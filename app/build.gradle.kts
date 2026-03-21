@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
+    kotlin("plugin.serialization") version "2.0.21"
 }
 
 android {
@@ -77,5 +78,11 @@ dependencies {
     implementation("com.google.firebase:firebase-database")
     //fcm
     implementation("com.google.firebase:firebase-messaging")
+
+    implementation(libs.compose.nav)
+    implementation(libs.coroutine.core)
+    implementation(libs.coroutine.android)
+    implementation(libs.lifecycle.viewmodel)
+    implementation(libs.serialization)
 
 }
