@@ -6,10 +6,12 @@ import androidx.compose.runtime.getValue
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.a32b.plant.ui.feature.auth.ui.SignInScreen
 import com.a32b.plant.ui.feature.community.ui.CommunityListScreen
 import com.a32b.plant.ui.feature.home.ui.HomeScreen
 import com.a32b.plant.ui.feature.mypage.ui.MypageScreen
 import com.a32b.plant.ui.feature.splash.SplashViewModel
+import com.a32b.plant.ui.feature.studying.ui.StudyingScreen
 
 @Composable
 fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewModel){
@@ -20,6 +22,8 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
             composable<Routes.HomeMain> { HomeScreen(navController) }
             composable<Routes.Mypage> { MypageScreen(navController) }
             composable<Routes.CommunityList> { CommunityListScreen(navController) }
+            composable<Routes.Studying> { StudyingScreen(navController) }
+            composable<Routes.SignIn> { SignInScreen(navController) }
         }
     }
 
