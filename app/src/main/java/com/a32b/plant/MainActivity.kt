@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -22,10 +23,16 @@ import com.a32b.plant.ui.feature.splash.SplashViewModel
 class MainActivity : ComponentActivity() {
     private val viewModel: SplashViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-//        val splashScreen = installSplashScreen
+        val splashScreen = installSplashScreen()
+        splashScreen.setKeepOnScreenCondition {
+            //해당 값이 트루일 동안 스플래시 유지
+            viewModel.destination.value == null
+        }
+
+        super.onCreate(savedInstanceState)
+
         setContent {
             val navController = rememberNavController()
             val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -42,7 +49,7 @@ class MainActivity : ComponentActivity() {
                 }
             ) {innerPadding ->
                 Box(modifier = Modifier.padding(innerPadding)){
-                    PlantAppNavigation(navController = navController)
+                    PlantAppNavigation(navController = navController, viewModel = viewModel)
                 }
             }
         }

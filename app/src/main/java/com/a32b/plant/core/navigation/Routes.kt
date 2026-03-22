@@ -5,7 +5,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 sealed interface Routes {
     //전달 받을 인자가 없는 일반 화면
-    @Serializable data object Splash: Routes
     @Serializable data object SignIn: Routes
     @Serializable data object SignUp: Routes
     @Serializable data object HomeMain: Routes

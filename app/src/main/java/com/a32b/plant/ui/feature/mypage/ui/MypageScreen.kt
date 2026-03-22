@@ -1,4 +1,4 @@
-package com.a32b.plant.ui.feature.mypage
+package com.a32b.plant.ui.feature.mypage.ui
 
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavController

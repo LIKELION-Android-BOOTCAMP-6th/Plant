@@ -64,7 +64,6 @@ fun BottomBar(navController: NavController){
             val isMypageSelected = currentDestination?.hasRoute<Routes.Mypage>() == true
             Image(
                 painter = painterResource(id = if(isMypageSelected) R.drawable.ic_bottom_mypage_selected else R.drawable.ic_bottom_mypage_normal),
-
                 contentDescription = "MYPAGE",
                 modifier = Modifier
                     .weight(1f)

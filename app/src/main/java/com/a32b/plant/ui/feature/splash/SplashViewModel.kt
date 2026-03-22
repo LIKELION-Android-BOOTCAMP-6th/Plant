@@ -5,8 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.data.di.AppContainer
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -17,8 +17,8 @@ import kotlinx.coroutines.launch
 
 class SplashViewModel : ViewModel(){
     private val userRepository = AppContainer.userRepository
-    private val _destination = MutableSharedFlow<Routes>()
-    val destination = _destination.asSharedFlow()
+    private val _destination = MutableStateFlow<Routes?>(null)
+    val destination = _destination.asStateFlow()
 
     init {
         checkAuthLogin()
@@ -26,11 +26,9 @@ class SplashViewModel : ViewModel(){
 
     private fun checkAuthLogin(){
         viewModelScope.launch {
-
             delay(3000)
-
-            if (userRepository.isAutoLogin()) _destination.emit(Routes.HomeMain)
-            else _destination.emit(Routes.SignIn)
+            _destination.value = if (userRepository.isAutoLogin()) Routes.HomeMain
+                                 else Routes.SignIn
         }
     }
 }
