@@ -85,4 +85,6 @@ dependencies {
     implementation(libs.lifecycle.viewmodel)
     implementation(libs.serialization)
 
+    implementation(libs.splashscreen)
+
 }
