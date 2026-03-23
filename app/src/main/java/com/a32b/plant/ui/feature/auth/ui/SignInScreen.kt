@@ -9,9 +9,4 @@ fun SignInScreen(navController: NavController) {
     Text("로그인")
 
 
-
-
-// test~
-
-
 }

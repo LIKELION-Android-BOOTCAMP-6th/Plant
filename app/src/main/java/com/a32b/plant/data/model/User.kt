@@ -12,9 +12,12 @@ data class PotInfo(
 // 유저 프로필 모델 (Firestore 구조와 매핑)
 data class UserProfile(
     val nickname: String = "",
-    // DB의 'currnetPot'을 코드 상에서는 'currentPot'으로 매핑
-    @get:PropertyName("currnetPot") @set:PropertyName("currnetPot")
+    val profileImg: String = "",
+    @get:PropertyName("currentPot") @set:PropertyName("currentPot")
     var currentPot: PotInfo = PotInfo(),
+    val isFirstLogin: Boolean = true,
     val isAutoLogin: Boolean = false,
-    val isDarkMode: Boolean = false
+    val isDarkMode: Boolean = false,
+    val totalStudyTime: Long = 0L,
+    val completedPotsCount: Int = 0
 )
