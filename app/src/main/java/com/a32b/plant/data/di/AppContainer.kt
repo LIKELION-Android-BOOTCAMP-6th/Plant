@@ -12,7 +12,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 object AppContainer {
     val firebaseAuth by lazy { FirebaseAuth.getInstance() }
     val firestore by lazy { FirebaseFirestore.getInstance() }
-    val userRepository = UserRepository()
+    val userRepository = UserRepository(firestore)
     val potRepository = PotRepository()
     val activityRepository = ActivityRepository()
     val postRepository = PostRepository()
