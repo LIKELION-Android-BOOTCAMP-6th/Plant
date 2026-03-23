@@ -26,7 +26,7 @@ class SplashViewModel : ViewModel(){
 
     private fun checkAuthLogin(){
         viewModelScope.launch {
-            delay(3000)
+            delay(1000)
             _destination.value = if (userRepository.isAutoLogin()) Routes.HomeMain
                                  else Routes.SignIn
         }
