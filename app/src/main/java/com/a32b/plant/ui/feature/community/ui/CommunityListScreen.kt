@@ -73,6 +73,8 @@ fun CommunityListScreen(navController: NavController) {
         Post(author = Author(nickname = "초보가드너"), content = "몬스테라 잎이 노랗게 변해요 ㅠㅠ", likeCount = 12, commentCount = 8)
     )
 
+
+
     // 💡 다이얼로그 본체
     if (showDialog) {
         AlertDialog(
