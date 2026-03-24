@@ -26,6 +26,8 @@ import com.a32b.plant.core.component.ProfileImage
 import com.a32b.plant.ui.feature.home.viewmodel.HomeViewModel
 import com.a32b.plant.ui.theme.primary
 import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.ui.theme.background
+import com.a32b.plant.ui.theme.fontColor
 
 @Composable
 fun HomeScreen(navController: NavController) {
@@ -40,9 +42,7 @@ fun HomeScreen(navController: NavController) {
             Text(
                 text = "${userName}의 Garden",
                 modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.headlineSmall,
-                color = primary,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.displayLarge
             )
         }
     ) { paddingValues ->
@@ -57,9 +57,8 @@ fun HomeScreen(navController: NavController) {
             item {
                 Spacer(modifier = Modifier.height(20.dp))
                 Text(currentDate,
-                    fontSize = 16.sp,
-                    color = Color.DarkGray,
-                    fontWeight = FontWeight.Medium)
+                    style = MaterialTheme.typography.titleSmall
+                )
                 Spacer(modifier = Modifier.height(20.dp))
 
                 // 메인 카드
@@ -75,7 +74,8 @@ fun HomeScreen(navController: NavController) {
                     }
                 )
                 Spacer(modifier = Modifier.height(20.dp))
-                Text("아래로 내려 나만의 화분 확인하기", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Text("아래로 내려 나만의 화분 확인하기",
+                    style = MaterialTheme.typography.bodySmall)
                 Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = Color.Gray)
                 Spacer(modifier = Modifier.height(30.dp))
             }
@@ -148,9 +148,7 @@ fun MainPlantCard(displayPot: PotInfo, onStartClick: () -> Unit) {
                     Text(
                         text = displayPot.tag,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                        color = Color(0xFF4CAF50),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -159,8 +157,8 @@ fun MainPlantCard(displayPot: PotInfo, onStartClick: () -> Unit) {
             // 화분이 없으면 안내 문구 - Bold 적용
             Text(
                 text = if (displayPot.id.isEmpty()) "화분을 등록해보세요" else displayPot.name,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.displayLarge,
+                color = fontColor
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -179,8 +177,7 @@ fun MainPlantCard(displayPot: PotInfo, onStartClick: () -> Unit) {
             // [공부 시간] 화분이 없으면 00:00:00
             Text(
                 text = TimeFormatter.formatToDigitalClock(displayPot.todayStudyingTime),                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.DarkGray
+                style = MaterialTheme.typography.titleLarge
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -193,7 +190,9 @@ fun MainPlantCard(displayPot: PotInfo, onStartClick: () -> Unit) {
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA5C16C))
             ) {
                 Text(if (displayPot.id.isEmpty()) "화분 없음" else "공부 시작",
-                    fontWeight = FontWeight.Bold)
+                    style = MaterialTheme.typography.titleSmall,
+                    color = background
+                )
             }
         }
     }
@@ -225,18 +224,14 @@ fun GridPlantItem(
             // 2. 총 공부 시간 (TimeFormatter 사용, Medium 적용)
             Text(
                 text = TimeFormatter.formatToDigitalClock(pot.todayStudyingTime),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFF4CAF50) // 포인트 컬러
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Black // 포인트 컬러
             )
 
             // 3. 화분 이름 (Medium 적용)
             Text(
                 text = pot.name,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.DarkGray,
-                maxLines = 1,
+                style = MaterialTheme.typography.bodySmall,maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
