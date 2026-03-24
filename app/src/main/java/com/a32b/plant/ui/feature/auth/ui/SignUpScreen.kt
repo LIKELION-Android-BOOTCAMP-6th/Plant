@@ -33,10 +33,9 @@ import androidx.navigation.NavController
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.ui.feature.auth.viewmodel.SignUpEvent
 import com.a32b.plant.ui.feature.auth.viewmodel.SignUpViewModel
+import com.a32b.plant.ui.theme.background
+import com.a32b.plant.ui.theme.fontColorSub
 
-val CardBackgroundColor = Color(0xFFFDFDFD)
-val TextFieldBackgroundColor = Color(0xFFEEEEEE)
-val HintTextColor = Color(0xFF9E9E9E)
 val PrimaryTextColor = Color(0xFF333333)
 
 @Composable
@@ -94,7 +93,7 @@ fun SignUpScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = CardBackgroundColor),
+                colors = CardDefaults.cardColors(containerColor = background),
                 elevation = CardDefaults.cardElevation(4.dp)
             ) {
                 Column(
@@ -118,19 +117,19 @@ fun SignUpScreen(
                         onValueChange = viewModel::onEmailChange,
                         placeholder = {
                             Text(text = "이메일을 입력하세요.",
-                                color = HintTextColor,
+                                color = fontColorSub,
                                 fontSize = 12.sp
                             )
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = TextFieldBackgroundColor,
-                            unfocusedContainerColor = TextFieldBackgroundColor,
+                            focusedContainerColor = background,
+                            unfocusedContainerColor = background,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             focusedTextColor = PrimaryTextColor,
                             unfocusedTextColor = PrimaryTextColor,
-                            focusedPlaceholderColor = HintTextColor,
-                            unfocusedPlaceholderColor = HintTextColor
+                            focusedPlaceholderColor = fontColorSub,
+                            unfocusedPlaceholderColor = fontColorSub
                         ),
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -154,19 +153,19 @@ fun SignUpScreen(
                         placeholder = {
                             Text(
                                 text = "6자리 이상. 영문,특수문자,숫자 필수.",
-                                color = HintTextColor,
+                                color = fontColorSub,
                                 fontSize = 12.sp
                             )
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = TextFieldBackgroundColor,
-                            unfocusedContainerColor = TextFieldBackgroundColor,
+                            focusedContainerColor = background,
+                            unfocusedContainerColor = background,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             focusedTextColor = PrimaryTextColor,
                             unfocusedTextColor = PrimaryTextColor,
-                            focusedPlaceholderColor = HintTextColor,
-                            unfocusedPlaceholderColor = HintTextColor
+                            focusedPlaceholderColor = fontColorSub,
+                            unfocusedPlaceholderColor = fontColorSub
                         ),
                         modifier = Modifier.fillMaxWidth(),
                         visualTransformation = if (passwordVisible) VisualTransformation.None
@@ -198,14 +197,14 @@ fun SignUpScreen(
                         value = uiState.passwordConfirm,
                         onValueChange = viewModel::onPasswordConfirmChange,
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = TextFieldBackgroundColor,
-                            unfocusedContainerColor = TextFieldBackgroundColor,
+                            focusedContainerColor = background,
+                            unfocusedContainerColor = background,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             focusedTextColor = PrimaryTextColor,
                             unfocusedTextColor = PrimaryTextColor,
-                            focusedPlaceholderColor = HintTextColor,
-                            unfocusedPlaceholderColor = HintTextColor
+                            focusedPlaceholderColor = fontColorSub,
+                            unfocusedPlaceholderColor = fontColorSub
                         ),
                         modifier = Modifier.fillMaxWidth(),
                         isError = uiState.passwordError != null,
