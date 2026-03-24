@@ -51,7 +51,6 @@ class UserRepository(private val db: FirebaseFirestore) {
         }
 
     suspend fun getPotId() = "현재 팟 아이디"
-    // fun isAutoLogin() = true
-    fun isAutoLogin() = false
+    fun isAutoLogin() = true
 }
 
