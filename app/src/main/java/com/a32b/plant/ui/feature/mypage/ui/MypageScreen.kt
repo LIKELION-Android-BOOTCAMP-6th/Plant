@@ -2,10 +2,10 @@ package com.a32b.plant.ui.feature.mypage.ui
 
 import android.R.attr.onClick
 import android.R.attr.text
-import android.widget.Button
-import android.widget.EditText
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,11 +21,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,63 +35,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.a32b.plant.core.component.ProfileImage
 import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageViewModel
-import com.google.android.play.integrity.internal.n
 
 @Composable
 fun MypageScreen(navController: NavController) {
     val viewModel: MyPageViewModel = viewModel()
     val potId by viewModel.potId.collectAsState()
-//    val nickname by viewModel.nickname.collectAsState()
-    val nickname: String = "임시"
-    var showDialog by remember { mutableStateOf(false) }
-    var newNickname by remember { mutableStateOf("") }
+
+    val userName by viewModel.userName.collectAsState()
     val context = LocalContext.current
-//    LaunchedEffect(nickname) {
-//        if (nickname.isNotBlank()) {
-//            newNickname = nickname
-//        }
-//    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // 프로필, 닉네임, 총 공부시간
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box( // 프로필이미지
-                modifier = Modifier
-                    .size(80.dp)
-                    .background(Color.LightGray, shape = CircleShape)
-                    // 클릭 시 Dialog 띄우기
-                    .clickable { showDialog = true }
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1F)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                )
-                {
-                    Text(text = "$nickname 님")
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(text = "총 공부 시간")
-                    Text(text = "20:43:30")
-                }
-            }
-
-        }
+        ProfileRow(userName, viewModel = viewModel)
 //        -------
         Column(
             modifier = Modifier
@@ -99,31 +61,23 @@ fun MypageScreen(navController: NavController) {
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+//            --------------
             // 동작 확인 후 Dialog 에 넣기
-            TextField(
-                value = newNickname,
-                onValueChange = { v -> newNickname = v },
-                label = { Text("새 닉네임 입력") },
-                placeholder = { Text("변경하실 닉네임을 입력해주세요") }
-            )
+//            --------------
 
-            ButtonTemplate(text = "기른 나무 수-") { }
+            ButtonTemplate(text = "기른 나무 수-모양 변경") { }
             ButtonTemplate(text = "커뮤니티 활동") { }
             ButtonTemplate(text = "앱 설정") { }
             ButtonTemplate(text = "공지사항") { }
             ButtonTemplate(text = "비밀번호 재설정") { }
-            ButtonTemplate(text = "다크모드-") { }
+            ButtonTemplate(text = "다크모드-모양 변경") { }
         }
         Button(onClick = { navController.popBackStack() }) {
             Text("뒤로가기")
         }
         Text(text = "$potId 팟아이디")
     }
-    if (showDialog) {
-        Dialog(onDismissRequest = { showDialog = false }) {
-            Text("Dialog 창 확인용")
-        }
-    }
+
 }
 
 @Composable
@@ -135,14 +89,158 @@ fun ButtonTemplate(text: String, onClick: () -> Unit) {
             containerColor = Color.White,
             contentColor = Color.Black
         )
-
-
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Start
         ) {
             Text(text = text, style = MaterialTheme.typography.bodyLarge)
+        }
+    }
+}
+
+@Composable
+fun ProfileRow(userName: String, viewModel: MyPageViewModel) {
+    var isOpenDialog by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // 03-24 공통 컴포넌트 가이드 참조 fun ProfileImage() 사용하기
+        Box( // 프로필이미지
+            modifier = Modifier
+                .size(80.dp)
+                .background(Color.LightGray, shape = CircleShape)
+                // 닉네임 변경 기능 가라로 완료 후 클릭 시 Dialog 띄우기
+                .clickable {
+                    isOpenDialog = true
+                }
+        ) {
+
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1F)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            )
+            {
+                Text(text = "$userName 님")
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(text = "총 공부 시간")
+                Text(text = "20:43:30")
+            }
+        }
+    }
+
+    if (isOpenDialog) {
+        ProfileDialog(onDismiss = { isOpenDialog = false }, userName, viewModel)
+    }
+}
+
+@Composable
+fun UpdateProfileButton(onClick: () -> Unit) {
+    val context = LocalContext.current
+    Button(onClick = {
+        onClick()
+        Toast.makeText(context, "업데이트 완료!", Toast.LENGTH_SHORT).show()
+    })
+    {
+        Text("저장")
+    }
+}
+
+//Log.d("mypage", "MypageScreen - ")
+// 다이얼로그 안에 원형 이미지,
+// 선택 시 테두리 강조 표시
+// 1가지만 선택 가능
+@Composable
+fun SetImages(selectedImageLevel: String, onImageClick: (String) -> Unit) {
+    Row() {
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .border(width = if (selectedImageLevel == "lv.0") 3.dp else 0.dp,
+                    color = Color.Red)
+                .clickable {
+                    onImageClick("lv.0")
+                }
+        ) {
+            ProfileImage("lv.0", 30)
+        }
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .border(width = if (selectedImageLevel == "lv.1") 3.dp else 0.dp,
+                    color = Color.Red)
+                .clickable {
+                    onImageClick("lv.1")
+                }
+        ) {
+            ProfileImage("lv.1", 30)
+        }
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .border(width = if (selectedImageLevel == "lv.2") 3.dp else 0.dp,
+                    color = Color.Red)
+                .clickable {
+                    onImageClick("lv.2")
+                }
+        ) {
+            ProfileImage("lv.2", 30)
+        }
+    }
+}
+
+@Composable
+fun ProfileDialog(onDismiss: () -> Unit, userName: String, viewModel: MyPageViewModel) {
+    var newUserName by remember { mutableStateOf(userName) }
+    var selectedImageLevel by remember { mutableStateOf("lv.0") }
+    val context = LocalContext.current
+
+    Dialog(onDismissRequest = { onDismiss() }) {
+        Card(modifier = Modifier.fillMaxWidth()) {
+            TextField(
+                value = newUserName,
+                onValueChange = { v -> newUserName = v },
+                label = { Text("0글자~10글자") },
+                placeholder = { Text("변경하실 닉네임을 입력해주세요") }
+            )
+            SetImages(
+                selectedImageLevel = selectedImageLevel,
+                onImageClick = { clickedLevel -> selectedImageLevel = clickedLevel })
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = { onDismiss() },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("취소")
+                }
+                Button(
+                    onClick = {
+                        onDismiss()
+                        viewModel.updateProfile(newUserName, selectedImageLevel)
+                        Log.d("mypage", "MyPageScreen -  $selectedImageLevel")
+
+                        Toast.makeText(context, "업데이트 완료!", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("저장0")
+                }
+            }
         }
     }
 }
