@@ -40,7 +40,7 @@ class PotRepository(private val db: FirebaseFirestore) {
             id = newDocRef.id,
             tag = tag,
             name = name,
-            level = 0,
+            level = "0",
             todayStudyingTime = 0L
         )
 
