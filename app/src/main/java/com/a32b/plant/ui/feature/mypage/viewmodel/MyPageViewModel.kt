@@ -35,7 +35,7 @@ class MyPageViewModel : ViewModel() {
         Log.d("mypage", "MyPageViewModel - $nickname ") // Log.d nickname 출력 확인 완료
         viewModelScope.launch {
             _userName.value = nickname
-//            userRepository.updateNicknameAndImage("WfFW9NVdg8NDXZPGNas4", nickname, imageLevel) repository
+            userRepository.updateNicknameAndImage("WfFW9NVdg8NDXZPGNas4", nickname, imageLevel)
         }
     }
 

@@ -1,5 +1,6 @@
 package com.a32b.plant.data.repository
 
+import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
 import com.a32b.plant.data.model.UserProfile
 import com.google.firebase.auth.FirebaseAuth
@@ -10,7 +11,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-class UserRepository(private val db: FirebaseFirestore,private val auth: FirebaseAuth) {
+class UserRepository(private val db: FirebaseFirestore, private val auth: FirebaseAuth) {
     // 특정 유저의 데이터를 실시간 Flow로 반환
     fun getUserProfile(uid: String): Flow<UserProfile?> = callbackFlow {
         val docRef = db.collection("users").document(uid)
@@ -50,6 +51,20 @@ class UserRepository(private val db: FirebaseFirestore,private val auth: Firebas
                     cont.resume(Result.failure(e))
                 }
         }
+
+    // 03-24 13:46 suspend 아직 사용법 정확히 몰라서 다시 알아본 후 수정 예정
+    suspend fun updateNicknameAndImage(uid: String, nickname: String, ImageLevel: String) {
+        db.collection("users").document(uid)
+            .update("nickname", nickname)
+            .addOnSuccessListener { Log.d("UserRepository", "updateNicknameAndImage 업데이트 성공") }
+            .addOnFailureListener { e ->
+                Log.w(
+                    "UserRepository",
+                    "updateNicknameAndImage Error updating document",
+                    e
+                )
+            }
+    }
 
     suspend fun getPotId() = "현재 팟 아이디"
     fun isAutoLogin() = true
