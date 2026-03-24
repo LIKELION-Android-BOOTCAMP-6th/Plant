@@ -70,10 +70,10 @@ class HomeViewModel : ViewModel() {
     }
 
     fun selectPot(pot: PotInfo) {
-        // 1. 즉시 UI 반영 (상단 메인 카드 교체)
+//         1. 즉시 UI 반영 (상단 메인 카드 교체)
         _displayPot.value = pot
 
-        // 2. DB(Firestore)에 마지막 선택된 화분 ID 저장
+//         2. DB(Firestore)에 마지막 선택된 화분 ID 저장
         viewModelScope.launch {
             try {
                 // userRepository에 해당 기능을 수행하는 함수가 있다고 가정합니다.
@@ -84,4 +84,4 @@ class HomeViewModel : ViewModel() {
         }
     }
 
-}
+ }

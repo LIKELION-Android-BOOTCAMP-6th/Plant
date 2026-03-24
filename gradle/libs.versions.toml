@@ -18,6 +18,7 @@ serialization = "1.7.3"
 
 splash = "1.0.0"
 foundation = "1.10.5"
+material3 = "1.4.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -47,6 +48,7 @@ lifecycle-viewmodel = {module = "androidx.lifecycle:lifecycle-viewmodel-compose"
 #시스템 스플래시 제어
 splashscreen = {module = "androidx.core:core-splashscreen", version.ref = "splash"}
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
+androidx-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -52,6 +52,23 @@ class UserRepository(private val db: FirebaseFirestore,private val auth: Firebas
         }
 
     suspend fun getPotId() = "현재 팟 아이디"
-    fun isAutoLogin() = true
+    // ********************** autoLogin true 만들기
+    // fun isAutoLogin() = true
+    fun isAutoLogin() = false
+
+    // 마지막으로 선택한 화분의 ID를 Firestore에 업데이트합니다.
+    suspend fun updateLastSelectedPot(uid: String, potId: String): Result<Unit> =
+        suspendCancellableCoroutine { cont ->
+            db.collection("users")
+                .document(uid)
+                .update("lastSelectedPotId", potId) // 특정 필드만 업데이트
+                .addOnSuccessListener {
+                    cont.resume(Result.success(Unit))
+                }
+                .addOnFailureListener { e ->
+                    // 실패 시 에러와 함께 resume
+                    cont.resume(Result.failure(e))
+                }
+        }
 }
 

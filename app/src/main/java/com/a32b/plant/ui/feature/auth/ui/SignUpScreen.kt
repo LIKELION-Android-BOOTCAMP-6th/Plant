@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
+import androidx.compose.material3.Typography
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,10 +34,13 @@ import androidx.navigation.NavController
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.ui.feature.auth.viewmodel.SignUpEvent
 import com.a32b.plant.ui.feature.auth.viewmodel.SignUpViewModel
+import com.a32b.plant.ui.theme.Typography
 import com.a32b.plant.ui.theme.background
+import com.a32b.plant.ui.theme.fontColor
 import com.a32b.plant.ui.theme.fontColorSub
+import com.a32b.plant.ui.theme.primary
 
-val PrimaryTextColor = Color(0xFF333333)
+val TextFieldBackgroundColor = Color(0xFFEEEEEE)
 
 @Composable
 fun SignUpScreen(
@@ -67,7 +71,7 @@ fun SignUpScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.primary)
+            .background(primary)
     ) {
         Column(
             modifier = Modifier
@@ -82,9 +86,10 @@ fun SignUpScreen(
             // Plant 타이틀 — 카드 위 초록 배경에 흰색으로
             Text(
                 text = "Plant",
-                style = MaterialTheme.typography.displaySmall,
+                style = MaterialTheme.typography.displayLarge,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = background,
+                fontSize = 40.sp
             )
 
             Spacer(modifier = Modifier.height(30.dp))
@@ -108,8 +113,8 @@ fun SignUpScreen(
                     Text(
                         text = "이메일",
                         fontWeight = FontWeight.Bold,
-                        color = PrimaryTextColor,
-                        style = MaterialTheme.typography.labelMedium
+                        color = fontColor,
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     TextField(
@@ -118,16 +123,17 @@ fun SignUpScreen(
                         placeholder = {
                             Text(text = "이메일을 입력하세요.",
                                 color = fontColorSub,
-                                fontSize = 12.sp
+                                fontSize = 12.sp,
+                                style = MaterialTheme.typography.bodySmall
                             )
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = background,
-                            unfocusedContainerColor = background,
+                            focusedContainerColor = TextFieldBackgroundColor,
+                            unfocusedContainerColor = TextFieldBackgroundColor,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
-                            focusedTextColor = PrimaryTextColor,
-                            unfocusedTextColor = PrimaryTextColor,
+                            focusedTextColor = fontColor,
+                            unfocusedTextColor = fontColor,
                             focusedPlaceholderColor = fontColorSub,
                             unfocusedPlaceholderColor = fontColorSub
                         ),
@@ -143,8 +149,8 @@ fun SignUpScreen(
                     Text(
                         text = "비밀번호",
                         fontWeight = FontWeight.Bold,
-                        color = PrimaryTextColor,
-                        style = MaterialTheme.typography.labelMedium
+                        color = fontColor,
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     TextField(
@@ -154,16 +160,17 @@ fun SignUpScreen(
                             Text(
                                 text = "6자리 이상. 영문,특수문자,숫자 필수.",
                                 color = fontColorSub,
-                                fontSize = 12.sp
+                                fontSize = 12.sp,
+                                style = MaterialTheme.typography.bodySmall
                             )
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = background,
-                            unfocusedContainerColor = background,
+                            focusedContainerColor = TextFieldBackgroundColor,
+                            unfocusedContainerColor = TextFieldBackgroundColor,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
-                            focusedTextColor = PrimaryTextColor,
-                            unfocusedTextColor = PrimaryTextColor,
+                            focusedTextColor = fontColor,
+                            unfocusedTextColor = fontColor,
                             focusedPlaceholderColor = fontColorSub,
                             unfocusedPlaceholderColor = fontColorSub
                         ),
@@ -189,20 +196,20 @@ fun SignUpScreen(
                     Text(
                         text = "비밀번호 확인",
                         fontWeight = FontWeight.Bold,
-                        color = PrimaryTextColor,
-                        style = MaterialTheme.typography.labelMedium
+                        color = fontColor,
+                        style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     TextField(
                         value = uiState.passwordConfirm,
                         onValueChange = viewModel::onPasswordConfirmChange,
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = background,
-                            unfocusedContainerColor = background,
+                            focusedContainerColor = TextFieldBackgroundColor,
+                            unfocusedContainerColor = TextFieldBackgroundColor,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
-                            focusedTextColor = PrimaryTextColor,
-                            unfocusedTextColor = PrimaryTextColor,
+                            focusedTextColor = fontColor,
+                            unfocusedTextColor = fontColor,
                             focusedPlaceholderColor = fontColorSub,
                             unfocusedPlaceholderColor = fontColorSub
                         ),
@@ -246,7 +253,10 @@ fun SignUpScreen(
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Text("회원가입 완료", style = MaterialTheme.typography.labelLarge)
+                            Text("회원가입 완료",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = background
+                                )
                         }
                     }
 
@@ -262,7 +272,7 @@ fun SignUpScreen(
                     ) {
                         ClickableText(
                             text = buildAnnotatedString {
-                                withStyle(style = SpanStyle(color = PrimaryTextColor)) {
+                                withStyle(style = SpanStyle(color = fontColor)) {
                                     append("이미 계정이 있으신가요? ")
                                 }
                                 withStyle(
