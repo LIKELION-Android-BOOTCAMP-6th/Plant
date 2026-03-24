@@ -54,9 +54,7 @@ class SignUpViewModel(
         val state = _uiState.value
 
         // 미입력 항목 검증
-        if (state.email.isBlank() || state.password.isBlank() ||
-            state.passwordConfirm.isBlank() || !state.agreePrivacy || !state.agreeTerms
-        ) {
+        if (state.email.isBlank() || state.password.isBlank() || state.passwordConfirm.isBlank()) {
             sendToast("모든 항목을 작성해주세요.")
             return
         }
@@ -86,6 +84,7 @@ class SignUpViewModel(
                 sendToast("회원가입 성공! 전송된 이메일을 확인해주세요.")
                 _eventChannel.send(SignUpEvent.NavigateToSignIn)
 
+                // !! 로그캣에 에러 띄워보기
             } catch (e: Exception) {
                 val message = when {
                     e.message?.contains("email address is already in use") == true ->

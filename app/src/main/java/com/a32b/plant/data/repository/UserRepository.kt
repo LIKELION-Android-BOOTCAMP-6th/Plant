@@ -30,6 +30,7 @@ class UserRepository(private val db: FirebaseFirestore) {
         suspendCancellableCoroutine { cont ->
             val newUser = UserProfile(
                 // 닉네임 설정 전까지 "",
+                // NULL 처리하기
                 nickname = "",
                 profileImg = "",
                 // isFirstLogin = true 로 로그인 시 닉네임 재설정 하고
@@ -50,6 +51,7 @@ class UserRepository(private val db: FirebaseFirestore) {
         }
 
     suspend fun getPotId() = "현재 팟 아이디"
-    fun isAutoLogin() = true
+    // fun isAutoLogin() = true
+    fun isAutoLogin() = false
 }
 
