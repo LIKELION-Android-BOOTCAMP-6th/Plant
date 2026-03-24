@@ -22,7 +22,7 @@ class HomeViewModel : ViewModel() {
 
 
      */
-    // 실제 운영 시에는 Firebase Auth에서 UID를 가져와야 합니다.
+    // 실제 운영 시에는 Firebase Auth에서 UID를 가져와야..
     // 현재는 DB에 데이터가 없어서 예시용
     private val currentUid = "test_user_uid"
     private val _userName = MutableStateFlow("사용자")
