@@ -20,9 +20,9 @@ sealed interface Routes {
     //진입 시 데이터가 필요한 화면
     @Serializable data class StudyPlanDetail(val potId: String) : Routes
     @Serializable data class Studying(val potId: String, val tag: String, val title: String): Routes
-    @Serializable data class StudyFinish(val tag: String, val titel: String): Routes
+    @Serializable data class StudyFinish(val tag: String, val title: String): Routes
     //timestamp: 날짜 시작 시간~ 종료 시간
-    @Serializable data class StudyResult(val timestapm: String, val tag: String,val title: String, val log: String, val time: String )
+    @Serializable data class StudyResult(val timestamp: String, val tag: String,val title: String, val log: String, val time: String )
     //개별 학습 기록 공유일 경우 타입에 공유 적어서 보내기
     @Serializable data class CommunityPost(val type: String? = null) : Routes
     @Serializable data class CommunityDetail(val postId: String) : Routes
