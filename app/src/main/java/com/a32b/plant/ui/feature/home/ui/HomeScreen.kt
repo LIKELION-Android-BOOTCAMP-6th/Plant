@@ -20,6 +20,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.ui.feature.home.viewmodel.HomeViewModel
+import com.a32b.plant.ui.theme.primary
 
 @Composable
 fun HomeScreen(navController: NavController) {
@@ -34,7 +35,7 @@ fun HomeScreen(navController: NavController) {
                 text = "${userName}의 Garden",
                 modifier = Modifier.padding(16.dp),
                 style = MaterialTheme.typography.headlineSmall,
-                color = Color(0xFFA5C16C),
+                color = primary,
                 fontWeight = FontWeight.Bold
             )
         }

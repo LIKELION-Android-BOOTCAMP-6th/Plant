@@ -7,6 +7,18 @@ val background = Color(0xFFFFFFF4)
 
 //메인 색상
 val primary = Color(0xFF97BC62)
+//그린 서브 색상1
+val sub_green1 = Color(0xFFA3D9A5)
+
+//그린 서브 색상2
+val sub_green2 = Color(0xFF51A872)
+
+//그린 서브 색상3
+val sub_green3 = Color(0xFF3F9661)
+
+//노란 색상
+val sub_yellow = Color(0xFFF2C94C)
+
 //서브 1 - 하단 바
 val sub1 = Color(0xFFE0C8A4)
 //서브 2
