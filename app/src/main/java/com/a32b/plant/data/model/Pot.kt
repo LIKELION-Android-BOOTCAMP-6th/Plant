@@ -5,7 +5,7 @@ data class PotInfo(
     val id: String = "",
     val tag: String = "",
     val name: String = "",
-    val level: String = "",
+    val level: Int = 0,
     val imageUrl: String = "",
     val todayStudyingTime: Long = 0L
 )
