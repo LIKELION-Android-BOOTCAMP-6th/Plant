@@ -1,9 +1,8 @@
 package com.a32b.plant.ui.feature.mypage.ui
 
-import android.R.attr.onClick
-import android.R.attr.text
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -35,13 +35,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.a32b.plant.core.component.ProfileImage
 import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageViewModel
+import com.a32b.plant.ui.theme.Typography
+import com.a32b.plant.ui.theme.fontColor
+import com.a32b.plant.ui.theme.sub_green1
+import com.a32b.plant.R
 
 @Composable
 fun MypageScreen(navController: NavController) {
@@ -66,6 +70,7 @@ fun MypageScreen(navController: NavController) {
 //            --------------
 
             ButtonTemplate(text = "기른 나무 수-모양 변경") { }
+            dividerImage()
             ButtonTemplate(text = "커뮤니티 활동") { }
             ButtonTemplate(text = "앱 설정") { }
             ButtonTemplate(text = "공지사항") { }
@@ -73,11 +78,10 @@ fun MypageScreen(navController: NavController) {
             ButtonTemplate(text = "다크모드-모양 변경") { }
         }
         Button(onClick = { navController.popBackStack() }) {
-            Text("뒤로가기")
+            Text("뒤로가기", style = Typography.bodySmall, color = fontColor)
         }
-        Text(text = "$potId 팟아이디")
+        Text(text = "$potId 팟아이디", style = Typography.bodySmall, color = fontColor)
     }
-
 }
 
 @Composable
@@ -87,7 +91,7 @@ fun ButtonTemplate(text: String, onClick: () -> Unit) {
         shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.White,
-            contentColor = Color.Black
+            contentColor = fontColor
         )
     ) {
         Row(
@@ -128,21 +132,35 @@ fun ProfileRow(userName: String, viewModel: MyPageViewModel) {
                 horizontalArrangement = Arrangement.SpaceBetween
             )
             {
-                Text(text = "$userName 님")
+                Text(text = "$userName 님", style = Typography.bodySmall, color = fontColor)
             }
             Spacer(modifier = Modifier.width(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = "총 공부 시간")
-                Text(text = "20:43:30")
+                Text(text = "총 공부 시간", style = Typography.bodySmall, color = fontColor)
+                Text(text = "20:43:30", style = Typography.bodySmall, color = fontColor)
             }
         }
     }
 
     if (isOpenDialog) {
         ProfileDialog(onDismiss = { isOpenDialog = false }, userName, viewModel)
+    }
+}
+
+@Composable
+fun dividerImage() {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.ic_mypage_divider),
+            contentDescription = "구분선",
+            modifier = Modifier.size(45.dp)
+        )
     }
 }
 
@@ -154,22 +172,21 @@ fun UpdateProfileButton(onClick: () -> Unit) {
         Toast.makeText(context, "업데이트 완료!", Toast.LENGTH_SHORT).show()
     })
     {
-        Text("저장")
+        Text("저장", style = Typography.bodySmall, color = fontColor)
     }
 }
 
-//Log.d("mypage", "MypageScreen - ")
-// 다이얼로그 안에 원형 이미지,
-// 선택 시 테두리 강조 표시
-// 1가지만 선택 가능
+
 @Composable
 fun SetImages(selectedImageLevel: String, onImageClick: (String) -> Unit) {
     Row() {
         Box(
             modifier = Modifier
                 .size(80.dp)
-                .border(width = if (selectedImageLevel == "lv.0") 3.dp else 0.dp,
-                    color = Color.Red)
+                .border(
+                    width = if (selectedImageLevel == "lv.0") 3.dp else 0.dp,
+                    color = sub_green1
+                )
                 .clickable {
                     onImageClick("lv.0")
                 }
@@ -179,8 +196,10 @@ fun SetImages(selectedImageLevel: String, onImageClick: (String) -> Unit) {
         Box(
             modifier = Modifier
                 .size(80.dp)
-                .border(width = if (selectedImageLevel == "lv.1") 3.dp else 0.dp,
-                    color = Color.Red)
+                .border(
+                    width = if (selectedImageLevel == "lv.1") 3.dp else 0.dp,
+                    color = sub_green1
+                )
                 .clickable {
                     onImageClick("lv.1")
                 }
@@ -190,8 +209,10 @@ fun SetImages(selectedImageLevel: String, onImageClick: (String) -> Unit) {
         Box(
             modifier = Modifier
                 .size(80.dp)
-                .border(width = if (selectedImageLevel == "lv.2") 3.dp else 0.dp,
-                    color = Color.Red)
+                .border(
+                    width = if (selectedImageLevel == "lv.2") 3.dp else 0.dp,
+                    color = sub_green1
+                )
                 .clickable {
                     onImageClick("lv.2")
                 }
@@ -210,10 +231,27 @@ fun ProfileDialog(onDismiss: () -> Unit, userName: String, viewModel: MyPageView
     Dialog(onDismissRequest = { onDismiss() }) {
         Card(modifier = Modifier.fillMaxWidth()) {
             TextField(
+//                ------------------ 이거 어떻게 쓰는건지 알아보기
+//                state = usernameState,
+                //                ,lineLimits = TextFieldLineLimits.SingleLine,
                 value = newUserName,
+
                 onValueChange = { v -> newUserName = v },
-                label = { Text("0글자~10글자") },
-                placeholder = { Text("변경하실 닉네임을 입력해주세요") }
+                label = {
+                    Text(
+                        "0글자~10글자 특수문자 제외",
+                        style = Typography.bodySmall,
+                        color = fontColor
+                    )
+                },
+                placeholder = {
+                    Text(
+                        "변경하실 닉네임을 입력해주세요",
+                        style = Typography.bodySmall,
+                        color = fontColor
+                    )
+                }
+
             )
             SetImages(
                 selectedImageLevel = selectedImageLevel,
@@ -225,20 +263,20 @@ fun ProfileDialog(onDismiss: () -> Unit, userName: String, viewModel: MyPageView
                 Button(
                     onClick = { onDismiss() },
                     modifier = Modifier.weight(1f)
+
                 ) {
-                    Text("취소")
+                    Text("취소", style = Typography.bodySmall, color = fontColor)
                 }
                 Button(
                     onClick = {
                         onDismiss()
                         viewModel.updateProfile(newUserName, selectedImageLevel)
                         Log.d("mypage", "MyPageScreen -  $selectedImageLevel")
-
                         Toast.makeText(context, "업데이트 완료!", Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("저장0")
+                    Text("저장", style = Typography.bodySmall, color = fontColor)
                 }
             }
         }

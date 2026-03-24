@@ -39,6 +39,12 @@ class MyPageViewModel : ViewModel() {
         }
     }
 
+    fun checkNickname(txt: String) {
+
+        Regex
+
+    }
+
 
     //데이터베이스에서 값을 안 가져와도 되는 경우
     fun getTag() = "자격증"
