@@ -19,8 +19,6 @@ class HomeViewModel : ViewModel() {
     _변수명 : 외부에서 값을 못 건들이게 하기 위해 private으로 선언
     변수명 : 외부에서 읽는 데이터.
     _변수명이 바뀌면 자동으로 값이 업데이트가 되게 하기 위해 .asStaeFlow() 붙이기
-
-
      */
     // 실제 운영 시에는 Firebase Auth에서 UID를 가져와야..
     // 현재는 DB에 데이터가 없어서 예시용
@@ -70,18 +68,22 @@ class HomeViewModel : ViewModel() {
     }
 
     fun selectPot(pot: PotInfo) {
-//         1. 즉시 UI 반영 (상단 메인 카드 교체)
+//      1. 즉시 UI 반영 (상단 메인 카드 교체)
         _displayPot.value = pot
 
-//         2. DB(Firestore)에 마지막 선택된 화분 ID 저장
+//      2. DB(Firestore)에 마지막 선택된 화분 ID 저장
         viewModelScope.launch {
             try {
-                // userRepository에 해당 기능을 수행하는 함수가 있다고 가정합니다.
+                // userRepository에 해당 기능을 수행하는 함수가 있다고 가정.
                 userRepository.updateLastSelectedPot(currentUid, pot.id)
             } catch (e: Exception) {
                 // 에러 처리 (필요시)
             }
         }
+    }
+
+    fun goToNewbornTreeScreen() {
+
     }
 
  }

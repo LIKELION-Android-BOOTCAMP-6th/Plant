@@ -120,7 +120,9 @@ fun HomeScreen(navController: NavController) {
             item {
                 Spacer(modifier = Modifier.height(30.dp))
                 IconButton(
-                    onClick = { /* 화분 추가 페이지로 이동 */ },
+                    onClick = {
+                        navController.navigate(Routes.NewBornTree)
+                    },
                     modifier = Modifier.size(56.dp)
                 ) {
                     Icon(
@@ -138,7 +140,7 @@ fun HomeScreen(navController: NavController) {
 
 @Composable
 fun MainPlantCard(displayPot: PotInfo, onStartClick: () -> Unit,
-                    isTestMode: Boolean = false // 테스트용 파라미터
+                    isTestMode: Boolean = false // 테스트용 -> 실제는 삭제
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(0.85f),
@@ -174,7 +176,7 @@ fun MainPlantCard(displayPot: PotInfo, onStartClick: () -> Unit,
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // [이미지 영역] 화분 유무에 따른 분기
+            // 화분 이미지
             ProfileImage(
                 level = displayPot.level,
                 size = 150
