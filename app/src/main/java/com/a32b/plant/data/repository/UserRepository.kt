@@ -86,6 +86,8 @@ class UserRepository(private val db: FirebaseFirestore, private val auth: Fireba
                     // 실패 시 에러와 함께 resume
                     cont.resume(Result.failure(e))
                 }
+
         }
+
 }
 

@@ -7,7 +7,7 @@ import com.a32b.plant.ui.feature.auth.viewmodel.SignUpViewModel
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityDetailViewModel
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityListViewModel
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityPostViewModel
-import com.a32b.plant.ui.feature.home.viewmodel.HomeViewModel
+//import com.a32b.plant.ui.feature.home.viewmodel.HomeViewModel
 import com.a32b.plant.ui.feature.home.viewmodel.NewBornTreeViewModel
 import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageViewModel
 import com.a32b.plant.ui.feature.studying.viewmodel.StudyingViewModel
@@ -27,7 +27,7 @@ object ViewModelFactory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return HomeViewModel(AppContainer.userRepository) as T
         }
-    }
+   }
     val newBornTreeViewModelFactory = object : ViewModelProvider.Factory{
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return NewBornTreeViewModel(AppContainer.potRepository) as T
