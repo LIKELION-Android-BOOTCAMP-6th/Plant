@@ -67,6 +67,7 @@ class SignUpViewModel(
 
         _uiState.update { it.copy(isLoading = true) }
 
+        //state event
         viewModelScope.launch {
             try {
                 // 1. Firebase Auth 계정 생성

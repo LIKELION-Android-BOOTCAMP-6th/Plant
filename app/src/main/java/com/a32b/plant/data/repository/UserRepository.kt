@@ -68,8 +68,8 @@ class UserRepository(private val db: FirebaseFirestore, private val auth: Fireba
 
     suspend fun getPotId() = "현재 팟 아이디"
     // ********************** autoLogin true 만들기
-    fun isAutoLogin() = true
-    // fun isAutoLogin() = false
+//    fun isAutoLogin() = true
+     fun isAutoLogin() = false
 
     // 마지막으로 선택한 화분의 ID를 Firestore에 업데이트합니다.
     suspend fun updateLastSelectedPot(uid: String, potId: String): Result<Unit> =
