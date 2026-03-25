@@ -56,7 +56,9 @@ fun NewBornTreeScreen(navController: NavController,
     //실패
     LaunchedEffect(Unit) {
         viewModel.errorMessage.collect { message ->
-            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            if (message.isNotEmpty()) {
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            }
         }
     }
 
@@ -124,17 +126,37 @@ fun NewBornTreeScreen(navController: NavController,
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                 ) {
-                    Text("태그 선택", style = MaterialTheme.typography.titleSmall)
+                    Text("태그 선택", style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(vertical = 8.dp))
 
                     //태그
-                    androidx.compose.foundation.lazy.LazyRow {
+                    androidx.compose.foundation.lazy.LazyRow(
+                        contentPadding = PaddingValues(vertical = 8.dp)
+                    ) {
                         items(tags.size){ index ->
                             val tag = tags[index]
                             androidx.compose.material3.FilterChip(
                                 selected = (selectedTag == tag),
                                 onClick = { selectedTag = tag},
-                                label = {Text(tag)},
-                                modifier = Modifier.padding(end = 4.dp)
+                                label = {
+                                    Text(tag, style = MaterialTheme.typography.bodySmall)
+                                },
+                                modifier = Modifier.padding(end = 8.dp),
+                                // 선택 시 색상 변화
+                                border = androidx.compose.material3.FilterChipDefaults.filterChipBorder(
+                                    enabled = !isUploading,
+                                    selected = (selectedTag == tag),
+                                    borderColor = androidx.compose.ui.graphics.Color.LightGray,
+                                    selectedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                                    borderWidth = 1.dp,
+                                    selectedBorderWidth = 0.dp,
+                                ),
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                                colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = primary,
+                                    selectedLabelColor = background,
+                                    labelColor = fontColor
+                                )
                             )
                         }
                     }

@@ -2,9 +2,8 @@ package com.a32b.plant.ui.feature.home.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.data.di.CurrentUser
 import com.a32b.plant.data.repository.PotRepository
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -12,8 +11,7 @@ import kotlinx.coroutines.launch
 
 class NewBornTreeViewModel(private val potRepository: PotRepository) : ViewModel() {
 
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
-    private val currentUid: String get() = auth.currentUser?.uid?: ""
+    private val currentUid: String get() = CurrentUser.uid
     private val currentUidTest = "test_user_uid" // 테스트용 id 지정
 
     //1. DB -> 태그 내용
@@ -42,7 +40,12 @@ class NewBornTreeViewModel(private val potRepository: PotRepository) : ViewModel
 
     //DB -> 새 화분 생성
     fun createPot(tag: String, name: String, onSuccess: () -> Unit){
+        if(currentUid.isEmpty()){
+            _errorMessage.value = "사용자 정보가 없습니다. 다시 로그인해주세요."
+            return
+        }
         viewModelScope.launch {
+            _isUploading.value = true
             val result = potRepository.addPot(currentUid, tag, name)
             _isUploading.value = false
 

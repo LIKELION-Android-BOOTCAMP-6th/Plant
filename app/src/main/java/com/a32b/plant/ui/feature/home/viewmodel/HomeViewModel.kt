@@ -4,12 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.data.di.AppContainer
 import com.a32b.plant.data.model.PotInfo
+import com.a32b.plant.data.model.UserProfile
 import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.data.di.CurrentUser
 import com.a32b.plant.data.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import java.time.LocalDateTime
 class HomeViewModel(private val userRepository: UserRepository) : ViewModel() {
 
@@ -18,9 +21,7 @@ class HomeViewModel(private val userRepository: UserRepository) : ViewModel() {
     변수명 : 외부에서 읽는 데이터.
     _변수명이 바뀌면 자동으로 값이 업데이트가 되게 하기 위해 .asStaeFlow() 붙이기
      */
-    // 실제 운영 시에는 Firebase Auth에서 UID를 가져와야..
-    // 현재는 DB에 데이터가 없어서 예시용
-    private val currentUid = "test_user_uid"
+    private val currentUid: String get() = CurrentUser.uid
     private val _userName = MutableStateFlow("사용자")
     val userName = _userName.asStateFlow()
     private val _currentDate = MutableStateFlow("")
@@ -40,10 +41,12 @@ class HomeViewModel(private val userRepository: UserRepository) : ViewModel() {
         val current = LocalDateTime.now()
         _currentDate.value = TimeFormatter.formatToKoreanDate(current)    }
     private fun observeUserProfile() {
+        val uid = CurrentUser.uid
+        if(uid.isEmpty()) return
         viewModelScope.launch {
             userRepository.getUserProfile(currentUid).collectLatest { profile ->
                 profile?.let { user ->
-                    _userName.value = user.nickname
+                    _userName.value = user.nickname.toString()
                     _potList.value = user.potList
 
                     val pots = user.potList
@@ -71,17 +74,7 @@ class HomeViewModel(private val userRepository: UserRepository) : ViewModel() {
 
 //      2. DB(Firestore)에 마지막 선택된 화분 ID 저장
         viewModelScope.launch {
-            try {
-                // userRepository에 해당 기능을 수행하는 함수가 있다고 가정.
-                userRepository.updateLastSelectedPot(currentUid, pot.id)
-            } catch (e: Exception) {
-                // 에러 처리 (필요시)
-            }
+            userRepository.updateLastSelectedPot(currentUid, pot.id)
         }
     }
-
-    fun goToNewbornTreeScreen() {
-
-    }
-
  }
