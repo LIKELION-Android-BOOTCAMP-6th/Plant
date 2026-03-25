@@ -21,8 +21,6 @@ class HomeViewModel(private val userRepository: UserRepository) : ViewModel() {
     변수명 : 외부에서 읽는 데이터.
     _변수명이 바뀌면 자동으로 값이 업데이트가 되게 하기 위해 .asStaeFlow() 붙이기
      */
-    // 실제 운영 시에는 Firebase Auth에서 UID를 가져와야..
-    // 현재는 DB에 데이터가 없어서 예시용
     private val currentUid: String get() = CurrentUser.uid
     private val _userName = MutableStateFlow("사용자")
     val userName = _userName.asStateFlow()
