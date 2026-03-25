@@ -22,6 +22,7 @@ import androidx.navigation.NavController
 import com.a32b.plant.core.component.ProfileImage
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.data.di.ViewModelFactory
 import com.a32b.plant.data.model.PotInfo
 import com.a32b.plant.ui.feature.home.viewmodel.HomeViewModel
 import com.a32b.plant.ui.theme.background
@@ -30,7 +31,7 @@ import com.a32b.plant.ui.theme.fontColor
 
 @Composable
 fun HomeScreen(navController: NavController) {
-    val viewModel: HomeViewModel = viewModel()
+    val viewModel: HomeViewModel = viewModel(factory = ViewModelFactory.homeViewModelFactory)
     val userName by viewModel.userName.collectAsState()
     val currentDate by viewModel.currentDate.collectAsState() // 로컬 날짜 획득
     val displayPot by viewModel.displayPot.collectAsState()

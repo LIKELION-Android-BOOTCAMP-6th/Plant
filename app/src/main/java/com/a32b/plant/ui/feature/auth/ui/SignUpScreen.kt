@@ -5,27 +5,23 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
-import androidx.compose.material3.Typography
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -34,11 +30,11 @@ import androidx.navigation.NavController
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.ui.feature.auth.viewmodel.SignUpEvent
 import com.a32b.plant.ui.feature.auth.viewmodel.SignUpViewModel
-import com.a32b.plant.ui.theme.Typography
 import com.a32b.plant.ui.theme.background
 import com.a32b.plant.ui.theme.fontColor
 import com.a32b.plant.ui.theme.fontColorSub
 import com.a32b.plant.ui.theme.primary
+
 
 val TextFieldBackgroundColor = Color(0xFFEEEEEE)
 
@@ -59,6 +55,7 @@ fun SignUpScreen(
             when (event) {
                 is SignUpEvent.ShowToast ->
                     Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+
                 is SignUpEvent.NavigateToSignIn ->
                     navController.navigate(Routes.SignIn) {
                         popUpTo(Routes.SignUp) { inclusive = true }
@@ -112,18 +109,15 @@ fun SignUpScreen(
                     // 이메일
                     Text(
                         text = "이메일",
-                        fontWeight = FontWeight.Bold,
-                        color = fontColor,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.titleSmall
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     TextField(
                         value = uiState.email,
                         onValueChange = viewModel::onEmailChange,
                         placeholder = {
-                            Text(text = "이메일을 입력하세요.",
-                                color = fontColorSub,
-                                fontSize = 12.sp,
+                            Text(
+                                text = "이메일을 입력하세요.",
                                 style = MaterialTheme.typography.bodySmall
                             )
                         },
@@ -148,9 +142,7 @@ fun SignUpScreen(
                     // 비밀번호
                     Text(
                         text = "비밀번호",
-                        fontWeight = FontWeight.Bold,
-                        color = fontColor,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.titleSmall
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     TextField(
@@ -159,8 +151,6 @@ fun SignUpScreen(
                         placeholder = {
                             Text(
                                 text = "6자리 이상. 영문,특수문자,숫자 필수.",
-                                color = fontColorSub,
-                                fontSize = 12.sp,
                                 style = MaterialTheme.typography.bodySmall
                             )
                         },
@@ -182,7 +172,7 @@ fun SignUpScreen(
                                 Icon(
                                     imageVector = if (passwordVisible) Icons.Default.Visibility
                                     else Icons.Default.VisibilityOff,
-                                    contentDescription = null
+                                            contentDescription = null
                                 )
                             }
                         },
@@ -195,9 +185,7 @@ fun SignUpScreen(
                     // 비밀번호 확인
                     Text(
                         text = "비밀번호 확인",
-                        fontWeight = FontWeight.Bold,
-                        color = fontColor,
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.titleSmall
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     TextField(
@@ -219,9 +207,11 @@ fun SignUpScreen(
                         visualTransformation = if (passwordConfirmVisible) VisualTransformation.None
                         else PasswordVisualTransformation(),
                         trailingIcon = {
-                            IconButton(onClick = { passwordConfirmVisible = !passwordConfirmVisible }) {
+                            IconButton(onClick = {
+                                passwordConfirmVisible = !passwordConfirmVisible
+                            }) {
                                 Icon(
-                                    imageVector = if (passwordConfirmVisible) Icons.Default.Visibility
+                                    imageVector = if (passwordVisible) Icons.Default.Visibility
                                     else Icons.Default.VisibilityOff,
                                     contentDescription = null
                                 )
@@ -244,7 +234,13 @@ fun SignUpScreen(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        // 그림자 효과
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 6.dp,    // 기본 상태 그림자 높이
+                            pressedElevation = 2.dp,    // 버튼 누를 때 그림자 높이 (누르면 낮아지는 효과)
+                            disabledElevation = 0.dp    // 비활성화 상태일 때 그림자 높이 0
+                        )
                     ) {
                         if (uiState.isLoading) {
                             CircularProgressIndicator(
@@ -253,10 +249,12 @@ fun SignUpScreen(
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Text("회원가입 완료",
+                            Text(
+                                "회원가입 완료",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = background
-                                )
+                                color = background,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
 
@@ -264,35 +262,27 @@ fun SignUpScreen(
                         modifier = Modifier.padding(vertical = 16.dp),
                         color = MaterialTheme.colorScheme.outlineVariant
                     )
-
-                    // 이미 계정이 있으신가요? 로그인
                     Box(
                         modifier = Modifier.fillMaxWidth(),
                         contentAlignment = Alignment.Center
                     ) {
-                        ClickableText(
-                            text = buildAnnotatedString {
-                                withStyle(style = SpanStyle(color = fontColor)) {
-                                    append("이미 계정이 있으신가요? ")
-                                }
-                                withStyle(
-                                    style = SpanStyle(
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontWeight = FontWeight.Bold,
-                                        textDecoration = TextDecoration.Underline
-                                    )
-                                ) {
-                                    append("로그인")
-                                }
-                            },
-                            onClick = { offset ->
-                                val startIndex = "이미 계정이 있으신가요? ".length
-                                val endIndex = startIndex + "로그인".length
-                                if (offset in startIndex until endIndex) {
-                                    navController.popBackStack()
-                                }
-                            }
-                        )
+                        Row {
+                            Text(
+                                text = "이미 계정이 있으신가요? ",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontSize = 15.sp,
+                                color = fontColor
+                            )
+                            Text(
+                                text = "로그인",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                                textDecoration = TextDecoration.Underline,
+                                modifier = Modifier.clickable { navController.popBackStack() }
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))

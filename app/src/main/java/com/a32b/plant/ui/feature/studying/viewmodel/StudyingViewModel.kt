@@ -1,30 +1,26 @@
 package com.a32b.plant.ui.feature.studying.viewmodel
 
 import android.util.Log
-import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.data.di.AppContainer
 import com.a32b.plant.data.model.StudyingUser
+import com.a32b.plant.data.repository.StudyingRepository
 import com.a32b.plant.ui.theme.primary
-import com.a32b.plant.ui.theme.sub1
 import com.a32b.plant.ui.theme.sub2
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-class StudyingViewModel: ViewModel() {
-    private val repository = AppContainer.studyingRepository
+class StudyingViewModel(private val repository: StudyingRepository, private val tag: String) : ViewModel() {
     private var isStudying by mutableStateOf(true)
-    private var tag = ""
-    fun setTag(tag: String) {
-        this.tag = tag
-    }
+//    fun setTag(tag: String) {
+//        this.tag = tag
+//    }
 
     /** db에서 같은 태그로 공부중인 사용자 데이터 가져오기 */
     var studyingUsers by mutableStateOf<List<StudyingUser>>(emptyList())

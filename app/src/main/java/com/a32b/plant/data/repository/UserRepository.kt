@@ -33,15 +33,7 @@ class UserRepository(private val db: FirebaseFirestore, private val auth: Fireba
     suspend fun createUser(uid: String): Result<Unit> =
         suspendCancellableCoroutine { cont ->
             val newUser = UserProfile(
-                // 닉네임 설정 전까지 "",
-                // NULL 처리하기
-                nickname = "",
-                profileImg = "",
-                // isFirstLogin = true 로 로그인 시 닉네임 재설정 하고
-                isFirstLogin = true,
-                isDarkMode = false,
-                totalStudyTime = 0L,
-                completedPotsCount = 0
+                isFirstLogin = true,   // 회원가입 시 true 유지 -> 첫 로그인 후 닉네임 재설정 하고 false 바꾸기
             )
             db.collection("users")
                 .document(uid)
@@ -79,7 +71,7 @@ class UserRepository(private val db: FirebaseFirestore, private val auth: Fireba
 
     // ********************** autoLogin true 만들기
     fun isAutoLogin() = true
-    // fun isAutoLogin() = false
+//     fun isAutoLogin() = false
 
     // 마지막으로 선택한 화분의 ID를 Firestore에 업데이트합니다.
     suspend fun updateLastSelectedPot(uid: String, potId: String): Result<Unit> =
@@ -94,6 +86,8 @@ class UserRepository(private val db: FirebaseFirestore, private val auth: Fireba
                     // 실패 시 에러와 함께 resume
                     cont.resume(Result.failure(e))
                 }
+
         }
+
 }
 

@@ -1,6 +1,5 @@
 package com.a32b.plant.ui.feature.home.viewmodel
 
-import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.data.repository.PotRepository
@@ -11,9 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-class NewBornTreeViewModel(): ViewModel() {
-    private val potRepository: PotRepository = PotRepository(db = FirebaseFirestore.getInstance())
-
+class NewBornTreeViewModel(private val potRepository: PotRepository) : ViewModel() {
 
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
     private val currentUid: String get() = auth.currentUser?.uid?: ""

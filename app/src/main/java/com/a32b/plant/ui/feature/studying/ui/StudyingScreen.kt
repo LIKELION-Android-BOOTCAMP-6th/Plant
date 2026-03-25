@@ -41,6 +41,7 @@ import com.a32b.plant.R
 import com.a32b.plant.core.component.ProfileImage
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.data.di.ViewModelFactory
 import com.a32b.plant.data.model.StudyingUser
 import com.a32b.plant.ui.feature.studying.viewmodel.StudyingViewModel
 import com.a32b.plant.ui.theme.Typography
@@ -52,8 +53,6 @@ import java.time.LocalDateTime
 
 @Composable
 fun StudyingScreen(navController: NavController) {
-    //뷰모델 연결해주기
-    val viewModel : StudyingViewModel = viewModel()
     val context = LocalContext.current
 
     //이전 스택에서 보낸 값을 args에 넣어서 뽑아낼 수 있음
@@ -63,9 +62,12 @@ fun StudyingScreen(navController: NavController) {
     val title = args.title
     val potId = args.potId
     Log.d("tag", tag)
+    //뷰모델 연결해주기
+
+    val viewModel : StudyingViewModel = viewModel(factory = ViewModelFactory.studyingViewModelFactory(tag))
+
 
     LaunchedEffect(Unit) {
-        viewModel.setTag(tag)
         viewModel.fetchStudyingUsers()
     }
 

@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.a32b.plant.core.navigation.Routes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,20 +33,19 @@ fun CommunityPostScreen(navController: NavController) {
     var title by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
     var selectedTag by remember { mutableStateOf("고등학생") }
-    val tags = listOf("중학생", "고등학생", "대학생", "자격증","공유")
+    val tags = listOf("중학생", "고등학생", "대학생", "자격증", "공유")
 
     Scaffold(
-        // 🎨 배경색: 이미지와 동일한 연한 아이보리
-        containerColor = Color(0xFFFDFDF0),
+        containerColor = Color(0xFFFDFDF0), // 연한 아이보리 배경
         topBar = {
             TopAppBar(
-                title = {},
+                title = { Text("글쓰기", fontSize = 16.sp, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     // ✅ 사각형 라운드 뒤로가기 버튼
                     Surface(
                         modifier = Modifier
-                            .padding(start = 16.dp)
-                            .size(32.dp)
+                            .padding(start = 12.dp)
+                            .size(36.dp)
                             .clickable { navController.popBackStack() },
                         shape = RoundedCornerShape(8.dp),
                         color = Color.White,
@@ -62,7 +62,7 @@ fun CommunityPostScreen(navController: NavController) {
                     }
                 },
                 actions = {
-                    // ✅ 작고 아기자기한 등록 버튼
+                    // ✅ 등록 버튼: 클릭 시 커뮤니티 목록으로 이동
                     Surface(
                         modifier = Modifier
                             .padding(end = 16.dp)
@@ -72,8 +72,15 @@ fun CommunityPostScreen(navController: NavController) {
                                 } else if (content.isBlank()) {
                                     Toast.makeText(context, "본문을 입력해주세요", Toast.LENGTH_SHORT).show()
                                 } else {
-                                    // 모든 내용 입력 시 전 화면으로 이동
-                                    navController.popBackStack()
+                                    // 1. 성공 메시지
+                                    Toast.makeText(context, "성공적으로 등록되었습니다!", Toast.LENGTH_SHORT).show()
+
+                                    // 2. 🚀 커뮤니티 목록 화면으로 이동
+                                    // 주의: Routes.Community 부분은 본인의 Navigation 설정에 맞게 수정하세요.
+                                    navController.navigate(Routes.CommunityDetail) {
+                                        // 글쓰기 화면을 스택에서 제거 (뒤로가기 시 다시 글쓰기창이 안 나오게 함)
+                                        popUpTo(Routes.CommunityPost) { inclusive = true }
+                                    }
                                 }
                             },
                         shape = RoundedCornerShape(20.dp),
@@ -81,10 +88,10 @@ fun CommunityPostScreen(navController: NavController) {
                     ) {
                         Text(
                             text = "등록",
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                            fontSize = 12.sp,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.DarkGray
+                            color = Color(0xFF33691E)
                         )
                     }
                 },
@@ -106,23 +113,22 @@ fun CommunityPostScreen(navController: NavController) {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    placeholder = { Text("제목", color = Color.LightGray) },
+                    placeholder = { Text("제목을 입력하세요", color = Color.LightGray) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         unfocusedContainerColor = Color.White,
                         focusedContainerColor = Color.White,
-                        unfocusedBorderColor = Color(0xFFF0F0F0),
+                        unfocusedBorderColor = Color(0xFFE0E0E0),
                         focusedBorderColor = Color(0xFFC5E1A5)
                     ),
                     shape = RoundedCornerShape(8.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                     singleLine = true
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // 2️⃣ 태그 선택 영역
-                Text(text = "태그", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
+                Text(text = "카테고리 선택", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -134,12 +140,12 @@ fun CommunityPostScreen(navController: NavController) {
                             modifier = Modifier.clickable { selectedTag = tag },
                             shape = RoundedCornerShape(16.dp),
                             color = if (isSelected) Color(0xFF88AB75) else Color.White,
-                            border = if (isSelected) null else BorderStroke(1.dp, Color(0xFFF0F0F0))
+                            border = if (isSelected) null else BorderStroke(1.dp, Color(0xFFE0E0E0))
                         ) {
                             Text(
                                 text = tag,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                fontSize = 11.sp,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                fontSize = 12.sp,
                                 color = if (isSelected) Color.White else Color.Gray,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                             )
@@ -155,36 +161,29 @@ fun CommunityPostScreen(navController: NavController) {
                     onValueChange = { content = it },
                     placeholder = {
                         Text(
-                            text = "※ 커뮤니티 규칙에 위배되는 게시글은 통보 없이 삭제될 수 있습니다.\n" +
-                                    "1. 타인을 비방하는 글\n" +
-                                    "2. 학업 공유외 사용금지\n"+
-                                    "3. 도배 금지",
+                            text = "※ 커뮤니티 규칙에 위배되는 게시글은 통보 없이 삭제될 수 있습니다.\n\n" +
+                                    "1. 타인을 비방하거나 욕설 금지\n" +
+                                    "2. 학업 공유 외 목적 사용 금지\n" +
+                                    "3. 도배 및 광고 금지",
                             fontSize = 13.sp,
-                            lineHeight = 20.sp,
+                            lineHeight = 22.sp,
                             color = Color.LightGray
                         )
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 450.dp),
+                        .heightIn(min = 400.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         unfocusedContainerColor = Color.White,
                         focusedContainerColor = Color.White,
-                        unfocusedBorderColor = Color(0xFFF0F0F0),
+                        unfocusedBorderColor = Color(0xFFE0E0E0),
                         focusedBorderColor = Color(0xFFC5E1A5)
                     ),
-                    shape = RoundedCornerShape(8.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
+                    shape = RoundedCornerShape(8.dp)
                 )
-                
-                Spacer(modifier = Modifier.height(32.dp))
+
+                Spacer(modifier = Modifier.height(40.dp))
             }
         }
     }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun CommunityPostPreview() {
-    CommunityPostScreen(navController = rememberNavController())
 }
