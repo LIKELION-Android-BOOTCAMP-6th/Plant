@@ -5,14 +5,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.data.repository.PotRepository
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-class NewBornTreeViewModel(
-    private val potRepository: PotRepository
-): ViewModel() {
+class NewBornTreeViewModel(): ViewModel() {
+    private val potRepository: PotRepository = PotRepository(db = FirebaseFirestore.getInstance())
+
 
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
     private val currentUid: String get() = auth.currentUser?.uid?: ""

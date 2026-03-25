@@ -1,11 +1,11 @@
 package com.a32b.plant.ui.feature.mypage.viewmodel
 
 import android.util.Log
-import android.widget.Toast
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.data.di.AppContainer
+import com.a32b.plant.data.model.UserProfile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -20,29 +20,57 @@ class MyPageViewModel : ViewModel() {
      */
     private val _potId = MutableStateFlow<String>("")
     val potId = _potId.asStateFlow()
-    private val _userName = MutableStateFlow("사용자")
+
+    private val _userData = MutableStateFlow<UserProfile?>(null)
+    val userData = _userData.asStateFlow()
+    private val _userName = MutableStateFlow<String>("사용자")
     val userName = _userName.asStateFlow()
+
+    // update 결과 확인용 update 완료 후 true => 다이얼로그 창 닫기
+    private val _isUpdateSuccess = MutableStateFlow(false)
+    val isUpdateSuccess = _isUpdateSuccess.asStateFlow()
+
 
     init {
         viewModelScope.launch {
             _potId.value = userRepository.getPotId()
+            Log.d("mypage", "여기! --------------")
+            Log.d("mypage", "${_potId.value} --------------")
+            val result = userRepository.getUserProfile("WfFW9NVdg8NDXZPGNas4")
+//            _userData.value = result
+            Log.d("mypage", "여기! --------------")
+            Log.d("mypage", "$result ")
         }
     }
 
-    // repository 는 suspend 사용
-    // 여기에서는 launch 와 async 중 launch 사용
+
+
+
     fun updateProfile(nickname: String, imageLevel: String) {
-        Log.d("mypage", "MyPageViewModel - $nickname ") // Log.d nickname 출력 확인 완료
-        viewModelScope.launch {
-            _userName.value = nickname
-            userRepository.updateNicknameAndImage("WfFW9NVdg8NDXZPGNas4", nickname, imageLevel)
+        if (nickname.length <= 2) {
+            _isUpdateSuccess.value = false
+            return
+        } else {
+            viewModelScope.launch {
+                try {
+                    userRepository.updateNicknameAndImage(
+                        "WfFW9NVdg8NDXZPGNas4",
+                        nickname,
+                        imageLevel
+                    )
+                    _isUpdateSuccess.value = true
+                    _userName.value = nickname
+                } catch (e: Exception) {
+                    Log.e("error", e.message.toString())
+                    _isUpdateSuccess.value = false
+                }
+            }
         }
     }
 
-    fun checkNickname(txt: String) {
 
-        Regex
-
+    fun resetIsUpdateSuccess() {
+        _isUpdateSuccess.value = false
     }
 
 

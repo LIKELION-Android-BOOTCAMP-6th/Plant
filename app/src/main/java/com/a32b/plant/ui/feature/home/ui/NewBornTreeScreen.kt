@@ -39,12 +39,11 @@ import com.a32b.plant.ui.theme.background
 import com.a32b.plant.ui.theme.fontColor
 import com.a32b.plant.ui.theme.primary
 import com.a32b.plant.ui.theme.sub1
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 
 @Composable
-fun NewBornTree(navController: NavController,
+fun NewBornTreeScreen(navController: NavController,
                 viewModel: NewBornTreeViewModel = viewModel()
 ){
     val context = LocalContext.current
@@ -118,6 +117,41 @@ fun NewBornTree(navController: NavController,
                         )
                     }
                 }
+            }
+            // 태그 출력
+            item {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                ) {
+                    Text("태그 선택", style = MaterialTheme.typography.titleSmall)
+
+                    //태그
+                    androidx.compose.foundation.lazy.LazyRow {
+                        items(tags.size){ index ->
+                            val tag = tags[index]
+                            androidx.compose.material3.FilterChip(
+                                selected = (selectedTag == tag),
+                                onClick = { selectedTag = tag},
+                                label = {Text(tag)},
+                                modifier = Modifier.padding(end = 4.dp)
+                            )
+                        }
+                    }
+
+                }
+            }
+            // 제목 입력
+            item {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("화분 이름", style = MaterialTheme.typography.titleSmall)
+                    androidx.compose.material3.OutlinedTextField(
+                        value = potName,
+                        onValueChange = { potName = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("이름을 입력하세요") }
+                    )
+                }
+
             }
         }
     }

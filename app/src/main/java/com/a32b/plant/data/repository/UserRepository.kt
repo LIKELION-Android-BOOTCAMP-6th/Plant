@@ -9,6 +9,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.tasks.await
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -53,21 +54,29 @@ class UserRepository(private val db: FirebaseFirestore, private val auth: Fireba
                 }
         }
 
-    // 03-24 13:46 suspend 아직 사용법 정확히 몰라서 다시 알아본 후 수정 예정
-    suspend fun updateNicknameAndImage(uid: String, nickname: String, ImageLevel: String) {
-        db.collection("users").document(uid)
-            .update("nickname", nickname)
-            .addOnSuccessListener { Log.d("UserRepository", "updateNicknameAndImage 업데이트 성공") }
-            .addOnFailureListener { e ->
-                Log.w(
-                    "UserRepository",
-                    "updateNicknameAndImage Error updating document",
-                    e
+    // 유저 닉네임, 고른 대표 식물 이미지 업데이트
+    suspend fun updateNicknameAndImage(uid: String, nickname: String, imageLevel: String) {
+        try {
+            db.collection("users").document(uid)
+                .update(
+                    "nickname", nickname,
+                    "profileImg", imageLevel
                 )
-            }
+                .addOnSuccessListener { Log.d("UserRepository", "updateNicknameAndImage 업데이트 성공") }
+                .addOnFailureListener { e ->
+                    Log.w(
+                        "UserRepository",
+                        "updateNicknameAndImage Error updating document",
+                        e
+                    )
+                }.await()
+        } catch (e: Exception) {
+            Log.e("error", e.message.toString())
+        }
     }
 
     suspend fun getPotId() = "현재 팟 아이디"
+
     // ********************** autoLogin true 만들기
     fun isAutoLogin() = true
     // fun isAutoLogin() = false
