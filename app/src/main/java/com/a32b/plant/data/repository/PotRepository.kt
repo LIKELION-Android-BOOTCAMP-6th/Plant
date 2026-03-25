@@ -22,7 +22,8 @@ class PotRepository(private val db: FirebaseFirestore) {
                 return@addSnapshotListener
             }
             //name 필드값 추출 -> 리스트화
-            val tags = snapshot?.documents?.mapNotNull { it.getString("name") } ?: emptyList()
+            //⭐⭐⭐둘 중 하나 지워야 해서 밑에 걸로 살려둠. 작성하신 분이 보고 둘 중 하나 날리기
+//            val tags = snapshot?.documents?.mapNotNull { it.getString("name") } ?: emptyList()
             val tags = snapshot?.documents?.mapNotNull { it.id }?: emptyList()
 
             //data 전송
@@ -33,7 +34,8 @@ class PotRepository(private val db: FirebaseFirestore) {
     }
 
     // 새 화분 DB에 추가
-    suspend fun addPot(uid: String, tag: String, name: String): Result<Unit> =
+    //⭐⭐⭐addPot으로 되어 있는 함수가 두 개라 오류 발생함 둘 중 하나 지우기
+    suspend fun addPot2(uid: String, tag: String, name: String): Result<Unit> =
         suspendCancellableCoroutine { cont ->
             //ID 먼저 생성 -> 아직 생성되지 않은 ID 값을 어떻게 가져올 수 있을지 고민함.
             val newDocRef = db.collection("users").document(uid).collection("pots").document()
@@ -43,7 +45,7 @@ class PotRepository(private val db: FirebaseFirestore) {
                 id = newDocRef.id,
                 tag = tag,
                 name = name,
-                level = "0",
+                imageUrl = "0", //⭐⭐⭐일단 데이터클래스랑 맞춰놨는데, 디비에는 레벨로 표현되어 있어서 데이터클래스를 바꿔야 함
                 todayStudyingTime = 0L
             )
 
@@ -67,6 +69,7 @@ class PotRepository(private val db: FirebaseFirestore) {
             .mapNotNull { document -> document.getString("level") }
         val resultList = levelList.distinct().sorted()
         return resultList
+    }
     suspend fun addPot(uid: String, tag: String, name: String): Result<Unit> = suspendCancellableCoroutine { cont ->
         //ID 먼저 생성 -> 아직 생성되지 않은 ID 값을 어떻게 가져올 수 있을지 고민함.
         val newDocRef = db.collection("users").document(uid).collection("pots").document()

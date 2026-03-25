@@ -34,6 +34,8 @@ import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.a32b.plant.data.di.ViewModelFactory
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityListViewModel
 
 // --- 데이터 모델 ---
@@ -50,10 +52,8 @@ data class Post(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CommunityListScreen(
-    navController: NavController,
-    viewModel: CommunityListViewModel // 👈 ViewModel을 외부에서 받아옵니다.
-) {
+fun CommunityListScreen(navController: NavController) {
+    val viewModel : CommunityListViewModel = viewModel(factory = ViewModelFactory.communityListViewModelFactory)
     // 1. ViewModel의 상태 관찰 (실시간 검색 리스트 및 검색어)
     val postList by viewModel.uiState.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
