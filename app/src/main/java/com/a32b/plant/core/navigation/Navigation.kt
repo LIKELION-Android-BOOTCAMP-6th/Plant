@@ -24,10 +24,11 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
             composable<Routes.HomeMain> { HomeScreen(navController) }
             composable<Routes.Mypage> { MypageScreen(navController) }
             composable<Routes.CommunityList> { CommunityListScreen(navController) }
-            composable<Routes.CommunityPost> { CommunityPostScreen(navController) }
             composable<Routes.Studying> { StudyingScreen(navController) }
             composable<Routes.SignIn> { SignInScreen(navController) }
             composable<Routes.SignUp> { SignUpScreen(navController) }
+            // 🧭 새 화면(글쓰기 상세) 길 만들기 추가!
+            composable<Routes.CommunityPost> { CommunityPostScreen(navController) }
         }
     }
 

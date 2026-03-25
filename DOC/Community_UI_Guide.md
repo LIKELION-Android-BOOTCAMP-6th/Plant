@@ -1,91 +1,63 @@
-# 📋 [상세 가이드] 1단계: 화면의 기둥 세우기 (Scaffold 완벽 정복)
+# 📋 [최종 가이드] 커뮤니티 화면 & 게시글 작성 UI 완벽 조립법
 
-이 문서는 Jetpack Compose의 꽃인 **Scaffold(스캐폴드)**를 사용하여 커뮤니티 화면의 전체적인 틀을 잡는 방법을 비전공자도 이해하기 쉽게 상세히 설명합니다.
-
----
-
-## 🍱 왜 Scaffold를 '식판'이라고 부를까요?
-
-우리가 식당에 가면 국 칸, 밥 칸, 반찬 칸이 나뉜 식판을 받습니다. `Scaffold`도 마찬가지입니다. 구글이 이미 **"여기는 지붕(상단 바), 여기는 바닥(메뉴 바), 여기는 동동 버튼 자리"**라고 칸을 다 나눠두었습니다.
-
-우리는 그 칸에 우리가 원하는 부품(레고 블록)을 쏙쏙 집어넣기만 하면 됩니다.
+이 문서는 비전공자 개발자도 전문가처럼 화면을 구성하고 기능을 연결할 수 있도록 돕는 **최종 설계도**입니다.
 
 ---
 
-## 🔍 1단계 상세 분석: 4가지 핵심 칸 채우기
+## 🎨 1. 화면의 색감과 분위기 (Scaffold)
 
-### 1. topBar (상단 지붕 영역)
-화면 맨 위에서 스크롤을 내려도 고정되어 있는 부분입니다.
-- **주로 넣는 것**: 앱 이름, 뒤로가기 버튼, 검색창.
-- **상세 팁**: `TopAppBar`라는 부품을 사용합니다. 이 부품의 `title = { }` 안에는 무엇이든 넣을 수 있습니다.
+**"첫인상은 배경색에서 결정됩니다."**
 
----
-
-## 🆘 긴급 조치: topBar 괄호 오류 (Unresolved reference: modifier)
-
-비전공자가 가장 많이 실수하는 부분입니다! `topBar = { ... }`는 **중괄호`{ }`**를 써야 하는데, 코드가 꼬이면 빨간 줄이 생깁니다.
-
-### 🚨 무엇이 잘못되었나요?
-- **코드 상태**: `topBar = ( modifier = Modifier.statusBarsPadding() ) { ... }` ❌
-- **문제점**: 
-  1. `topBar`는 칸의 이름일 뿐이고, 바로 중괄호 `{ }`를 써야 합니다.
-  2. `modifier`(옷)는 칸 자체가 입는 게 아니라, 그 안에 들어온 **부품(`TopAppBar`)**이 입어야 합니다.
-
-### ✅ 올바른 조립 순서 (이대로 따라하세요!)
-```kotlin
-topBar = {  // <-- 시작은 무조건 중괄호 {
-    TopAppBar(
-        modifier = Modifier.statusBarsPadding(), // <-- 옷(modifier)은 여기에!
-        title = {
-            OutlinedTextField( ... )
-        }
-    )
-} // <-- 마지막은 무조건 중괄호 }
-```
+이미지와 똑같은 부드러운 느낌을 주기 위해 `Scaffold`에 옷을 입힙니다.
+- **배경색**: `containerColor = Color(0xFFFDFDF0)`를 사용하면 눈이 편안한 아이보리 톤이 완성됩니다.
+- **상태표시줄 보호**: `Modifier.statusBarsPadding()`을 잊지 마세요. 시계나 배터리 아이콘에 검색창이 가려지는 것을 막아줍니다.
 
 ---
 
-## 📱 상단 바가 카메라나 상태표시줄을 가릴 때 (Safe Area)
+## 🔍 2. 날씬하고 똑똑한 검색창 (BasicTextField)
 
-### 🚨 "수동으로 천장 여백 주기" (statusBarsPadding)
-- **해결법**: `TopAppBar`의 `modifier`에 `.statusBarsPadding()`을 추가하세요.
+**"돋보기 아이콘 하나에도 생명을 불어넣으세요."**
 
----
-
-## 🎨 검색창을 사진처럼 예쁘게 조절하는 법 (중요!)
-
-### 🚨 1. "가로로 꽉 채워라!" (Modifier.fillMaxWidth)
-### 🚨 2. "힌트 글자와 아이콘 넣기" (placeholder)
+일반적인 검색창보다 더 예쁜 모양을 만들기 위해 `BasicTextField`를 직접 디자인했습니다.
+- **디자인**: 흰색 배경(`Color.White`) + 둥근 테두리(`RoundedCornerShape(8.dp)`)를 조합합니다.
+- **키보드 마법**: `FocusRequester` 리모컨을 사용해 돋보기 아이콘만 눌러도 한글 키보드가 즉시 올라오도록 설정했습니다.
+- **검색 액션**: 키보드의 엔터키를 돋보기 모양(`ImeAction.Search`)으로 바꿔 사용자가 바로 검색할 수 있게 합니다.
 
 ---
 
-## 🆘 긴급 조치: innerPadding 빨간 줄 해결하기
+## 🧭 3. 화면 사이의 보물찾기 (Navigation)
 
-### 🚨 범인 1: "선물을 줬는데 왜 안 쓰니?" (Unused Parameter)
-- **해결법**: `LazyColumn` 괄호 안에 `modifier = Modifier.padding(innerPadding)`을 꼭 써주세요.
+**"글쓰기 버튼은 상세 페이지로 가는 포털입니다."**
+
+- **목적지 주소**: `Routes.CommunityPost()`가 바로 글을 쓰는 상세 화면의 주소입니다.
+- **이동 코드**: `navController.navigate(주소)`를 사용하면 기사님(NavController)이 안전하게 다음 화면으로 데려다줍니다.
+- **중요**: 이 기능을 쓰려면 `Navigation.kt` 지도에 새 화면을 반드시 등록해줘야 합니다. (이미 제가 등록해두었습니다!)
 
 ---
 
-## 💡 한눈에 보는 Scaffold 조립 도면 (최종본)
+## 📊 4. 실시간으로 반응하는 데이터 (State)
 
-```kotlin
-Scaffold(
-    topBar = { 
-        TopAppBar(
-            modifier = Modifier.statusBarsPadding(), // 상단 여백 보호!
-            title = {
-                OutlinedTextField(
-                    value = "",
-                    onValueChange = {},
-                    modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
-                    placeholder = { Text("검색") }
-                )
-            }
-        )
-    }
-) { innerPadding -> 
-    LazyColumn(modifier = Modifier.padding(innerPadding)) { 
-        /* 리스트 내용 */ 
-    }
-}
-```
+**"검색창에 글자를 치면 목록이 마법처럼 바뀝니다."**
+
+- **필터링**: 사용자가 검색창에 단어를 치면, 그 단어가 포함된 게시글만 골라내는 로직입니다.
+- **좋아요**: 하트 아이콘을 누르면 `isLiked` 상태가 변하면서 하트가 빨갛게 물들고 숫자가 올라갑니다.
+
+---
+
+## 📄 5. 게시글 상세 보기 (CommunityPost)
+
+**"본문과 댓글이 하나로 어우러지는 화면입니다."**
+
+- **스크롤 통합**: 게시글 본문과 댓글 리스트를 하나의 `LazyColumn`에 담아 전체 화면이 자연스럽게 스크롤되게 만듭니다.
+- **댓글 입력**: 본문 바로 아래에 입체감 있는 입력창(`Card`)을 배치하여 소통의 창구를 만듭니다.
+
+---
+
+## 🚨 자주 발생하는 '빨간 줄' 긴급 처방전
+
+1. **단위 오류**: `.dp` 앞에 한글이나 오타가 섞여 있지 않은지 확인하세요. (예: `300ㄴㅇ.dp` ❌ -> `50.dp` ✅)
+2. **Import 누락**: `Modifier`, `Color`, `Routes` 등에 빨간 줄이 가면 `Alt + Enter`로 택배(Import)를 받으세요.
+3. **괄호 짝**: `Scaffold`나 `LazyColumn`의 중괄호`{ }`가 잘 닫혔는지 확인하세요.
+
+---
+**이제 이 가이드를 옆에 두고 `CommunityScreen.kt`와 `CommunityPost.kt`를 멋지게 완성해보세요!**
