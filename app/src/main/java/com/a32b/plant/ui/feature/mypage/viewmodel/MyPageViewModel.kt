@@ -1,17 +1,17 @@
 package com.a32b.plant.ui.feature.mypage.viewmodel
 
 import android.util.Log
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.data.di.AppContainer
 import com.a32b.plant.data.model.UserProfile
+import com.a32b.plant.data.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class MyPageViewModel : ViewModel() {
-    private val userRepository = AppContainer.userRepository
+class MyPageViewModel(private val userRepository: UserRepository) : ViewModel() {
+//    private val userRepository = AppContainer.userRepository
 
     /** 데이터베이스에서 값을 받아와야 하는 경우
     _변수명 : 외부에서 값을 못 건들이게 하기 위해 private으로 선언

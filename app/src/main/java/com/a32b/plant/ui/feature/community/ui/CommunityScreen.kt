@@ -32,16 +32,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.data.di.ViewModelFactory
+import com.a32b.plant.ui.feature.community.viewmodel.CommunityListViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CommunityScreen(navController: NavController) {
+    val viewModel: CommunityListViewModel = viewModel(factory = ViewModelFactory.communityListViewModelFactory)
 
     // ✅ 1. 데이터 클래스 및 보조 함수 내부 선언
     data class Author(

@@ -52,12 +52,13 @@ import com.a32b.plant.ui.theme.Typography
 import com.a32b.plant.ui.theme.fontColor
 import com.a32b.plant.ui.theme.sub_green1
 import com.a32b.plant.R
+import com.a32b.plant.data.di.ViewModelFactory
 import com.a32b.plant.ui.theme.primary
 import com.a32b.plant.ui.theme.sub1
 
 @Composable
 fun MypageScreen(navController: NavController) {
-    val viewModel: MyPageViewModel = viewModel()
+    val viewModel: MyPageViewModel = viewModel(factory = ViewModelFactory.myPageViewModelFactory)
 //    val potId by viewModel.potId.collectAsState()
 
     val userName by viewModel.userName.collectAsState()

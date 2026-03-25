@@ -4,16 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.data.di.AppContainer
 import com.a32b.plant.data.model.PotInfo
-import com.a32b.plant.data.model.UserProfile
 import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.data.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 import java.time.LocalDateTime
-class HomeViewModel : ViewModel() {
-    private val userRepository = AppContainer.userRepository
+class HomeViewModel(private val userRepository: UserRepository) : ViewModel() {
 
     /** 데이터베이스에서 값을 받아와야 하는 경우
     _변수명 : 외부에서 값을 못 건들이게 하기 위해 private으로 선언

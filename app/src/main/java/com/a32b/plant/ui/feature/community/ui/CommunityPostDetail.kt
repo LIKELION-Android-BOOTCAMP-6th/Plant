@@ -29,14 +29,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.a32b.plant.R
+import com.a32b.plant.data.di.ViewModelFactory
+import com.a32b.plant.ui.feature.community.viewmodel.CommunityDetailViewModel
 import com.google.firebase.firestore.FirebaseFirestore
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CommunityPostScreen(navController: NavController) {
+
+    val viewModel: CommunityDetailViewModel = viewModel(factory = ViewModelFactory.communityDetailViewModelFactory("postId"))
 
     // ✅ 1. 데이터 클래스 내부 선언
     data class Comment(

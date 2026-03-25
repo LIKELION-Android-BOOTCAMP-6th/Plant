@@ -41,10 +41,11 @@ import com.a32b.plant.ui.theme.primary
 import com.a32b.plant.ui.theme.sub1
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import com.a32b.plant.data.di.ViewModelFactory
 
 @Composable
 fun NewBornTreeScreen(navController: NavController,
-                viewModel: NewBornTreeViewModel = viewModel()
+                      viewModel: NewBornTreeViewModel = viewModel(factory = ViewModelFactory.newBornTreeViewModelFactory)
 ){
     val context = LocalContext.current
     val tags by viewModel.dbTags.collectAsState()

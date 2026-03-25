@@ -27,10 +27,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.data.di.ViewModelFactory
+import com.a32b.plant.ui.feature.community.viewmodel.CommunityPostViewModel
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -39,6 +42,8 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun CommunityListScreen(navController: NavController) {
+
+    val viewModel: CommunityPostViewModel = viewModel(factory = ViewModelFactory.communityPostViewModelFactory(type = "type"))
 
     // ✅ 1. 데이터 클래스 및 보조 함수를 내부로 이동 (캡슐화)
     fun getCurrentDate(): String {
