@@ -9,5 +9,5 @@ import com.a32b.plant.ui.feature.studying.viewmodel.StudyResultViewModel
 
 @Composable
 fun StudyResultScreen(navController: NavController) {
-    val viewModel: StudyResultViewModel = viewModel(factory = ViewModelFactory.studyingViewModelFactory())
+//    val viewModel: StudyResultViewModel = viewModel(factory = ViewModelFactory.studyingViewModelFactory())
 }
