@@ -20,68 +20,83 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.toRoute
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.data.di.ViewModelFactory
 import com.a32b.plant.data.model.Post
+import com.a32b.plant.ui.feature.community.viewmodel.CommunityDetailViewModel
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityListViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CommunityScreen(navController: NavController, viewModel: CommunityListViewModel) {
-    val postList by viewModel.uiState.collectAsStateWithLifecycle()
-    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+fun CommunityDetailScreen(navController: NavController) {
+    val args = navController.currentBackStackEntry?.toRoute<Routes.CommunityList>()
+
+//    val viewModel: CommunityDetailViewModel = viewModel(
+//        factory = ViewModelFactory.communityDetailViewModelFactory(args.postId)
+//    )
+
+
+
+//    val postList by viewModel.uiState.collectAsStateWithLifecycle()
+//    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
 
     var showDialog by remember { mutableStateOf(false) }
     var selectedTags by remember { mutableStateOf(setOf<String>()) }
 
-    Scaffold(
-        containerColor = Color(0xFFFDFDF0),
-        topBar = {
-            CommunitySearchBar(
-                query = searchQuery,
-                onQueryChange = { viewModel.onSearchQueryChanged(it) },
-                onFilterClick = { showDialog = true },
-                isFilterActive = selectedTags.isNotEmpty()
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { navController.navigate(Routes.CommunityPost()) },
-                containerColor = Color(0xFFE6D5B8),
-                shape = CircleShape
-            ) {
-                Icon(painterResource(R.drawable.ic_edit), null, Modifier.size(24.dp))
-            }
-        }
-    ) { innerPadding ->
-        if (postList.isEmpty()) {
-            EmptyView()
-        } else {
-            LazyColumn(
-                modifier = Modifier.padding(innerPadding).fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(postList) { post ->
-                    PostItemCard(
-                        post = post,
-                        onClick = { navController.navigate(Routes.CommunityDetail(postId = post.id)) }
-                    )
-                }
-            }
-        }
-    }
+//    Scaffold(
+//        containerColor = Color(0xFFFDFDF0),
+//        topBar = {
+//            CommunitySearchBar(
+//                query = searchQuery,
+//                onQueryChange = { viewModel.onSearchQueryChanged(it) },
+//                onFilterClick = { showDialog = true },
+//                isFilterActive = selectedTags.isNotEmpty()
+//            )
+//        }
+//,
+//        floatingActionButton = {
+//            FloatingActionButton(
+//                onClick = { navController.navigate(Routes.CommunityPost()) },
+//                containerColor = Color(0xFFE6D5B8),
+//                shape = CircleShape
+//            ) {
+//                Icon(painterResource(R.drawable.ic_edit), null, Modifier.size(24.dp))
+//            }
+//        }
+//    )
+//    {
+//        innerPadding ->
+//        if (postList.isEmpty()) {
+//            EmptyView()
+//        } else {
+//            LazyColumn(
+//                modifier = Modifier.padding(innerPadding).fillMaxSize(),
+//                contentPadding = PaddingValues(16.dp),
+//                verticalArrangement = Arrangement.spacedBy(12.dp)
+//            ) {
+//                items(postList) { post ->
+//                    PostItemCard(
+//                        post = post,
+//                        onClick = { navController.navigate(Routes.CommunityDetail(postId = post.id)) }
+//                    )
+//                }
+//            }
+//        }
+//    }
 
-    if (showDialog) {
-        CategorySelectDialog(
-            selectedTags = selectedTags,
-            onTagClick = { tag ->
-                selectedTags = if (selectedTags.contains(tag)) selectedTags - tag else selectedTags + tag
-            },
-            onDismiss = { showDialog = false }
-        )
-    }
+//    if (showDialog) {
+//        CategorySelectDialog(
+//            selectedTags = selectedTags,
+//            onTagClick = { tag ->
+//                selectedTags = if (selectedTags.contains(tag)) selectedTags - tag else selectedTags + tag
+//            },
+//            onDismiss = { showDialog = false }
+//        )
+//    }
 }
 
 // --- 부품 1: 검색바 ---
@@ -124,15 +139,15 @@ fun PostItemCard(post: Post, onClick: () -> Unit) {
                 Text("  ${post.nickName}", fontSize = 12.sp, color = Color.Gray)
             }
             Spacer(Modifier.height(12.dp))
-            Row {
-                StatInfo(R.drawable.ic_community_comment, post.commentCount.toString())
-                Spacer(Modifier.width(16.dp))
-                StatInfo(
-                    if (post.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    post.likeCount.toString(),
-                    if (post.isLiked) Color.Red else Color.Gray
-                )
-            }
+//            Row {
+//                StatInfo(R.drawable.ic_community_comment, post.commentCount.toString())
+//                Spacer(Modifier.width(16.dp))
+//                StatInfo(
+//                    if (post.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+//                    post.likeCount.toString(),
+//                    if (post.isLiked) Color.Red else Color.Gray
+//                )
+//            }
         }
     }
 }
@@ -182,3 +197,4 @@ fun CategorySelectDialog(selectedTags: Set<String>, onTagClick: (String) -> Unit
 fun EmptyView() {
     Box(Modifier.fillMaxSize(), Alignment.Center) { Text("검색 결과가 없습니다 😭", color = Color.Gray) }
 }
+//}

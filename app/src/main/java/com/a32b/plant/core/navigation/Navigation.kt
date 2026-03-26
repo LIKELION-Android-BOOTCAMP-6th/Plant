@@ -37,20 +37,13 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
 
             // 2. 커뮤니티 글쓰기
             composable<Routes.CommunityPost> {
-                val postViewModel: CommunityPostViewModel = viewModel(
-                    factory = ViewModelFactory.communityPostViewModelFactory
-                )
-                CommunityPostScreen(navController, postViewModel)
+
+                CommunityPostScreen(navController)
             }
 
+            composable<Routes.CommunityDetail> {
 
-            composable<Routes.CommunityDetail> { backStackEntry ->
-
-                val route = backStackEntry.toRoute<Routes.CommunityDetail>()
-                val detailViewModel: CommunityDetailViewModel = viewModel(
-                    factory = ViewModelFactory.communityDetailViewModelFactory(route.postId)
-                )
-                CommunityDetailScreen(navController, detailViewModel)
+                CommunityDetailScreen(navController)
             }
 
             composable<Routes.Studying> { StudyingScreen(navController) }

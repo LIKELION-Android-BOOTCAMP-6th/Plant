@@ -21,17 +21,21 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.a32b.plant.data.di.ViewModelFactory
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityPostViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CommunityPostScreen(
-    navController: NavController,
-    viewModel: CommunityPostViewModel // ✅ ViewModel 연결
+    navController: NavController
+
 ) {
     val context = LocalContext.current
-
+    val viewModel: CommunityPostViewModel = viewModel(
+        factory = ViewModelFactory.communityPostViewModelFactory
+    )
     // 상태 관리 (입력값들)
     var title by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
