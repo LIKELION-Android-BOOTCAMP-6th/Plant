@@ -52,7 +52,7 @@ object ViewModelFactory {
     }
     fun studyingViewModelFactory(tag: String, potId:String, title:String, startTime: String, level: String) = object : ViewModelProvider.Factory{
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return StudyingViewModel(AppContainer.studyingRepository, tag, potId, title, startTime, level) as T
+            return StudyingViewModel(AppContainer.studyingRepository, AppContainer.potRepository,tag, potId, title, startTime, level) as T
         }
     }
     fun studyResultViewModelFactory(timestamp: String, tag: String, title: String, log: List<String>, level: String) = object : ViewModelProvider.Factory{

@@ -1,11 +1,11 @@
 package com.a32b.plant.data.repository
 
 import android.util.Log
+import com.a32b.plant.data.di.CurrentUser
+import com.a32b.plant.data.model.StudyLog
 import com.a32b.plant.data.model.Logs
 import com.a32b.plant.data.model.PotInfo
-import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ServerTimestamp
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -117,5 +117,17 @@ class PotRepository(private val db: FirebaseFirestore) {
             .mapNotNull { document -> document.getString("level") }
         val resultList = levelList.distinct().sorted()
         return resultList
+    }
+
+    fun createStudyLog(potId: String, studyLog: StudyLog){
+        db.collection("users").document(CurrentUser.uid)
+            .collection("pots").document(potId)
+            .collection("logs")
+            .add(studyLog)
+            .addOnSuccessListener {
+                Log.d("스터디로그", "성공적")
+            }
+
+
     }
 }

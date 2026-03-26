@@ -1,9 +1,15 @@
 package com.a32b.plant.ui.feature.studying.viewmodel
 
+import android.content.Context
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.data.di.CurrentUser
+import com.a32b.plant.data.model.StudyLog
 import com.a32b.plant.data.model.StudyingUser
+import com.a32b.plant.data.repository.PotRepository
 import com.a32b.plant.data.repository.StudyingRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -23,7 +29,8 @@ data class StudyingUiState(
     val studyingUsers: List<StudyingUser> = emptyList(),
     val isFinishDialogShown: Boolean = false, //다이얼로그 표출 여부 체크
     val studyLog: List<String> = emptyList(),
-    val isStduyFinish: Boolean = false //true시 학습 완전 종료, 디비로 값 넘기기
+    val isStduyFinish: Boolean = false, //true시 학습 완전 종료, 디비로 값 넘기기
+    val isInterruptedSession: Boolean = false //비정상 종료 여부 체크
 )
 
 sealed class StudyingEvent{
@@ -40,6 +47,7 @@ sealed class StudyingEvent{
 }
 class StudyingViewModel(
     private val repository: StudyingRepository,
+    private val potRepository: PotRepository,
     private val tag: String,
     private val potId: String,
     private val title: String,
@@ -55,6 +63,20 @@ class StudyingViewModel(
 
     /** 로컬에서 비정상 종료가 있는지 감지   */
 
+
+    /*
+    1. 데이터스토어에서 불러와
+    2. 빈 값이 아니면 저장되어 있는 유아이디랑 현재 사용자의 유아이디가 같은지 확인해
+    2-1. 같다면 이전 기록이 있다고 말하고, 이전 기록으로 학습을 이어갈건지 물어보는 다이얼로그를 띄워
+    2-2. 이어간다고 하면 -> 그 값으로 세팅해
+    2-3. 안 이어간다고 하면 걍 다이얼로그 닫고 끝내기
+    ⭐내일 와서 어플리케이션 파일 만들고 context 추가하기...
+     */
+//    fun getStudySession(): Boolean{
+//        viewModelScope.launch {
+//            repository.readSession()
+//        }
+//    }
 
     /** db에서 같은 태그로 공부중인 사용자 데이터 가져오기 */
     fun onStudyingUsersChange(){
@@ -80,9 +102,11 @@ class StudyingViewModel(
             while (true){
                 delay(1000)
                 onTimerChange()
-                if(_uiState.value.timer % 600000L == 0L){
+//                if(_uiState.value.timer % 600000L == 0L){
+                if(_uiState.value.timer % 6000L == 0L){
                     repository.updateStudyingUser(
-                        StudyingUser("zz", "zz", "lv.2", tag, _uiState.value.timer)
+                        StudyingUser(CurrentUser.uid, CurrentUser.nickname, CurrentUser.profileImg, tag, _uiState.value.timer)
+//                        StudyingUser("zz", "zz", "lv.2", tag, _uiState.value.timer)
                     )
                     onStudyingUsersChange()
                 }
@@ -117,11 +141,16 @@ class StudyingViewModel(
     fun onFinishStudyingClick() {
 
         //디비로 사용자의 입력값 넘기고
-        //로그 데이터클래스 하나 만들기 - title, contents <- log, studyingTime
+
+        val timestamp = "${TimeFormatter.formatToKoreanDate(LocalDateTime.now())} $startTime ~ ${getCurrentTime()}"
+        fun setStudyLog(): StudyLog = StudyLog(timestamp, _uiState.value.studyLog, _uiState.value.timer)
+        potRepository.createStudyLog(potId, setStudyLog())
+        repository.deleteStudyingUser()
+
         //스터디 리절트로 이동할 때 넘길 값들이 필요함 실드 클래스에 추가할 것
         viewModelScope.launch {
             _eventChannel.send(StudyingEvent.NavigateToStudyResult(
-                timestamp = "${TimeFormatter.formatToKoreanDate(LocalDateTime.now())} $startTime ~ ${getCurrentTime()}",
+                timestamp = timestamp,
                 tag = tag,
                 potId = potId,
                 title = title,
@@ -130,6 +159,7 @@ class StudyingViewModel(
                 level = level
             ))
         }
+
     }
 
 

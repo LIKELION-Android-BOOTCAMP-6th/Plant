@@ -2,7 +2,7 @@ package com.a32b.plant.data.model
 
 import com.google.firebase.Timestamp
 
-data class Log(
+data class StudyLog(
     val title: String,
     val contents: List<String>,
     val studyingTime: Long,

@@ -2,6 +2,7 @@ package com.a32b.plant.data.repository
 
 import android.content.Context
 import android.util.Log
+import com.a32b.plant.data.di.CurrentUser
 import com.a32b.plant.data.local.StudyingDataStore
 import com.a32b.plant.data.local.StudyingSession
 import com.a32b.plant.data.model.StudyingUser
@@ -17,6 +18,7 @@ class StudyingRepository(private val db: FirebaseFirestore) {
                 .get()
                 .await()
                 .toObjects(StudyingUser::class.java)
+                .sortedByDescending { it.studyingTime }
         } catch (e: Exception){
             Log.e("error", e.message.toString())
             emptyList()
@@ -45,15 +47,18 @@ class StudyingRepository(private val db: FirebaseFirestore) {
         }
 
     }
+
+    fun deleteStudyingUser(){
+        db.collection("studying")
+            .whereEqualTo("uid", CurrentUser.uid)
+            .get()
+            .addOnSuccessListener { doc ->
+                doc.firstOrNull()?.reference?.delete()
+            }
+    }
+
     suspend fun saveSession(context: Context, session: StudyingSession) = datasore.save(context, session)
     fun readSession(context: Context) = datasore.read(context)
     suspend fun clearSession(context: Context) = datasore.clear(context)
 
-    suspend fun deleteStudyingUser(){
-
-    }
-
-    suspend fun saveStudyLog(){
-
-    }
 }

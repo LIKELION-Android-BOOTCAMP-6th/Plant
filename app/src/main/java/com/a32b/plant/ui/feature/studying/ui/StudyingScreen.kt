@@ -84,7 +84,6 @@ fun StudyingScreen(navController: NavController) {
     val title = args.title
     val potId = args.potId
     val level = args.level
-    Log.d("tag", tag)
 
     val startTime = remember {
         val now = LocalDateTime.now()
@@ -213,8 +212,8 @@ fun StudyingUserCard(users: List<StudyingUser>, tag: String){
         colors = CardDefaults.cardColors(containerColor = background),
         ) {
         Column(modifier = Modifier.padding(10.dp)) {
-            Text("$tag 5", style = MaterialTheme.typography.titleSmall)
-            users.forEach { user ->
+            Text("$tag ${users.size}", style = MaterialTheme.typography.titleSmall)
+            users.take(3).forEach { user ->
                 StudyinUserItem(user)
                 Spacer(modifier = Modifier.height(8.dp))
             }
