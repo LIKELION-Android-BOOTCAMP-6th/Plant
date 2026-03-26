@@ -44,6 +44,7 @@ class MyPageViewModel(
     init {
         viewModelScope.launch {
             CurrentUser.uid = "ARnkLKJE60MuhYMgivXweboI6ch2"
+//            CurrentUser.uid = "RVmMPR05kVYeLyWYknUbGdmDnGG2"
             userRepository.getUserProfile(CurrentUser.uid).collectLatest { profile ->
                 if (profile != null) {
                     _uiState.update {
@@ -54,7 +55,6 @@ class MyPageViewModel(
                             totalStudyTime = formatToDigitalClock(profile.totalStudyTime ?: 0L)
                         )
                     }
-
                 } else {
                     Log.e("PlantLog", "MyPageViewModel init - 사용자 uid 검색 결과 null")
                 }
@@ -67,6 +67,7 @@ class MyPageViewModel(
         viewModelScope.launch {
             val result = potRepository.getDuplicationLevelList(CurrentUser.uid)
             _uiState.update { it.copy(levelList = result) }
+//            Log.d("PlantLog", "getImageLevelList() - $result")
         }
     }
 
@@ -113,11 +114,11 @@ class MyPageViewModel(
         viewModelScope.launch {
             try {
                 Log.d("plantLog", "----------3")
-//                userRepository.updateIsDarkMode(
-//                    uid = CurrentUser.uid,
-//                    state = state
-//                )
-//                _uiState.update { it.copy(isDarkMode = state) }
+                userRepository.updateIsDarkMode(
+                    uid = CurrentUser.uid,
+                    state = state
+                )
+                _uiState.update { it.copy(isDarkMode = state) }
 
             } catch (e: Exception) {
                 Log.e("error", e.message.toString())

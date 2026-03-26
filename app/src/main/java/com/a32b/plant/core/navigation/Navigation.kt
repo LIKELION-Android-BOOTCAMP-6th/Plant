@@ -19,18 +19,20 @@ import com.a32b.plant.ui.feature.community.viewmodel.CommunityDetailViewModel
 import com.a32b.plant.ui.feature.home.ui.HomeScreen
 import com.a32b.plant.ui.feature.home.ui.NewBornTreeScreen
 import com.a32b.plant.ui.feature.mypage.ui.MypageScreen
+import com.a32b.plant.ui.feature.mypage.ui.MypageSetting
 import com.a32b.plant.ui.feature.splash.SplashViewModel
 import com.a32b.plant.ui.feature.studying.ui.StudyResultScreen
 import com.a32b.plant.ui.feature.studying.ui.StudyingScreen
 
 @Composable
-fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewModel){
+fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewModel) {
 
     val destination by viewModel.destination.collectAsState()
     destination?.let { startRoute ->
-        NavHost(navController = navController, startDestination = startRoute){
+        NavHost(navController = navController, startDestination = startRoute) {
             composable<Routes.HomeMain> { HomeScreen(navController) }
             composable<Routes.Mypage> { MypageScreen(navController) }
+            composable<Routes.MypageSetting> { MypageSetting(navController) }
 
             // 1. 커뮤니티 리스트
             composable<Routes.CommunityList> { CommunityListScreen(navController) }
