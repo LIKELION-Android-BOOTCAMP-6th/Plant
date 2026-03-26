@@ -44,7 +44,7 @@ object ViewModelFactory {
             return CommunityListViewModel(AppContainer.postRepository) as T
         }
     }
-    fun studyingViewModelFactory(tag: String, potId:String) = object : ViewModelProvider.Factory{
+    fun studyingViewModelFactory(tag: String, potId:String, title:String, startTime: String) = object : ViewModelProvider.Factory{
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return StudyingViewModel(AppContainer.studyingRepository, tag, potId) as T
         }

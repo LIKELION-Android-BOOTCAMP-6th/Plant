@@ -64,6 +64,7 @@ import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.data.di.ViewModelFactory
 import com.a32b.plant.data.model.StudyingUser
+import com.a32b.plant.ui.feature.studying.viewmodel.StudyingEvent
 import com.a32b.plant.ui.feature.studying.viewmodel.StudyingViewModel
 import com.a32b.plant.ui.theme.Typography
 import com.a32b.plant.ui.theme.background
@@ -71,6 +72,7 @@ import com.a32b.plant.ui.theme.primary
 import com.a32b.plant.ui.theme.sub1
 import com.a32b.plant.ui.theme.sub2
 import java.time.LocalDateTime
+import kotlin.math.log
 
 @Composable
 fun StudyingScreen(navController: NavController) {
@@ -82,9 +84,11 @@ fun StudyingScreen(navController: NavController) {
     val title = args.title
     val potId = args.potId
     Log.d("tag", tag)
-    //뷰모델 연결해주기
 
-    val viewModel : StudyingViewModel = viewModel(factory = ViewModelFactory.studyingViewModelFactory(tag, potId))
+    val startTime = remember {
+        val now = LocalDateTime.now()
+        TimeFormatter.formatToTimeOnly(now) }
+    val viewModel : StudyingViewModel = viewModel(factory = ViewModelFactory.studyingViewModelFactory(tag, potId, title, startTime))
 
     val uiState by viewModel.uiState.collectAsState()
     val timerButtonText = if (uiState.isStudying) "일시정지" else "학습하기"
@@ -92,17 +96,23 @@ fun StudyingScreen(navController: NavController) {
 
     LaunchedEffect(Unit) {
         viewModel.onStudyingUsersChange()
-        viewModel.event.collect {
-            navController.navigate(Routes.StudyResult){
-                popUpTo(Routes.HomeMain) { inclusive = false }
+        viewModel.event.collect { event ->
+            when(event) {
+                is StudyingEvent.NavigateToStudyResult -> {
+                    navController.navigate(Routes.StudyResult(
+                        timestamp = event.timestamp,
+                        tag = event.tag,
+                        title = event.title,
+                        log = event.log,
+                        time = event.time,
+                        potId = event.potId
+                    ))
+                }
             }
-
         }
     }
 
-    val startTime = remember {
-        val now = LocalDateTime.now()
-        TimeFormatter.formatToTimeOnly(now) }
+
 
     val studyingUsers = uiState.studyingUsers
     Surface(modifier = Modifier.fillMaxSize(),
@@ -139,6 +149,7 @@ fun StudyingScreen(navController: NavController) {
             Log.d("입력값 확인", logs.toString())
             viewModel.onIsStudyFinishChange()
             viewModel.setStudyLog(logs)
+            viewModel.onFinishStudyingClick()
         }, tag, title)
     }
 }

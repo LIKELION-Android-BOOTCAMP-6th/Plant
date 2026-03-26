@@ -1,11 +1,10 @@
 package com.a32b.plant.ui.feature.studying.viewmodel
 
-import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.data.model.StudyingUser
 import com.a32b.plant.data.repository.StudyingRepository
-import com.a32b.plant.ui.theme.sub2
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -14,6 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDateTime
 
 data class StudyingUiState(
     val tag: String,
@@ -27,12 +27,22 @@ data class StudyingUiState(
 )
 
 sealed class StudyingEvent{
-    object NavigateToStudyResult: StudyingEvent()
+    data class NavigateToStudyResult(
+        val timestamp: String, //날짜 시작시간 ~ 종료 시간
+        val tag: String,
+        val title: String,
+        val log: List<String>,
+        val time: Long,
+        val potId: String
+
+        ): StudyingEvent()
 }
 class StudyingViewModel(
     private val repository: StudyingRepository,
     private val tag: String,
-    private val potId: String
+    private val potId: String,
+    private val title: String,
+    private val startTime: String
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(StudyingUiState(tag = tag))
@@ -91,13 +101,24 @@ class StudyingViewModel(
     }
 
     fun onIsStudyFinishChange() = _uiState.update { it.copy(isStduyFinish = true) }
+    fun getCurrentTime(): String{
+        val now = LocalDateTime.now()
+        return TimeFormatter.formatToTimeOnly(now)
+    }
     fun onFinishStudyingClick() {
 
         //디비로 사용자의 입력값 넘기고
         //로그 데이터클래스 하나 만들기 - title, contents <- log, studyingTime
         //스터디 리절트로 이동할 때 넘길 값들이 필요함 실드 클래스에 추가할 것
         viewModelScope.launch {
-            _eventChannel.send(StudyingEvent.NavigateToStudyResult)
+            _eventChannel.send(StudyingEvent.NavigateToStudyResult(
+                timestamp = "${TimeFormatter.formatToKoreanDate(LocalDateTime.now())} $startTime ~ ${getCurrentTime()}",
+                tag = tag,
+                potId = potId,
+                title = title,
+                log = _uiState.value.studyLog,
+                time = _uiState.value.timer
+            ))
         }
     }
 

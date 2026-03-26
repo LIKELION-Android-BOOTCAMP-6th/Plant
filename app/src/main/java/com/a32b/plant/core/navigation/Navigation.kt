@@ -13,6 +13,7 @@ import com.a32b.plant.ui.feature.community.ui.CommunityPostScreen
 import com.a32b.plant.ui.feature.home.ui.HomeScreen
 import com.a32b.plant.ui.feature.mypage.ui.MypageScreen
 import com.a32b.plant.ui.feature.splash.SplashViewModel
+import com.a32b.plant.ui.feature.studying.ui.StudyResultScreen
 import com.a32b.plant.ui.feature.studying.ui.StudyingScreen
 
 @Composable
@@ -26,6 +27,7 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
             composable<Routes.CommunityList> { CommunityListScreen(navController) }
             composable<Routes.CommunityPost> { CommunityPostScreen(navController) }
             composable<Routes.Studying> { StudyingScreen(navController) }
+            composable<Routes.StudyResult> { StudyResultScreen(navController) }
             composable<Routes.SignIn> { SignInScreen(navController) }
             composable<Routes.SignUp> { SignUpScreen(navController) }
         }
