@@ -41,9 +41,9 @@ val TextFieldBackgroundColor = Color(0xFFEEEEEE)
 
 @Composable
 fun SignUpScreen(
-    navController: NavController,
-    viewModel: SignUpViewModel = viewModel(factory = ViewModelFactory.signUpViewModelFactory)
+    navController: NavController
 ) {
+    val viewModel: SignUpViewModel = viewModel(factory = ViewModelFactory.signUpViewModelFactory)
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 

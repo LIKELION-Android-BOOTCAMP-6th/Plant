@@ -42,9 +42,9 @@ import com.a32b.plant.ui.theme.primary
 
 @Composable
 fun SignInScreen(
-    navController: NavController,
-    viewModel: SignInViewModel = viewModel(factory = ViewModelFactory.signInViewModelFactory)
+    navController: NavController
 ) {
+    val viewModel: SignInViewModel = viewModel(factory = ViewModelFactory.signInViewModelFactory)
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
