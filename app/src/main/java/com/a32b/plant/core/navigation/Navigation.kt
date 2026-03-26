@@ -41,8 +41,6 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
                 CommunityPostScreen(navController)
             }
 
-
-
             composable<Routes.CommunityDetail> {
 
                 CommunityDetailScreen(navController)
