@@ -5,10 +5,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,7 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -53,19 +53,18 @@ import com.a32b.plant.ui.theme.fontColor
 import com.a32b.plant.ui.theme.sub_green1
 import com.a32b.plant.R
 import com.a32b.plant.data.di.ViewModelFactory
+import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageUiState
 import com.a32b.plant.ui.theme.primary
 
 @Composable
 fun MypageScreen(navController: NavController) {
     val viewModel: MyPageViewModel = viewModel(factory = ViewModelFactory.myPageViewModelFactory)
-//    val potId by viewModel.potId.collectAsState()
-
-    val userName by viewModel.userName.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
         // 프로필, 닉네임, 총 공부시간
-        ProfileRow(userName, viewModel = viewModel)
-//        -------
+        ProfileRow(uiState = uiState, viewModel = viewModel)
+
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -78,13 +77,21 @@ fun MypageScreen(navController: NavController) {
             ButtonTemplate(text = "앱 설정") { }
             ButtonTemplate(text = "공지사항") { }
             ButtonTemplate(text = "비밀번호 재설정") { }
-            DarkModeToggleButton()
+            DarkModeToggleButton(
+                isDarkMode = uiState.isDarkMode,
+                onToggle = {
+                    viewModel.toggleDarkMode()
+                }
+            )
         }
     }
 }
 
 @Composable
-fun DarkModeToggleButton() {
+fun DarkModeToggleButton(
+    isDarkMode: Boolean,
+    onToggle: () -> Unit
+) {
     val isDark = remember { mutableStateOf(false) }
 
     Button(
@@ -172,37 +179,44 @@ fun ButtonTemplate(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun ProfileRow(userName: String, viewModel: MyPageViewModel) {
+fun ProfileRow(uiState: MyPageUiState, viewModel: MyPageViewModel) {
     var isOpenDialog by remember { mutableStateOf(false) }
-    val isUpdateSuccess by viewModel.isUpdateSuccess.collectAsState()
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 03-24 공통 컴포넌트 가이드 참조 fun ProfileImage() 사용하기
-        Box( // 프로필이미지
+        // [수정 포인트] 03-24 공통 컴포넌트 가이드 적용
+        Box(
             modifier = Modifier
-                .size(60.dp)
-                .background(Color.LightGray, shape = CircleShape)
                 .clickable {
                     viewModel.getImageLevelList()
                     isOpenDialog = true
                 }
         ) {
-
+            ProfileImage(
+                level = uiState.profileImg,
+                size = 60
+            )
         }
+
         Spacer(modifier = Modifier.width(16.dp))
+
         Column(modifier = Modifier.weight(1F)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
-            )
-            {
-                Text(text = "$userName 님", style = Typography.bodySmall, color = fontColor)
+            ) {
+                Text(
+                    text = "${uiState.nickname} 님",
+                    style = Typography.bodySmall,
+                    color = fontColor
+                )
             }
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -214,10 +228,13 @@ fun ProfileRow(userName: String, viewModel: MyPageViewModel) {
     }
 
     if (isOpenDialog) {
-        ProfileDialog(onDismiss = { isOpenDialog = false }, userName, viewModel)
+        ProfileDialog(
+            onDismiss = { isOpenDialog = false },
+            uiState = uiState, // 뷰모델의 상태 가방 전달
+            viewModel = viewModel
+        )
     }
 }
-
 @Composable
 fun DividerImage() {
     Column(
@@ -232,12 +249,14 @@ fun DividerImage() {
     }
 }
 
-// 프로필 편집 클릭 시 이미지 3개 띄우는 함수
 @Composable
-fun SetImages(levelList: List<String>, selectedImageLevel: String, onImageClick: (String) -> Unit) {
+fun SetImages(
+    levelList: List<String>,
+    selectedImageLevel: String,
+    onImageClick: (String) -> Unit
+) {
     FlowRow(
-        modifier = Modifier
-            .fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         maxItemsInEachRow = 3
@@ -253,7 +272,8 @@ fun SetImages(levelList: List<String>, selectedImageLevel: String, onImageClick:
                         shape = CircleShape
                     )
                     .clickable { onImageClick(level) }
-            ){
+            ) {
+                // 네가 요청한 형식 그대로!
                 ProfileImage(level, 60)
             }
         }
@@ -262,82 +282,77 @@ fun SetImages(levelList: List<String>, selectedImageLevel: String, onImageClick:
 
 
 @Composable
-fun ProfileDialog(onDismiss: () -> Unit, userName: String, viewModel: MyPageViewModel) {
-    var newUserName by remember { mutableStateOf(userName) }
-    var selectedImageLevel by remember { mutableStateOf("lv.1") }
-    val context = LocalContext.current
-    val isUpdateSuccess by viewModel.isUpdateSuccess.collectAsState()
-    val levelList by viewModel.levelList.collectAsState()
+fun ProfileDialog(
+    onDismiss: () -> Unit,
+    uiState: MyPageUiState, // 1. 이제 가방(uiState)을 직접 받아!
+    viewModel: MyPageViewModel
+) {
+    // 다이얼로그 안에서만 임시로 쓸 상태들 (입력 중인 값)
+    var newUserName by remember { mutableStateOf(uiState.nickname) }
+    var selectedImageLevel by remember { mutableStateOf(uiState.profileImg) }
 
-    LaunchedEffect(isUpdateSuccess) {
-        if (isUpdateSuccess) {
+    val context = LocalContext.current
+
+    // 2. [중요] 업데이트 성공 시 창 닫기 로직
+    LaunchedEffect(uiState.isUpdateSuccess) {
+        if (uiState.isUpdateSuccess) {
             Toast.makeText(context, "업데이트 완료", Toast.LENGTH_SHORT).show()
             onDismiss()
             viewModel.resetIsUpdateSuccess()
         }
     }
+
     Dialog(onDismissRequest = { onDismiss() }) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(400.dp),
+                .wrapContentHeight(),
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
                     .padding(16.dp),
-                verticalArrangement = Arrangement.SpaceBetween
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
+                Column {
                     TextField(
+                        modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         value = newUserName,
-                        onValueChange = { v ->
-                            if (v.length <= 10) newUserName = v
-                        },
-                        label = {
-                            Text(
-                                "변경하실 닉네임을 입력해주세요 0글자~10글자 특수문자 제외",
-                                style = Typography.bodySmall,
-                                color = fontColor
-                            )
-                        },
-                        placeholder = {
-                            Text(
-                                "변경하실 닉네임을 입력해주세요",
-                                style = Typography.bodySmall,
-                                color = fontColor
-                            )
-                        }
+                        onValueChange = { if (it.length <= 10) newUserName = it },
+                        label = { Text("닉네임 변경 (3~10자)", style = Typography.labelSmall) },
+                        isError = uiState.nicknameError != null
                     )
-                    SetImages(
-                        levelList = levelList,
-                        selectedImageLevel = selectedImageLevel,
-                        onImageClick = { clickedLevel -> selectedImageLevel = clickedLevel })
+
+                    if (uiState.nicknameError != null) {
+                        Text(
+                            text = uiState.nicknameError,
+                            color = Color.Red,
+                            style = Typography.labelSmall,
+                            modifier = Modifier.padding(start = 8.dp, top = 4.dp)
+                        )
+                    }
                 }
+
+                SetImages(
+                    levelList = uiState.levelList,
+                    selectedImageLevel = selectedImageLevel,
+                    onImageClick = { selectedImageLevel = it }
+                )
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Button(
-                        onClick = { onDismiss() },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("취소", style = Typography.bodySmall, color = fontColor)
+                    Button(onClick = { onDismiss() }, modifier = Modifier.weight(1f)) {
+                        Text("취소")
                     }
                     Button(
                         onClick = {
-                            if (newUserName.length <= 2) {
-                                Toast.makeText(context, "닉네임 길이 3~10글자", Toast.LENGTH_SHORT).show()
-                            } else {
-                                viewModel.updateProfile(newUserName, selectedImageLevel)
-                            }
+                            viewModel.updateProfile(newUserName, selectedImageLevel)
                         },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("저장", style = Typography.bodySmall, color = fontColor)
+                        Text("저장")
                     }
                 }
             }

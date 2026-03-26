@@ -1,7 +1,12 @@
 package com.a32b.plant.data.repository
 
+import android.R.attr.name
+import android.R.attr.tag
+import android.util.Log
 import com.a32b.plant.data.model.PotInfo
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ServerTimestamp
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -55,6 +60,68 @@ class PotRepository(private val db: FirebaseFirestore) {
                     cont.resume(Result.failure(e))
                 }
         }
+
+    //ARnkLKJE60MuhYMgivXweboI6ch2
+    //VosJjoUJp6SplH0siKyoAIBZ7fk2
+// 이상 없으면 오전에 물어보고 model에 넣기
+// https://stackoverflow.com/questions/48474957/how-to-add-a-timestamp-in-firestore-with-android/48475027#48475027
+// https://oneuptime.com/blog/post/2026-02-02-kotlin-firebase/view
+    data class Pots(
+        val uid: String = "",
+        val tag: String = "",
+        val name: String = "",
+        val level: String = "",
+        val todayStudyingTime: Long = 0L,
+        @ServerTimestamp
+        val createdAt: Timestamp? = null,
+        val completedAt: Timestamp? = null,
+        val isCompleted: Boolean = false
+    )
+
+    data class Logs(
+        val title: String = "",
+        val content: List<String> = emptyList(),
+        val studyTime: Long = 0L,
+        @ServerTimestamp
+        val createdAt: Timestamp? = null
+    )
+
+    //    "timestamp" to FieldValue.serverTimestamp()
+    suspend fun createPot() {
+        val pot = Pots(
+            uid = "VosJjoUJp6SplH0siKyoAIBZ7fk2",
+            tag = "자격증",
+            name = "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+            level = "lv.3",
+            todayStudyingTime = 0L,
+            isCompleted = false
+        )
+        val log = Logs(
+            title = "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+            content = listOf(
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+                "학습내용abcdabcdefghiabcdabcdefghiabcdabcdefghi",
+                "학습내용5555555555555555555 5 5 55 55 5  5",
+                "abcdabcdefghiabcdabcdefghiabcdabcdefghi",
+                "ddddddddddsdfsdfsdf",
+                ""
+            ),
+            studyTime = 10L
+        )
+
+        db.collection("pots")
+            .add(pot)
+            .addOnSuccessListener { document ->
+                val potDocId = document.id
+                Log.d("PlantLog", "생성 성공, ID : $potDocId")
+                db.collection("pots")
+                    .document(potDocId)
+                    .collection("logs").add(log)
+                    .addOnSuccessListener {
+                        Log.d("PlantLog", "logs add 완료")
+                    }
+            }
+    }
 
 
     suspend fun getDuplicationLevelList(uid: String): List<String> {
