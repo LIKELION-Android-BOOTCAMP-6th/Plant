@@ -1,12 +1,19 @@
 package com.a32b.plant.data.model
 
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.ServerTimestamp
+
 //화분 정보 모음
 data class PotInfo(
     val id: String = "",
     val tag: String = "",
     val name: String = "",
     val imageUrl: String = "",
-    val pottotalStudyingTime: Long? = null
+    val pottotalStudyingTime: Long? = null,
+    @ServerTimestamp
+    val createdAt: Timestamp? = null,
+    val completedAt: Timestamp? = null,
+    val isCompleted: Boolean = false
 ){
     //레벨 업 계산
     val level: String get(){
@@ -24,3 +31,10 @@ data class PotInfo(
     }
 
 }
+data class Logs(
+    val title: String = "",
+    val content: List<String> = emptyList(),
+    val studyTime: Long = 0L,
+    @ServerTimestamp
+    val createdAt: Timestamp? = null
+)

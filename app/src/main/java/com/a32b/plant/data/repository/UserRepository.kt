@@ -16,18 +16,40 @@ import kotlin.coroutines.resumeWithException
 
 class UserRepository(private val db: FirebaseFirestore, private val auth: FirebaseAuth) {
     // 특정 유저의 데이터를 실시간 Flow로 반환
+    // 특정 유저의 데이터 + 하위 pots 목록까지 "모두" 실시간으로 감치
     fun getUserProfile(uid: String): Flow<UserProfile?> = callbackFlow {
-        val docRef = db.collection("users").document(uid)
-
-        val listener = docRef.addSnapshotListener { snapshot, error ->
-            if (error != null) {
-                close(error)
-                return@addSnapshotListener
-            }
-            val profile = snapshot?.toObject(UserProfile::class.java)
-            trySend(profile)
+        if (uid.isEmpty()) {
+            trySend(null)
+            return@callbackFlow
         }
-        awaitClose { listener.remove() }
+        val userDocRef = db.collection("users").document(uid)
+        val potsCollectionRef = userDocRef.collection("pots")
+
+        var userProfile: UserProfile? = null
+
+        // 1. 유저 정보 실시간 리스너
+        val userListener = userDocRef.addSnapshotListener { userSnapshot, _ ->
+            userProfile = userSnapshot?.toObject(UserProfile::class.java)
+
+            // 유저 정보가 오면 화분 목록도 쿼리해서 전송
+            potsCollectionRef.get().addOnSuccessListener { potsSnapshot ->
+                val pots = potsSnapshot.toObjects(PotInfo::class.java)
+                trySend(userProfile?.copy(potList = pots))
+            }
+        }
+
+        // 2. 화분 목록 실시간 리스너 (화분 추가/삭제 시에도 UI 즉시 반영)
+        val potsListener = potsCollectionRef.addSnapshotListener { potsSnapshot, _ ->
+            val pots = potsSnapshot?.toObjects(PotInfo::class.java) ?: emptyList()
+            if (userProfile != null) {
+                trySend(userProfile?.copy(potList = pots))
+            }
+        }
+
+        awaitClose {
+            userListener.remove()
+            potsListener.remove()
+        }
     }
 
     // 유저 프로필 1회성 가져오기 (로그인 시 isFirstLogin 체크 등)
