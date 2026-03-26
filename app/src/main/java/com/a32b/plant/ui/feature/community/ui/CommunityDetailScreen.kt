@@ -39,6 +39,8 @@ fun CommunityDetailScreen(navController: NavController) {
 //        factory = ViewModelFactory.communityDetailViewModelFactory(args.postId)
 //    )
 
+
+
 //    val postList by viewModel.uiState.collectAsStateWithLifecycle()
 //    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
 
