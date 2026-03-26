@@ -41,7 +41,7 @@ class HomeViewModel(private val userRepository: UserRepository) : ViewModel() {
         val current = LocalDateTime.now()
         _currentDate.value = TimeFormatter.formatToKoreanDate(current)    }
     private fun observeUserProfile() {
-        val uid = CurrentUser.uid
+        val uid = currentUid
         if(uid.isEmpty()) return
         viewModelScope.launch {
             userRepository.getUserProfile(currentUid).collectLatest { profile ->
@@ -49,25 +49,28 @@ class HomeViewModel(private val userRepository: UserRepository) : ViewModel() {
                     _userName.value = user.nickname.toString()
                     _potList.value = user.potList
 
-                    val pots = user.potList
-                    _displayPot.value = when {
-                        //case 1 : 화분이 아예 없는 경우
-                        pots.isEmpty() -> PotInfo(id = "", name = "화분을 추가해주세요")
-
-                        //case 2 : 화분이 하나만 있는 경우
-                        pots.size == 1 -> pots[0]
-
-                        //case 3: 화분이 2개 이상인 경우
-                        else -> {
-                            val lastPot = pots.find { it.id == user.lastSelectedPotId }
-                            lastPot ?: pots[0]
-                        }
-                    }
+                    _displayPot.value = calculateDisplayPot(user)
                 }
             }
         }
     }
 
+    private fun calculateDisplayPot(user: UserProfile): PotInfo{
+        val pots = user.potList
+        return when {
+            //case 1 : 화분이 아예 없는 경우
+            pots.isEmpty() -> PotInfo(id = "", name = "화분을 추가해주세요")
+
+            //case 2 : 화분이 하나만 있는 경우
+            pots.size == 1 -> pots[0]
+
+            //case 3: 화분이 2개 이상인 경우
+            else -> {
+                val lastPot = pots.find { it.id == user.lastSelectedPotId }
+                lastPot ?: pots[0]
+            }
+        }
+    }
     fun selectPot(pot: PotInfo) {
 //      1. 즉시 UI 반영 (상단 메인 카드 교체)
         _displayPot.value = pot
