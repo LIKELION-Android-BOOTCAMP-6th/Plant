@@ -102,10 +102,10 @@ fun HomeScreen(navController: NavController) {
                             // [콜백 2] 텍스트 클릭 시 -> 학습 계획창으로 이동
                             onTextClick = {
                                 //  계획 페이지 개발 완료 시 아래 주석 해제
-                                // navController.navigate(Routes.Plan(pot.id, pot.tag, pot.name))
+                                pot.id?.let { id ->
+                                    navController.navigate(Routes.StudyPlanDetail(pot.id))
+                                }
 
-                                // 현재는 클릭 시 메인 카드로 교체되게 하거나 토스트를 띄울 수 있습니다.
-                                viewModel.selectPot(pot)
                             }
                         )
                     }
