@@ -96,9 +96,6 @@ class SignUpViewModel(
                 // 2. 인증 메일 발송
                 sendVerificationEmail()
 
-                // uid SignInViewModel에 넘기기?
-                userRepository.createUser(uid).getOrThrow()
-
                 // 3. 이메일 인증 전까지 로그인 차단
                 auth.signOut()
 

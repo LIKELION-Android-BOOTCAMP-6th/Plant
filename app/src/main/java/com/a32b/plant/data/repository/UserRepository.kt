@@ -85,6 +85,17 @@ class UserRepository(private val db: FirebaseFirestore, private val auth: Fireba
                 }
         }
 
+    // 첫 로그인 완료 처리 (닉네임 저장 + isFirstLogin → false + isAutoLogin → true)
+    suspend fun completeFirstLogin(uid: String, nickname: String) {
+        db.collection("users").document(uid)
+            .update(
+                "nickname", nickname,
+                "isFirstLogin", false,
+                "isAutoLogin", true
+            )
+            .await()
+    }
+
     // 유저 닉네임, 고른 대표 식물 이미지 업데이트
     suspend fun updateNicknameAndImage(uid: String, nickname: String, imageLevel: String) {
         try {

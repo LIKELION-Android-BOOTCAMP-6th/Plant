@@ -16,9 +16,14 @@ import com.a32b.plant.ui.feature.studying.viewmodel.StudyingViewModel
 object ViewModelFactory {
     val signInViewModelFactory = object : ViewModelProvider.Factory{
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return SignInViewModel(AppContainer.userRepository, AppContainer.firebaseAuth) as T
+            return SignInViewModel(
+                AppContainer.userRepository,
+                AppContainer.firebaseAuth,
+                AppContainer.nicknameRepository
+            ) as T
         }
     }
+
     val signUpViewModelFactory = object : ViewModelProvider.Factory{
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return SignUpViewModel(AppContainer.firebaseAuth,AppContainer.userRepository) as T

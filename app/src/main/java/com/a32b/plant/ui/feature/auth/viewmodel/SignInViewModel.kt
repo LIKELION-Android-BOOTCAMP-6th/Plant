@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.data.di.CurrentUser
+import com.a32b.plant.data.repository.NicknameRepository
 import com.a32b.plant.data.repository.UserRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
@@ -20,7 +21,12 @@ data class SignInUiState(
     val email: String = "",
     val password: String = "",
     val isLoading: Boolean = false,
-    val emailError: String? = null
+    val emailError: String? = null,
+    // 닉네임 설정 다이얼로그
+    val showNicknameDialog: Boolean = false,
+    val nicknameInput: String = "",
+    val nicknameError: String? = null,
+    val isNicknameLoading: Boolean = false
 )
 
 // 일회성 이벤트
@@ -28,13 +34,12 @@ sealed class SignInEvent {
     data class ShowToast(val message: String) : SignInEvent()
     object NavigateToHome : SignInEvent()
     object NavigateToSignUp : SignInEvent()
-    // 첫 로그인 → 닉네임 설정 화면 (추후 구현 시 활성화)
-    // object NavigateToNicknameSetting : SignInEvent()
 }
 
 class SignInViewModel(
     private val userRepository: UserRepository,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val nicknameRepository: NicknameRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SignInUiState())
@@ -43,6 +48,9 @@ class SignInViewModel(
     private val _eventChannel = Channel<SignInEvent>(Channel.BUFFERED)
     val events = _eventChannel.receiveAsFlow()
 
+    // 로그인 성공 후 저장해두는 uid (닉네임 설정 시 사용)
+    private var loggedInUid: String = ""
+
     // 입력 변경
     fun onEmailChange(value: String) {
         _uiState.update { it.copy(email = value, emailError = null) }
@@ -50,6 +58,10 @@ class SignInViewModel(
 
     fun onPasswordChange(value: String) {
         _uiState.update { it.copy(password = value) }
+    }
+
+    fun onNicknameChange(value: String) {
+        _uiState.update { it.copy(nicknameInput = value, nicknameError = null) }
     }
 
     // 로그인 실행
@@ -92,8 +104,23 @@ class SignInViewModel(
                     return@launch
                 }
 
-                // 3. Firestore에서 유저 프로필 조회 (isFirstLogin 체크)
-                val profile = userRepository.getUserProfileOnce(user.uid)
+                loggedInUid = user.uid
+
+
+                // 3. Firestore에 유저 문서가 있는지 확인 → 없으면 생성
+                var profile = userRepository.getUserProfileOnce(user.uid)
+
+                if (profile == null) {
+                    // 이메일 인증 후 첫 로그인 → Firestore에 유저 데이터 생성
+                    val createResult = userRepository.createUser(user.uid)
+                    if (createResult.isFailure) {
+                        sendToast("유저 정보 생성에 실패했습니다. 다시 시도해주세요.")
+                        auth.signOut()
+                        return@launch
+                    }
+                    // 생성 직후 다시 조회
+                    profile = userRepository.getUserProfileOnce(user.uid)
+                }
 
                 // 4. CurrentUser 싱글톤 세팅
                 CurrentUser.set(
@@ -102,15 +129,13 @@ class SignInViewModel(
                     profileImg = profile?.profileImg ?: ""
                 )
 
-                // 5. 자동로그인 저장 (로그인 성공 = 자동로그인 활성화)
-                userRepository.updateAutoLogin(user.uid, true)
-
-                // 6. 첫 로그인 여부에 따라 분기
+                // 5. 첫 로그인 여부에 따라 분기
                 if (profile?.isFirstLogin == true) {
-                    // TODO: 닉네임 설정 화면으로 이동 (NewBornTree 등)
-                    // 현재는 홈으로 이동
-                    _eventChannel.send(SignInEvent.NavigateToHome)
+                    // 닉네임 설정 다이얼로그 표시
+                    _uiState.update { it.copy(showNicknameDialog = true) }
                 } else {
+                    // 자동로그인 저장 후 홈 진입
+                    userRepository.updateAutoLogin(user.uid, true)
                     _eventChannel.send(SignInEvent.NavigateToHome)
                 }
 
@@ -123,31 +148,77 @@ class SignInViewModel(
         }
     }
 
+    // 닉네임 설정
+    fun confirmNickname() {
+        val nickname = _uiState.value.nicknameInput.trim()
+
+        // 글자수 검증 (2~10자)
+        if (nickname.length < 2 || nickname.length > 10) {
+            _uiState.update { it.copy(nicknameError = "닉네임은 2자 이상 10자 이하로 입력해주세요.") }
+            return
+        }
+
+        _uiState.update { it.copy(isNicknameLoading = true, nicknameError = null) }
+
+        viewModelScope.launch {
+            try {
+                // 1. 닉네임 중복 검사
+                val isDuplicate = nicknameRepository.isNicknameTaken(nickname)
+                if (isDuplicate) {
+                    _uiState.update {
+                        it.copy(nicknameError = "이미 사용 중인 닉네임입니다.", isNicknameLoading = false)
+                    }
+                    return@launch
+                }
+
+                // 2. nicknames 컬렉션에 닉네임 등록
+                nicknameRepository.registerNickname(nickname)
+
+                // 3. users/{uid} 문서에 닉네임 저장 + isFirstLogin → false + isAutoLogin → true
+                userRepository.completeFirstLogin(loggedInUid, nickname)
+
+                // 4. CurrentUser 업데이트
+                CurrentUser.nickname = nickname
+
+                // 5. 다이얼로그 닫고 홈으로 이동
+                _uiState.update { it.copy(showNicknameDialog = false, isNicknameLoading = false) }
+                _eventChannel.send(SignInEvent.NavigateToHome)
+
+            } catch (e: Exception) {
+                Log.e("SignIn", "닉네임 설정 실패: ${e.message}", e)
+                _uiState.update {
+                    it.copy(nicknameError = "닉네임 설정에 실패했습니다.", isNicknameLoading = false)
+                }
+            }
+        }
+    }
+
+
     // Firebase 에러 분기 처리
     private fun handleSignInError(e: Exception) {
         val firebaseEx = e as? FirebaseAuthException
         Log.e("SignIn", "errorCode: ${firebaseEx?.errorCode}")
 
         when (firebaseEx?.errorCode) {
-            // 이메일 관련 오류
-            "ERROR_USER_NOT_FOUND",
+            // 이메일 형식 오류
             "ERROR_INVALID_EMAIL" -> {
                 _uiState.update { it.copy(email = "") }
-                sendToast("계정 정보가 올바르지 않습니다.")
+                sendToast("바른 이메일 형식을 입력해주세요")
             }
-            // 비밀번호 오류
+            // 가입 정보 없음, 비밀번호 오류 -> '계정 정보가 올바르지 않습니다.' 로 통합
+            "ERROR_USER_NOT_FOUND",
             "ERROR_WRONG_PASSWORD" -> {
                 _uiState.update { it.copy(password = "") }
                 sendToast("계정 정보가 올바르지 않습니다.")
             }
-            // 최신 Firebase SDK는 이메일/비밀번호 오류를 통합 코드로 반환
+            // 앱 인증 (토큰 검증) 실패
             "ERROR_INVALID_CREDENTIAL" -> {
                 _uiState.update { it.copy(password = "") }
-                sendToast("계정 정보가 올바르지 않습니다.")
+                sendToast("로그인에 실패했습니다. 다시 시도해주세요.")
             }
             else -> {
                 _uiState.update { it.copy(password = "") }
-                sendToast("계정 정보가 올바르지 않습니다.")
+                sendToast("로그인에 실패했습니다. 다시 시도해주세요.")
             }
         }
     }

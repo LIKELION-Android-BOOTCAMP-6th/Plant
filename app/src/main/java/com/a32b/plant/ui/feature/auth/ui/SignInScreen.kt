@@ -27,6 +27,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -41,9 +43,7 @@ import com.a32b.plant.ui.theme.fontColorSub
 import com.a32b.plant.ui.theme.primary
 
 @Composable
-fun SignInScreen(
-    navController: NavController
-) {
+fun SignInScreen(navController: NavController) {
     val viewModel: SignInViewModel = viewModel(factory = ViewModelFactory.signInViewModelFactory)
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -65,6 +65,112 @@ fun SignInScreen(
 
                 is SignInEvent.NavigateToSignUp ->
                     navController.navigate(Routes.SignUp)
+            }
+        }
+    }
+
+    // *****************************************************************************************
+    // 닉네임 설정 다이얼로그 (isFirstLogin == true 일 때 표시) - StudyingScreen Dialog와 비슷하게 맞추기!
+    if (uiState.showNicknameDialog) {
+        Dialog(
+            onDismissRequest = { /* 닫기 불가 - 닉네임 설정 필수 */ },
+            properties = DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false
+            )
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = background),
+                elevation = CardDefaults.cardElevation(8.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "닉네임 설정",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Plant에서 사용할 닉네임을 설정해주세요.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = fontColorSub
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    TextField(
+                        value = uiState.nicknameInput,
+                        onValueChange = viewModel::onNicknameChange,
+                        placeholder = {
+                            Text(
+                                text = "2~10자 닉네임 입력",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = TextFieldBackgroundColor,
+                            unfocusedContainerColor = TextFieldBackgroundColor,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            focusedTextColor = fontColor,
+                            unfocusedTextColor = fontColor,
+                            focusedPlaceholderColor = fontColorSub,
+                            unfocusedPlaceholderColor = fontColorSub
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp),
+                        isError = uiState.nicknameError != null,
+                        supportingText = uiState.nicknameError?.let { { Text(it) } }
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Button(
+                        onClick = viewModel::confirmNickname,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        enabled = !uiState.isNicknameLoading,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 4.dp,
+                            pressedElevation = 2.dp,
+                            disabledElevation = 0.dp
+                        )
+                    ) {
+                        if (uiState.isNicknameLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                "설정 완료",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = background,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -253,7 +359,7 @@ fun SignInScreen(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-
+                    // ── "또는" 구분선 ──
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -282,7 +388,7 @@ fun SignInScreen(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // 구글 로그인 버튼 (ic_auth_google.png 사용)
+                    // 구글 로그인 버튼
                     OutlinedButton(
                         onClick = {
                             // TODO: 구글 로그인 (후순위 개발)
