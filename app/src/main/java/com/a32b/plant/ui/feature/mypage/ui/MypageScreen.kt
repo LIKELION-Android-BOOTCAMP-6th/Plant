@@ -1,5 +1,7 @@
 package com.a32b.plant.ui.feature.mypage.ui
 
+import android.R.attr.level
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -24,6 +27,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -46,15 +51,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.compose.composable
 import com.a32b.plant.core.component.ProfileImage
 import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageViewModel
 import com.a32b.plant.ui.theme.Typography
 import com.a32b.plant.ui.theme.fontColor
 import com.a32b.plant.ui.theme.sub_green1
 import com.a32b.plant.R
+import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.data.di.ViewModelFactory
 import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageUiState
 import com.a32b.plant.ui.theme.primary
+import com.a32b.plant.ui.theme.sub2
 
 @Composable
 fun MypageScreen(navController: NavController) {
@@ -74,7 +82,9 @@ fun MypageScreen(navController: NavController) {
             GrownTreesButton() {}
             DividerImage()
             ButtonTemplate(text = "커뮤니티 활동") { }
-            ButtonTemplate(text = "앱 설정") { }
+            ButtonTemplate(text = "앱 설정") {
+                navController.navigate(Routes.MypageSetting)
+            }
             ButtonTemplate(text = "공지사항") { }
             ButtonTemplate(text = "비밀번호 재설정") { }
             DarkModeToggleButton(
@@ -112,6 +122,7 @@ fun DarkModeToggleButton(
                 text = "다크모드",
                 style = MaterialTheme.typography.bodyLarge
             )
+            // 우측
             Switch(
                 checked = isDarkMode,
                 onCheckedChange = { onToggle() },
@@ -139,14 +150,14 @@ fun GrownTreesButton(
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween, // 좌우 배치
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "기른 나무 수",
                 style = MaterialTheme.typography.bodyLarge
             )
-            // -------- 03-26 users db 변경되면 가져오기
+            // -------- 03-26 users db pots 추가되면 가져오기
             Text(
                 text = "1 그루",
                 style = MaterialTheme.typography.bodyLarge
@@ -164,6 +175,9 @@ fun ButtonTemplate(text: String, onClick: () -> Unit) {
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.White,
             contentColor = fontColor
+        ),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 2.dp,
         )
     ) {
         Row(
@@ -192,9 +206,20 @@ fun ProfileRow(uiState: MyPageUiState, viewModel: MyPageViewModel) {
                     isOpenDialog = true
                 }
         ) {
+
             ProfileImage(
-                level = uiState.profileImg,
+                level = uiState.profileImg.replace("lv.", ""),
                 size = 60
+            )
+            Icon(
+                painter = painterResource(id = R.drawable.ic_edit),
+                contentDescription = "프로필 수정",
+
+                modifier = Modifier
+                    .size(20.dp)
+                    .align(Alignment.BottomEnd)
+                    .offset(x = 3.dp, y = 3.dp),
+                tint = Color.Black
             )
         }
 
@@ -225,7 +250,7 @@ fun ProfileRow(uiState: MyPageUiState, viewModel: MyPageViewModel) {
     if (isOpenDialog) {
         ProfileDialog(
             onDismiss = { isOpenDialog = false },
-            uiState = uiState, // 뷰모델의 상태 가방 전달
+            uiState = uiState,
             viewModel = viewModel
         )
     }
@@ -245,12 +270,14 @@ fun DividerImage() {
     }
 }
 
+// 프로필 편집 다이얼로그 화분 이미지 배치
 @Composable
 fun SetImages(
     levelList: List<String>,
     selectedImageLevel: String,
     onImageClick: (String) -> Unit
 ) {
+    Log.d("PlantLog", "$levelList")
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -258,18 +285,19 @@ fun SetImages(
         maxItemsInEachRow = 3
     ) {
         levelList.forEach { level ->
+            val removeTextResult = level.replace("lv.", "")
             Box(
                 modifier = Modifier
                     .size(60.dp)
                     .clip(CircleShape)
                     .border(
-                        width = if (selectedImageLevel == level) 3.dp else 0.dp,
+                        width = if (selectedImageLevel == level) 5.dp else 0.dp,
                         color = sub_green1,
                         shape = CircleShape
                     )
                     .clickable { onImageClick(level) }
             ) {
-                ProfileImage(level, 60)
+                ProfileImage(level = removeTextResult, size = 60)
             }
         }
     }
@@ -338,17 +366,24 @@ fun ProfileDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Button(onClick = { onDismiss() }, modifier = Modifier.weight(1f)) {
-                        Text("취소")
-                    }
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .height(45.dp)
+                            .weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(sub2)
+                    ) { Text("취소", style = Typography.bodyMedium) }
+
                     Button(
                         onClick = {
                             viewModel.updateProfile(newUserName, selectedImageLevel)
                         },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("저장")
-                    }
+                        modifier = Modifier
+                            .height(45.dp)
+                            .weight(1f),
+                        shape = RoundedCornerShape(8.dp)
+                    ) { Text("저장", style = Typography.titleSmall) }
                 }
             }
         }

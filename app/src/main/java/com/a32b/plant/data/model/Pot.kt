@@ -9,7 +9,7 @@ data class PotInfo(
     val tag: String? = null,
     val name: String? = null,
     val imageUrl: String? = null,
-    val pottotalStudyingTime: Long? = null,
+    val potTotalStudyingTime: Long? = null,
     @ServerTimestamp
     val createdAt: Timestamp? = null,
     val completedAt: Timestamp? = null,
@@ -19,9 +19,11 @@ data class PotInfo(
     val level: String get(){
         if (id.isNullOrEmpty()) return "EMPTY"
 
-        val totalSeconds = pottotalStudyingTime ?: 0L
+        val rawMillis = potTotalStudyingTime ?: 0L
+
+        val totalSeconds = if (rawMillis > 1_000_000L) rawMillis / 1000 else rawMillis
         val hours = totalSeconds / 3600
-        val calculatedlevel =  when {
+        val calculatedLevel =  when {
             hours >= 77 -> 5
             hours >= 50 -> 4
             hours >= 30 -> 3
@@ -29,7 +31,7 @@ data class PotInfo(
             hours >= 3 -> 1
             else -> 0
         }
-        return calculatedlevel.toString()
+        return calculatedLevel.toString()
     }
 
 }

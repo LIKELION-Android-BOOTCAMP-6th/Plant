@@ -17,7 +17,7 @@ class PotRepository(private val db: FirebaseFirestore) {
 
     //태그 획득
     fun getAvailableTags(): Flow<List<String>> = callbackFlow {
-        val collectionRef = db.collection("tags")
+        val collectionRef = db.collection("tags").orderBy("id").limit(5)
 
         // 데이터 변경 감지
         val listener = collectionRef.addSnapshotListener { snapshot, error ->
@@ -26,7 +26,7 @@ class PotRepository(private val db: FirebaseFirestore) {
                 return@addSnapshotListener
             }
             //name 필드값 추출 -> 리스트화
-            val tags = snapshot?.documents?.mapNotNull { it.id }?: emptyList()
+            val tags = snapshot?.documents?.mapNotNull { doc -> doc.id }?: emptyList()
 
             //data 전송
             trySend(tags)
@@ -47,7 +47,7 @@ class PotRepository(private val db: FirebaseFirestore) {
                 tag = tag,
                 name = name,
                 imageUrl = "0", //⭐⭐⭐일단 데이터클래스랑 맞춰놨는데, 디비에는 레벨로 표현되어 있어서 데이터클래스를 바꿔야 함
-                pottotalStudyingTime = 0L
+                potTotalStudyingTime = 0L
             )
 
             //DB에 저장
@@ -76,7 +76,7 @@ class PotRepository(private val db: FirebaseFirestore) {
             //uid = "VosJjoUJp6SplH0siKyoAIBZ7fk2",
             tag = "자격증",
             name = "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
-            pottotalStudyingTime = 0L,
+            potTotalStudyingTime = 0L,
             isCompleted = false
         )
 

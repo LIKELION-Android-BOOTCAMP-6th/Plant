@@ -83,12 +83,13 @@ fun StudyingScreen(navController: NavController) {
     val tag = args!!.tag
     val title = args.title
     val potId = args.potId
+    val level = args.level
     Log.d("tag", tag)
 
     val startTime = remember {
         val now = LocalDateTime.now()
         TimeFormatter.formatToTimeOnly(now) }
-    val viewModel : StudyingViewModel = viewModel(factory = ViewModelFactory.studyingViewModelFactory(tag, potId, title, startTime))
+    val viewModel : StudyingViewModel = viewModel(factory = ViewModelFactory.studyingViewModelFactory(tag, potId, title, startTime, level))
 
     val uiState by viewModel.uiState.collectAsState()
     val timerButtonText = if (uiState.isStudying) "일시정지" else "학습하기"
@@ -105,8 +106,11 @@ fun StudyingScreen(navController: NavController) {
                         title = event.title,
                         log = event.log,
                         time = event.time,
-                        potId = event.potId
-                    ))
+                        potId = event.potId,
+                        level
+                    )){
+                        popUpTo(Routes.HomeMain) { inclusive = false }
+                    }
                 }
             }
         }

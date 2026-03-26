@@ -19,12 +19,13 @@ import com.a32b.plant.ui.feature.auth.ui.SignUpScreen
 import com.a32b.plant.ui.feature.home.ui.HomeScreen
 import com.a32b.plant.ui.feature.home.ui.NewBornTreeScreen
 import com.a32b.plant.ui.feature.mypage.ui.MypageScreen
+import com.a32b.plant.ui.feature.mypage.ui.MypageSetting
 import com.a32b.plant.ui.feature.splash.SplashViewModel
 import com.a32b.plant.ui.feature.studying.ui.StudyResultScreen
 import com.a32b.plant.ui.feature.studying.ui.StudyingScreen
 
 @Composable
-fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewModel){
+fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewModel) {
 
     val destination by viewModel.destination.collectAsState()
     destination?.let { startRoute ->
@@ -32,6 +33,7 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
 
             composable<Routes.HomeMain> { HomeScreen(navController) }
             composable<Routes.Mypage> { MypageScreen(navController) }
+            composable<Routes.MypageSetting> { MypageSetting(navController) }
 
             composable<Routes.CommunityList> {
                 CommunityListScreen(navController)

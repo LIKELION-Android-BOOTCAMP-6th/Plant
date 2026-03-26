@@ -33,7 +33,8 @@ sealed class StudyingEvent{
         val title: String,
         val log: List<String>,
         val time: Long,
-        val potId: String
+        val potId: String,
+        val level: String
 
         ): StudyingEvent()
 }
@@ -42,7 +43,8 @@ class StudyingViewModel(
     private val tag: String,
     private val potId: String,
     private val title: String,
-    private val startTime: String
+    private val startTime: String,
+    private val level: String
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(StudyingUiState(tag = tag))
@@ -117,7 +119,8 @@ class StudyingViewModel(
                 potId = potId,
                 title = title,
                 log = _uiState.value.studyLog,
-                time = _uiState.value.timer
+                time = _uiState.value.timer,
+                level = level
             ))
         }
     }
