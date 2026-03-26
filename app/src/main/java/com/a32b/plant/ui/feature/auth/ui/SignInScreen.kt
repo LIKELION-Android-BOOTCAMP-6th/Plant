@@ -1,59 +1,342 @@
 package com.a32b.plant.ui.feature.auth.ui
 
-import androidx.compose.foundation.layout.Arrangement       // 자식 요소 배치 방식 (가운데, 위, 아래 등)
-import androidx.compose.foundation.layout.Column            // 세로로 요소를 쌓는 레이아웃 컴포넌트
-import androidx.compose.foundation.layout.fillMaxSize       // 부모 크기를 꽉 채우는 Modifier
-import androidx.compose.material3.Button                    // 버튼 컴포넌트
-import androidx.compose.material3.Text                      // 텍스트 컴포넌트
-import androidx.compose.runtime.Composable                  // @Composable 어노테이션을 쓰기 위해 필요
-import androidx.compose.ui.Alignment                        // 정렬 방향 설정 (가로 중앙, 우측 등)
-import androidx.compose.ui.Modifier                         // UI 요소의 크기, 여백 등을 설정하는 수식어
+import android.widget.Toast
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController                    // 화면 이동을 담당하는 네비게이션 컨트롤러
-import com.a32b.plant.core.navigation.Routes                // 앱 내 화면 경로(라우트) 정의 모음
+import androidx.navigation.NavController
+import com.a32b.plant.R
+import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.data.di.ViewModelFactory
+import com.a32b.plant.ui.feature.auth.viewmodel.SignInEvent
 import com.a32b.plant.ui.feature.auth.viewmodel.SignInViewModel
+import com.a32b.plant.ui.theme.background
+import com.a32b.plant.ui.theme.fontColor
+import com.a32b.plant.ui.theme.fontColorSub
+import com.a32b.plant.ui.theme.primary
 
-
-// @Composable: 이 함수가 UI를 그리는 Compose 함수임을 선언하는 어노테이션
-// Compose에서는 UI를 함수로 표현해 — @Composable이 붙은 함수만 화면을 그릴 수 있음
 @Composable
-// SignInScreen: 로그인 화면을 그리는 함수
-// navController: 다른 화면으로 이동할 때 사용하는 네비게이션 객체를 외부에서 받아옴
-//************ 임시 로그인 화면 ************
-//***************************************
-fun SignInScreen(navController: NavController) {
+fun SignInScreen(
+    navController: NavController
+) {
+    val viewModel: SignInViewModel = viewModel(factory = ViewModelFactory.signInViewModelFactory)
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
-    val viewModel : SignInViewModel = viewModel(factory = ViewModelFactory.signInViewModelFactory)
+    var passwordVisible by remember { mutableStateOf(false) }
 
-    // Column: 자식 요소들을 세로(위→아래)로 쌓는 레이아웃
-    Column(
+    // 일회성 이벤트 수신 (토스트, 화면 전환)
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is SignInEvent.ShowToast ->
+                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
 
-        // Modifier.fillMaxSize(): 이 Column이 화면 전체 크기를 꽉 채우도록 설정
-        modifier = Modifier.fillMaxSize(),
+                is SignInEvent.NavigateToHome ->
+                    navController.navigate(Routes.HomeMain) {
+                        // 로그인 화면을 백스택에서 제거 → 뒤로가기 시 로그인으로 돌아가지 않도록
+                        popUpTo(Routes.SignIn) { inclusive = true }
+                    }
 
-        // verticalArrangement: 세로 방향으로 자식 요소들을 어떻게 배치할지 설정
-        // Arrangement.Center: 세로 방향 가운데 정렬
-        verticalArrangement = Arrangement.Center,
+                is SignInEvent.NavigateToSignUp ->
+                    navController.navigate(Routes.SignUp)
+            }
+        }
+    }
 
-        // horizontalAlignment: 가로 방향으로 자식 요소들을 어떻게 정렬할지 설정
-        // Alignment.CenterHorizontally: 가로 방향 가운데 정렬
-        horizontalAlignment = Alignment.CenterHorizontally
+    // 초록 배경 전체
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(primary)
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Spacer(modifier = Modifier.statusBarsPadding())
+            Spacer(modifier = Modifier.height(100.dp))
 
-        // Text: "로그인 화면 (임시)" 라는 글자를 화면에 표시
-        // 현재는 임시 화면이라 간단하게 텍스트만 표시
-        Text("로그인 화면 (임시)")
+            // Plant 로고 타이틀
+            Text(
+                text = "Plant",
+                style = MaterialTheme.typography.displayLarge,
+                fontWeight = FontWeight.Bold,
+                color = background,
+                fontSize = 40.sp
+            )
 
-        // Button: 클릭 가능한 버튼 컴포넌트
-        // onClick: 버튼 클릭 시 실행할 동작을 람다(중괄호 블록)로 전달
-        Button(onClick = {
-            // navController.navigate(): 다른 화면으로 이동하는 함수
-            // Routes.SignUp: Routes.kt에 정의된 회원가입 화면 경로
-            navController.navigate(Routes.SignUp)
-        }) {
-            // 버튼 안에 표시될 텍스트
-            Text("회원가입 하러가기")
+            Spacer(modifier = Modifier.height(4.dp))
+
+            //  서브 타이틀
+            Text(
+                text = "로그인해서 계속하세요",
+                style = MaterialTheme.typography.bodyMedium,
+                color = background,
+                fontSize = 16.sp
+            )
+
+            Spacer(modifier = Modifier.height(30.dp))
+
+            // 흰색 카드
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = background),
+                elevation = CardDefaults.cardElevation(4.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // 이메일 입력
+                    Text(
+                        text = "이메일",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextField(
+                        value = uiState.email,
+                        onValueChange = viewModel::onEmailChange,
+                        placeholder = {
+                            Text(
+                                text = "이메일을 입력하세요",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = TextFieldBackgroundColor,
+                            unfocusedContainerColor = TextFieldBackgroundColor,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            focusedTextColor = fontColor,
+                            unfocusedTextColor = fontColor,
+                            focusedPlaceholderColor = fontColorSub,
+                            unfocusedPlaceholderColor = fontColorSub
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp),
+                        isError = uiState.emailError != null,
+                        supportingText = uiState.emailError?.let { { Text(it) } }
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 비밀번호 입력
+                    Text(
+                        text = "비밀번호",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextField(
+                        value = uiState.password,
+                        onValueChange = viewModel::onPasswordChange,
+                        placeholder = {
+                            Text(
+                                text = "비밀번호를 입력하세요",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = TextFieldBackgroundColor,
+                            unfocusedContainerColor = TextFieldBackgroundColor,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            focusedTextColor = fontColor,
+                            unfocusedTextColor = fontColor,
+                            focusedPlaceholderColor = fontColorSub,
+                            unfocusedPlaceholderColor = fontColorSub
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        visualTransformation = if (passwordVisible) VisualTransformation.None
+                        else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(
+                                    imageVector = if (passwordVisible) Icons.Default.Visibility
+                                    else Icons.Default.VisibilityOff,
+                                    contentDescription = null
+                                )
+                            }
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // 비밀번호 찾기 링크 (우측 정렬)
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.CenterEnd
+                    ) {
+                        Text(
+                            text = "비밀번호를 잊으셨나요?",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 13.sp,
+                            color = fontColorSub,
+                            modifier = Modifier.clickable {
+                                // TODO: FindPasswordDialog 연결
+                            }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // 로그인 버튼
+                    Button(
+                        onClick = viewModel::signIn,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        enabled = !uiState.isLoading,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 6.dp,
+                            pressedElevation = 2.dp,
+                            disabledElevation = 0.dp
+                        )
+                    ) {
+                        if (uiState.isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(22.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                "로그인",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = background,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_signin_divider_2),
+                            contentDescription = null,
+                            modifier = Modifier.weight(1f),
+                            contentScale = ContentScale.FillWidth
+                        )
+                        Text(
+                            text = "또는",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 13.sp,
+                            color = fontColorSub,
+                            modifier = Modifier.padding(horizontal = 12.dp)
+                        )
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_signin_divider_2),
+                            contentDescription = null,
+                            modifier = Modifier.weight(1f),
+                            contentScale = ContentScale.FillWidth
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // 구글 로그인 버튼 (ic_auth_google.png 사용)
+                    OutlinedButton(
+                        onClick = {
+                            // TODO: 구글 로그인 (후순위 개발)
+                            Toast.makeText(context, "구글 로그인은 추후 지원 예정입니다.", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = Color.White
+                        )
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_auth_google),
+                            contentDescription = "Google 로그인",
+                            modifier = Modifier.height(40.dp),
+                            contentScale = ContentScale.FillHeight
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // "계정이 없으신가요? 회원가입" 링크
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row {
+                            Text(
+                                text = "계정이 없으신가요? ",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontSize = 15.sp,
+                                color = fontColor
+                            )
+                            Text(
+                                text = "회원가입",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                                textDecoration = TextDecoration.Underline,
+                                modifier = Modifier.clickable {
+                                    navController.navigate(Routes.SignUp)
+                                }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }

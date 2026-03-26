@@ -10,7 +10,7 @@ data class UserProfile(
     var currentPot: PotInfo = PotInfo(),
     // [추가] 사용자가 보유한 화분 전체 리스트
     val potList: List<PotInfo> = emptyList(),
-    val isFirstLogin: Boolean? = null,
+    val isFirstLogin: Boolean? = null, // 회원가입 시 true 유지 -> 첫 로그인 후 닉네임 재설정 하고 false 바꾸기
     val isAutoLogin: Boolean? = null,
     val isDarkMode: Boolean? = null,
     val totalStudyTime: Long? = null,

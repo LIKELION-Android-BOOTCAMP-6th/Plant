@@ -41,4 +41,11 @@ class StudyingRepository(private val db: FirebaseFirestore) {
         }
 
     }
+    suspend fun deleteStudyingUser(){
+
+    }
+
+    suspend fun saveStudyLog(){
+
+    }
 }

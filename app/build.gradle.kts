@@ -88,7 +88,6 @@ dependencies {
 
     implementation(libs.splashscreen)
 
-    // 아이콘 visibility (실험중)
     implementation("androidx.compose.material:material-icons-extended")
 
     //coil, AsyniImage

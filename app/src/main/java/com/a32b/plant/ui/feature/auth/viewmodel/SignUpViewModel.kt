@@ -1,11 +1,8 @@
 package com.a32b.plant.ui.feature.auth.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
-import com.a32b.plant.data.di.AppContainer
 import com.a32b.plant.data.repository.UserRepository
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.channels.Channel
@@ -22,10 +19,10 @@ data class SignUpUiState(
     val email: String = "",
     val password: String = "",
     val passwordConfirm: String = "",
-    val agreePrivacy: Boolean = false,
-    val agreeTerms: Boolean = false,
     val isLoading: Boolean = false,
-    val passwordError: String? = null
+    val emailError: String? = null,
+    val passwordError: String? = null,
+    val passwordConfirmError: String? = null
 )
 
 sealed class SignUpEvent {
@@ -45,13 +42,18 @@ class SignUpViewModel(
     val events = _eventChannel.receiveAsFlow()
 
     fun onEmailChange(value: String) = _uiState.update { it.copy(email = value) }
-    fun onPasswordChange(value: String) = _uiState.update { it.copy(password = value, passwordError = null) }
-    fun onPasswordConfirmChange(value: String) = _uiState.update { it.copy(passwordConfirm = value, passwordError = null) }
-    fun onAgreePrivacyChange(value: Boolean) = _uiState.update { it.copy(agreePrivacy = value) }
-    fun onAgreeTermsChange(value: Boolean) = _uiState.update { it.copy(agreeTerms = value) }
+    fun onPasswordChange(value: String) = _uiState.update { it.copy(password = value) }
+    fun onPasswordConfirmChange(value: String) = _uiState.update { it.copy(passwordConfirm = value) }
 
     fun signUp() {
         val state = _uiState.value
+
+        // 회원가입 버튼 클릭 시 기존 3종 검증 에러(이메일 형식 검증, 비밀번호 조건 검증, 비밀번호 일치 검증) 전부 초기화
+        _uiState.update { it.copy(
+            emailError = null,
+            passwordError = null,
+            passwordConfirmError = null
+        )}
 
         // 미입력 항목 검증
         if (state.email.isBlank() || state.password.isBlank() || state.passwordConfirm.isBlank()) {
@@ -59,11 +61,29 @@ class SignUpViewModel(
             return
         }
 
+        // 이메일, 비밀번호 조건, 비밀번호 일치 3가지 검증을 한번에 실행
+        var hasError = false
+
+        // 이메일 형식 검증
+        if (!isValidEmail(state.email)) {
+            _uiState.update { it.copy(emailError = "이메일 형식이 올바르지 않습니다.") }
+            hasError = true
+        }
+
+        // 비밀번호 조건 검증 (소문자 + 숫자 + 특수문자, 6자리 이상)
+        if (!isValidPassword(state.password)) {
+            _uiState.update { it.copy(passwordError = "비밀번호 조건을 맞춰주세요.") }
+            hasError = true
+        }
+
         // 비밀번호 일치 검증
         if (state.password != state.passwordConfirm) {
-            _uiState.update { it.copy(passwordError = "비밀번호가 일치하지 않습니다.") }
-            return
+            _uiState.update { it.copy(passwordConfirmError = "비밀번호가 일치하지 않습니다.") }
+            hasError = true
         }
+
+        // 에러가 하나라도 있으면 진행 중단
+        if (hasError) return
 
         _uiState.update { it.copy(isLoading = true) }
 
@@ -76,27 +96,42 @@ class SignUpViewModel(
                 // 2. 인증 메일 발송
                 sendVerificationEmail()
 
-                // 3. Firestore users 문서 생성 (isFirstLogin = true)
-                userRepository.createUser(uid).getOrThrow()
-
-                // 4. 이메일 인증 전까지 로그인 차단
+                // 3. 이메일 인증 전까지 로그인 차단
                 auth.signOut()
 
-                sendToast("회원가입 성공! 전송된 이메일을 확인해주세요.")
+                sendToast("회원가입 완료! 인증 메일을 확인해주세요.")
                 _eventChannel.send(SignUpEvent.NavigateToSignIn)
 
-                // !! 로그캣에 에러 띄워보기
             } catch (e: Exception) {
-                val message = when {
-                    e.message?.contains("email address is already in use") == true ->
-                        "이미 등록된 계정입니다."
-                    else -> "회원가입 실패. 다시 시도해주세요."
+                // Firebase 오류 코드 로그로 확인
+                 val firebaseEx = e as? com.google.firebase.auth.FirebaseAuthException
+                 Log.e("AuthError", "Code: ${firebaseEx?.errorCode}, Msg: ${e.message}")
+
+                val message = when (firebaseEx?.errorCode) {
+                    // Firebase에서 돌아오는 오류 코드로 분기
+                    "ERROR_EMAIL_ALREADY_IN_USE" -> "이미 등록된 계정입니다."
+                    "ERROR_WEAK_PASSWORD"        -> "비밀번호 조건을 맞춰주세요."
+                    "ERROR_INVALID_EMAIL"        -> "이메일 형식이 올바르지 않습니다."
+                    else                         -> "회원가입 실패. 다시 시도해주세요."
                 }
                 sendToast(message)
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
             }
         }
+    }
+
+    // 비밀번호 조건 검증 함수
+    // 소문자, 숫자, 특수문자 포함 6자리 이상
+    private fun isValidPassword(password: String): Boolean {
+        val regex = Regex("^(?=.*[a-z])(?=.*[0-9])(?=.*[!@#\$%^&*()_+\\-=]).{6,}$")
+        return regex.matches(password)
+    }
+
+    // 이메일 형식 검증 함수
+    private fun isValidEmail(email: String): Boolean {
+        val regex = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
+        return regex.matches(email)
     }
 
     // Firebase Auth 계정 생성 - suspend 함수
@@ -123,18 +158,9 @@ class SignUpViewModel(
                 ?: cont.resumeWithException(Exception("현재 유저가 없습니다."))
         }
 
+    // 토스트 함수 공통소스화?
     private fun sendToast(message: String) {
         viewModelScope.launch { _eventChannel.send(SignUpEvent.ShowToast(message)) }
     }
 
-    companion object {
-        val Factory: ViewModelProvider.Factory = viewModelFactory {
-            initializer {
-                SignUpViewModel(
-                    auth = AppContainer.firebaseAuth,
-                    userRepository = AppContainer.userRepository
-                )
-            }
-        }
-    }
 }

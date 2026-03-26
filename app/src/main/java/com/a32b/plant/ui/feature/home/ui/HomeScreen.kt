@@ -81,7 +81,7 @@ fun HomeScreen(navController: NavController) {
                 Spacer(modifier = Modifier.height(30.dp))
             }
 
-            // [홈 2 영역] 하단 그리드
+            // 하단 그리드
             val chunkedPots = potList.chunked(3)
 
             items(chunkedPots) { rowPots ->
@@ -153,7 +153,7 @@ fun MainPlantCard(displayPot: PotInfo, onStartClick: () -> Unit,
             modifier = Modifier.padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            //화분이 있을 때만 태그 표시 (ID가 비어있지 않을 때)
+            // 화분이 있을 때만 태그 표시 (ID가 비어있지 않을 때)
             if (displayPot.id.isNotEmpty() && displayPot.tag.isNotEmpty()) {
                 Surface(
                     color = Color(0xFFE8F5E9),

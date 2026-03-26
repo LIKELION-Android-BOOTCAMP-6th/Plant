@@ -28,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.data.di.ViewModelFactory
 import com.a32b.plant.ui.feature.auth.viewmodel.SignUpEvent
 import com.a32b.plant.ui.feature.auth.viewmodel.SignUpViewModel
 import com.a32b.plant.ui.theme.background
@@ -40,9 +41,9 @@ val TextFieldBackgroundColor = Color(0xFFEEEEEE)
 
 @Composable
 fun SignUpScreen(
-    navController: NavController,
-    viewModel: SignUpViewModel = viewModel(factory = SignUpViewModel.Factory)
+    navController: NavController
 ) {
+    val viewModel: SignUpViewModel = viewModel(factory = ViewModelFactory.signUpViewModelFactory)
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
@@ -134,7 +135,9 @@ fun SignUpScreen(
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         singleLine = true,
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(8.dp),
+                        isError = uiState.emailError != null,
+                        supportingText = uiState.emailError?.let { { Text(it) } }
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -177,7 +180,9 @@ fun SignUpScreen(
                             }
                         },
                         singleLine = true,
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(8.dp),
+                        isError = uiState.passwordError != null,
+                        supportingText = uiState.passwordError?.let { { Text(it) } }
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -202,8 +207,6 @@ fun SignUpScreen(
                             unfocusedPlaceholderColor = fontColorSub
                         ),
                         modifier = Modifier.fillMaxWidth(),
-                        isError = uiState.passwordError != null,
-                        supportingText = uiState.passwordError?.let { { Text(it) } },
                         visualTransformation = if (passwordConfirmVisible) VisualTransformation.None
                         else PasswordVisualTransformation(),
                         trailingIcon = {
@@ -211,14 +214,16 @@ fun SignUpScreen(
                                 passwordConfirmVisible = !passwordConfirmVisible
                             }) {
                                 Icon(
-                                    imageVector = if (passwordVisible) Icons.Default.Visibility
+                                    imageVector = if (passwordConfirmVisible) Icons.Default.Visibility
                                     else Icons.Default.VisibilityOff,
                                     contentDescription = null
                                 )
                             }
                         },
                         singleLine = true,
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(8.dp),
+                        isError = uiState.passwordConfirmError != null,
+                        supportingText = uiState.passwordConfirmError?.let { { Text(it) } }
                     )
 
                     Spacer(modifier = Modifier.height(32.dp))

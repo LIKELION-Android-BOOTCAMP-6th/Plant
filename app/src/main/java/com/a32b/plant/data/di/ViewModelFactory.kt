@@ -8,6 +8,7 @@ import com.a32b.plant.ui.feature.community.viewmodel.CommunityDetailViewModel
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityListViewModel
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityPostViewModel
 import com.a32b.plant.ui.feature.home.viewmodel.HomeViewModel
+//import com.a32b.plant.ui.feature.home.viewmodel.HomeViewModel
 import com.a32b.plant.ui.feature.home.viewmodel.NewBornTreeViewModel
 import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageViewModel
 import com.a32b.plant.ui.feature.studying.viewmodel.StudyingViewModel
@@ -27,7 +28,7 @@ object ViewModelFactory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return HomeViewModel(AppContainer.userRepository) as T
         }
-    }
+   }
     val newBornTreeViewModelFactory = object : ViewModelProvider.Factory{
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return NewBornTreeViewModel(AppContainer.potRepository) as T
@@ -35,7 +36,7 @@ object ViewModelFactory {
     }
     val myPageViewModelFactory = object : ViewModelProvider.Factory{
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return MyPageViewModel(AppContainer.userRepository) as T
+            return MyPageViewModel(AppContainer.userRepository, AppContainer.potRepository) as T
         }
     }
     val communityListViewModelFactory = object : ViewModelProvider.Factory{
@@ -43,9 +44,9 @@ object ViewModelFactory {
             return CommunityListViewModel(AppContainer.postRepository) as T
         }
     }
-    fun studyingViewModelFactory(tag: String) = object : ViewModelProvider.Factory{
+    fun studyingViewModelFactory(tag: String, potId:String) = object : ViewModelProvider.Factory{
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return StudyingViewModel(AppContainer.studyingRepository, tag) as T
+            return StudyingViewModel(AppContainer.studyingRepository, tag, potId) as T
         }
     }
     fun communityDetailViewModelFactory(postId : String) = object : ViewModelProvider.Factory{

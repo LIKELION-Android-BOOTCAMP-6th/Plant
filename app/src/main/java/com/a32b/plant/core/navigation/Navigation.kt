@@ -11,7 +11,6 @@ import com.a32b.plant.ui.feature.auth.ui.SignUpScreen
 import com.a32b.plant.ui.feature.community.ui.CommunityListScreen
 import com.a32b.plant.ui.feature.community.ui.CommunityPostScreen
 import com.a32b.plant.ui.feature.home.ui.HomeScreen
-import com.a32b.plant.ui.feature.home.ui.NewBornTreeScreen
 import com.a32b.plant.ui.feature.mypage.ui.MypageScreen
 import com.a32b.plant.ui.feature.splash.SplashViewModel
 import com.a32b.plant.ui.feature.studying.ui.StudyingScreen
@@ -29,7 +28,6 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
             composable<Routes.Studying> { StudyingScreen(navController) }
             composable<Routes.SignIn> { SignInScreen(navController) }
             composable<Routes.SignUp> { SignUpScreen(navController) }
-            composable<Routes.NewBornTree> { NewBornTreeScreen(navController) }
         }
     }
 

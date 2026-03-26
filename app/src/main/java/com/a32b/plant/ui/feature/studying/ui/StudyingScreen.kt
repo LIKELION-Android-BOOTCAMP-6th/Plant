@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,23 +18,43 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.toRoute
@@ -53,7 +74,6 @@ import java.time.LocalDateTime
 
 @Composable
 fun StudyingScreen(navController: NavController) {
-    val context = LocalContext.current
 
     //이전 스택에서 보낸 값을 args에 넣어서 뽑아낼 수 있음
     val args = navController.currentBackStackEntry?.toRoute<Routes.Studying>()
@@ -64,21 +84,27 @@ fun StudyingScreen(navController: NavController) {
     Log.d("tag", tag)
     //뷰모델 연결해주기
 
-    val viewModel : StudyingViewModel = viewModel(factory = ViewModelFactory.studyingViewModelFactory(tag))
+    val viewModel : StudyingViewModel = viewModel(factory = ViewModelFactory.studyingViewModelFactory(tag, potId))
 
+    val uiState by viewModel.uiState.collectAsState()
+    val timerButtonText = if (uiState.isStudying) "일시정지" else "학습하기"
+    val timerButtonBack = if (uiState.isStudying) sub2 else primary
 
     LaunchedEffect(Unit) {
-        viewModel.fetchStudyingUsers()
+        viewModel.onStudyingUsersChange()
+        viewModel.event.collect {
+            navController.navigate(Routes.StudyResult){
+                popUpTo(Routes.HomeMain) { inclusive = false }
+            }
+
+        }
     }
 
     val startTime = remember {
         val now = LocalDateTime.now()
         TimeFormatter.formatToTimeOnly(now) }
 
-    val studyingUsers = viewModel.studyingUsers
-//    studyingUsers.add(StudyingUser("0", "닉네임", "lv.0", "자격증", 300000))
-//    studyingUsers.add(StudyingUser("0", "닉네임1", "lv.1", "자격증", 30000))
-//    studyingUsers.add(StudyingUser("0", "닉네임2", "lv.5", "자격증", 1000000))
+    val studyingUsers = uiState.studyingUsers
     Surface(modifier = Modifier.fillMaxSize(),
         color = Color(0xFFF8F6F6)
     ) {
@@ -92,20 +118,28 @@ fun StudyingScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(70.dp))
             Text("$startTime ~", style = Typography.bodyMedium, fontSize = 13.sp)
-            SetTimer(viewModel.timeMillis)
+            SetTimer(uiState.timer)
 
             Spacer(modifier = Modifier.height(30.dp))
             Row {
                 //일시정지/학습시작 버튼
-                Button(viewModel.buttonText, viewModel.buttonBack){ viewModel.toggleStudyStatus()}
-                Button("학습종료", sub1) {
+                StateChangeButton(timerButtonText, timerButtonBack){ viewModel.onStudyingStatusChange()}
+                StateChangeButton("학습종료", sub1) {
                     viewModel.stopStopwatch()
+                    viewModel.onDialogShownChange()
                 }
             }
             Spacer(modifier = Modifier.weight(1f))
 
             StudyingUserCard(studyingUsers, tag)
         }
+    }
+    if(uiState.isDialogShown){
+        StudyFinishDialog(onDismiss = {viewModel.onDialogDismissClick()},onConfirm = { logs ->
+            Log.d("입력값 확인", logs.toString())
+            viewModel.onIsStudyFinishChange()
+            viewModel.setStudyLog(logs)
+        }, tag, title)
     }
 }
 
@@ -139,7 +173,7 @@ fun SetTimer(time: Long){
     }
 }
 @Composable
-fun Button(text: String, backColor: Color, function: () -> Unit){
+fun StateChangeButton(text: String, backColor: Color, function: () -> Unit){
     Card(
         modifier = Modifier.width(150.dp).height(70.dp).padding(10.dp)
             .clickable(
@@ -180,5 +214,88 @@ fun StudyinUserItem(user: StudyingUser){
         ProfileImage(user.profileImg, 30)
         Text(text = user.nickname, style = MaterialTheme.typography.bodyMedium)
         Text(text = " ${TimeFormatter.formatToMinute(user.studyingTime)} 째 공부중!", style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
+fun StudyFinishDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (List<String>) -> Unit,
+    tag: String,
+    title: String
+) {
+    val inputs = remember { mutableStateListOf("") }  // 입력창 리스트
+    val focus = remember { mutableStateListOf(FocusRequester()) } //포커스 조절하는 거
+
+    LaunchedEffect(inputs.size) {
+        if (inputs.size > 1) focus.last().requestFocus()
+    }
+    Dialog(onDismissRequest = {}) {
+        Card(shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(background)) {
+            Column(modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally) {
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text("학습 종료", style = Typography.titleSmall)
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+                Text("[$tag] $title", style = Typography.titleSmall)
+
+                Spacer(modifier = Modifier.height(21.dp))
+
+                // 입력창 리스트
+                inputs.forEachIndexed { index, value ->
+                    OutlinedTextField(
+                        value = value,
+                        shape = RoundedCornerShape(10.dp),
+                        onValueChange = { inputs[index] = it },
+                        modifier = Modifier.fillMaxWidth()
+                            .focusRequester(focus[index]),
+                        placeholder = {Text("오늘의 학습을 기록해보세요!", style = Typography.bodyMedium, color = Color(0xFF858585))},
+                        textStyle = Typography.bodyMedium,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(
+                            onNext = {
+                                inputs.add("")
+                                focus.add(FocusRequester())
+                            }
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(22.dp))
+                }
+
+
+                // 플러스 버튼
+                IconButton(onClick = {
+                    inputs.add("")
+                    focus.add(FocusRequester())
+                }) {
+                    Image(painter = painterResource(R.drawable.ic_studying_plus),
+                        contentDescription = "추가 버튼")
+                }
+
+                Spacer(modifier = Modifier.height(30.dp))
+
+                // 취소 / 종료 버튼
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Button(onClick = onDismiss,
+                        modifier = Modifier.height(45.dp).weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(sub2)
+                    ) { Text("취소", style = Typography.bodyMedium) }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Button(
+                        onClick = { onConfirm(inputs.toList()) },
+                        modifier = Modifier.height(45.dp).weight(1f),
+                        shape = RoundedCornerShape(8.dp)
+                    ) { Text("종료", style = Typography.titleSmall) }
+                }
+            }
+        }
     }
 }

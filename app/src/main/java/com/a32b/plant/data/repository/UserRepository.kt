@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
+import kotlin.Boolean
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -29,11 +30,27 @@ class UserRepository(private val db: FirebaseFirestore, private val auth: Fireba
         awaitClose { listener.remove() }
     }
 
+    // 유저 프로필 1회성 가져오기 (로그인 시 isFirstLogin 체크 등)
+    suspend fun getUserProfileOnce(uid: String): UserProfile? {
+        return try {
+            val snapshot = db.collection("users").document(uid).get().await()
+            snapshot.toObject(UserProfile::class.java)
+        } catch (e: Exception) {
+            Log.e("UserRepository", "getUserProfileOnce 실패: ${e.message}", e)
+            null
+        }
+    }
+
     // suspendCancellableCoroutine , 유저 정보 생성
     suspend fun createUser(uid: String): Result<Unit> =
         suspendCancellableCoroutine { cont ->
             val newUser = UserProfile(
-                isFirstLogin = true,   // 회원가입 시 true 유지 -> 첫 로그인 후 닉네임 재설정 하고 false 바꾸기
+                // 회원가입 시 true 유지 -> 첫 로그인 후 닉네임 재설정 하고 false 바꾸기
+                isFirstLogin = true,
+                isAutoLogin = false,
+                isDarkMode = false,
+                totalStudyTime = 0L,
+                completedPotsCount = 0
             )
             db.collection("users")
                 .document(uid)
@@ -67,9 +84,21 @@ class UserRepository(private val db: FirebaseFirestore, private val auth: Fireba
         }
     }
 
+
+    // 자동 로그인 여부 Firestore에 저장
+    suspend fun updateAutoLogin(uid: String, isAutoLogin: Boolean) {
+        try {
+            db.collection("users").document(uid)
+                .update("isAutoLogin", isAutoLogin)
+                .await()
+        } catch (e: Exception) {
+            Log.e("UserRepository", "updateAutoLogin 실패: ${e.message}", e)
+        }
+    }
+
     suspend fun getPotId() = "현재 팟 아이디"
 
-    // ********************** autoLogin true 만들기
+    // ********************** push 할 때 autoLogin true 만들기
     fun isAutoLogin() = true
 //     fun isAutoLogin() = false
 
@@ -86,6 +115,8 @@ class UserRepository(private val db: FirebaseFirestore, private val auth: Fireba
                     // 실패 시 에러와 함께 resume
                     cont.resume(Result.failure(e))
                 }
+
         }
+
 }
 
