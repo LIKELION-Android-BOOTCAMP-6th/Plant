@@ -60,6 +60,8 @@ class PotRepository(private val db: FirebaseFirestore) {
                 }
         }
 
+
+
     //ARnkLKJE60MuhYMgivXweboI6ch2
     //VosJjoUJp6SplH0siKyoAIBZ7fk2
 // 이상 없으면 오전에 물어보고 model에 넣기

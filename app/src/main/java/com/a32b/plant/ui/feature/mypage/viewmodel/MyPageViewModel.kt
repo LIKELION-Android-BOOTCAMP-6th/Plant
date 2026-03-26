@@ -1,8 +1,10 @@
 package com.a32b.plant.ui.feature.mypage.viewmodel
 
 import android.util.Log
+import androidx.activity.SystemBarStyle.Companion.dark
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
 import com.a32b.plant.data.di.CurrentUser
 import com.a32b.plant.data.repository.PotRepository
 import com.a32b.plant.data.repository.UserRepository
@@ -23,7 +25,8 @@ data class MyPageUiState(
     val isUpdateSuccess: Boolean = false,
     val levelList: List<String> = emptyList(), // 프로필 편집 - 화분 이미지 띄우기 위해 쓰이는 레벨 리스트
     val isDarkMode: Boolean = false,
-    val nicknameError: String? = null
+    val nicknameError: String? = null,
+    val totalStudyTime: String = "0시간 0분"
 )
 
 sealed class MyPageEvent {
@@ -37,14 +40,9 @@ class MyPageViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(MyPageUiState())
     val uiState = _uiState.asStateFlow()
-    // update 결과 확인용 update 완료 후 true => 다이얼로그 창 닫기
-    private val _isUpdateSuccess = MutableStateFlow(false)
-    val isUpdateSuccess = _isUpdateSuccess.asStateFlow()
 
     init {
         viewModelScope.launch {
-//            _potId.value = "WfFW9NVdg8NDXZPGNas4"
-
             CurrentUser.uid = "ARnkLKJE60MuhYMgivXweboI6ch2"
             userRepository.getUserProfile(CurrentUser.uid).collectLatest { profile ->
                 if (profile != null) {
@@ -52,10 +50,10 @@ class MyPageViewModel(
                         it.copy(
                             nickname = profile.nickname ?: "이름없음",
                             profileImg = profile.profileImg ?: "Lv.1",
-                            isDarkMode = profile.isDarkMode ?: false
+                            isDarkMode = profile.isDarkMode ?: true,
+                            totalStudyTime = formatToDigitalClock(profile.totalStudyTime ?: 0L)
                         )
                     }
-                    Log.d("PlantLog", "현재 닉네임: ${profile.nickname}, 다크모드: ${profile.isDarkMode}")
 
                 } else {
                     Log.e("PlantLog", "MyPageViewModel init - 사용자 uid 검색 결과 null")
@@ -74,7 +72,12 @@ class MyPageViewModel(
 
     fun updateProfile(nickname: String, imageLevel: String) {
         if (nickname.length <= 2) {
-            _uiState.update { it.copy(isUpdateSuccess = false, nicknameError = "닉네임은 3글자 이상 입력해주세요") }
+            _uiState.update {
+                it.copy(
+                    isUpdateSuccess = false,
+                    nicknameError = "닉네임은 3글자 이상 입력해주세요"
+                )
+            }
             return
         } else {
             viewModelScope.launch {
@@ -104,13 +107,25 @@ class MyPageViewModel(
         _uiState.update { it.copy(isUpdateSuccess = false) }
     }
 
+
     fun toggleDarkMode() {
-        _uiState.update { currentState ->
-            currentState.copy(isDarkMode = !currentState.isDarkMode)
+        val state = !uiState.value.isDarkMode
+        viewModelScope.launch {
+            try {
+                Log.d("plantLog", "----------3")
+//                userRepository.updateIsDarkMode(
+//                    uid = CurrentUser.uid,
+//                    state = state
+//                )
+//                _uiState.update { it.copy(isDarkMode = state) }
+
+            } catch (e: Exception) {
+                Log.e("error", e.message.toString())
+            }
         }
     }
+
 
     //데이터베이스에서 값을 안 가져와도 되는 경우
     fun getTag() = "자격증"
 }
-

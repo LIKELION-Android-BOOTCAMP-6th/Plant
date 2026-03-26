@@ -71,7 +71,7 @@ fun MypageScreen(navController: NavController) {
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            ButtonTemplate(text = "기른 나무 수-모양 변경") { }
+            GrownTreesButton() {}
             DividerImage()
             ButtonTemplate(text = "커뮤니티 활동") { }
             ButtonTemplate(text = "앱 설정") { }
@@ -93,10 +93,8 @@ fun DarkModeToggleButton(
     isDarkMode: Boolean,
     onToggle: () -> Unit
 ) {
-    val isDark = remember { mutableStateOf(false) }
-
     Button(
-        onClick = { isDark.value = !isDark.value },
+        onClick = { onToggle() },
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.buttonColors(
@@ -115,8 +113,8 @@ fun DarkModeToggleButton(
                 style = MaterialTheme.typography.bodyLarge
             )
             Switch(
-                checked = isDark.value,
-                onCheckedChange = { isDark.value = it },
+                checked = isDarkMode,
+                onCheckedChange = { onToggle() },
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = Color.White,
                     checkedTrackColor = primary
@@ -127,38 +125,36 @@ fun DarkModeToggleButton(
 }
 
 @Composable
-fun GrownTreeCountButton() {
-// 임시로 정한 숫자 (나중엔 서버나 DB에서 가져오겠지?)
-    val count = 5
+fun GrownTreesButton(
+    onClick: () -> Unit
+) {
     Button(
-        onClick = { /* 클릭 시 나무 상세 페이지로 이동 등 */ },
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.White,
-            contentColor = Color.Black
+            contentColor = fontColor
         )
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.SpaceBetween, // 좌우 배치
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 왼쪽: 제목 (폰트 작게)
             Text(
                 text = "기른 나무 수",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyLarge
             )
-
-            // 오른쪽: 숫자 상태 (폰트 더 작게)
+            // -------- 03-26 users db 변경되면 가져오기
             Text(
-                text = "${count}그루",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF4CAF50) // 나무니까 초록색 포인트!
+                text = "1 그루",
+                style = MaterialTheme.typography.bodyLarge
             )
         }
     }
 }
+
 
 @Composable
 fun ButtonTemplate(text: String, onClick: () -> Unit) {
@@ -189,7 +185,6 @@ fun ProfileRow(uiState: MyPageUiState, viewModel: MyPageViewModel) {
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // [수정 포인트] 03-24 공통 컴포넌트 가이드 적용
         Box(
             modifier = Modifier
                 .clickable {
@@ -204,7 +199,6 @@ fun ProfileRow(uiState: MyPageUiState, viewModel: MyPageViewModel) {
         }
 
         Spacer(modifier = Modifier.width(16.dp))
-
         Column(modifier = Modifier.weight(1F)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -223,7 +217,7 @@ fun ProfileRow(uiState: MyPageUiState, viewModel: MyPageViewModel) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(text = "총 공부 시간", style = Typography.bodySmall, color = fontColor)
-                Text(text = "20:43:30", style = Typography.bodySmall, color = fontColor)
+                Text(text = uiState.totalStudyTime, style = Typography.bodySmall, color = fontColor)
             }
         }
     }
@@ -236,6 +230,7 @@ fun ProfileRow(uiState: MyPageUiState, viewModel: MyPageViewModel) {
         )
     }
 }
+
 @Composable
 fun DividerImage() {
     Column(
@@ -274,7 +269,6 @@ fun SetImages(
                     )
                     .clickable { onImageClick(level) }
             ) {
-                // 네가 요청한 형식 그대로!
                 ProfileImage(level, 60)
             }
         }
@@ -285,7 +279,7 @@ fun SetImages(
 @Composable
 fun ProfileDialog(
     onDismiss: () -> Unit,
-    uiState: MyPageUiState, // 1. 이제 가방(uiState)을 직접 받아!
+    uiState: MyPageUiState,
     viewModel: MyPageViewModel
 ) {
     // 다이얼로그 안에서만 임시로 쓸 상태들 (입력 중인 값)
@@ -294,7 +288,7 @@ fun ProfileDialog(
 
     val context = LocalContext.current
 
-    // 2. [중요] 업데이트 성공 시 창 닫기 로직
+    // 업데이트 성공 시 창 닫기 로직
     LaunchedEffect(uiState.isUpdateSuccess) {
         if (uiState.isUpdateSuccess) {
             Toast.makeText(context, "업데이트 완료", Toast.LENGTH_SHORT).show()
