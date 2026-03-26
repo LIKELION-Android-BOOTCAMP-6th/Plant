@@ -99,6 +99,7 @@ class PotRepository(private val db: FirebaseFirestore) {
             todayStudyingTime = 0L,
             isCompleted = false
         )
+
         val log = Logs(
             title = "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
             content = listOf(

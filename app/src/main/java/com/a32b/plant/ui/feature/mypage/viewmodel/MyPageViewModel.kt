@@ -30,6 +30,7 @@ sealed class MyPageEvent {
     object SuccessUpdate : MyPageEvent()
 }
 
+
 class MyPageViewModel(
     private val userRepository: UserRepository,
     private val potRepository: PotRepository
@@ -54,7 +55,6 @@ class MyPageViewModel(
                             isDarkMode = profile.isDarkMode ?: false
                         )
                     }
-                    // ViewModel의 init 블록 안에 추가
                     Log.d("PlantLog", "현재 닉네임: ${profile.nickname}, 다크모드: ${profile.isDarkMode}")
 
                 } else {
