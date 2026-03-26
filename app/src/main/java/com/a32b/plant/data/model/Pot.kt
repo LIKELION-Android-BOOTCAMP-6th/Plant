@@ -5,10 +5,10 @@ import com.google.firebase.firestore.ServerTimestamp
 
 //화분 정보 모음
 data class PotInfo(
-    val id: String = "",
-    val tag: String = "",
-    val name: String = "",
-    val imageUrl: String = "",
+    val id: String? = null,
+    val tag: String? = null,
+    val name: String? = null,
+    val imageUrl: String? = null,
     val pottotalStudyingTime: Long? = null,
     @ServerTimestamp
     val createdAt: Timestamp? = null,
@@ -17,7 +17,9 @@ data class PotInfo(
 ){
     //레벨 업 계산
     val level: String get(){
-        val totalSeconds = pottotalStudyingTime ?: 0
+        if (id.isNullOrEmpty()) return "EMPTY"
+
+        val totalSeconds = pottotalStudyingTime ?: 0L
         val hours = totalSeconds / 3600
         val calculatedlevel =  when {
             hours >= 77 -> 5

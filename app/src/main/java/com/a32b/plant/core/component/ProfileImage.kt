@@ -13,22 +13,25 @@ import com.a32b.plant.R
 import com.a32b.plant.core.util.PlantLevel
 
 @Composable
-fun ProfileImage(level: String, size: Int){
+fun ProfileImage(level: String, size: Int, modifier: Modifier = Modifier){
 
-    val levelInt = level.toIntOrNull() ?: 0
-    // 레벨 변경에 따른 이미지 변경
-    val imageRes = when(levelInt){
-        1 -> R.drawable.ic_pot_lv1 //
-        2 -> R.drawable.ic_pot_lv2 // 30시간 이상
-        3 -> R.drawable.ic_pot_lv3 // 50시간 이상
-        4 -> R.drawable.ic_pot_lv4 // 100시간 이상
-        else -> R.drawable.ic_pot_lv0 // 기본 (0~9시간)
+    val imageRes = when (level) {
+        "0" -> R.drawable.ic_pot_lv0
+        "1" -> R.drawable.ic_pot_lv1
+        "2" -> R.drawable.ic_pot_lv2
+        "3" -> R.drawable.ic_pot_lv3
+        "4" -> R.drawable.ic_pot_lv4
+        "5" -> R.drawable.ic_pot_lv5
+        else -> R.drawable.logo_plant     // 예외 상황 대비
     }
+
     Image(
-        painter = painterResource(id = PlantLevel.getPlantImage(level)),
+        painter = painterResource(id = imageRes),
         contentDescription = "화분 성장 단계 : $level",
         contentScale = ContentScale.Fit,
-        modifier = Modifier.size(size.dp).clip(CircleShape)
+        modifier = modifier
+            .size(size.dp)
+            .clip(CircleShape)
     )
 
 }

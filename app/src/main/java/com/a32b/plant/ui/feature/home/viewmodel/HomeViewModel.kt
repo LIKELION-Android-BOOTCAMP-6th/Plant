@@ -80,7 +80,7 @@ class HomeViewModel(private val userRepository: UserRepository) : ViewModel() {
 
         // 2. DB에 마지막 선택된 화분 ID 업데이트
         viewModelScope.launch {
-            userRepository.updateLastSelectedPot(currentUid, pot.id)
+            userRepository.updateLastSelectedPot(currentUid, pot.id ?: "")
         }
     }
 }
