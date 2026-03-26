@@ -66,9 +66,9 @@ fun HomeScreen(navController: NavController) {
                     displayPot = displayPot,
                     onStartClick = {
                         // 화분이 있을 때만 공부 페이지로 이동
-                        if (displayPot.id.isNotEmpty()) {
+                        if (!(displayPot.id.isNullOrEmpty())) {
                             navController.navigate(
-                                Routes.Studying(displayPot.id, displayPot.tag, displayPot.name)
+                                Routes.Studying(displayPot.id!!, displayPot.tag?: "", displayPot.name ?: "")
                             )
                         }
                     },
@@ -154,8 +154,7 @@ fun MainPlantCard(displayPot: PotInfo, onStartClick: () -> Unit,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // 화분이 있을 때만 태그 표시 (ID가 비어있지 않을 때)
-            if (displayPot.id.isNotEmpty() && displayPot.tag.isNotEmpty()) {
-                Surface(
+            if (!displayPot.id.isNullOrEmpty() && !displayPot.tag.isNullOrEmpty()) {                Surface(
                     color = Color(0xFFE8F5E9),
                     shape = RoundedCornerShape(8.dp)
                 ) {
@@ -170,8 +169,7 @@ fun MainPlantCard(displayPot: PotInfo, onStartClick: () -> Unit,
 
             // 화분이 없으면 안내 문구 - Bold 적용
             Text(
-                text = if (displayPot.id.isEmpty()) "화분을 등록해보세요" else displayPot.name,
-                style = MaterialTheme.typography.displayLarge,
+                text = if (displayPot.id.isNullOrEmpty()) "화분을 등록해보세요" else (displayPot.name ?: "이름 없음"),                style = MaterialTheme.typography.displayLarge,
                 color = fontColor
             )
 
@@ -199,12 +197,12 @@ fun MainPlantCard(displayPot: PotInfo, onStartClick: () -> Unit,
             Button(
                 onClick = onStartClick,
                 // 화분이 있거나, 테스트 모드일 때 버튼을 활성화함
-                enabled = displayPot.id.isNotEmpty() || isTestMode,
+                enabled = !displayPot.id.isNullOrEmpty() || isTestMode,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA5C16C))
             ) {
                 Text(
-                    text = if (displayPot.id.isEmpty() && !isTestMode) "화분 없음" else "공부 시작",
+                    text = if (displayPot.id.isNullOrEmpty() && !isTestMode) "화분 없음" else "공부 시작",
                     style = MaterialTheme.typography.titleSmall,
                     color = background
                 )
@@ -234,7 +232,7 @@ fun GridPlantItem(
     onTextClick: () -> Unit // 텍스트 클릭 여부
 ) {
     // 화분 ID가 비어있지 않을 때만 실제 내용을 표시
-    if (pot.id.isNotEmpty()) {
+    if (!pot.id.isNullOrEmpty()) {
         Column(
             modifier = modifier
                 .fillMaxWidth()
@@ -273,7 +271,7 @@ fun GridPlantItem(
                 )
                 // 화분 이름 (Medium 적용)
                 Text(
-                    text = pot.name,
+                    text = pot.name ?: "이름 없음",
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
