@@ -17,7 +17,9 @@ data class PotInfo(
 ){
     //레벨 업 계산
     val level: String get(){
-        val totalSeconds = pottotalStudyingTime ?: 0
+        if (id.isNullOrEmpty()) return "EMPTY"
+
+        val totalSeconds = pottotalStudyingTime ?: 0L
         val hours = totalSeconds / 3600
         val calculatedlevel =  when {
             hours >= 77 -> 5
