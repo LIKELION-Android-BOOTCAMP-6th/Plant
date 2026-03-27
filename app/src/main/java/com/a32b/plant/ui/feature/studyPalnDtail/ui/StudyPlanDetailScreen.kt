@@ -116,12 +116,12 @@ fun StudyRecordCard(log : StudyLog){
             ){
                 // 날짜
                 Text(
-                    text = TimeFormatter.formatToKoreanDate(dateTime),
+                    text = if (log.title.isNotEmpty()) log.title else TimeFormatter.formatToKoreanDate(dateTime),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis // 너무 길면 ... 처리
+                    overflow = TextOverflow.Ellipsis
             )
                 // 2. 공부시간 (우측 고정)
                 Text(
@@ -132,7 +132,7 @@ fun StudyRecordCard(log : StudyLog){
                 )
                 Spacer(modifier = Modifier.width(5.dp))
 
-                // 삭제 버튼
+//                 //삭제 버튼
 //                IconButton(onClick = /* delete*/) {
 //                    Icon(painterResource(R.drawable.ic_trash),
 //                        contentDescription = "상세 공부 기록 삭제",

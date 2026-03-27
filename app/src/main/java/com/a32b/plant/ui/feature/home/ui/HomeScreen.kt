@@ -103,7 +103,7 @@ fun HomeScreen(navController: NavController) {
                             onTextClick = {
                                 //  계획 페이지 개발 완료 시 아래 주석 해제
                                 pot.id?.let { id ->
-                                    navController.navigate(Routes.StudyPlanDetail(pot.id))
+                                    navController.navigate(Routes.StudyPlanDetail(id))
                                 }
 
                             }

@@ -5,6 +5,8 @@ import android.widget.Toast
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
+import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.data.model.PotInfo
 import com.a32b.plant.data.model.UserProfile
 import com.a32b.plant.core.util.TimeFormatter
@@ -27,7 +29,8 @@ class StudyPlanDetailViewModel(
     private val auth = Firebase.auth
 
     // Navigation에서 넘겨준 potId
-    private val potId: String = checkNotNull(savedStateHandle["potId"])
+    private val args = savedStateHandle.toRoute<Routes.StudyPlanDetail>()
+    private val potId: String = args.potId
     private val userId: String = auth.currentUser?.uid ?: ""
 
     private val _potDetail = MutableStateFlow<PotInfo?>(null)
@@ -73,8 +76,7 @@ class StudyPlanDetailViewModel(
             .get()
             .addOnSuccessListener { querySnapshots ->
                 val logs = querySnapshots.documents.mapNotNull { doc ->
-                    //문서 ID -> StudyLog 객체에 입력 => 삭제 위해서
-                    doc.toObject(StudyLog::class.java)?.copy(doc.id)
+                    doc.toObject(StudyLog::class.java)?.copy(id = doc.id)
                 }
                 _studyLogs.value = logs
             }
