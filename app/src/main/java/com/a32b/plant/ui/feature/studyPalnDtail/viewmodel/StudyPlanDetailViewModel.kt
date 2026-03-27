@@ -1,14 +1,18 @@
 package com.a32b.plant.ui.feature.studyPalnDtail.viewmodel
 
+import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.data.model.PotInfo
 import com.a32b.plant.data.model.UserProfile
 import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.data.model.StudyLog
 import com.a32b.plant.data.repository.UserRepository
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +33,9 @@ class StudyPlanDetailViewModel(
     private val _potDetail = MutableStateFlow<PotInfo?>(null)
     val potDetail = _potDetail.asStateFlow()
 
+    private val _studyLogs = MutableStateFlow<List<StudyLog>>(emptyList())
+    val studyLogs = _studyLogs.asStateFlow()
+
     init {
         fetchPotDetail()
     }
@@ -39,13 +46,16 @@ class StudyPlanDetailViewModel(
         // Firestore 경로: users/{userId}/pots/{potId}
         db.collection("users").document(userId)
             .collection("pots").document(potId)
+            .collection("logs")
+            .orderBy("createAt", Query.Direction.DESCENDING)
             .get()
-            .addOnSuccessListener { document ->
-//                if (document != null) {
-//                    val pot = document.toObject<PotInfo>()
-//                    _potDetail.value = pot
-//                }
+            .addOnSuccessListener { querySnapshot ->
+                val logs = querySnapshot.toObjects(StudyLog::class.java)
+                _studyLogs.value = logs
             }
-            .addOnFailureListener { /* 에러 처리 */ }
+            .addOnFailureListener { e ->
+                Log.e("Firestore","데이터 로드 실패 : ${e.message}")
+                //Toast.makeText(context, "")
+            }
     }
 }
