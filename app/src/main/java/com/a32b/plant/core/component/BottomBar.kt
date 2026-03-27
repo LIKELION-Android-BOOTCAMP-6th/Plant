@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -32,10 +33,10 @@ fun BottomBar(navController: NavController){
 
     Surface(modifier = Modifier
         .fillMaxWidth()
-        .height(68.dp),
+        .navigationBarsPadding(),
         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
         color = sub1) {
-        Row(modifier = Modifier.fillMaxSize(),
+        Row(modifier = Modifier.fillMaxWidth().height(68.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically) {
 
