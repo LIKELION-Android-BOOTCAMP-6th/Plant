@@ -35,9 +35,7 @@ import com.a32b.plant.ui.theme.background
 import com.a32b.plant.ui.theme.fontColor
 import com.a32b.plant.ui.theme.fontColorSub
 import com.a32b.plant.ui.theme.primary
-
-
-val TextFieldBackgroundColor = Color(0xFFEEEEEE)
+import com.a32b.plant.ui.theme.textFieldBackground
 
 @Composable
 fun SignUpScreen(
@@ -123,8 +121,8 @@ fun SignUpScreen(
                             )
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = TextFieldBackgroundColor,
-                            unfocusedContainerColor = TextFieldBackgroundColor,
+                            focusedContainerColor = textFieldBackground,
+                            unfocusedContainerColor = textFieldBackground,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             focusedTextColor = fontColor,
@@ -158,8 +156,8 @@ fun SignUpScreen(
                             )
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = TextFieldBackgroundColor,
-                            unfocusedContainerColor = TextFieldBackgroundColor,
+                            focusedContainerColor = textFieldBackground,
+                            unfocusedContainerColor = textFieldBackground,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             focusedTextColor = fontColor,
@@ -197,8 +195,8 @@ fun SignUpScreen(
                         value = uiState.passwordConfirm,
                         onValueChange = viewModel::onPasswordConfirmChange,
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = TextFieldBackgroundColor,
-                            unfocusedContainerColor = TextFieldBackgroundColor,
+                            focusedContainerColor = textFieldBackground,
+                            unfocusedContainerColor = textFieldBackground,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             focusedTextColor = fontColor,

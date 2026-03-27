@@ -5,6 +5,9 @@ import androidx.compose.ui.graphics.Color
 //배경 색상
 val background = Color(0xFFFFFFF4)
 
+// 입력창 배경색
+val textFieldBackground = Color(0xFFEEEEEE)
+
 //메인 색상
 val primary = Color(0xFF97BC62)
 //그린 서브 색상1
