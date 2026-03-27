@@ -47,16 +47,16 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
                 CommunityPostScreen(navController, postVm)
             }
 
-            // ✅ 2. 상세 화면 조립 방식 수정
+
             composable<Routes.CommunityDetail> { backStackEntry ->
                 val route = backStackEntry.toRoute<Routes.CommunityDetail>()
                 val detailVm: CommunityDetailViewModel = viewModel(
                     factory = ViewModelFactory.communityDetailViewModelFactory(route.postId)
                 )
 
-                // navController를 직접 주는 게 아니라, '뒤로가기 버튼을 눌렀을 때의 동작'을 전달합니다.
+
                 CommunityDetailScreen(
-                    onBack = { navController.popBackStack() }, // 👈 이렇게 써야 에러가 안 납니다!
+                    onBack = { navController.popBackStack() },
                     viewModel = detailVm
                 )
             }

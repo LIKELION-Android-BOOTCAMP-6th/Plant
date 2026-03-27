@@ -9,48 +9,25 @@ import kotlinx.coroutines.launch
 
 class CommunityListViewModel(private val repository: PostRepository) : ViewModel() {
 
-
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
 
-
-    private val _navigateToCommunity = MutableSharedFlow<Unit>()
-    val navigateToCommunity = _navigateToCommunity.asSharedFlow()
-
-
-    val uiState: StateFlow<List<Post>> = combine(
-        repository.getPosts(),
-        _searchQuery
-    ) { posts, query ->
-
-
-        val filteredPosts = if (query.isBlank()) {
-            posts
-        } else {
-            posts.filter {
-                it.title.contains(query, ignoreCase = true) ||
-                        it.content.contains(query, ignoreCase = true)
+    private val _uiState = MutableStateFlow<List<Post>>(emptyList())
+    val uiState: StateFlow<List<Post>> = _searchQuery
+        .combine(repository.getPosts()) { query, posts ->
+            if (query.isBlank()) {
+                posts
+            } else {
+                posts.filter { it.content.contains(query, ignoreCase = true) || it.title.contains(query, ignoreCase = true) }
             }
         }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
-
-        val sortedPosts = filteredPosts.sortedByDescending { it.createdAt }
-
-
-        if (sortedPosts.isNotEmpty()) {
-            _navigateToCommunity.emit(Unit)
-        }
-
-        sortedPosts
-
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
-    )
-
-
-    fun onSearchQueryChanged(newQuery: String) {
-        _searchQuery.value = newQuery
+    fun onSearchQueryChanged(query: String) {
+        _searchQuery.value = query
     }
 }

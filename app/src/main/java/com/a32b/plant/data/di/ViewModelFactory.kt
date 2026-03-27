@@ -8,6 +8,7 @@ import com.a32b.plant.ui.feature.community.viewmodel.CommunityDetailViewModel
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityListViewModel
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityPostViewModel
 import com.a32b.plant.ui.feature.home.viewmodel.HomeViewModel
+//import com.a32b.plant.ui.feature.home.viewmodel.HomeViewModel
 import com.a32b.plant.ui.feature.home.viewmodel.NewBornTreeViewModel
 import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageArchiveViewModel
 import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageViewModel

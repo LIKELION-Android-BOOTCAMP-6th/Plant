@@ -78,7 +78,7 @@ fun CommunityListScreen(navController: NavController) {
         }
     }
 
-    // ✅ 필터 다이얼로그 (중복 선택 로직 포함)
+
     if (showDialog) {
         CategoryDialog(
             currentSelected = selectedTags,
@@ -183,10 +183,12 @@ fun PostCard(post: Post, onClick: () -> Unit) {
             Row {
                 IconStat(R.drawable.ic_community_comment, post.commentCount.toString())
                 Spacer(modifier = Modifier.width(12.dp))
+
                 IconStat(
-                    if (post.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    post.likeCount.toString(),
-                    if (post.isLiked) Color.Red else Color.Gray
+
+                    iconRes = if (post.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    text = post.likeCount.toString(),
+                    tint = if (post.isLiked) Color.Red else Color.Gray
                 )
             }
         }

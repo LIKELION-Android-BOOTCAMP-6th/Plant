@@ -1,13 +1,12 @@
 package com.a32b.plant.ui.feature.community.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.*
@@ -20,12 +19,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle // ✅ 이거 꼭 확인!
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.a32b.plant.R
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityDetailViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,101 +31,138 @@ fun CommunityDetailScreen(
     onBack: () -> Unit,
     viewModel: CommunityDetailViewModel
 ) {
-
     val postState by viewModel.post.collectAsStateWithLifecycle()
+    val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
+    val commentText by viewModel.commentText.collectAsStateWithLifecycle()
 
-    val dateFormat = SimpleDateFormat("yyyy년 MM월 dd일", Locale.KOREA)
+    var isEditing by remember { mutableStateOf(false) }
+    var editTitle by remember { mutableStateOf("") }
+    var editContent by remember { mutableStateOf("") }
+
+    LaunchedEffect(postState) {
+        postState?.let {
+            editTitle = it.title
+            editContent = it.content
+        }
+    }
 
     Scaffold(
-        containerColor = Color.White,
+        containerColor = Color(0xFFF9F9F4),
         topBar = {
             TopAppBar(
                 title = { },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "뒤로가기")
+                        Icon(painterResource(id = R.drawable.ic_backbtn), contentDescription = "뒤로", modifier = Modifier.size(24.dp))
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         }
     ) { innerPadding ->
+        val currentPost = postState ?: return@Scaffold
 
 
-        val currentPost = postState
-        if (currentPost == null) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Color(0xFFC5E1A5))
+        val formattedDate = remember(currentPost.createdAt) {
+            try {
+                val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                val outputFormat = SimpleDateFormat("yyyy년MM월dd일", Locale.KOREA)
+                val date = inputFormat.parse(currentPost.createdAt)
+                date?.let { outputFormat.format(it) } ?: currentPost.createdAt
+            } catch (e: Exception) {
+                currentPost.createdAt
             }
-        } else {
+        }
 
-            Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-                LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 20.dp)) {
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .padding(horizontal = 20.dp)
+        ) {
+            Card(
+                modifier = Modifier.fillMaxSize(),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(2.dp)
+            ) {
+                LazyColumn(modifier = Modifier.padding(20.dp)) {
 
-                    // 제목
                     item {
-                        Text(
-                            text = currentPost.title,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(vertical = 20.dp).fillMaxWidth(),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                        )
+                        if (isEditing) {
+                            OutlinedTextField(value = editTitle, onValueChange = { editTitle = it }, modifier = Modifier.fillMaxWidth())
+                        } else {
+                            Text(currentPost.title, fontSize = 28.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        }
+                        Spacer(modifier = Modifier.height(20.dp))
                     }
 
+
                     item {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(40.dp).clip(CircleShape).background(Color.LightGray))
-                            Spacer(Modifier.width(12.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                            Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.LightGray))
+                            Spacer(modifier = Modifier.width(10.dp))
                             Text(currentPost.nickName, fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.weight(1f))
-                            Text(
-                                text = dateFormat.format(currentPost.createdAt),
-                                color = Color.Gray,
-                                fontSize = 12.sp
-                            )
+                            Spacer(modifier = Modifier.weight(1f))
+
+                            Text(formattedDate, color = Color.Gray, fontSize = 14.sp)
+                        }
+                        Spacer(modifier = Modifier.height(25.dp))
+                    }
+
+
+                    item {
+                        if (isEditing) {
+                            OutlinedTextField(value = editContent, onValueChange = { editContent = it }, modifier = Modifier.fillMaxWidth().height(150.dp))
+                        } else {
+                            Text(currentPost.content, fontSize = 16.sp, lineHeight = 24.sp)
+                        }
+                        Spacer(modifier = Modifier.height(40.dp))
+                    }
+
+
+                    item {
+                        HorizontalDivider(color = Color(0xFFEEEEEE))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                        ) {
+                            Icon(painterResource(id = R.drawable.ic_community_comment), "댓글", tint = Color(0xFF6750A4), modifier = Modifier.size(18.dp))
+                            Text(" ${currentPost.comments.size}", modifier = Modifier.padding(end = 12.dp))
+                            Icon(Icons.Default.FavoriteBorder, "좋아요", tint = Color(0xFF6750A4), modifier = Modifier.size(18.dp))
+                            Text(" ${currentPost.likeCount}")
+
+                            Spacer(modifier = Modifier.weight(1f))
+
+                            if (currentPost.nickName == currentUser?.nickname) {
+                                IconButton(onClick = { isEditing = !isEditing }, modifier = Modifier.size(24.dp)) {
+                                    Icon(painterResource(id = R.drawable.ic_edit), "수정")
+                                }
+                                IconButton(onClick = { viewModel.deletePost { onBack() } }, modifier = Modifier.size(24.dp)) {
+                                    Icon(Icons.Default.Delete, "삭제")
+                                }
+                            }
                         }
                     }
 
 
                     item {
-                        Spacer(Modifier.height(30.dp))
-                        Text(
-                            text = currentPost.content,
-                            fontSize = 16.sp,
-                            lineHeight = 24.sp
+                        CommentInputSection(
+                            nickname = currentUser?.nickname ?: "익명",
+                            text = commentText,
+                            onTextChange = { viewModel.onCommentChange(it) },
+                            onSend = { viewModel.addComment() }
                         )
-                        Spacer(Modifier.height(50.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
                     }
 
+                    // ✅ 6. 실제 댓글 목록 (DB 데이터 연결)
+                    items(currentPost.comments) { commentData ->
+                        val name = commentData["nickName"] as? String ?: "익명"
+                        val content = commentData["content"] as? String ?: ""
 
-                    item {
-                        Divider(color = Color(0xFFF0F0F0))
-                        Row(Modifier.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(painterResource(R.drawable.ic_community_comment), null, Modifier.size(20.dp), tint = Color(0xFF6750A4))
-                            Text(" ${currentPost.commentCount} ", fontSize = 14.sp)
-
-                            Icon(Icons.Default.FavoriteBorder, null, Modifier.size(20.dp), tint = Color(0xFF6750A4))
-                            Text(" ${currentPost.likeCount}", fontSize = 14.sp)
-
-                            Spacer(Modifier.weight(1f))
-
-                            Icon(painterResource(R.drawable.ic_edit), null, Modifier.size(20.dp), tint = Color(0xFF6750A4))
-                            Spacer(Modifier.width(12.dp))
-
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "삭제",
-                                modifier = Modifier.size(20.dp).clickable {
-                                    viewModel.deletePost { onBack() }
-                                },
-                                tint = Color(0xFF6750A4)
-                            )
-                        }
-                    }
-
-                    item {
-                        CommentInputSection()
+                        CommentRow(name = name, content = content)
+                        Spacer(modifier = Modifier.height(12.dp))
                     }
                 }
             }
@@ -136,24 +171,52 @@ fun CommunityDetailScreen(
 }
 
 @Composable
-fun CommentInputSection() {
+fun CommentRow(name: String, content: String) {
+    Row(verticalAlignment = Alignment.Top) {
+        Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(Color.LightGray))
+        Spacer(Modifier.width(8.dp))
+        Column {
+            Text(name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(content, fontSize = 14.sp, color = Color.Black)
+        }
+    }
+}
+
+@Composable
+fun CommentInputSection(nickname: String, text: String, onTextChange: (String) -> Unit, onSend: () -> Unit) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F0F0)),
         shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(24.dp).clip(CircleShape).background(Color.LightGray))
-                Text("  닉네임", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(Color.LightGray))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(nickname, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
-            Spacer(Modifier.height(8.dp))
-            Box(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(8.dp)).padding(12.dp)) {
-                Text("댓글작성", color = Color.LightGray, fontSize = 14.sp)
-            }
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                Surface(color = Color(0xFFC5E1A5), shape = RoundedCornerShape(4.dp), modifier = Modifier.padding(top = 8.dp)) {
-                    Text("등록", Modifier.padding(horizontal = 8.dp, vertical = 4.dp), fontSize = 10.sp, color = Color(0xFF33691E))
+            TextField(
+                value = text,
+                onValueChange = onTextChange,
+                modifier = Modifier.fillMaxWidth().height(80.dp).padding(top = 8.dp),
+                placeholder = { Text("댓글작성", fontSize = 14.sp, color = Color.LightGray) },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent
+                ),
+                shape = RoundedCornerShape(8.dp)
+            )
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                Button(
+                    onClick = onSend,
+                    modifier = Modifier.height(30.dp).width(60.dp).padding(top = 4.dp),
+                    contentPadding = PaddingValues(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8BC34A)),
+                    shape = RoundedCornerShape(4.dp)
+                ) {
+                    Text("등록", fontSize = 12.sp, color = Color.White)
                 }
             }
         }
