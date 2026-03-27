@@ -23,12 +23,13 @@ import com.a32b.plant.data.di.ViewModelFactory
 import com.a32b.plant.data.model.PotInfo
 import com.a32b.plant.ui.feature.home.ui.GridPlantItem
 import com.a32b.plant.ui.feature.home.viewmodel.HomeViewModel
+import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageArchiveViewModel
 import com.a32b.plant.ui.theme.background
 
 
 @Composable
 fun MyPageArchiveScreen(navController: NavController) {
-    val viewModel: HomeViewModel =
+    val viewModel: MyPageArchiveViewModel =
         viewModel(factory = ViewModelFactory.myPageArchiveViewModelFactory)
     val potList by viewModel.potList.collectAsState()
 
