@@ -3,7 +3,6 @@ package com.a32b.plant.data.repository
 import android.util.Log
 import com.a32b.plant.data.di.CurrentUser
 import com.a32b.plant.data.model.StudyLog
-import com.a32b.plant.data.model.Logs
 import com.a32b.plant.data.model.PotInfo
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -81,9 +80,9 @@ class PotRepository(private val db: FirebaseFirestore) {
             isCompleted = false
         )
 
-        val log = Logs(
+        val log = StudyLog(
             title = "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
-            content = listOf(
+            contents = listOf(
                 "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
                 "학습내용abcdabcdefghiabcdabcdefghiabcdabcdefghi",
                 "학습내용5555555555555555555 5 5 55 55 5  5",
@@ -91,7 +90,7 @@ class PotRepository(private val db: FirebaseFirestore) {
                 "ddddddddddsdfsdfsdf",
                 ""
             ),
-            studyTime = 10L
+            studyingTime = 10L
         )
 
         db.collection("pots")

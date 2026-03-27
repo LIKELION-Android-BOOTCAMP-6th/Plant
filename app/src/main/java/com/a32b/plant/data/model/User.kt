@@ -11,8 +11,6 @@ data class UserProfile(
     val potList: List<PotInfo> = emptyList(),
     @get:PropertyName("isFirstLogin") @set:PropertyName("isFirstLogin")
     var isFirstLogin: Boolean? = null, // 회원가입 시 true 유지 -> 첫 로그인 후 닉네임 재설정 하고 false 바꾸기
-    @get:PropertyName("isAutoLogin") @set:PropertyName("isAutoLogin")
-    var isAutoLogin: Boolean? = null,
     @get:PropertyName("isDarkMode") @set:PropertyName("isDarkMode")
     var isDarkMode: Boolean? = null,
     val totalStudyTime: Long? = null,

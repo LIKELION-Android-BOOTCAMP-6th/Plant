@@ -67,9 +67,7 @@ class UserRepository(private val db: FirebaseFirestore, private val auth: Fireba
     suspend fun createUser(uid: String): Result<Unit> =
         suspendCancellableCoroutine { cont ->
             val newUser = UserProfile(
-                // 회원가입 시 true 유지 -> 첫 로그인 후 닉네임 재설정 하고 false 바꾸기
-                isFirstLogin = true,
-                isAutoLogin = false,
+                isFirstLogin = true,  // 회원가입 시 true 유지 -> 첫 로그인 후 닉네임 설정하면 false
                 isDarkMode = false,
                 totalStudyTime = 0L,
                 completedPotsCount = 0
@@ -90,8 +88,7 @@ class UserRepository(private val db: FirebaseFirestore, private val auth: Fireba
         db.collection("users").document(uid)
             .update(
                 "nickname", nickname,
-                "isFirstLogin", false,
-                "isAutoLogin", true
+                "isFirstLogin", false
             )
             .await()
     }
@@ -117,23 +114,12 @@ class UserRepository(private val db: FirebaseFirestore, private val auth: Fireba
         }
     }
 
-
-    // 자동 로그인 여부 Firestore에 저장
-    suspend fun updateAutoLogin(uid: String, isAutoLogin: Boolean) {
-        try {
-            db.collection("users").document(uid)
-                .update("isAutoLogin", isAutoLogin)
-                .await()
-        } catch (e: Exception) {
-            Log.e("UserRepository", "updateAutoLogin 실패: ${e.message}", e)
-        }
+    // 회원 탈퇴 -> 유저 문서 삭제
+    suspend fun deleteUser(uid: String) {
+        db.collection("users").document(uid).delete().await()
     }
 
     suspend fun getPotId() = "현재 팟 아이디"
-
-    // ********************** push 할 때 autoLogin true 만들기
-//    fun isAutoLogin() = true
-     fun isAutoLogin() = false
 
     // 마지막으로 선택한 화분의 ID를 Firestore에 업데이트합니다.
     suspend fun updateLastSelectedPot(uid: String, potId: String): Result<Unit> =

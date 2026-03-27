@@ -88,7 +88,10 @@ class SignInViewModel(
         viewModelScope.launch {
             try {
                 // 1. Firebase 로그인
+                // 상세 설명: 아래 코드 한 줄이 동작하는 순간 Firebase SDK가 내부적으로 기기 로컬 저장소에 인증 토큰을 자동 저장
+                // auth.currentUser에 정보 저장됨 -> 이후 앱 껏다 켜도 로그인된 유저 정보 반환
                 val result = auth.signInWithEmailAndPassword(state.email, state.password).await()
+
                 val user = result.user
 
                 if (user == null) {
@@ -134,8 +137,7 @@ class SignInViewModel(
                     // 닉네임 설정 다이얼로그 표시
                     _uiState.update { it.copy(showNicknameDialog = true) }
                 } else {
-                    // 자동로그인 저장 후 홈 진입
-                    userRepository.updateAutoLogin(user.uid, true)
+                    // 홈 진입
                     _eventChannel.send(SignInEvent.NavigateToHome)
                 }
 
@@ -213,11 +215,22 @@ class SignInViewModel(
             }
             // 앱 인증 (토큰 검증) 실패
             "ERROR_INVALID_CREDENTIAL" -> {
-                _uiState.update { it.copy(password = "") }
+                _uiState.update {
+                    it.copy(
+                        email = "",
+                        password = ""
+                    )
+                }
                 sendToast("로그인에 실패했습니다. 다시 시도해주세요.")
             }
+
             else -> {
-                _uiState.update { it.copy(password = "") }
+                _uiState.update {
+                    it.copy(
+                        email = "",
+                        password = ""
+                    )
+                }
                 sendToast("로그인에 실패했습니다. 다시 시도해주세요.")
             }
         }

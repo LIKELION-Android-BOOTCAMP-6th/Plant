@@ -60,7 +60,7 @@ fun SignInScreen(navController: NavController) {
 
                 is SignInEvent.NavigateToHome ->
                     navController.navigate(Routes.HomeMain) {
-                        // 로그인 화면을 백스택에서 제거 → 뒤로가기 시 로그인으로 돌아가지 않도록
+                        // 로그인 화면을 백스택에서 제거 → 홈으로 간 뒤 뒤로가기 시 로그인으로 돌아가지 않도록
                         popUpTo(Routes.SignIn) { inclusive = true }
                     }
 
@@ -70,11 +70,11 @@ fun SignInScreen(navController: NavController) {
         }
     }
 
-    // *****************************************************************************************
-    // 닉네임 설정 다이얼로그 (isFirstLogin == true 일 때 표시) - StudyingScreen Dialog와 비슷하게 맞추기!
+    // 닉네임 설정 다이얼로그
     if (uiState.showNicknameDialog) {
         Dialog(
-            onDismissRequest = {}, // 닫기 불가 - 닉네임 설정 필수
+            // 닫기 불가 - 닉네임 설정 필수
+            onDismissRequest = {},
             properties = DialogProperties(
                 dismissOnBackPress = false,
                 dismissOnClickOutside = false
@@ -192,7 +192,7 @@ fun SignInScreen(navController: NavController) {
             horizontalAlignment = Alignment.Start
         ) {
             Spacer(modifier = Modifier.statusBarsPadding())
-            Spacer(modifier = Modifier.height(100.dp))
+            Spacer(modifier = Modifier.height(130.dp))
 
             // Plant 로고 타이틀
             Text(
@@ -391,27 +391,20 @@ fun SignInScreen(navController: NavController) {
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // 구글 로그인 버튼
-                    OutlinedButton(
-                        onClick = {
-                            // TODO: 구글 로그인 (후순위 개발)
-                            Toast.makeText(context, "구글 로그인은 추후 지원 예정입니다.", Toast.LENGTH_SHORT).show()
-                        },
+                    // 구글 로그인 이미지
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_auth_google),
+                        contentDescription = "Google 로그인",
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = Color.White
-                        )
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_auth_google),
-                            contentDescription = "Google 로그인",
-                            modifier = Modifier.height(40.dp),
-                            contentScale = ContentScale.FillHeight
-                        )
-                    }
+                            .height(48.dp)
+                            .clickable {
+                                // TODO: 구글 로그인 (후순위 개발)
+                                Toast.makeText(context, "구글 로그인은 추후 지원 예정입니다.", Toast.LENGTH_SHORT)
+                                    .show()
+                            },
+                        contentScale = ContentScale.Fit
+                    )
 
                     Spacer(modifier = Modifier.height(20.dp))
 

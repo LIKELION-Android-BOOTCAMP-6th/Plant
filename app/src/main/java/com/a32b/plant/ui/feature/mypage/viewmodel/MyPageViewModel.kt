@@ -5,16 +5,17 @@ import androidx.activity.SystemBarStyle.Companion.dark
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
-import com.a32b.plant.data.di.AppContainer.userRepository
 import com.a32b.plant.data.di.CurrentUser
 import com.a32b.plant.data.repository.NicknameRepository
 import com.a32b.plant.data.repository.PotRepository
 import com.a32b.plant.data.repository.UserRepository
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 /** 데이터베이스에서 값을 받아와야 하는 경우
 _변수명 : 외부에서 값을 못 건들이게 하기 위해 private으로 선언
@@ -41,7 +42,8 @@ sealed class MyPageEvent {
 class MyPageViewModel(
     private val userRepository: UserRepository,
     private val potRepository: PotRepository,
-    private val nicknameRepository: NicknameRepository
+    private val nicknameRepository: NicknameRepository,
+    private val firebaseAuth: FirebaseAuth
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(MyPageUiState())
     val uiState = _uiState.asStateFlow()

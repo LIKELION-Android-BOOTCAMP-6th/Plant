@@ -1,14 +1,20 @@
 package com.a32b.plant.ui.feature.studyPalnDtail.viewmodel
 
+import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
+import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.data.model.PotInfo
 import com.a32b.plant.data.model.UserProfile
 import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.data.model.StudyLog
 import com.a32b.plant.data.repository.UserRepository
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,29 +29,129 @@ class StudyPlanDetailViewModel(
     private val auth = Firebase.auth
 
     // Navigation에서 넘겨준 potId
-    private val potId: String = checkNotNull(savedStateHandle["potId"])
+    private val args = savedStateHandle.toRoute<Routes.StudyPlanDetail>()
+    private val potId: String = args.potId
     private val userId: String = auth.currentUser?.uid ?: ""
 
     private val _potDetail = MutableStateFlow<PotInfo?>(null)
     val potDetail = _potDetail.asStateFlow()
 
-    init {
-        fetchPotDetail()
+    private val _studyLogs = MutableStateFlow<List<StudyLog>>(emptyList())
+    val studyLogs = _studyLogs.asStateFlow()
+
+    // 다이얼로그 출력 여부
+    private val _isEditDialogShown = MutableStateFlow(false)
+    val isEditDialogShown = _isEditDialogShown.asStateFlow()
+
+    //다이얼로그 표시/숨김 제어
+    fun setEditDialogShown(show: Boolean){
+        _isEditDialogShown.value = show
     }
 
+    //화분 이름 업데이트
+    fun updatePotName(newName: String){
+        if (isInvalidIds(userId, potId) || newName.isBlank()) return
+
+        db.collection("users").document(userId)
+            .collection("pots").document(potId)
+            .update("name", newName) // Firestore의 'name' 필드만 업데이트
+            .addOnSuccessListener {
+                fetchPotDetail() // UI 갱신을 위해 데이터 다시 불러오기
+                setEditDialogShown(false) // 다이얼로그 닫기
+            }
+            .addOnFailureListener { e ->
+                Log.e("Firestore", "이름 수정 실패: ${e.message}")
+                //Toast.makeText("수정 실패", "")
+            }
+    }
+
+    // 삭제 확인 다이얼로그 출력 여부
+    private val _isDeleteDialogShown = MutableStateFlow(false)
+    val isDeleteDialogShown = _isDeleteDialogShown.asStateFlow()
+
+    //삭제 대기 로그 ID
+    private var pendingDeleteLogID : String = ""
+
+    fun showDeleteDialog(logId: String){
+        pendingDeleteLogID = logId
+        _isDeleteDialogShown.value = true
+    }
+
+    fun dismissDeleteDialog(){
+        _isDeleteDialogShown.value = false
+        pendingDeleteLogID = ""
+    }
+
+    //최종 삭제
+    fun confirmDelete(){
+        if(pendingDeleteLogID.isNotEmpty()){
+            deleteStudyLog(pendingDeleteLogID)
+            dismissDeleteDialog()
+        }
+    }
+
+    init {
+        fetchPotDetail()
+        fetchStudyLogs()
+    }
+
+    //ID 검사
+    private fun isInvalidIds(vararg ids : String?): Boolean{
+        return ids.any {it.isNullOrEmpty()}
+    }
+
+    //화분 상세 정보 가져오기
     private fun fetchPotDetail() {
-        if (userId.isEmpty()) return
+        if (isInvalidIds(userId, potId)) return
 
         // Firestore 경로: users/{userId}/pots/{potId}
         db.collection("users").document(userId)
             .collection("pots").document(potId)
             .get()
             .addOnSuccessListener { document ->
-//                if (document != null) {
-//                    val pot = document.toObject<PotInfo>()
-//                    _potDetail.value = pot
-//                }
+                if (document.exists()) {
+                    _potDetail.value = document.toObject(PotInfo::class.java)?.copy(id = document.id)
+                }
             }
-            .addOnFailureListener { /* 에러 처리 */ }
+            .addOnFailureListener { e ->
+                Log.e("Firestore","데이터 로드 실패 : ${e.message}")
+                //Toast.makeText(context, "")
+            }
+    }
+    private fun fetchStudyLogs(){
+        if(isInvalidIds(userId, potId)) return
+        db.collection("users").document(userId)
+            .collection("pots").document(potId)
+            .collection("logs")
+            .orderBy("createAt", Query.Direction.DESCENDING)
+            .get()
+            .addOnSuccessListener { querySnapshots ->
+                val logs = querySnapshots.documents.mapNotNull { doc ->
+                    doc.toObject(StudyLog::class.java)?.copy(id = doc.id)
+                }
+                _studyLogs.value = logs
+            }
+    }
+    fun deleteStudyLog(logId: String){
+        if(isInvalidIds(userId, potId, logId)) return
+        viewModelScope.launch {
+            db.collection("users").document(userId)
+                .collection("pots").document(potId)
+                .collection("logs").document(logId)
+                .delete()
+                .addOnSuccessListener {
+                    // 삭제 후 리스트 새로고침
+                    fetchStudyLogs()
+                }
+                .addOnFailureListener { e ->
+                    Log.e("Firestore", "삭제 실패 : ${e.message}")
+                }
+        }
+    }
+    fun checkID(logId: String): Boolean{
+        return when {
+            userId.isEmpty() || potId.isEmpty() || logId.isEmpty() -> true
+            else -> false
+        }
     }
 }

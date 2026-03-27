@@ -44,8 +44,10 @@ object ViewModelFactory {
     val myPageViewModelFactory = object : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return MyPageViewModel(
-                AppContainer.userRepository, AppContainer.potRepository,
-                AppContainer.nicknameRepository
+                AppContainer.userRepository,
+                AppContainer.potRepository,
+                AppContainer.nicknameRepository,
+                AppContainer.firebaseAuth
             ) as T
         }
     }

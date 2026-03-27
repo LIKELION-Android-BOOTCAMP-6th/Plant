@@ -33,12 +33,4 @@ data class PotInfo(
         }
         return calculatedLevel.toString()
     }
-
 }
-data class Logs(
-    val title: String = "",
-    val content: List<String> = emptyList(),
-    val studyTime: Long = 0L,
-    @ServerTimestamp
-    val createdAt: Timestamp? = null
-)
