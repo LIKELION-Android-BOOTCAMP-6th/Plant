@@ -1,6 +1,7 @@
 package com.a32b.plant.ui.feature.mypage.viewmodel
 
 import android.util.Log
+import androidx.activity.SystemBarStyle.Companion.dark
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
@@ -8,28 +9,28 @@ import com.a32b.plant.data.di.CurrentUser
 import com.a32b.plant.data.repository.NicknameRepository
 import com.a32b.plant.data.repository.PotRepository
 import com.a32b.plant.data.repository.UserRepository
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.tasks.await
 
-/** 데이터베이스에서 값을 받아와야 하는 경우
-_변수명 : 외부에서 값을 못 건들이게 하기 위해 private으로 선언
-변수명 : 외부에서 읽는 데이터.
-_변수명이 바뀌면 자동으로 값이 업데이트가 되게 하기 위해 .asStaeFlow() 붙이기
+/** �곗씠�곕쿋�댁뒪�먯꽌 媛믪쓣 諛쏆븘���� �섎뒗 寃쎌슦
+_蹂��섎챸 : �몃��먯꽌 媛믪쓣 紐� 嫄대뱾�닿쾶 �섍린 �꾪빐 private�쇰줈 �좎뼵
+蹂��섎챸 : �몃��먯꽌 �쎈뒗 �곗씠��.
+_蹂��섎챸�� 諛붾�뚮㈃ �먮룞�쇰줈 媛믪씠 �낅뜲�댄듃媛� �섍쾶 �섍린 �꾪빐 .asStaeFlow() 遺숈씠湲�
  */
 data class MyPageUiState(
     val nickname: String = "",
-    val profileImg: String = "",
+    val profileImg: String = "Lv.1",
     val isUpdateSuccess: Boolean = false,
-    val levelList: List<String> = emptyList(), // 프로필 편집 - 화분 이미지 띄우기 위해 쓰이는 레벨 리스트
+    val levelList: List<String> = emptyList(), // �꾨줈�� �몄쭛 - �붾텇 �대�吏� �꾩슦湲� �꾪빐 �곗씠�� �덈꺼 由ъ뒪��
     val isDarkMode: Boolean = false,
     val isLoading: Boolean = false,
     val nicknameError: String? = null,
-    val totalStudyTime: String = "0시간 0분",
+    val totalStudyTime: String = "0�쒓컙 0遺�",
     val completedPotCount: Int = 0,
 )
 
@@ -49,31 +50,37 @@ class MyPageViewModel(
 
     init {
         viewModelScope.launch {
-            CurrentUser.uid = "4KMOJRhjpmYvUI2VseGpm78WNwp1" // 테스트용
+            CurrentUser.uid = "cf2MtNfq0lN5b0agyNSVqeoKuDc2"
+            // �꾩옱 濡쒓렇�몃맂 �좎� ID
+            //private val currentUid: String get() = CurrentUser.uid
+            // �뚯뒪�몄슜 UID
+//            private val currentUid: String = "cf2MtNfq0lN5b0agyNSVqeoKuDc2"
+
+//            CurrentUser.uid = "RVmMPR05kVYeLyWYknUbGdmDnGG2"
             userRepository.getUserProfile(CurrentUser.uid).collectLatest { profile ->
                 if (profile != null) {
                     _uiState.update {
                         it.copy(
-                            nickname = profile.nickname ?: "이름없음",
-                            profileImg = profile.profileImg ?: "",
+                            nickname = profile.nickname ?: "�대쫫�놁쓬",
+                            profileImg = profile.profileImg ?: "Lv.1",
                             isDarkMode = profile.isDarkMode ?: true,
                             totalStudyTime = formatToDigitalClock(profile.totalStudyTime ?: 0L)
                         )
                     }
                     getCompletedPotCount()
+
                 } else {
-                    Log.e("error", "-----------사용자 정보 없음")
+                    Log.e("error", "-----------�ъ슜�� �뺣낫 �놁쓬")
                 }
             }
         }
     }
 
-    // 사용자의 완료 화분 개수 구해 _uiState.completedPotCount 에 넣기
+    // �ъ슜�먯쓽 �꾨즺 �붾텇 媛쒖닔 援ы빐 _uiState.completedPotCount �� �ｊ린
     fun getCompletedPotCount() {
         viewModelScope.launch {
             try {
                 val myPotList = userRepository.getUsersPots(CurrentUser.uid)
-//                Log.d("plantLog", "getCompletedPotCount : $myPotList")
                 _uiState.update { it ->
                     it.copy(
                         completedPotCount = myPotList.count { it.isCompleted }
@@ -85,29 +92,26 @@ class MyPageViewModel(
         }
     }
 
-    // 보유한 레벨 중복 제거 레벨 리스트 가져오기
+    // 蹂댁쑀�� �덈꺼 以묐났 �쒓굅 �덈꺼 由ъ뒪�� 媛��몄삤湲�
     fun getImageLevelList() {
         viewModelScope.launch {
-            val resultList = potRepository.getDuplicationLevelList(CurrentUser.uid).toMutableList()
-            if (resultList.isEmpty()) {
-                resultList.add("")
-            }
-            _uiState.update { it.copy(levelList = resultList) }
+            val result = potRepository.getDuplicationLevelList(CurrentUser.uid)
+            _uiState.update { it.copy(levelList = result) }
         }
     }
 
-    // 닉네임 검사용 2~10글자 허용
+    // �됰꽕�� 寃��ъ슜 2~10湲��� �덉슜
     private fun checkNicknameValidation(text: String): String? {
         val len = text.length
         return if (len !in 2..10) {
-            "닉네임은 2자 이상 10자 이하로 입력해주세요"
+            "�됰꽕�꾩� 2�� �댁긽 10�� �댄븯濡� �낅젰�댁＜�몄슂"
         } else {
             null
         }
     }
 
-    // 검사o, 추가o, 삭제, 업데이트?
-    // 검사o, 추가o, 업데이트, 삭제?
+    // 寃��촲, 異붽�o, ��젣, �낅뜲�댄듃?
+    // 寃��촲, 異붽�o, �낅뜲�댄듃, ��젣?
     fun updateProfile(nickname: String, imageLevel: String) {
         val validationResult = checkNicknameValidation(nickname)
         if (validationResult != null) {
@@ -122,14 +126,14 @@ class MyPageViewModel(
         viewModelScope.launch {
             try {
                 val currentNickname = _uiState.value.nickname
-//                 닉네임 같으면 프로필 사진만 변경하려는 의도로 판단
+                // �됰꽕�� 媛숈쑝硫� �꾨줈�� �ъ쭊留� 蹂�寃쏀븯�ㅻ뒗 �섎룄濡� �먮떒
                 if (nickname != currentNickname) {
-////                 닉네임 중복 검사
+                    // �됰꽕�� 以묐났 寃���
                     if (nicknameRepository.isNicknameTaken(nickname)) {
                         _uiState.update {
                             it.copy(
                                 isUpdateSuccess = false,
-                                nicknameError = "이미 사용중인 닉네임입니다"
+                                nicknameError = "�대� �ъ슜以묒씤 �됰꽕�꾩엯�덈떎"
                             )
                         }
                         return@launch
@@ -143,7 +147,6 @@ class MyPageViewModel(
                     nickname,
                     imageLevel
                 )
-
                 _uiState.update {
                     it.copy(
                         nickname = nickname,
@@ -152,19 +155,12 @@ class MyPageViewModel(
                         nicknameError = null
                     )
                 }
-                CurrentUser.set(
-                    uid = CurrentUser.uid,
-                    nickname = nickname,
-                    profileImg = imageLevel
-                )
-
             } catch (e: Exception) {
                 Log.e("error", e.message.toString())
                 _uiState.update { it.copy(isUpdateSuccess = false) }
             }
         }
     }
-
 
     fun resetIsUpdateSuccess() {
         _uiState.update { it.copy(isUpdateSuccess = false) }
@@ -175,11 +171,13 @@ class MyPageViewModel(
         val state = !uiState.value.isDarkMode
         viewModelScope.launch {
             try {
+                Log.d("plantLog", "----------3")
                 userRepository.updateIsDarkMode(
                     uid = CurrentUser.uid,
                     state = state
                 )
                 _uiState.update { it.copy(isDarkMode = state) }
+
             } catch (e: Exception) {
                 Log.e("error", e.message.toString())
             }
@@ -187,6 +185,6 @@ class MyPageViewModel(
     }
 
 
-    //데이터베이스에서 값을 안 가져와도 되는 경우
-    fun getTag() = "자격증"
+    //�곗씠�곕쿋�댁뒪�먯꽌 媛믪쓣 �� 媛��몄��� �섎뒗 寃쎌슦
+    fun getTag() = "�먭꺽利�"
 }
