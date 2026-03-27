@@ -48,6 +48,11 @@ object ViewModelFactory {
             ) as T
         }
     }
+    val myPageArchiveViewModelFactory = object : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return HomeViewModel(AppContainer.userRepository) as T
+        }
+    }
     val communityListViewModelFactory = object : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return CommunityListViewModel(AppContainer.postRepository) as T

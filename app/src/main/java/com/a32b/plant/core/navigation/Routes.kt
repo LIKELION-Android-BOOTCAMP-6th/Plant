@@ -10,10 +10,11 @@ sealed interface Routes {
     @Serializable data object HomeMain: Routes
     @Serializable data object NewBornTree: Routes
     @Serializable data object CommunityList: Routes
-    @Serializable data object Mypage: Routes
+    @Serializable data object MyPage: Routes
     @Serializable data object ProfileEdit: Routes
     @Serializable data object MyCommunityFeed: Routes
-    @Serializable data object MypageSetting: Routes
+    @Serializable data object MyPageSetting: Routes
+    @Serializable data object MyPageArchive: Routes
     @Serializable data object StudyCompleted: Routes
 
 

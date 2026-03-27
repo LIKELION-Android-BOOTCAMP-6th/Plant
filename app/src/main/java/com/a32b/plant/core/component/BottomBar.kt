@@ -61,15 +61,15 @@ fun BottomBar(navController: NavController){
                     .clickable{navController.navigate(Routes.HomeMain)}
             )
 
-            val isMypageSelected = currentDestination?.hasRoute<Routes.Mypage>() == true
+            val isMyPageSelected = currentDestination?.hasRoute<Routes.MyPage>() == true
             Image(
-                painter = painterResource(id = if(isMypageSelected) R.drawable.ic_bottom_mypage_selected else R.drawable.ic_bottom_mypage_normal),
+                painter = painterResource(id = if(isMyPageSelected) R.drawable.ic_bottom_mypage_selected else R.drawable.ic_bottom_mypage_normal),
                 contentDescription = "MYPAGE",
                 modifier = Modifier
                     .weight(1f)
                     .width(24.dp)
                     .height(32.dp)
-                    .clickable{navController.navigate(Routes.Mypage)}
+                    .clickable{navController.navigate(Routes.MyPage)}
             )
         }
     }

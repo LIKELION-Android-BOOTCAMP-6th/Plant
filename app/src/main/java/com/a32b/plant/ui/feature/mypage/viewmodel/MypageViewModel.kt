@@ -1,11 +1,9 @@
 package com.a32b.plant.ui.feature.mypage.viewmodel
 
 import android.util.Log
-import androidx.activity.SystemBarStyle.Companion.dark
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
-import com.a32b.plant.data.di.AppContainer.userRepository
 import com.a32b.plant.data.di.CurrentUser
 import com.a32b.plant.data.repository.NicknameRepository
 import com.a32b.plant.data.repository.PotRepository
@@ -23,7 +21,7 @@ _변수명이 바뀌면 자동으로 값이 업데이트가 되게 하기 위해
  */
 data class MyPageUiState(
     val nickname: String = "",
-    val profileImg: String = "Lv.1",
+    val profileImg: String = "",
     val isUpdateSuccess: Boolean = false,
     val levelList: List<String> = emptyList(), // 프로필 편집 - 화분 이미지 띄우기 위해 쓰이는 레벨 리스트
     val isDarkMode: Boolean = false,
@@ -48,25 +46,18 @@ class MyPageViewModel(
 
     init {
         viewModelScope.launch {
-            CurrentUser.uid = "cf2MtNfq0lN5b0agyNSVqeoKuDc2"
-            // 현재 로그인된 유저 ID
-            //private val currentUid: String get() = CurrentUser.uid
-            // 테스트용 UID
-//            private val currentUid: String = "cf2MtNfq0lN5b0agyNSVqeoKuDc2"
-
-//            CurrentUser.uid = "RVmMPR05kVYeLyWYknUbGdmDnGG2"
+            CurrentUser.uid = "4KMOJRhjpmYvUI2VseGpm78WNwp1" // 테스트용
             userRepository.getUserProfile(CurrentUser.uid).collectLatest { profile ->
                 if (profile != null) {
                     _uiState.update {
                         it.copy(
                             nickname = profile.nickname ?: "이름없음",
-                            profileImg = profile.profileImg ?: "Lv.1",
+                            profileImg = profile.profileImg ?: "",
                             isDarkMode = profile.isDarkMode ?: true,
                             totalStudyTime = formatToDigitalClock(profile.totalStudyTime ?: 0L)
                         )
                     }
                     getCompletedPotCount()
-
                 } else {
                     Log.e("error", "-----------사용자 정보 없음")
                 }
@@ -79,6 +70,7 @@ class MyPageViewModel(
         viewModelScope.launch {
             try {
                 val myPotList = userRepository.getUsersPots(CurrentUser.uid)
+//                Log.d("plantLog", "getCompletedPotCount : $myPotList")
                 _uiState.update { it ->
                     it.copy(
                         completedPotCount = myPotList.count { it.isCompleted }
@@ -93,8 +85,11 @@ class MyPageViewModel(
     // 보유한 레벨 중복 제거 레벨 리스트 가져오기
     fun getImageLevelList() {
         viewModelScope.launch {
-            val result = potRepository.getDuplicationLevelList(CurrentUser.uid)
-            _uiState.update { it.copy(levelList = result) }
+            val resultList = potRepository.getDuplicationLevelList(CurrentUser.uid).toMutableList()
+            if (resultList.isEmpty()) {
+                resultList.add("")
+            }
+            _uiState.update { it.copy(levelList = resultList) }
         }
     }
 
@@ -124,9 +119,9 @@ class MyPageViewModel(
         viewModelScope.launch {
             try {
                 val currentNickname = _uiState.value.nickname
-                // 닉네임 같으면 프로필 사진만 변경하려는 의도로 판단
+//                 닉네임 같으면 프로필 사진만 변경하려는 의도로 판단
                 if (nickname != currentNickname) {
-                    // 닉네임 중복 검사
+////                 닉네임 중복 검사
                     if (nicknameRepository.isNicknameTaken(nickname)) {
                         _uiState.update {
                             it.copy(
@@ -145,6 +140,7 @@ class MyPageViewModel(
                     nickname,
                     imageLevel
                 )
+
                 _uiState.update {
                     it.copy(
                         nickname = nickname,
@@ -153,12 +149,19 @@ class MyPageViewModel(
                         nicknameError = null
                     )
                 }
+                CurrentUser.set(
+                    uid = CurrentUser.uid,
+                    nickname = nickname,
+                    profileImg = imageLevel
+                )
+
             } catch (e: Exception) {
                 Log.e("error", e.message.toString())
                 _uiState.update { it.copy(isUpdateSuccess = false) }
             }
         }
     }
+
 
     fun resetIsUpdateSuccess() {
         _uiState.update { it.copy(isUpdateSuccess = false) }
@@ -169,13 +172,11 @@ class MyPageViewModel(
         val state = !uiState.value.isDarkMode
         viewModelScope.launch {
             try {
-                Log.d("plantLog", "----------3")
                 userRepository.updateIsDarkMode(
                     uid = CurrentUser.uid,
                     state = state
                 )
                 _uiState.update { it.copy(isDarkMode = state) }
-
             } catch (e: Exception) {
                 Log.e("error", e.message.toString())
             }

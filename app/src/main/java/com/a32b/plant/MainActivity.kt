@@ -42,7 +42,7 @@ class MainActivity : ComponentActivity() {
                 val showBottomBar = navBackStackEntry?.destination?.let { destination ->
                     destination.hasRoute<Routes.HomeMain>() ||
                             destination.hasRoute<Routes.CommunityList>() ||
-                            destination.hasRoute<Routes.Mypage>()
+                            destination.hasRoute<Routes.MyPage>()
                 } ?: false
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),

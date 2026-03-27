@@ -18,8 +18,9 @@ import com.a32b.plant.ui.feature.auth.ui.SignInScreen
 import com.a32b.plant.ui.feature.auth.ui.SignUpScreen
 import com.a32b.plant.ui.feature.home.ui.HomeScreen
 import com.a32b.plant.ui.feature.home.ui.NewBornTreeScreen
-import com.a32b.plant.ui.feature.mypage.ui.MypageScreen
-import com.a32b.plant.ui.feature.mypage.ui.MypageSetting
+import com.a32b.plant.ui.feature.mypage.ui.MyPageArchiveScreen
+import com.a32b.plant.ui.feature.mypage.ui.MyPageScreen
+import com.a32b.plant.ui.feature.mypage.ui.MyPageSetting
 import com.a32b.plant.ui.feature.splash.SplashViewModel
 import com.a32b.plant.ui.feature.studyPalnDtail.ui.StudyPlanDetailScreen
 import com.a32b.plant.ui.feature.studying.ui.StudyResultScreen
@@ -33,8 +34,9 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
         NavHost(navController = navController, startDestination = startRoute){
 
             composable<Routes.HomeMain> { HomeScreen(navController) }
-            composable<Routes.Mypage> { MypageScreen(navController) }
-            composable<Routes.MypageSetting> { MypageSetting(navController) }
+            composable<Routes.MyPage> { MyPageScreen(navController) }
+            composable<Routes.MyPageSetting> { MyPageSetting(navController) }
+            composable<Routes.MyPageArchive> { MyPageArchiveScreen(navController) }
 
             composable<Routes.CommunityList> {
                 CommunityListScreen(navController)

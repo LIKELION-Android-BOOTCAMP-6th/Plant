@@ -1,17 +1,13 @@
 package com.a32b.plant.ui.feature.mypage.ui
 
-import android.R.attr.enabled
-import android.R.attr.level
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -29,7 +25,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -48,11 +43,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.composable
 import com.a32b.plant.core.component.ProfileImage
 import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageViewModel
 import com.a32b.plant.ui.theme.Typography
@@ -66,7 +61,7 @@ import com.a32b.plant.ui.theme.primary
 import com.a32b.plant.ui.theme.sub2
 
 @Composable
-fun MypageScreen(navController: NavController) {
+fun MyPageScreen(navController: NavController) {
     val viewModel: MyPageViewModel = viewModel(factory = ViewModelFactory.myPageViewModelFactory)
     val uiState by viewModel.uiState.collectAsState()
 
@@ -80,11 +75,13 @@ fun MypageScreen(navController: NavController) {
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            GrownTreesButton(completedPotCount = uiState.completedPotCount) {}
+            GrownTreesButton(completedPotCount = uiState.completedPotCount) {
+                navController.navigate(Routes.MyPageArchive)
+            }
             DividerImage()
             ButtonTemplate(text = "커뮤니티 활동") { }
             ButtonTemplate(text = "앱 설정") {
-                navController.navigate(Routes.MypageSetting)
+                navController.navigate(Routes.MyPageSetting)
             }
             ButtonTemplate(text = "공지사항") { }
             ButtonTemplate(text = "비밀번호 재설정") { }
@@ -94,6 +91,7 @@ fun MypageScreen(navController: NavController) {
                     viewModel.toggleDarkMode()
                 }
             )
+            ButtonTemplate(text = "비밀번호 재설정") { }
         }
     }
 }
@@ -111,12 +109,15 @@ fun DarkModeToggleButton(
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.White,
             contentColor = Color.Black
+        ),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 2.dp,
         )
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             // 좌측
             Text(
@@ -160,7 +161,7 @@ fun GrownTreesButton(
             )
             // -------- 03-26 users db pots 추가되면 가져오기
             Text(
-                text = "${completedPotCount} 그루",
+                text = "$completedPotCount 그루",
                 style = MaterialTheme.typography.bodyLarge
             )
         }
@@ -232,18 +233,24 @@ fun ProfileRow(uiState: MyPageUiState, viewModel: MyPageViewModel) {
             ) {
                 Text(
                     text = "${uiState.nickname} 님",
-                    style = Typography.bodySmall,
-                    color = fontColor
+                    style = Typography.bodyMedium,
+                    color = fontColor,
+                    fontWeight = FontWeight.Bold
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(text = "총 공부 시간", style = Typography.bodySmall, color = fontColor)
-                Text(text = uiState.totalStudyTime, style = Typography.bodySmall, color = fontColor)
+                Spacer(modifier = Modifier.width(14.dp))
+                Text(
+                    text = uiState.totalStudyTime,
+                    style = Typography.bodyMedium,
+                    color = fontColor,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
@@ -278,13 +285,15 @@ fun SetImages(
     selectedImageLevel: String,
     onImageClick: (String) -> Unit
 ) {
-    Log.d("PlantLog", "$levelList")
+//    Log.d("PlantLog", "$levelList")
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         maxItemsInEachRow = 3
     ) {
+        Log.d("plantLog", "MyPageScreen - $levelList")
+        Log.d("plantLog", "MyPageScreen - ${levelList.size}")
         levelList.forEach { level ->
             val removeTextResult = level.replace("lv.", "")
             Box(
@@ -343,7 +352,7 @@ fun ProfileDialog(
                         singleLine = true,
                         value = newUserName,
                         onValueChange = { if (it.length <= 10) newUserName = it },
-                        label = { Text("닉네임 변경 (3~10자)", style = Typography.labelSmall) },
+                        label = { Text("닉네임 변경 (2~10자)", style = Typography.labelSmall) },
                         isError = uiState.nicknameError != null
                     )
 
@@ -378,7 +387,7 @@ fun ProfileDialog(
 
                     Button(
                         onClick = {
-                                viewModel.updateProfile(newUserName, selectedImageLevel)
+                            viewModel.updateProfile(newUserName, selectedImageLevel)
                         },
                         enabled = !uiState.isLoading, // 작업중이면 버튼 클릭 비활성화 하려고 추가
                         modifier = Modifier
