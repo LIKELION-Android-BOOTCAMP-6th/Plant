@@ -20,7 +20,7 @@ data class PotInfo(
         if (id.isNullOrEmpty()) return "EMPTY"
 
         val rawMillis = potTotalStudyingTime ?: 0L
-        val hours = rawMillis / (1000*60*60).toDouble()
+        val hours = rawMillis / (1000*60).toDouble()
         val calculatedLevel =  when {
             hours >= 77.0 -> 5
             hours >= 50.0 -> 4
