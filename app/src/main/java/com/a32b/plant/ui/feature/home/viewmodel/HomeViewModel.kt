@@ -6,19 +6,35 @@ import com.a32b.plant.data.model.PotInfo
 import com.a32b.plant.data.model.UserProfile
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.data.di.CurrentUser
+import com.a32b.plant.data.local.StudyingSession
+import com.a32b.plant.data.model.StudyLog
+import com.a32b.plant.data.repository.PotRepository
+import com.a32b.plant.data.repository.StudyingRepository
 import com.a32b.plant.data.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 
-class HomeViewModel(private val userRepository: UserRepository) : ViewModel() {
+data class InterruptedUiState(
+    //공부중 비정상 종료 처리를 위한 상태 관리 클래스
+    val isInterrupted: Boolean = false, //비정상 종료 체크
+    val interruptedStudySession: StudyingSession? = null,
+    val log: List<String> = emptyList()
+)
+class HomeViewModel(
+    private val userRepository: UserRepository,
+    private val studyingRepository: StudyingRepository,
+    private val potRepository: PotRepository
+) : ViewModel() {
 
     // 현재 로그인된 유저 ID
     private val currentUid: String get() = CurrentUser.uid
     // 테스트용 UID
-    //private val currentUid: String = "ARnkLKJE60MuhYMgivXweboI6ch2"
+//    private val currentUid: String = "ARnkLKJE60MuhYMgivXweboI6ch2"
 
     private val _userName = MutableStateFlow("사용자")
     val userName = _userName.asStateFlow()
@@ -32,11 +48,47 @@ class HomeViewModel(private val userRepository: UserRepository) : ViewModel() {
     private val _potList = MutableStateFlow<List<PotInfo>>(emptyList())
     val potList = _potList.asStateFlow()
 
+    private val _interruptedUiState = MutableStateFlow(InterruptedUiState())
+    val interruptedUiState = _interruptedUiState.asStateFlow()
+
     init {
         updateCurrentDate()
         observeUserProfile()
+        getStudySession()
     }
 
+    fun getStudySession(){
+        viewModelScope.launch {
+            studyingRepository.readSession()
+                .first()
+                .let { session ->
+                    if (session.userId == CurrentUser.uid){
+                        _interruptedUiState.update { it.copy(isInterrupted = true,
+                            interruptedStudySession = session) }
+                    }
+                }
+        }
+    }
+    fun onInterruptedDialogDismiss() {
+        _interruptedUiState.update { it.copy(isInterrupted = false) }
+        viewModelScope.launch {
+            studyingRepository.deleteStudyingUser()
+            studyingRepository.clearSession()
+        }
+    }
+
+    fun setInterruptedStudyLog(log: List<String>) = _interruptedUiState.update { it.copy(log = log) }
+
+    fun saveStudyLog(){
+        //비정상 종료 시에는 현재 날짜만 저장
+        val title = TimeFormatter.formatToKoreanDate(LocalDateTime.now())
+        val contents = _interruptedUiState.value.log
+        val studyTime = _interruptedUiState.value.interruptedStudySession!!.time
+        val studyLog = StudyLog(title,contents,studyTime!!)
+        val potId = _interruptedUiState.value.interruptedStudySession!!.potId
+        potRepository.createStudyLog(potId!!, studyLog )
+        potRepository.updateTotalStudyTime(potId,studyTime)
+    }
     private fun updateCurrentDate() {
         val current = LocalDateTime.now()
         _currentDate.value = TimeFormatter.formatToKoreanDate(current)

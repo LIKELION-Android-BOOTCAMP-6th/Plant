@@ -4,6 +4,7 @@ import android.util.Log
 import com.a32b.plant.data.di.CurrentUser
 import com.a32b.plant.data.model.StudyLog
 import com.a32b.plant.data.model.PotInfo
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -126,7 +127,12 @@ class PotRepository(private val db: FirebaseFirestore) {
             .addOnSuccessListener {
                 Log.d("스터디로그", "성공적")
             }
+    }
 
+    fun updateTotalStudyTime(potId: String, studyTime: Long){
+        db.collection("users").document(CurrentUser.uid)
+            .collection("pots").document(potId)
+            .update("potTotalStudyingTime", FieldValue.increment(studyTime))
 
     }
 }

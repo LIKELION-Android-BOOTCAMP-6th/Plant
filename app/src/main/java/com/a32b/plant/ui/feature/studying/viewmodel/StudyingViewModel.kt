@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.data.di.CurrentUser
+import com.a32b.plant.data.local.StudyingSession
 import com.a32b.plant.data.model.StudyLog
 import com.a32b.plant.data.model.StudyingUser
 import com.a32b.plant.data.repository.PotRepository
@@ -16,6 +17,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -27,10 +29,11 @@ data class StudyingUiState(
     val isStudying: Boolean = true, //스톱워치 가동을 위한 공부중 여부 체크
     val buttonText: String = "일시정지",
     val studyingUsers: List<StudyingUser> = emptyList(),
-    val isFinishDialogShown: Boolean = false, //다이얼로그 표출 여부 체크
+    val isFinishDialogShown: Boolean = false, //학습 종료 다이얼로그 표출 여부 체크
     val studyLog: List<String> = emptyList(),
-    val isStduyFinish: Boolean = false, //true시 학습 완전 종료, 디비로 값 넘기기
-    val isInterruptedSession: Boolean = false //비정상 종료 여부 체크
+    val isStudyFinish: Boolean = false, //true시 학습 완전 종료, 디비로 값 넘기기
+    val isInterruptedSession: Boolean = false, //비정상 종료 여부 체크
+    val interruptedStudyLog: StudyingSession? = null
 )
 
 sealed class StudyingEvent{
@@ -61,8 +64,16 @@ class StudyingViewModel(
     private val _eventChannel = Channel<StudyingEvent>(Channel.BUFFERED)
     val event = _eventChannel.receiveAsFlow()
 
-    /** 로컬에서 비정상 종료가 있는지 감지   */
+    /** 비정상 종료 대비 로컬 디비에 데이터 저장   */
 
+    fun saveSession(){
+        viewModelScope.launch {
+            while (_uiState.value.isStudying){
+                delay(5000L)
+                repository.saveSession(StudyingSession(CurrentUser.uid, tag, title, potId, _uiState.value.timer))
+            }
+        }
+    }
 
     /*
     1. 데이터스토어에서 불러와
@@ -72,11 +83,7 @@ class StudyingViewModel(
     2-3. 안 이어간다고 하면 걍 다이얼로그 닫고 끝내기
     ⭐내일 와서 어플리케이션 파일 만들고 context 추가하기...
      */
-//    fun getStudySession(): Boolean{
-//        viewModelScope.launch {
-//            repository.readSession()
-//        }
-//    }
+
 
     /** db에서 같은 태그로 공부중인 사용자 데이터 가져오기 */
     fun onStudyingUsersChange(){
@@ -120,6 +127,7 @@ class StudyingViewModel(
 
     init {
         startStopwatch()
+        saveSession()
     }
 
     /**  학습 종료 버튼 클릭 시 학습 기록하는 다이얼로그 표출    */
@@ -133,22 +141,24 @@ class StudyingViewModel(
     }
 
     /** 학습 완전 종료 시 (= 다이얼로그에서도 기록 입력 후 종료 버튼 클릭했을 때)    */
-    fun onIsStudyFinishChange() = _uiState.update { it.copy(isStduyFinish = true) }
+    fun onIsStudyFinishChange() = _uiState.update { it.copy(isStudyFinish = true) }
     fun getCurrentTime(): String{
         val now = LocalDateTime.now()
         return TimeFormatter.formatToTimeOnly(now)
     }
     fun onFinishStudyingClick() {
 
-        //디비로 사용자의 입력값 넘기고
-
+        //개별 학습 기록의 제목
         val timestamp = "${TimeFormatter.formatToKoreanDate(LocalDateTime.now())} $startTime ~ ${getCurrentTime()}"
         fun setStudyLog(): StudyLog = StudyLog(timestamp, _uiState.value.studyLog, _uiState.value.timer)
         potRepository.createStudyLog(potId, setStudyLog())
+        potRepository.updateTotalStudyTime(potId, _uiState.value.timer)
         repository.deleteStudyingUser()
 
-        //스터디 리절트로 이동할 때 넘길 값들이 필요함 실드 클래스에 추가할 것
         viewModelScope.launch {
+            //종료 시 로컬디비에 저장된 데이터 삭제
+            repository.clearSession()
+
             _eventChannel.send(StudyingEvent.NavigateToStudyResult(
                 timestamp = timestamp,
                 tag = tag,

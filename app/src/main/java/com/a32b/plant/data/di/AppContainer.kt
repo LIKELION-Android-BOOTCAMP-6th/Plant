@@ -1,5 +1,6 @@
 package com.a32b.plant.data.di
 
+import com.a32b.plant.PlantApplication
 import com.a32b.plant.data.repository.ActivityRepository
 import com.a32b.plant.data.repository.NicknameRepository
 import com.a32b.plant.data.repository.PostRepository
@@ -17,5 +18,5 @@ object AppContainer {
     val activityRepository = ActivityRepository(firestore)
     val postRepository = PostRepository(firestore)
     val nicknameRepository = NicknameRepository(firestore)
-    val studyingRepository = StudyingRepository(firestore)
+    val studyingRepository = StudyingRepository(firestore, PlantApplication.appContext)
 }

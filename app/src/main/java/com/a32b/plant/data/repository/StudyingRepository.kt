@@ -9,7 +9,7 @@ import com.a32b.plant.data.model.StudyingUser
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 
-class StudyingRepository(private val db: FirebaseFirestore) {
+class StudyingRepository(private val db: FirebaseFirestore, private val appContext: Context) {
     private val datasore = StudyingDataStore
     suspend fun getStudyingUser(tag: String): List<StudyingUser>{
         return try{
@@ -57,8 +57,8 @@ class StudyingRepository(private val db: FirebaseFirestore) {
             }
     }
 
-    suspend fun saveSession(context: Context, session: StudyingSession) = datasore.save(context, session)
-    fun readSession(context: Context) = datasore.read(context)
-    suspend fun clearSession(context: Context) = datasore.clear(context)
+    suspend fun saveSession(session: StudyingSession) = datasore.save(appContext, session)
+    fun readSession() = datasore.read(appContext)
+    suspend fun clearSession() = datasore.clear(appContext)
 
 }
