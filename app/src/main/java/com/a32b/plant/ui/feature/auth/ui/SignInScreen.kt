@@ -41,6 +41,7 @@ import com.a32b.plant.ui.theme.background
 import com.a32b.plant.ui.theme.fontColor
 import com.a32b.plant.ui.theme.fontColorSub
 import com.a32b.plant.ui.theme.primary
+import com.a32b.plant.ui.theme.textFieldBackground
 
 @Composable
 fun SignInScreen(navController: NavController) {
@@ -73,7 +74,7 @@ fun SignInScreen(navController: NavController) {
     // 닉네임 설정 다이얼로그 (isFirstLogin == true 일 때 표시) - StudyingScreen Dialog와 비슷하게 맞추기!
     if (uiState.showNicknameDialog) {
         Dialog(
-            onDismissRequest = { /* 닫기 불가 - 닉네임 설정 필수 */ },
+            onDismissRequest = {}, // 닫기 불가 - 닉네임 설정 필수
             properties = DialogProperties(
                 dismissOnBackPress = false,
                 dismissOnClickOutside = false
@@ -103,13 +104,14 @@ fun SignInScreen(navController: NavController) {
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "Plant에서 사용할 닉네임을 설정해주세요.",
+                        text = "Plant에서 사용 할 닉네임을 설정해주세요.",
                         style = MaterialTheme.typography.bodySmall,
                         color = fontColorSub
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))
 
+                    // 입력창
                     TextField(
                         value = uiState.nicknameInput,
                         onValueChange = viewModel::onNicknameChange,
@@ -120,8 +122,8 @@ fun SignInScreen(navController: NavController) {
                             )
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = TextFieldBackgroundColor,
-                            unfocusedContainerColor = TextFieldBackgroundColor,
+                            focusedContainerColor = textFieldBackground,
+                            unfocusedContainerColor = textFieldBackground,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             focusedTextColor = fontColor,
@@ -138,6 +140,7 @@ fun SignInScreen(navController: NavController) {
 
                     Spacer(modifier = Modifier.height(24.dp))
 
+                    // 설정 완료 버튼
                     Button(
                         onClick = viewModel::confirmNickname,
                         modifier = Modifier
@@ -243,8 +246,8 @@ fun SignInScreen(navController: NavController) {
                             )
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = TextFieldBackgroundColor,
-                            unfocusedContainerColor = TextFieldBackgroundColor,
+                            focusedContainerColor = textFieldBackground,
+                            unfocusedContainerColor = textFieldBackground,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             focusedTextColor = fontColor,
@@ -278,8 +281,8 @@ fun SignInScreen(navController: NavController) {
                             )
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = TextFieldBackgroundColor,
-                            unfocusedContainerColor = TextFieldBackgroundColor,
+                            focusedContainerColor = textFieldBackground,
+                            unfocusedContainerColor = textFieldBackground,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             focusedTextColor = fontColor,
