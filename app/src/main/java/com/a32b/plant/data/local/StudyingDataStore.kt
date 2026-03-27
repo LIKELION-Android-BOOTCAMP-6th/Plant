@@ -15,7 +15,6 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = PRE
 object StudyingDataStore {
     object Keys {
         val USER_ID = stringPreferencesKey("userId")
-        val PROFILE_IMG = stringPreferencesKey("profileImg")
         val POT_ID = stringPreferencesKey("potId")
         val TAG = stringPreferencesKey("tag")
         val TITLE = stringPreferencesKey("title")
@@ -25,7 +24,6 @@ object StudyingDataStore {
     suspend fun save(context: Context, studying: StudyingSession){
         context.dataStore.edit { preferences ->
             preferences[Keys.USER_ID] = studying.userId!!
-            preferences[Keys.PROFILE_IMG] = studying.profileImg!!
             preferences[Keys.POT_ID] = studying.potId!!
             preferences[Keys.TAG] = studying.tag!!
             preferences[Keys.TITLE] = studying.title!!
@@ -37,7 +35,6 @@ object StudyingDataStore {
         return context.dataStore.data.map { preferences ->
             StudyingSession(
                 userId = preferences[Keys.USER_ID],
-                profileImg = preferences[Keys.PROFILE_IMG],
                 potId = preferences[Keys.POT_ID],
                 tag = preferences[Keys.TAG],
                 title = preferences[Keys.TITLE],

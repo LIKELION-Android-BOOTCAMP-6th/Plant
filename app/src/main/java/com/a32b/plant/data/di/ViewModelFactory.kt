@@ -32,7 +32,8 @@ object ViewModelFactory {
     }
     val homeViewModelFactory = object : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return HomeViewModel(AppContainer.userRepository) as T
+            return HomeViewModel(AppContainer.userRepository, AppContainer.studyingRepository,
+                AppContainer.potRepository) as T
         }
     }
     val newBornTreeViewModelFactory = object : ViewModelProvider.Factory {

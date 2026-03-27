@@ -1,11 +1,15 @@
 package com.a32b.plant.ui.feature.home.ui
 
+import android.util.Log
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -14,19 +18,31 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.a32b.plant.R
 import com.a32b.plant.core.component.ProfileImage
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.data.di.CurrentUser
 import com.a32b.plant.data.di.ViewModelFactory
+import com.a32b.plant.data.local.StudyingSession
 import com.a32b.plant.data.model.PotInfo
 import com.a32b.plant.ui.feature.home.viewmodel.HomeViewModel
+import com.a32b.plant.ui.feature.studying.ui.StudyingScreen
+import com.a32b.plant.ui.theme.Typography
 import com.a32b.plant.ui.theme.background
 import com.a32b.plant.ui.theme.fontColor
+import com.a32b.plant.ui.theme.primary
+import com.a32b.plant.ui.theme.sub2
 
 
 @Composable
@@ -36,7 +52,21 @@ fun HomeScreen(navController: NavController) {
     val currentDate by viewModel.currentDate.collectAsState() // 로컬 날짜 획득
     val displayPot by viewModel.displayPot.collectAsState()
     val potList by viewModel.potList.collectAsState()
+    val interruptedUiState by viewModel.interruptedUiState.collectAsState() //공부중 비정상 종료 감지
 
+    if(interruptedUiState.isInterrupted){
+        val tag = interruptedUiState.interruptedStudySession!!.tag
+        val title = interruptedUiState.interruptedStudySession!!.title
+        val time = interruptedUiState.interruptedStudySession!!.time
+        InterruptedDialog(onDismiss = { viewModel.onInterruptedDialogDismiss()},
+            onConfirm = { inputs->
+                viewModel.setInterruptedStudyLog(inputs)
+                viewModel.saveStudyLog()
+                viewModel.onInterruptedDialogDismiss()
+            },
+            StudyingSession(CurrentUser.uid, tag = tag, title = title, time = time)
+        )
+    }
     Scaffold(
         topBar = {
             Text(
@@ -282,4 +312,81 @@ fun GridPlantItem(
         // 화분이 없는 빈 칸은 투명한 공간으로 둠 (그리드 정렬 유지용)
         Spacer(modifier = modifier.fillMaxWidth())
     }
+}
+
+@Composable
+fun InterruptedDialog(onDismiss: () -> Unit, onConfirm: (List<String>) -> Unit, studySession: StudyingSession){
+    val inputs = remember { mutableStateListOf("") }
+    val focus = remember { mutableStateListOf(FocusRequester()) }
+
+    LaunchedEffect(inputs.size) {
+        if (inputs.size > 1) focus.last().requestFocus()
+    }
+    Dialog(onDismissRequest = {}) {
+        Card(shape = RoundedCornerShape(30.dp),
+            colors = CardDefaults.cardColors(background)) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(22.dp)) {
+                Text("이전 학습 기록이 저장되지 않았습니다!", style = Typography.titleSmall)
+                Spacer(modifier = Modifier.height(10.dp))
+                Text("저장하시겠습니까?", style = Typography.bodyMedium)
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text("[${studySession.tag}] ${studySession.title}", style = Typography.bodyMedium)
+                Text(TimeFormatter.formatToDigitalClock(studySession.time!!), style = Typography.bodyMedium)
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                inputs.forEachIndexed { index, value ->
+                    OutlinedTextField(
+                        value = value,
+                        shape = RoundedCornerShape(10.dp),
+                        onValueChange = { inputs[index] = it },
+                        modifier = Modifier.fillMaxWidth()
+                            .focusRequester(focus[index]),
+                        placeholder = {Text("학습을 기록해보세요!", style = Typography.bodyMedium, color = Color(0xFF858585))},
+                        textStyle = Typography.bodyMedium,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(
+                            onNext = {
+                                inputs.add("")
+                                focus.add(FocusRequester())
+                            }
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+
+                // 플러스 버튼
+                IconButton(onClick = {
+                    inputs.add("")
+                    focus.add(FocusRequester())
+                }, modifier = Modifier.size(30.dp)) {
+                    Image(painter = painterResource(R.drawable.ic_studying_plus),
+                        contentDescription = "추가 버튼")
+                }
+                Spacer(modifier = Modifier.height(30.dp))
+
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Button(onClick = onDismiss,
+                        modifier = Modifier.height(30.dp).weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(sub2)) {
+                        Text("취소", style = Typography.bodyMedium)
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Button(onClick = {onConfirm(inputs.toList())},
+                        modifier = Modifier.height(30.dp).weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(primary)) {
+                        Text("저장", style = Typography.bodyMedium)
+                    }
+                }
+
+            }
+
+        }
+    }
+
 }

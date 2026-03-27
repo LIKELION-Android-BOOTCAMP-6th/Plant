@@ -63,6 +63,7 @@ import com.a32b.plant.core.component.ProfileImage
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.data.di.ViewModelFactory
+import com.a32b.plant.data.local.StudyingSession
 import com.a32b.plant.data.model.StudyingUser
 import com.a32b.plant.ui.feature.studying.viewmodel.StudyingEvent
 import com.a32b.plant.ui.feature.studying.viewmodel.StudyingViewModel

@@ -57,8 +57,8 @@ class StudyingRepository(private val db: FirebaseFirestore, private val appConte
             }
     }
 
-    suspend fun saveSession(context: Context, session: StudyingSession) = datasore.save(context, session)
-    fun readSession(context: Context) = datasore.read(context)
-    suspend fun clearSession(context: Context) = datasore.clear(context)
+    suspend fun saveSession(session: StudyingSession) = datasore.save(appContext, session)
+    fun readSession() = datasore.read(appContext)
+    suspend fun clearSession() = datasore.clear(appContext)
 
 }
