@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.a32b.plant.ui.theme.Typography
 import com.a32b.plant.ui.theme.primary
 
 @Composable
@@ -39,7 +40,7 @@ fun TagGroup(tags: List<String>, isMultiSelected: Boolean = true, onSelectedChan
                     onSelectedChanged(selectedTags)
                 }
             ) {
-                Text(tag, Modifier.padding(top = 5.dp, bottom = 5.dp, start = 10.dp, end = 10.dp), style = MaterialTheme.typography.bodyMedium)
+                Text(tag, Modifier.padding(top = 5.dp, bottom = 5.dp, start = 10.dp, end = 10.dp), style = Typography.bodyMedium)
             }
         }
     }
