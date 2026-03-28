@@ -14,6 +14,9 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
+
 
 /** 데이터베이스에서 값을 받아와야 하는 경우
 _변수명 : 외부에서 값을 못 건들이게 하기 위해 private으로 선언
@@ -33,7 +36,8 @@ data class MyPageUiState(
 )
 
 sealed class MyPageEvent {
-    object SuccessUpdate : MyPageEvent()
+    data class ShowToast(val message: String) : MyPageEvent()
+    object NavigateToSignIn : MyPageEvent()// 로그인화면 보내기용 ************
 }
 
 
@@ -46,15 +50,11 @@ class MyPageViewModel(
     private val _uiState = MutableStateFlow(MyPageUiState())
     val uiState = _uiState.asStateFlow()
 
+    private val _eventChannel = Channel<MyPageEvent>(Channel.BUFFERED)
+    val events = _eventChannel.receiveAsFlow()
+
     init {
         viewModelScope.launch {
-            //private val currentUid: String get() = CurrentUser.uid
-            // 테스트용 UID
-//            CurrentUser.uid = "4KMOJRhjpmYvUI2VseGpm78WNwp1" // 테스트용
-//            CurrentUser.uid = "cf2MtNfq0lN5b0agyNSVqeoKuDc2" // 테스트용
-            if (CurrentUser.uid.isEmpty()) {
-                CurrentUser.uid = "q5q2qv4MinXzQkqWQnUtEfXDoCj2"
-            }
             userRepository.getUserProfile(CurrentUser.uid).collectLatest { profile ->
                 if (profile != null) {
 //                    Log.d("plantLog", "결과있음")
@@ -161,11 +161,8 @@ class MyPageViewModel(
                     )
                 }
 
-                CurrentUser.set(
-                    uid = CurrentUser.uid,
-                    nickname = nickname,
-                    profileImg = imageLevel
-                )
+                CurrentUser.nickname = nickname
+                CurrentUser.profileImg = imageLevel
 
             } catch (e: Exception) {
                 Log.e("error", e.message.toString())
@@ -195,6 +192,17 @@ class MyPageViewModel(
         }
     }
 
+    fun logout() {
+        // auth.signOut(): Firebase Auth 세션 제거 -> 다음 앱 실행 시 auth.currentUser == null -> 스플래시 to 로그인 화면
+//        auth.signOut()
+        firebaseAuth.signOut()
+        // CurrentUser.clear(): 앱 메모리(CurrentUser 내 uid, nickname, profileImg 초기화
+        CurrentUser.clear()
+        // 로그인 화면 이동
+        viewModelScope.launch {
+            _eventChannel.send(MyPageEvent.NavigateToSignIn)
+        }
+    }
 
     //데이터베이스에서 값을 안 가져와도 되는 경우
     fun getTag() = "자격증"
