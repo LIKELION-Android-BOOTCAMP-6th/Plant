@@ -138,6 +138,7 @@ class SignInViewModel(
                     _uiState.update { it.copy(showNicknameDialog = true) }
                 } else {
                     // 홈 진입
+                    sendToast("${CurrentUser.nickname}님 환영합니다.")
                     _eventChannel.send(SignInEvent.NavigateToHome)
                 }
 
@@ -184,6 +185,7 @@ class SignInViewModel(
 
                 // 5. 다이얼로그 닫고 홈으로 이동
                 _uiState.update { it.copy(showNicknameDialog = false, isNicknameLoading = false) }
+                sendToast("${CurrentUser.nickname}님 환영합니다.")
                 _eventChannel.send(SignInEvent.NavigateToHome)
 
             } catch (e: Exception) {
