@@ -9,7 +9,7 @@ data class PotInfo(
     val tag: String? = null,
     val name: String? = null,
     val imageUrl: String? = null,
-    val potTotalStudyingTime: Long? = null,
+    val potTotalStudyingTime: Long? = null, // ms 단위 - 1초 = 1000
     @ServerTimestamp
     val createdAt: Timestamp? = null,
     val completedAt: Timestamp? = null,
@@ -20,15 +20,13 @@ data class PotInfo(
         if (id.isNullOrEmpty()) return "EMPTY"
 
         val rawMillis = potTotalStudyingTime ?: 0L
-
-        val totalSeconds = if (rawMillis > 1_000_000L) rawMillis / 1000 else rawMillis
-        val hours = totalSeconds / 3600
+        val hours = rawMillis / (1000*60).toDouble()
         val calculatedLevel =  when {
-            hours >= 77 -> 5
-            hours >= 50 -> 4
-            hours >= 30 -> 3
-            hours >= 10 -> 2
-            hours >= 3 -> 1
+            hours >= 77.0 -> 5
+            hours >= 50.0 -> 4
+            hours >= 30.0 -> 3
+            hours >= 10.0 -> 2
+            hours >= 3.0 -> 1
             else -> 0
         }
         return calculatedLevel.toString()
