@@ -11,6 +11,7 @@ import com.a32b.plant.ui.feature.home.viewmodel.HomeViewModel
 //import com.a32b.plant.ui.feature.home.viewmodel.HomeViewModel
 import com.a32b.plant.ui.feature.home.viewmodel.NewBornTreeViewModel
 import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageArchiveViewModel
+import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageSettingViewModel
 import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageViewModel
 import com.a32b.plant.ui.feature.studying.viewmodel.StudyResultViewModel
 import com.a32b.plant.ui.feature.studying.viewmodel.StudyingViewModel
@@ -50,6 +51,21 @@ object ViewModelFactory {
                 AppContainer.nicknameRepository,
                 AppContainer.firebaseAuth
             ) as T
+        }
+    }
+
+    val myPageSettingViewModelFactory = object : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return MyPageSettingViewModel(
+                AppContainer.userRepository,
+                AppContainer.nicknameRepository,
+                AppContainer.firebaseAuth
+            ) as T
+        }
+    }
+    val myPageArchiveViewModelFactory = object : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return MyPageArchiveViewModel(AppContainer.userRepository) as T
         }
     }
     val communityListViewModelFactory = object : ViewModelProvider.Factory {
@@ -101,9 +117,5 @@ object ViewModelFactory {
             return CommunityPostViewModel(AppContainer.postRepository) as T
         }
     }
-    val myPageArchiveViewModelFactory = object : ViewModelProvider.Factory{
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return MyPageArchiveViewModel(AppContainer.potRepository) as T
-        }
-    }
+
 }

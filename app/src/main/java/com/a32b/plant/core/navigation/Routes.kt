@@ -10,10 +10,11 @@ sealed interface Routes {
     @Serializable data object HomeMain: Routes
     @Serializable data object NewBornTree: Routes
     @Serializable data object CommunityList: Routes
-    @Serializable data object Mypage: Routes
+    @Serializable data object Mypage: Routes // 03-27 BottomBar 에 연결되어 있음 혹시 모르니 나중에 건들기
     @Serializable data object ProfileEdit: Routes
     @Serializable data object MyCommunityFeed: Routes
-    @Serializable data object MypageSetting: Routes
+    @Serializable data object MyPageSetting: Routes
+    @Serializable data object MyPageArchive: Routes
     @Serializable data object StudyCompleted: Routes
 
 
