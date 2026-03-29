@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,6 +36,13 @@ fun MyPageArchiveScreen(navController: NavController) {
 
     Scaffold(
         topBar = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(text = "OO님의 기른 나무")
+            }
 
         }
     ) { paddingValues ->
@@ -93,7 +101,6 @@ fun MyPageArchiveScreen(navController: NavController) {
                     .padding(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // ProfileImage 내부에 Box를 감싸서 clickable을 적용합니다.
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp)) // 동그랗게 클릭 영역 제한
@@ -106,11 +113,10 @@ fun MyPageArchiveScreen(navController: NavController) {
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
-                // 2. 화분 정보 (시간, 이름) - 학습 계획창 이동용
+                // 2. 화분 정보 (시간, 이름) -
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        ,
+                        .fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // 총 공부 시간
