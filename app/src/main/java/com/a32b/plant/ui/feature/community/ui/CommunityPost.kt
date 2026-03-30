@@ -103,7 +103,7 @@ fun CommunityPostScreen(
             item {
                 Text("카테고리", style = Typography.bodyMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
-                TagSelector(tags, selectedTag) { selectedTag = it }
+//                TagSelector(tags, selectedTag) { selectedTag = it }
             }
 
             item {

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.data.di.CurrentUser
 import com.a32b.plant.data.model.Post
+import com.a32b.plant.data.model.PostAuthor
 import com.a32b.plant.data.repository.PostRepository
 import com.a32b.plant.data.repository.PotRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,9 +56,11 @@ class CommunityPostViewModel(private val repository: PostRepository, private val
                 } else {
 //                     ✅ 새 글 작성 모드
                     val newPost = Post(
-                        authorId = CurrentUser.uid,
-                        authorNickname = CurrentUser.nickname,
-                        authorProfileImg = CurrentUser.profileImg,
+                        author = PostAuthor(
+                            CurrentUser.uid,
+                            CurrentUser.nickname,
+                            CurrentUser.profileImg
+                        ),
                         title = _uiState.value.title,
                         content = _uiState.value.content,
                         tag = _uiState.value.selected

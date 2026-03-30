@@ -25,19 +25,20 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.data.di.ViewModelFactory
 import com.a32b.plant.data.model.Post
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityListViewModel
+import com.google.firebase.Timestamp
 import java.text.SimpleDateFormat
 import java.util.*
 
-fun formatTimeAgo(dateString: String): String {
+fun formatTimeAgo(timestamp: Timestamp): String {
     return try {
 
-        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.KOREA)
-        val date = sdf.parse(dateString) ?: return dateString
+
         val now = System.currentTimeMillis()
-        val diff = now - date.time
+        val diff = now - timestamp.toDate().time
 
         val seconds = diff / 1000
         val minutes = seconds / 60
@@ -49,10 +50,12 @@ fun formatTimeAgo(dateString: String): String {
             minutes < 60 -> "${minutes}분 전"
             hours < 24 -> "${hours}시간 전"
             days < 7 -> "${days}일 전"
-            else -> dateString
+            else -> {
+                TimeFormatter.formatTimestamp(timestamp)
+            }
         }
     } catch (e: Exception) {
-        dateString
+        ""
     }
 }
 
@@ -65,7 +68,7 @@ fun CommunityListScreen(navController: NavController) {
     val selectedTags by viewModel.selectedTags.collectAsStateWithLifecycle()
 
     var showDialog by remember { mutableStateOf(false) }
-    val filterTags = listOf("중학생", "고등학생", "취준", "자격증", "취미", "자랑", "공유")
+    val filterTags = listOf("중학생", "고등학생","대학생", "취준", "자격증", "공유")
 
     Scaffold(
         containerColor = Color(0xFFFDFDF0),
@@ -120,7 +123,8 @@ fun CommunityListScreen(navController: NavController) {
                     items(postList) { post ->
                         PostCard(
                             post = post,
-                            onClick = { navController.navigate(Routes.CommunityDetail(postId = post.id)) }
+                            isLiked = viewModel.onLikedChange(),
+                            onClick = { navController.navigate(Routes.CommunityDetail(postId = post.postId)) }
                         )
                     }
                 }
@@ -268,7 +272,7 @@ fun CategoryDialog(
 }
 
 @Composable
-fun PostCard(post: Post, onClick: () -> Unit) {
+fun PostCard(post: Post, isLiked: Boolean,onClick: () -> Unit ) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -279,19 +283,19 @@ fun PostCard(post: Post, onClick: () -> Unit) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
 
                 Text(text = post.title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.Black)
-                Text(text = formatTimeAgo(post.createdAt), fontSize = 11.sp, color = Color.Black)
+                Text(text = formatTimeAgo(post.createdAt!!), fontSize = 11.sp, color = Color.Black)
             }
             Spacer(modifier = Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(modifier = Modifier.size(16.dp).clip(CircleShape).background(Color(0xFFC5E1A5)))
-                Text(text = "  ${post.nickName}", fontSize = 12.sp, color = Color.Black)
+                Text(text = "  ${post.author.nickname}", fontSize = 12.sp, color = Color.Black)
             }
             Spacer(modifier = Modifier.height(8.dp))
             Row {
                 IconStat(R.drawable.ic_community_comment, post.commentCount.toString())
                 Spacer(modifier = Modifier.width(12.dp))
 
-                val isLiked = post.isLiked
+
                 IconStat(
                     iconRes = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     text = post.likeCount.toString(),

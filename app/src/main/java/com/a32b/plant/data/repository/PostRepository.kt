@@ -1,8 +1,8 @@
 package com.a32b.plant.data.repository
 
+import android.util.Log
 import com.a32b.plant.data.di.CurrentUser
 import com.a32b.plant.data.model.Post
-import com.a32b.plant.data.model.Author
 import com.a32b.plant.data.model.CommunityActivity
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
@@ -15,13 +15,12 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 class PostRepository(
-    private val db: FirebaseFirestore,
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val db: FirebaseFirestore
 ) {
 
+    //글 목록 조회
     fun getPosts(): Flow<List<Post>> = callbackFlow {
         val subscription = db.collection("posts")
-            .orderBy("createdAt", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     close(error)
@@ -29,29 +28,20 @@ class PostRepository(
                 }
 
                 val posts = snapshot?.documents?.mapNotNull { doc ->
-                    doc.toObject(Post::class.java)?.copy(postId = doc.id)
-                } ?: emptyList()
+                    try {
+                        doc.toObject(Post::class.java)?.copy(postId = doc.id)
+                    } catch (e: Exception) {
+                        Log.e("파싱오류", "문서 ID: ${doc.id}, 데이터: ${doc.data}")
+                        null
+                    }
+                }?.sortedByDescending { it.createdAt } ?: emptyList()
 
                 trySend(posts)
             }
         awaitClose { subscription.remove() }
     }
 
-    fun getCurrentUser(): Flow<Author?> = callbackFlow {
-        val uid = auth.currentUser?.uid
-        if (uid == null) {
-            trySend(null)
-            close()
-            return@callbackFlow
-        }
-        val subscription = db.collection("users").document(uid)
-            .addSnapshotListener { snapshot, _ ->
-                val author = snapshot?.toObject(Author::class.java)?.copy(uid = uid)
-                trySend(author)
-            }
-        awaitClose { subscription.remove() }
-    }
-
+    //상세 조회??
     fun getPost(postId: String): Flow<Post?> = callbackFlow {
         val subscription = db.collection("posts").document(postId)
             .addSnapshotListener { snapshot, _ ->
@@ -123,6 +113,11 @@ class PostRepository(
             .add(data)
             .await()
 
+    }
+    fun getLiked(): Boolean{
+        //post/{postId}/liked/{Current.uid}
+        // isLiked 여부를 리턴하는 걸로
+        return false
     }
 
     suspend fun toggleLike(postId: String, uid: String, isAlreadyLiked: Boolean) {

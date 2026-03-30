@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.State
+import com.a32b.plant.data.di.CurrentUser
 import com.a32b.plant.data.model.Post
-import com.a32b.plant.data.model.Author
 import com.a32b.plant.data.repository.PostRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -21,8 +21,6 @@ class CommunityDetailViewModel(
     private val _post = MutableStateFlow<Post?>(null)
     val post: StateFlow<Post?> = _post.asStateFlow()
 
-    val currentUser: StateFlow<Author?> = repository.getCurrentUser()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     var commentText = MutableStateFlow("")
 
@@ -42,17 +40,16 @@ class CommunityDetailViewModel(
     fun closeDeleteDialog() { _showDeleteDialog.value = false }
 
     fun addComment() {
-        val user = currentUser.value
         val content = commentText.value
 
-        if (user == null || content.isBlank()) return
+        if (CurrentUser.uid == null || content.isBlank()) return
 
         viewModelScope.launch {
             try {
                 repository.addComment(
                     postId = postId,
-                    uid = user.uid,
-                    nickName = user.nickname,
+                    uid = CurrentUser.uid,
+                    nickName = CurrentUser.nickname,
                     content = content
                 )
                 commentText.value = ""
@@ -71,17 +68,15 @@ class CommunityDetailViewModel(
 
     fun toggleLike() {
         val currentPost = _post.value ?: return
-        val user = currentUser.value ?: return
 
-        if (currentPost.authorUid == user.uid) return
+        if (currentPost.author.id == CurrentUser.uid) return
 
         if (_isLikeProcessing.value) return
 
         viewModelScope.launch {
             _isLikeProcessing.value = true
             try {
-                val isAlreadyLiked = currentPost.likedBy.contains(user.uid)
-                repository.toggleLike(postId, user.uid, isAlreadyLiked)
+                repository.toggleLike(postId, CurrentUser.uid, currentPost.isLiked)
             } catch (e: Exception) { 
                 e.printStackTrace() 
             } finally {

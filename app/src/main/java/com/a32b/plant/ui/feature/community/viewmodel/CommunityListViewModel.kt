@@ -33,9 +33,10 @@ class CommunityListViewModel(private val repository: PostRepository) : ViewModel
         posts.filter { post ->
             val matchesQuery = if (query.isBlank()) true 
                                else post.content.contains(query, ignoreCase = true) || post.title.contains(query, ignoreCase = true)
-            
+
+            //필터 검색 - 하나라도 들어있을 시
             val matchesTags = if (tags.isEmpty()) true 
-                              else tags.contains(post.tag)
+                              else tags.any{it in post.tag}
             
             matchesQuery && matchesTags
         }
@@ -52,4 +53,5 @@ class CommunityListViewModel(private val repository: PostRepository) : ViewModel
     fun onTagsChanged(tags: Set<String>) {
         _selectedTags.value = tags
     }
+    fun onLikedChange() = repository.getLiked()
 }
