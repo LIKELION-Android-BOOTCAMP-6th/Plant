@@ -40,4 +40,7 @@ object TimeFormatter {
 
     fun formatTimestamp(timestamp: Timestamp): String
         = SimpleDateFormat("yyyy년 MM월 dd일", Locale.KOREA).format(timestamp.toDate())
+
+    fun formatTimestampTime(Timestamp: Timestamp): String
+        = SimpleDateFormat("yyyy년 MM월 dd일 HH:mm", Locale.KOREA).format(Timestamp.toDate())
 }
