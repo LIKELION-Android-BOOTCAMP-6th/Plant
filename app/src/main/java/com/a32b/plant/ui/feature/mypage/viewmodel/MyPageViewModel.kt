@@ -56,10 +56,9 @@ class MyPageViewModel(
 
     init {
         viewModelScope.launch {
+//            potRepository.createPot()
             userRepository.getUserProfile(CurrentUser.uid).collectLatest { profile ->
                 if (profile != null) {
-//                    Log.d("plantLog", "결과있음")
-//                    Log.d("plantLog", "$_uiState")
                     _uiState.update {
                         it.copy(
                             nickname = profile.nickname ?: "이름없음",
@@ -68,8 +67,6 @@ class MyPageViewModel(
                             totalStudyTime = formatToDigitalClock(profile.totalStudyTime ?: 0L)
                         )
                     }
-                    Log.d("plantLog", "$_uiState")
-
                     getCompletedPotCount()
                 } else {
                     Log.e("error", "-----------사용자 정보 없음")
@@ -83,7 +80,6 @@ class MyPageViewModel(
         viewModelScope.launch {
             try {
                 val myPotList = userRepository.getUsersPots(CurrentUser.uid)
-//                Log.d("plantLog", "getCompletedPotCount : $myPotList")
                 _uiState.update { it ->
                     it.copy(
                         completedPotCount = myPotList.count { it.isCompleted }

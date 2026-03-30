@@ -1,6 +1,8 @@
 package com.a32b.plant.data.model
 
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.PropertyName
 import com.google.firebase.firestore.ServerTimestamp
 
 //화분 정보 모음
@@ -13,7 +15,8 @@ data class PotInfo(
     @ServerTimestamp
     val createdAt: Timestamp? = null,
     val completedAt: Timestamp? = null,
-    val isCompleted: Boolean = false
+    @get:PropertyName("isCompleted") @set:PropertyName("isCompleted")
+    var isCompleted: Boolean = false
 ){
     //레벨 업 계산
     val level: String get(){

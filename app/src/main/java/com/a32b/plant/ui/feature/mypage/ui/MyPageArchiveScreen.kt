@@ -19,20 +19,20 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.a32b.plant.core.component.ProfileImage
+import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.data.di.ViewModelFactory
 import com.a32b.plant.data.model.PotInfo
 import com.a32b.plant.ui.feature.home.ui.GridPlantItem
-import com.a32b.plant.ui.feature.home.viewmodel.HomeViewModel
 import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageArchiveViewModel
 import com.a32b.plant.ui.theme.background
-
 
 @Composable
 fun MyPageArchiveScreen(navController: NavController) {
     val viewModel: MyPageArchiveViewModel =
         viewModel(factory = ViewModelFactory.myPageArchiveViewModelFactory)
-    val potList by viewModel.potList.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
+
 
     Scaffold(
         topBar = {
@@ -41,7 +41,7 @@ fun MyPageArchiveScreen(navController: NavController) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
-                Text(text = "OO님의 기른 나무")
+                Text(text = "${uiState.nickname}님의 기른 나무")
             }
 
         }
@@ -51,16 +51,15 @@ fun MyPageArchiveScreen(navController: NavController) {
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(background),
-            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // 하단 그리드
-            val chunkedPots = potList.chunked(3)
+            val chunkedPots = uiState.potList.chunked(3)
             items(chunkedPots) { rowPots ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.Start)
                 ) {
                     rowPots.forEach { pot ->
                         GridPlantItem(
@@ -68,6 +67,8 @@ fun MyPageArchiveScreen(navController: NavController) {
                             modifier = Modifier.weight(1f),
                             // [콜백 1] 이미지 클릭 시 ->
                             onImageClick = {
+                                navController.navigate(Routes.MyPageArchiveDetail(potId = pot.id.toString()))
+                                Log.d("plantLog", "id : ${pot.id}")
                             },
                             // [콜백 2] 텍스트 클릭 시 ->
                             onTextClick = {
@@ -91,15 +92,13 @@ fun MyPageArchiveScreen(navController: NavController) {
         modifier: Modifier = Modifier,
         onImageClick: () -> Unit, // 이미지 클릭 - 영역 클릭 시 로 변경하기
     ) {
-        // 화분 ID가 비어있지 않을 때만 실제 내용을 표시
-        if (!pot.id.isNullOrEmpty()) {
             Log.d("plantLog", "----- $pot")
             Column(
                 modifier = modifier
                     .fillMaxWidth()
                     .background(Color.White, RoundedCornerShape(16.dp))
                     .padding(12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.Start
             ) {
                 Box(
                     modifier = Modifier
@@ -117,7 +116,7 @@ fun MyPageArchiveScreen(navController: NavController) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.Start
                 ) {
                     // 총 공부 시간
                     Text(
@@ -134,9 +133,5 @@ fun MyPageArchiveScreen(navController: NavController) {
                     )
                 }
             }
-        } else {
-            // 화분이 없는 빈 칸은 투명한 공간으로 둠 (그리드 정렬 유지용)
-            Spacer(modifier = modifier.fillMaxWidth())
-        }
     }
 }

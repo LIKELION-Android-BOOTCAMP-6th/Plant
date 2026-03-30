@@ -380,7 +380,7 @@ fun SetImages(
     selectedImageLevel: String,
     onImageClick: (String) -> Unit
 ) {
-//    Log.d("PlantLog", "$levelList")
+    Log.d("PlantLog", "$levelList")
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),

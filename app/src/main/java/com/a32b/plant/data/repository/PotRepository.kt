@@ -1,7 +1,9 @@
 package com.a32b.plant.data.repository
 
 import android.util.Log
+import coil.util.CoilUtils.result
 import com.a32b.plant.data.di.CurrentUser
+import com.a32b.plant.data.di.CurrentUser.uid
 import com.a32b.plant.data.model.StudyLog
 import com.a32b.plant.data.model.PotInfo
 import com.google.firebase.firestore.FieldValue
@@ -12,6 +14,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
 import kotlin.coroutines.resume
+import kotlin.text.get
 
 class PotRepository(private val db: FirebaseFirestore) {
 
@@ -26,7 +29,7 @@ class PotRepository(private val db: FirebaseFirestore) {
                 return@addSnapshotListener
             }
             //name 필드값 추출 -> 리스트화
-            val tags = snapshot?.documents?.mapNotNull { doc -> doc.id }?: emptyList()
+            val tags = snapshot?.documents?.mapNotNull { doc -> doc.id } ?: emptyList()
 
             //data 전송
             trySend(tags)
@@ -61,7 +64,6 @@ class PotRepository(private val db: FirebaseFirestore) {
         }
 
 
-
     //ARnkLKJE60MuhYMgivXweboI6ch2
     //VosJjoUJp6SplH0siKyoAIBZ7fk2
 // 이상 없으면 오전에 물어보고 model에 넣기
@@ -83,7 +85,6 @@ class PotRepository(private val db: FirebaseFirestore) {
         val log = StudyLog(
             title = "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
             contents = listOf(
-                "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
                 "학습내용abcdabcdefghiabcdabcdefghiabcdabcdefghi",
                 "학습내용5555555555555555555 5 5 55 55 5  5",
                 "abcdabcdefghiabcdabcdefghiabcdabcdefghi",
@@ -119,7 +120,7 @@ class PotRepository(private val db: FirebaseFirestore) {
         return resultList
     }
 
-    fun createStudyLog(potId: String, studyLog: StudyLog){
+    fun createStudyLog(potId: String, studyLog: StudyLog) {
         db.collection("users").document(CurrentUser.uid)
             .collection("pots").document(potId)
             .collection("logs")
@@ -129,10 +130,23 @@ class PotRepository(private val db: FirebaseFirestore) {
             }
     }
 
-    fun updateTotalStudyTime(potId: String, studyTime: Long){
+    fun updateTotalStudyTime(potId: String, studyTime: Long) {
         db.collection("users").document(CurrentUser.uid)
             .collection("pots").document(potId)
             .update("potTotalStudyingTime", FieldValue.increment(studyTime))
+    }
 
+    suspend fun getPotsByUserUid(uid: String, completed: Boolean? = null): List<PotInfo> {
+        var query = db.collection("pots").whereEqualTo("uid", uid)
+        if (completed != null) {
+            query = query.whereEqualTo("isCompleted", completed)
+        }
+        val result = query.get().await()
+        return result.toObjects(PotInfo::class.java)
+    }
+
+    suspend fun getPotById(id: String): PotInfo? {
+        val result = db.collection("pots").document(id).get().await()
+        return result.toObject(PotInfo::class.java)
     }
 }

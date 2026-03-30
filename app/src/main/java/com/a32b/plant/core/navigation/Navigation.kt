@@ -18,10 +18,12 @@ import com.a32b.plant.ui.feature.auth.ui.SignInScreen
 import com.a32b.plant.ui.feature.auth.ui.SignUpScreen
 import com.a32b.plant.ui.feature.home.ui.HomeScreen
 import com.a32b.plant.ui.feature.home.ui.NewBornTreeScreen
+import com.a32b.plant.ui.feature.mypage.ui.MyPageArchiveDetailScreen
 import com.a32b.plant.ui.feature.mypage.ui.MyCommunityFeedScreen
 import com.a32b.plant.ui.feature.mypage.ui.MyPageArchiveScreen
 import com.a32b.plant.ui.feature.mypage.ui.MyPageScreen
 import com.a32b.plant.ui.feature.mypage.ui.MyPageSettingScreen
+import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageArchiveDetailViewModel
 import com.a32b.plant.ui.feature.splash.SplashViewModel
 import com.a32b.plant.ui.feature.studyPalnDtail.ui.StudyPlanDetailScreen
 import com.a32b.plant.ui.feature.studying.ui.StudyResultScreen
@@ -32,12 +34,23 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
 
     val destination by viewModel.destination.collectAsState()
     destination?.let { startRoute ->
-        NavHost(navController = navController, startDestination = startRoute){
+        NavHost(navController = navController, startDestination = startRoute) {
 
             composable<Routes.HomeMain> { HomeScreen(navController) }
             composable<Routes.Mypage> { MyPageScreen(navController) }
             composable<Routes.MyPageSetting> { MyPageSettingScreen(navController) }
             composable<Routes.MyPageArchive> { MyPageArchiveScreen(navController) }
+
+            composable<Routes.MyPageArchiveDetail> {backStackEntry->
+                val route = backStackEntry.toRoute<Routes.MyPageArchiveDetail>()
+                val detailVm: MyPageArchiveDetailViewModel = viewModel(
+                    factory = ViewModelFactory.myPageArchiveDetailViewModelFactory(route.potId)
+                )
+                MyPageArchiveDetailScreen(
+                    onBack = { navController.popBackStack() },
+                    viewModel = detailVm
+                )
+            }
 
             composable<Routes.CommunityList> {
                 CommunityListScreen(navController)
