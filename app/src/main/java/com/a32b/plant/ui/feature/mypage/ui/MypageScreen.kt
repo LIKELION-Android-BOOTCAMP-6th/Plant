@@ -85,6 +85,7 @@ fun MyPageScreen(navController: NavController) {
                     navController.navigate(Routes.SignIn) {
                         popUpTo(0) { inclusive = true }
                     }
+
                 is MyPageEvent.NavigateToMyCommunityFeed ->
                     navController.navigate(Routes.MyCommunityFeed)
             }
@@ -115,7 +116,10 @@ fun MyPageScreen(navController: NavController) {
 
                     Row(modifier = Modifier.fillMaxWidth()) {
                         Button(
-                            onClick = onDismiss,
+                            onClick = {
+                                viewModel.clearProfileState()
+                                onDismiss()
+                            },
                             modifier = Modifier
                                 .height(45.dp)
                                 .weight(1f),
@@ -352,7 +356,10 @@ fun ProfileRow(uiState: MyPageUiState, viewModel: MyPageViewModel) {
 
     if (isOpenDialog) {
         ProfileDialog(
-            onDismiss = { isOpenDialog = false },
+            onDismiss = {
+                viewModel.clearProfileState()
+                isOpenDialog = false
+            },
             uiState = uiState,
             viewModel = viewModel
         )
@@ -423,12 +430,16 @@ fun ProfileDialog(
     LaunchedEffect(uiState.isUpdateSuccess) {
         if (uiState.isUpdateSuccess) {
             Toast.makeText(context, "업데이트 완료", Toast.LENGTH_SHORT).show()
+            viewModel.clearProfileState()
             onDismiss()
             viewModel.resetIsUpdateSuccess()
         }
     }
 
-    Dialog(onDismissRequest = { onDismiss() }) {
+    Dialog(onDismissRequest = {
+        viewModel.clearProfileState()
+        onDismiss()
+    }) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -444,7 +455,11 @@ fun ProfileDialog(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         value = newUserName,
-                        onValueChange = { if (it.length <= 10) newUserName = it },
+                        onValueChange = {
+                            if (it.length <= 10)
+                                newUserName = it
+                            viewModel.resetNicknameError()
+                        },
                         label = { Text("닉네임 변경 (2~10자)", style = Typography.labelSmall) },
                         isError = uiState.nicknameError != null
                     )
@@ -470,7 +485,10 @@ fun ProfileDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Button(
-                        onClick = onDismiss,
+                        onClick = {
+                            viewModel.clearProfileState()
+                            onDismiss()
+                        },
                         modifier = Modifier
                             .height(45.dp)
                             .weight(1f),
