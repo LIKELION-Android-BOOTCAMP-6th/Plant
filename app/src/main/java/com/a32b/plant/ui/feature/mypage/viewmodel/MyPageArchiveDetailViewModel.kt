@@ -31,19 +31,17 @@ class MyPageArchiveDetailViewModel(
 
     init {
         viewModelScope.launch {
-            val potInfo = potRepository.getUserPotById(CurrentUser.uid, potId) // 1. 먼저 데이터를 가져온다
+            val potInfo = potRepository.getPotLogs(CurrentUser.uid, potId)
 
             _uiState.update {
                 it.copy(
                     nickname = CurrentUser.nickname,
-                    pot = potInfo,
-                    totalStudyTime = formatToDigitalClock(potInfo?.potTotalStudyingTime ?: 0L)
+
                 )
             }
-
             Log.d("plantLog", "화분 데이터 로드 완료: ${_uiState.value.pot}")
-//            Log.d("plantLog", "화분 데이터 로드 완료: ${_uiState.value.pot.logs}")
             Log.d("plantLog", "변환된 시간: ${_uiState.value.totalStudyTime}")
         }
     }
 }
+

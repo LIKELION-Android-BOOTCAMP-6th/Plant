@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageArchiveDetailViewModel
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.toRoute
@@ -51,18 +52,30 @@ fun MyPageArchiveDetailScreen(navController: NavController) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // 뒤로가기 버튼
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_backbtn),
-                    contentDescription = "뒤로가기",
-                    modifier = Modifier.size(24.dp),
-                    tint = Color.Unspecified
-                )
+                IconButton(onClick = { navController.popBackStack() }) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_backbtn),
+                        contentDescription = "뒤로가기",
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
 
                 Text(
                     text = "[${pot?.tag ?: "태그"}] ",
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(start = 8.dp)
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 8.dp)
                 )
+
+                IconButton(onClick = { navController.popBackStack() }) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_share),
+                        contentDescription = "공유하기",
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
         }
     ) { paddingValues ->
@@ -106,6 +119,8 @@ fun MyPageArchiveDetailScreen(navController: NavController) {
                         )
                     }
                 }
+                Text(text = "공부 기록", style = MaterialTheme.typography.titleLarge)
+                
             }
         } else {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

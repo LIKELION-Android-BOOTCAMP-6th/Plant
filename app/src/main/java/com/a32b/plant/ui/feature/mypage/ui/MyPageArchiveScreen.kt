@@ -41,7 +41,10 @@ fun MyPageArchiveScreen(navController: NavController) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
-                Text(text = "${uiState.nickname}님의 기른 나무")
+                Text(
+                    text = "${uiState.nickname}님의 기른 나무",
+                    style = MaterialTheme.typography.titleMedium
+                )
             }
 
         }
@@ -92,46 +95,46 @@ fun MyPageArchiveScreen(navController: NavController) {
         modifier: Modifier = Modifier,
         onImageClick: () -> Unit, // 이미지 클릭 - 영역 클릭 시 로 변경하기
     ) {
-            Log.d("plantLog", "----- $pot")
+        Log.d("plantLog", "----- $pot")
+        Column(
+            modifier = modifier
+                .fillMaxWidth()
+                .background(Color.White, RoundedCornerShape(16.dp))
+                .padding(12.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp)) // 동그랗게 클릭 영역 제한
+                    .clickable { onImageClick() } // [클릭 1] 이미지 클릭 시
+            ) {
+                ProfileImage(
+                    level = pot.level,
+                    size = 60
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            // 2. 화분 정보 (시간, 이름) -
             Column(
-                modifier = modifier
-                    .fillMaxWidth()
-                    .background(Color.White, RoundedCornerShape(16.dp))
-                    .padding(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth(),
                 horizontalAlignment = Alignment.Start
             ) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp)) // 동그랗게 클릭 영역 제한
-                        .clickable { onImageClick() } // [클릭 1] 이미지 클릭 시
-                ) {
-                    ProfileImage(
-                        level = pot.level,
-                        size = 60
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-                // 2. 화분 정보 (시간, 이름) -
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    horizontalAlignment = Alignment.Start
-                ) {
-                    // 총 공부 시간
-                    Text(
-                        text = TimeFormatter.formatToDigitalClock(pot.potTotalStudyingTime ?: 0L),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Black
-                    )
-                    // 화분 이름
-                    Text(
-                        text = pot.name ?: "이름 없음",
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                // 총 공부 시간
+                Text(
+                    text = TimeFormatter.formatToDigitalClock(pot.potTotalStudyingTime ?: 0L),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Black
+                )
+                // 화분 이름
+                Text(
+                    text = pot.name ?: "이름 없음",
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
+        }
     }
 }

@@ -129,10 +129,6 @@ class MyPageViewModel(
         }
 
 
-        Log.d("PlantLog", "출력 -----------------------")
-        Log.d("PlantLog", "$nickname")
-        Log.d("PlantLog", "$imageLevel")
-        Log.d("PlantLog", "완료 -----------------------")
         if (nickname == uiState.value.nickname && imageLevel == uiState.value.profileImg) {
             clearProfileState()
         }

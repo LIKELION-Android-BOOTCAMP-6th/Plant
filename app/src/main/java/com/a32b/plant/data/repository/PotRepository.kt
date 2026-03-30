@@ -5,6 +5,7 @@ import com.a32b.plant.data.di.CurrentUser
 import com.a32b.plant.data.di.CurrentUser.uid
 import com.a32b.plant.data.model.StudyLog
 import com.a32b.plant.data.model.PotInfo
+import com.a32b.plant.data.model.LogInfo
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
 import kotlin.coroutines.resume
+import kotlin.jvm.java
 
 class PotRepository(private val db: FirebaseFirestore) {
 
@@ -110,8 +112,7 @@ class PotRepository(private val db: FirebaseFirestore) {
 
 
     suspend fun getDuplicationLevelList(uid: String): List<String> {
-        val result = db.collection("pots")
-            .whereEqualTo("uid", uid)
+        val result = db.collection("users").document(uid).collection("pots")
             .get()
             .await()
         val levelList = result.documents
@@ -138,12 +139,24 @@ class PotRepository(private val db: FirebaseFirestore) {
 
     suspend fun getUserPotsByStatus(uid: String, isCompleted: Boolean): List<PotInfo> {
         return db.collection("users").document(uid).collection("pots")
-            .whereEqualTo("completed", isCompleted)
+            .whereEqualTo("isCompleted", isCompleted)
             .get().await().toObjects(PotInfo::class.java)
     }
 
-    suspend fun getUserPotById(uid: String, id: String): PotInfo? {
-        val result = db.collection("users").document(uid).collection("pots").document(id).get().await()
-        return result.toObject(PotInfo::class.java)
+    suspend fun getPotLogs(uid: String, potId: String): List<LogInfo> {
+        return try {
+            val result = db.collection("users")
+                .document(uid)
+                .collection("pots")
+                .document(potId)
+                .collection("logs")
+                .get().await()
+            result.toObjects(LogInfo::class.java)
+        } catch (e: Exception) {
+            Log.e("plantLog", "${e.message}")
+            emptyList()
+        }
     }
+
+
 }
