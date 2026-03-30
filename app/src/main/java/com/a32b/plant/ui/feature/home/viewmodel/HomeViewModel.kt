@@ -102,26 +102,29 @@ class HomeViewModel(
             userRepository.getUserProfile(uid).collectLatest { profile ->
                 profile?.let { user ->
                     _userName.value = user.nickname ?: "사용자"
-                    _potList.value = user.potList
+
+                    // 완료 여부에 따른 필터 추가
+                    val ongoingPots = user.potList.filter { !it.isCompleted }.toList()
+                    _potList.value = ongoingPots
 
                     // 화면에 보여줄 화분 결정
-                    _displayPot.value = calculateDisplayPot(user)
+                    _displayPot.value = calculateDisplayPot(user, ongoingPots)
                 }
             }
         }
     }
 
-    private fun calculateDisplayPot(user: UserProfile): PotInfo {
-        val pots = user.potList
+    private fun calculateDisplayPot(user: UserProfile, ongoingPots: List<PotInfo>): PotInfo {
+        val pots = ongoingPots
         return when {
             // case 1: 화분이 아예 없는 경우
-            pots.isEmpty() -> PotInfo(id = "", name = "화분을 추가해주세요")
+            ongoingPots.isEmpty() -> PotInfo(id = "", name = "화분을 추가해주세요")
             // case 2: 화분이 하나만 있는 경우
-            pots.size == 1 -> pots[0]
+            ongoingPots.size == 1 -> ongoingPots[0]
             // case 3: 화분이 여러 개인 경우 마지막 선택한 화분 찾기
             else -> {
-                val lastPot = pots.find { it.id == user.lastSelectedPotId }
-                lastPot ?: pots[0]
+                val lastPot = ongoingPots.find { it.id == user.lastSelectedPotId }
+                lastPot ?: ongoingPots[0]
             }
         }
     }

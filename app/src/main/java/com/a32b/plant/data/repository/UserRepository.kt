@@ -16,7 +16,7 @@ import kotlin.coroutines.resumeWithException
 
 class UserRepository(private val db: FirebaseFirestore, private val auth: FirebaseAuth) {
     // 특정 유저의 데이터를 실시간 Flow로 반환
-    // 특정 유저의 데이터 + 하위 pots 목록까지 "모두" 실시간으로 감치
+    // 특정 유저의 데이터 + 하위 pots 목록까지 "모두" 실시간으로 감지
     fun getUserProfile(uid: String): Flow<UserProfile?> = callbackFlow {
         if (uid.isEmpty()) {
             trySend(null)
@@ -26,24 +26,26 @@ class UserRepository(private val db: FirebaseFirestore, private val auth: Fireba
         val potsCollectionRef = userDocRef.collection("pots")
 
         var userProfile: UserProfile? = null
+        var currentOngoingPots: List<PotInfo> = emptyList()
+
+        //공통 전송 로직
+        fun sendUpdate(){
+            trySend(userProfile?.copy(potList = currentOngoingPots))
+        }
 
         // 1. 유저 정보 실시간 리스너
         val userListener = userDocRef.addSnapshotListener { userSnapshot, _ ->
             userProfile = userSnapshot?.toObject(UserProfile::class.java)
-
-            // 유저 정보가 오면 화분 목록도 쿼리해서 전송
-            potsCollectionRef.get().addOnSuccessListener { potsSnapshot ->
-                val pots = potsSnapshot.toObjects(PotInfo::class.java)
-                trySend(userProfile?.copy(potList = pots))
-            }
+            sendUpdate()
         }
 
         // 2. 화분 목록 실시간 리스너 (화분 추가/삭제 시에도 UI 즉시 반영)
-        val potsListener = potsCollectionRef.addSnapshotListener { potsSnapshot, _ ->
-            val pots = potsSnapshot?.toObjects(PotInfo::class.java) ?: emptyList()
-            if (userProfile != null) {
-                trySend(userProfile?.copy(potList = pots))
-            }
+        val potsListener = potsCollectionRef.whereEqualTo("completed", false)
+            .addSnapshotListener{ potsSnapshot, _ ->
+            currentOngoingPots = potsSnapshot?.documents?.mapNotNull{ doc ->
+                doc.toObject(PotInfo::class.java)?.copy(id = doc.id)
+            }?: emptyList()
+            sendUpdate()
         }
 
         awaitClose {

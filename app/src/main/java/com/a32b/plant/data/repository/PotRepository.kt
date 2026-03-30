@@ -2,6 +2,7 @@ package com.a32b.plant.data.repository
 
 import android.util.Log
 import com.a32b.plant.data.di.CurrentUser
+import com.a32b.plant.data.di.CurrentUser.uid
 import com.a32b.plant.data.model.StudyLog
 import com.a32b.plant.data.model.PotInfo
 import com.google.firebase.firestore.FieldValue
@@ -49,7 +50,9 @@ class PotRepository(private val db: FirebaseFirestore) {
                 imageUrl = "0", //⭐⭐⭐일단 데이터클래스랑 맞춰놨는데, 디비에는 레벨로 표현되어 있어서 데이터클래스를 바꿔야 함
                 potTotalStudyingTime = 0L
             )
-
+            Log.d("plantLog", "--------------------------------")
+            Log.d("plantLog", "$newPot")
+            Log.d("plantLog", "--------------------------------")
             //DB에 저장
             newDocRef.set(newPot)
                 .addOnSuccessListener {
@@ -133,18 +136,14 @@ class PotRepository(private val db: FirebaseFirestore) {
             .update("potTotalStudyingTime", FieldValue.increment(studyTime))
     }
 
-    suspend fun getPotsByUserUid(uid: String, completed: Boolean? = null): List<PotInfo> {
-        var query = db.collection("pots").whereEqualTo("uid", uid)
-        if (completed != null) {
-            query = query.whereEqualTo("isCompleted", completed)
-        }
-        val result = query.get().await()
-        return result.toObjects(PotInfo::class.java)
+    suspend fun getUserPotsByStatus(uid: String, isCompleted: Boolean): List<PotInfo> {
+        return db.collection("users").document(uid).collection("pots")
+            .whereEqualTo("completed", isCompleted)
+            .get().await().toObjects(PotInfo::class.java)
     }
 
-    suspend fun getPotById(id: String?): PotInfo? {
-        if (id == null) return null
-        val result = db.collection("pots").document(id).get().await()
+    suspend fun getUserPotById(uid: String, id: String): PotInfo? {
+        val result = db.collection("users").document(uid).collection("pots").document(id).get().await()
         return result.toObject(PotInfo::class.java)
     }
 }

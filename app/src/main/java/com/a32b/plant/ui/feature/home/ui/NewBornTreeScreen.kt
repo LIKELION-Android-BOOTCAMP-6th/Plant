@@ -169,9 +169,17 @@ fun NewBornTreeScreen(navController: NavController,
                     Text("화분 이름", style = MaterialTheme.typography.titleSmall)
                     androidx.compose.material3.OutlinedTextField(
                         value = potName,
-                        onValueChange = { potName = it },
+                        onValueChange = { input ->
+                            // 줄바꿈 금지 & 글자 수 제한
+                            if(!input.contains("\n") && input.length <= 15){
+                            potName = input
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("이름을 입력하세요") }
+                        placeholder = { Text("이름을 입력하세요 (최대 15글자)") },
+
+                        // 한 줄 입력 고정
+                        singleLine = true,
                     )
                 }
 

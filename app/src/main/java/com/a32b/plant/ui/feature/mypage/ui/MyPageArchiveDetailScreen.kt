@@ -32,8 +32,8 @@ import java.util.Locale
 
 @Composable
 fun MyPageArchiveDetailScreen(navController: NavController) {
-    val args = navController.currentBackStackEntry?.toRoute<Routes.MyPageArchiveDetail>()
-    val potId = args?.potId
+    val args = navController.currentBackStackEntry?.toRoute<Routes.MyPageArchiveDetail>()!!
+    val potId = args.potId
 
     val viewModel: MyPageArchiveDetailViewModel =
         viewModel(factory = ViewModelFactory.myPageArchiveDetailViewModelFactory(potId))

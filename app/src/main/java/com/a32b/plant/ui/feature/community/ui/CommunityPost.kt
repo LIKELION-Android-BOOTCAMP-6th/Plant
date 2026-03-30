@@ -30,7 +30,12 @@ import com.a32b.plant.ui.theme.Typography
 import com.a32b.plant.ui.theme.background
 
 @Composable
-fun CommunityPostScreen(navController: NavController) {
+fun CommunityPostScreen(
+    navController: NavController
+) {
+    val route = navController.currentBackStackEntry?.toRoute<Routes.CommunityPost>()
+    val postId = route?.postId
+
     val context = LocalContext.current
     val args = navController.currentBackStackEntry?.toRoute<Routes.CommunityPost>()
     val postId = args?.postId

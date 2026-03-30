@@ -1,6 +1,7 @@
 package com.a32b.plant.ui.feature.community.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,59 +22,73 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.toRoute
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.data.di.ViewModelFactory
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityDetailViewModel
+import com.a32b.plant.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CommunityDetailScreen(
-    onBack: () -> Unit,
-    viewModel: CommunityDetailViewModel,
     navController: NavController
 ) {
+
+    val route = navController.currentBackStackEntry?.toRoute<Routes.CommunityDetail>()
+    val postId = route?.postId ?: ""
+
+
+    val viewModel: CommunityDetailViewModel = viewModel(
+        factory = ViewModelFactory.communityDetailViewModelFactory(postId)
+    )
 
     val postState by viewModel.post.collectAsStateWithLifecycle()
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
     val commentText by viewModel.commentText.collectAsStateWithLifecycle()
-    val isLikeProcessing by viewModel.isLikeProcessing.collectAsStateWithLifecycle()
-
     val showDeleteDialog = viewModel.showDeleteDialog.value
+
+
+    val isLikedByMe = postState?.isLiked == true
+
 
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.closeDeleteDialog() },
-            title = { Text("게시글 삭제", fontWeight = FontWeight.Bold) },
-            text = { Text("정말로 이 게시글을 삭제하시겠습니까?\n삭제된 내용은 복구할 수 없습니다.") },
+            title = { Text("게시글 삭제", color = Color.Black, fontWeight = FontWeight.Bold) },
+            text = { Text("정말로 삭제하시겠습니까?", color = Color.Black) },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deletePost { onBack() }
-                        viewModel.closeDeleteDialog()
-                    }
-                ) {
+                TextButton(onClick = {
+                    viewModel.deletePost { navController.popBackStack() }
+                    viewModel.closeDeleteDialog()
+                }) {
                     Text("삭제", color = Color.Red, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.closeDeleteDialog() }) {
-                    Text("취소")
+                    Text("취소", color = Color.Black)
                 }
             },
-            shape = RoundedCornerShape(16.dp),
-            containerColor = Color.White
+            containerColor = sub2
         )
     }
 
     Scaffold(
-        containerColor = Color(0xFFF9F9F4),
+        containerColor = background,
         topBar = {
             TopAppBar(
                 title = { },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(painterResource(id = R.drawable.ic_backbtn), contentDescription = "뒤로", modifier = Modifier.size(24.dp))
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            painterResource(id = R.drawable.ic_backbtn),
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = Color.Black
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -82,77 +97,67 @@ fun CommunityDetailScreen(
     ) { innerPadding ->
         val currentPost = postState ?: return@Scaffold
 
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .padding(horizontal = 20.dp)
-        ) {
+        Column(modifier = Modifier.padding(innerPadding).fillMaxSize().padding(horizontal = 20.dp)) {
             Card(
                 modifier = Modifier.fillMaxSize(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                shape = RoundedCornerShape(12.dp),
-                elevation = CardDefaults.cardElevation(2.dp)
+                colors = CardDefaults.cardColors(containerColor = sub2),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 LazyColumn(modifier = Modifier.padding(20.dp)) {
-                    item {
-                        Text(currentPost.title, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
 
                     item {
+                        Text(currentPost.title, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                        Spacer(modifier = Modifier.height(16.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color(0xFFE0E0E0)))
+                            Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(sub3))
                             Spacer(modifier = Modifier.width(10.dp))
-                            Text(currentPost.nickName, fontWeight = FontWeight.Medium)
+                            Text(currentPost.nickName, fontWeight = FontWeight.Medium, color = Color.Black)
                             Spacer(modifier = Modifier.weight(1f))
-                            Text(currentPost.createdAt, color = Color.Gray, fontSize = 12.sp)
+                            Text(currentPost.createdAt.toString(), color = Color.Black, fontSize = 12.sp)
                         }
                         Spacer(modifier = Modifier.height(20.dp))
                     }
 
+
                     item {
-                        Text(currentPost.content, fontSize = 16.sp, lineHeight = 24.sp)
+                        Text(currentPost.content, fontSize = 16.sp, lineHeight = 24.sp, color = Color.Black)
                         Spacer(modifier = Modifier.height(30.dp))
                     }
 
+
                     item {
-                        HorizontalDivider(color = Color(0xFFEEEEEE))
+                        HorizontalDivider(color = sub3.copy(alpha = 0.5f))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
                         ) {
-                            Icon(painterResource(id = R.drawable.ic_community_comment), "댓글", tint = Color(0xFF6750A4), modifier = Modifier.size(18.dp))
-                            Text(" ${currentPost.comments.size}", modifier = Modifier.padding(end = 12.dp))
-                            
-                            val isLiked = currentPost.likedBy.contains(currentUser?.uid)
-                            val isAuthor = currentPost.authorUid == currentUser?.uid
+                            Icon(painterResource(id = R.drawable.ic_community_comment), null, tint = primary, modifier = Modifier.size(18.dp))
+                            Text(" ${currentPost.comments.size}", color = Color.Black, modifier = Modifier.padding(end = 16.dp))
 
-                            IconButton(
-                                onClick = { if (!isAuthor && !isLikeProcessing) viewModel.toggleLike() },
-                                enabled = !isAuthor && !isLikeProcessing
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.clickable { viewModel.toggleLike() }
                             ) {
                                 Icon(
-                                    imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                    contentDescription = "좋아요",
-                                    tint = if (isLiked) Color.Red else Color(0xFF6750A4),
-                                    modifier = Modifier.size(18.dp)
+                                    imageVector = if (isLikedByMe) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                    tint = if (isLikedByMe) Color.Red else primary,
+                                    modifier = Modifier.size(18.dp),
+                                    contentDescription = null
                                 )
+                                Text(" ${currentPost.likeCount}", color = Color.Black)
                             }
-                            Text(" ${currentPost.likeCount}")
 
                             Spacer(modifier = Modifier.weight(1f))
 
 
                             if (currentPost.nickName == currentUser?.nickname) {
-                                IconButton(onClick = { 
-
+                                IconButton(onClick = {
                                     navController.navigate(Routes.CommunityPost(postId = currentPost.id))
                                 }) {
-                                    Icon(painterResource(id = R.drawable.ic_edit), "수정", modifier = Modifier.size(20.dp))
+                                    Icon(painterResource(id = R.drawable.ic_edit), null, tint = Color.Black)
                                 }
                                 IconButton(onClick = { viewModel.openDeleteDialog() }) {
-                                    Icon(Icons.Default.Delete, "삭제", modifier = Modifier.size(20.dp))
+                                    Icon(Icons.Default.Delete, null, tint = Color.Black)
                                 }
                             }
                         }
@@ -185,52 +190,46 @@ fun CommunityDetailScreen(
 @Composable
 fun CommentRow(name: String, content: String) {
     Row(verticalAlignment = Alignment.Top) {
-        Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(Color(0xFFEEEEEE)))
+        Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(sub3))
         Spacer(Modifier.width(8.dp))
         Column {
-            Text(name, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-            Text(content, fontSize = 14.sp, color = Color.DarkGray)
+            Text(name, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.Black)
+            Text(content, fontSize = 14.sp, color = Color.Black)
         }
     }
 }
 
 @Composable
 fun CommentInputSection(nickname: String, text: String, onTextChange: (String) -> Unit, onSend: () -> Unit) {
-    val isEnabled = text.isNotBlank()
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5)),
+        colors = CardDefaults.cardColors(containerColor = textFieldBackground),
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(18.dp).clip(CircleShape).background(Color.LightGray))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(nickname, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            }
+            Text(nickname, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.Black)
             TextField(
                 value = text,
                 onValueChange = onTextChange,
                 modifier = Modifier.fillMaxWidth().height(70.dp).padding(top = 8.dp),
-                placeholder = { Text("댓글 입력...", fontSize = 13.sp) },
+                placeholder = { Text("댓글을 남겨보세요...", fontSize = 13.sp, color = Color.Gray) },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.White,
                     unfocusedContainerColor = Color.White,
                     focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
+                    unfocusedIndicatorColor = Color.Transparent,
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black
                 ),
                 shape = RoundedCornerShape(8.dp)
             )
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                 Button(
                     onClick = onSend,
-                    enabled = isEnabled,
-                    modifier = Modifier.height(32.dp).width(64.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isEnabled) Color(0xFF8BC34A) else Color.LightGray
-                    ),
+                    modifier = Modifier.height(32.dp).padding(top = 4.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = primary),
                     shape = RoundedCornerShape(4.dp),
-                    contentPadding = PaddingValues(0.dp)
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
                 ) {
                     Text("등록", fontSize = 12.sp, color = Color.White)
                 }

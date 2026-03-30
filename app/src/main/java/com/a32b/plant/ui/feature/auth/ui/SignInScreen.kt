@@ -85,7 +85,7 @@ fun SignInScreen(navController: NavController) {
                 is SignInEvent.NavigateToHome ->
                     navController.navigate(Routes.HomeMain) {
                         // 로그인 화면을 백스택에서 제거 → 홈으로 간 뒤 뒤로가기 시 로그인으로 돌아가지 않도록
-                        popUpTo(Routes.SignIn) { inclusive = true }
+                        popUpTo(0) { inclusive = true }
                     }
 
                 is SignInEvent.NavigateToSignUp ->

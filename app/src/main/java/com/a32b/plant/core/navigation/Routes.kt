@@ -18,7 +18,7 @@ sealed interface Routes {
 
     @Serializable data class StudyPlanDetail(val potId: String) : Routes
     @Serializable data class Studying(val potId: String, val tag: String, val title: String, val level: String): Routes
-    @Serializable data class StudyResult(val timestamp: String, val tag: String,val title: String, val log: List<String>, val time: Long, val potId: String, val level: String )
+    @Serializable data class StudyResult(val timestamp: String, val tag: String,val title: String, val log: List<String>, val time: Long, val potId: String, val level: String ) : Routes
 
     @Serializable data class CommunityPost(val postId: String? = null, val potId: String?, val studyLogId: List<String>?) : Routes
     @Serializable data class CommunityDetail(val postId: String) : Routes
