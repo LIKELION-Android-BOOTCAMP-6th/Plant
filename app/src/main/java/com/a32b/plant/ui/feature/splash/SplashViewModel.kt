@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.data.di.AppContainer
 import com.a32b.plant.data.di.CurrentUser
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -24,7 +23,6 @@ class SplashViewModel : ViewModel() {
 
     private fun checkAuthLogin() {
         viewModelScope.launch {
-            delay(500)
 
             // autoLogin 동작 - firebase 로그인 세션 확인
             val firebaseUser = auth.currentUser
