@@ -48,7 +48,7 @@ class MyPageSettingViewModel(
                 // 2. nicknames 컬렉션에서 닉네임 문서 삭제
                 nicknameRepository.deleteNickname(nickname)
 
-                // 3. Firestore users/{uid} 문서 삭제 - UserRepository.kt 에 함수 추가해놨음!
+                // 3. Firestore users/{uid} 문서 삭제
                 userRepository.deleteUser(uid)
 
                 // 4. Firebase Auth 계정 삭제

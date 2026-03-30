@@ -116,18 +116,73 @@ class UserRepository(private val db: FirebaseFirestore, private val auth: Fireba
         }
     }
 
-    // 회원 탈퇴 -> 유저 문서 삭제
+    // 회원탈퇴 시 유저 관련 모든 데이터 삭제
     suspend fun deleteUser(uid: String) {
-        val userDoc = db.collection("users").document(uid)
 
-        // 1. 하위 pots 컬렉션 문서 전부 삭제
-        val pots = userDoc.collection("pots").get().await()
+        // 1. users/{uid}/pots/{potId}/logs/ (하위-하위) 컬렉션 내 문서들 삭제
+        val pots = db.collection("users").document(uid)
+            .collection("pots").get().await()
         for (pot in pots.documents) {
+            // {lodId} 문서들 삭제
+            val logs = pot.reference.collection("logs").get().await()
+            for (log in logs.documents) {
+                log.reference.delete().await()
+            }
+            // {potsId} 문서들 삭제
             pot.reference.delete().await()
         }
 
-        // 2. 유저 문서 삭제
-        userDoc.delete().await()
+
+        // 2. users/{uid} 문서 삭제
+        db.collection("users").document(uid).delete().await()
+
+
+        // 3. activities/{activityId} 문서들 삭제 (uid 필드로 조회)
+        val activities = db.collection("activities")
+            .whereEqualTo("uid", uid).get().await()
+        for (activity in activities.documents) {
+            activity.reference.delete().await()
+        }
+
+
+        // 4. posts 중 내 게시글 삭제 → 하위 컬렉션(comments, likes)도 함께 삭제
+        // 게시글들 중 내 게시글만 가져오기 (author.id 필드로 조회)
+        val myPosts = db.collection("posts")
+            .whereEqualTo("author.id", uid).get().await()
+
+        for (post in myPosts.documents) {
+            // 내 게시글 내 comments/{commentsId} 문서들(comments 하위 컬렉션) 전부 삭제
+            val comments = post.reference.collection("comments").get().await()
+            for (comment in comments.documents) {
+                comment.reference.delete().await()
+            }
+            // 내 게시글 likes/{uid} 문서들(likes 하위 컬렉션) 전부 삭제
+            val likes = post.reference.collection("likes").get().await()
+            for (like in likes.documents) {
+                like.reference.delete().await()
+            }
+            // {postId} 문서 삭제
+            post.reference.delete().await()
+        }
+
+
+        // 5. 다른 사람 게시글에 남긴 내 댓글 삭제 (collectionGroup 이용)
+        val myComments = db.collectionGroup("comments")
+            .whereEqualTo("user.id", uid).get().await()
+        for (comment in myComments.documents) {
+            comment.reference.delete().await()
+        }
+
+
+        // 6. 다른 사람 게시글에 남긴 내 좋아요 삭제
+        //    likes/{uid} 구조이므로 posts에서 likes/{uid} 문서를 모두 찾아 삭제...
+        val allPosts = db.collection("posts").get().await()
+        for (post in allPosts.documents) {
+            val myLike = post.reference.collection("likes").document(uid).get().await()
+            if (myLike.exists()) {
+                myLike.reference.delete().await()
+            }
+        }
     }
 
     suspend fun getPotId() = "현재 팟 아이디"
