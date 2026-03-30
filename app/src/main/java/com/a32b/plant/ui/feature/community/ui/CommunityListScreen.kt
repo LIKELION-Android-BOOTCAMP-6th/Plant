@@ -33,7 +33,7 @@ import java.util.*
 
 fun formatTimeAgo(dateString: String): String {
     return try {
-        // 데이터베이스의 날짜 형식에 맞춰 포맷 지정 (yyyy-MM-dd HH:mm 기준)
+
         val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.KOREA)
         val date = sdf.parse(dateString) ?: return dateString
         val now = System.currentTimeMillis()
@@ -189,10 +189,10 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit, onFilterCli
                         painter = painterResource(id = R.drawable.ic_community_filters),
                         contentDescription = "필터",
                         modifier = Modifier.size(22.dp),
-                        tint = if (isFilterActive) Color(0xFF4CAF50) else Color.Black // ✅ 필터 블랙
+                        tint = if (isFilterActive) Color(0xFF4CAF50) else Color.Black
                     )
                 }
-                Icon(imageVector = Icons.Default.Search, contentDescription = "검색", modifier = Modifier.size(24.dp), tint = Color.Black) // ✅ 검색 블랙
+                Icon(imageVector = Icons.Default.Search, contentDescription = "검색", modifier = Modifier.size(24.dp), tint = Color.Black)
             }
         },
         colors = OutlinedTextFieldDefaults.colors(
