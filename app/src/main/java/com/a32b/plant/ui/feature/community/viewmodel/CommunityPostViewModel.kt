@@ -2,6 +2,7 @@ package com.a32b.plant.ui.feature.community.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.data.di.CurrentUser
 import com.a32b.plant.data.model.Post
 import com.a32b.plant.data.repository.PostRepository
 import com.a32b.plant.data.repository.PotRepository
@@ -33,7 +34,7 @@ class CommunityPostViewModel(private val repository: PostRepository, private val
     fun getPost(postId: String) {
         viewModelScope.launch {
             repository.getPost(postId).firstOrNull()?.let { post ->
-                _uiState.update { it.copy(postId = post.id,title = post.title, content = post.content, selected = post.tag) }
+                _uiState.update { it.copy(postId = post.postId,title = post.title, content = post.content, selected = post.tag) }
             }
         }
     }
@@ -45,25 +46,23 @@ class CommunityPostViewModel(private val repository: PostRepository, private val
     fun onContentChange(content: String) = _uiState.update { it.copy(content = content) }
     fun onSelectedTagChange(tag:List<String>) = _uiState.update { it.copy(selected = tag) }
 
-    fun savePost(postId: String?, title: String, content: String, tag: String, onComplete: (Boolean) -> Unit) {
+    fun savePost(onComplete: (Boolean) -> Unit) {
         viewModelScope.launch {
             try {
                 if (postId != null) {
                     // ✅ 수정 모드
-                    repository.updatePost(postId, title, content, tag)
+                    repository.updatePost(postId, _uiState.value.title, _uiState.value.content, _uiState.value.selected)
                 } else {
-                    // ✅ 새 글 작성 모드
-//                    val newPost = Post(
-//                        id = "",
-//                        title = title,
-//                        nickName = "성호",
-//                        content = content,
-//                        tag = tag,
-//                        commentCount = 0,
-//                        likeCount = 0,
-//                        createdAt = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-//                    )
-//                    repository.uploadPost(newPost)
+//                     ✅ 새 글 작성 모드
+                    val newPost = Post(
+                        authorId = CurrentUser.uid,
+                        authorNickname = CurrentUser.nickname,
+                        authorProfileImg = CurrentUser.profileImg,
+                        title = _uiState.value.title,
+                        content = _uiState.value.content,
+                        tag = _uiState.value.selected
+                    )
+                    repository.uploadPost(newPost)
                 }
                 onComplete(true)
             } catch (e: Exception) {

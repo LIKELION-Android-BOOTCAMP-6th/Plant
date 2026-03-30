@@ -33,16 +33,14 @@ import com.a32b.plant.ui.theme.background
 fun CommunityPostScreen(
     navController: NavController
 ) {
-    val route = navController.currentBackStackEntry?.toRoute<Routes.CommunityPost>()
-    val postId = route?.postId
-
     val context = LocalContext.current
     val args = navController.currentBackStackEntry?.toRoute<Routes.CommunityPost>()
+
     val postId = args?.postId
     val potId = args?.potId
     val studyLog = args?.studyLogId
     val viewModel: CommunityPostViewModel = viewModel(
-        factory = ViewModelFactory.communityPostViewModelFactory
+        factory = ViewModelFactory.communityPostViewModelFactory(postId, potId, studyLog)
     )
 
     val uiState by viewModel.uiState.collectAsState()
@@ -67,16 +65,16 @@ fun CommunityPostScreen(
                     if (uiState.title.isBlank() || uiState.content.isBlank()) {
                         Toast.makeText(context, "제목과 내용을 모두 입력해주세요.", Toast.LENGTH_SHORT).show()
                     } else {
-//                        viewModel.savePost(postId, uiState.title, uiState.content, uiState.selected) { isSuccess ->
-//                            if (isSuccess) {
-//                                val msg = if (postId != null) "수정되었습니다!" else "성공적으로 등록되었습니다!"
-//                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-//                                //⭐등록 완료 시 해당 게시물 디테일로 넘어가기
-//                                navController.popBackStack()
-//                            } else {
-//                                Toast.makeText(context, "등록에 실패했습니다.", Toast.LENGTH_SHORT).show()
-//                            }
-//                        }
+                        viewModel.savePost() { isSuccess ->
+                            if (isSuccess) {
+                                val msg = if (postId != null) "수정되었습니다!" else "성공적으로 등록되었습니다!"
+                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                //⭐등록 완료 시 해당 게시물 디테일로 넘어가기
+                                navController.popBackStack()
+                            } else {
+                                Toast.makeText(context, "등록에 실패했습니다.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     }
                 }
             )
@@ -105,7 +103,7 @@ fun CommunityPostScreen(
             item {
                 Text("카테고리", style = Typography.bodyMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
-//                TagSelector(tags, selectedTag) { selectedTag = it }
+                TagSelector(tags, selectedTag) { selectedTag = it }
             }
 
             item {

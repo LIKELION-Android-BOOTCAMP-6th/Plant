@@ -1,21 +1,33 @@
 package com.a32b.plant.data.model
 
-import com.google.firebase.firestore.IgnoreExtraProperties
+import com.google.firebase.Timestamp
 
-@IgnoreExtraProperties
 data class Post(
-    val id: String = "",
+    val postId : String = "",
+    val authorId: String = "",
+    val authorNickname: String = "",
+    val authorProfileImg: String = "",
     val title: String = "",
-    val nickName: String = "",
-    val authorUid: String = "",
     val content: String = "",
     val tag: List<String> = emptyList(),
     val commentCount: Int = 0,
     val likeCount: Int = 0,
-    val likedBy: List<String> = emptyList(),
+    val createdAt: Timestamp? = null,
+    val activityId: String = ""
+)
+
+data class Comment(
+    val userId: String = "",
+    val userNickname: String = "",
+    val userProfileImg: String = "",
+    val content: String = "",
+    val createdAt: Timestamp? = null,
+    val activityId: String = ""
+)
+
+data class PostLike(
     val isLiked: Boolean = false,
-    val createdAt: String = "",
-    val comments: List<Map<String, Any>> = emptyList()
+    val activityId: String = ""
 )
 
 
