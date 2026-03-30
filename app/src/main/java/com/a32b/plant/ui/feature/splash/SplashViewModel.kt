@@ -32,6 +32,14 @@ class SplashViewModel : ViewModel() {
             // 로그인 세션 존재 → CurrentUser 세팅 후 홈으로
             if (firebaseUser != null) {
                 val profile = userRepository.getUserProfileOnce(firebaseUser.uid)
+
+                // 세션은 있는데 Firestore 프로필이 없으면 → 로그아웃 처리
+                if (profile == null) {
+                    auth.signOut()
+                    _destination.value = Routes.SignIn
+                    return@launch
+                }
+
                 CurrentUser.set(
                     uid = firebaseUser.uid,
                     nickname = profile?.nickname ?: "",
