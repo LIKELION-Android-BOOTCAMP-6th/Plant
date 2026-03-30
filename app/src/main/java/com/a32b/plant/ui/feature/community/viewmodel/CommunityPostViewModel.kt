@@ -21,7 +21,8 @@ data class CommunityPostUiState(
     val content: String = "",
     val selected: List<String> = emptyList(),
     val potId: String? = null,
-    val studyLogs: List<String>? = null
+    val studyLogs: List<String>? = null,
+    val isDismissDialogShow: Boolean = false
 )
 class CommunityPostViewModel(private val repository: PostRepository, private val activityRepository: PotRepository,
                              private val postId: String?, private val potId: String?, private val studyLogs: List<String>?
@@ -47,6 +48,7 @@ class CommunityPostViewModel(private val repository: PostRepository, private val
     fun onContentChange(content: String) = _uiState.update { it.copy(content = content) }
     fun onSelectedTagChange(tag:List<String>) = _uiState.update { it.copy(selected = tag) }
 
+    fun onIsDismissDialogShowChange() = _uiState.update { it.copy(isDismissDialogShow = !it.isDismissDialogShow) }
     fun savePost(onComplete: (Boolean) -> Unit) {
         viewModelScope.launch {
             try {

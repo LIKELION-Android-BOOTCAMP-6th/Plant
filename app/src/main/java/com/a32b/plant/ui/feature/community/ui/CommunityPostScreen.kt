@@ -1,6 +1,7 @@
 package com.a32b.plant.ui.feature.community.ui
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.toRoute
+import com.a32b.plant.core.component.ConfirmDialog
 import com.a32b.plant.core.component.TagGroup
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.data.di.ViewModelFactory
@@ -48,6 +50,7 @@ fun CommunityPostScreen(
         postId?.let { viewModel.getPost(postId) }
         potId?.let { viewModel.getStudyLog(potId) }
     }
+    BackHandler { viewModel.onIsDismissDialogShowChange() }
 
     Scaffold(
         containerColor = background,
@@ -56,6 +59,7 @@ fun CommunityPostScreen(
                 isEditMode = postId != null,
                 onBackClick = {
                     //⭐백버튼 클릭 시 정말 종료하겠냐는 다이얼로그 띄우기
+                    viewModel.onIsDismissDialogShowChange()
                 },
                 onRegisterClick = {
                     if (uiState.title.isBlank() || uiState.content.isBlank()) {
@@ -123,6 +127,14 @@ fun CommunityPostScreen(
             item { Spacer(modifier = Modifier.height(40.dp)) }
         }
     }
+
+    if (uiState.isDismissDialogShow)
+        ConfirmDialog("게시글 작성을 종료하시겠습니까?",
+            semiText = "작성된 게시글은 저장되지 않습니다.",
+            onDismiss = {viewModel.onIsDismissDialogShowChange()},
+            onConfirm = {navController.popBackStack()
+            }
+        )
 }
 
 
