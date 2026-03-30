@@ -5,8 +5,19 @@ import androidx.lifecycle.viewModelScope
 import com.a32b.plant.data.model.Post
 import com.a32b.plant.data.repository.PostRepository
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 
 class CommunityListViewModel(private val repository: PostRepository) : ViewModel() {
+
+    private val _navigateToDetail = MutableSharedFlow<String>()
+    val navigateToDetail = _navigateToDetail.asSharedFlow()
+
+    fun onPostClick(postId: String) {
+        viewModelScope.launch {
+            _navigateToDetail.emit(postId)
+        }
+    }
+
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()

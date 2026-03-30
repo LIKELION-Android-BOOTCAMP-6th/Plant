@@ -22,15 +22,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.toRoute
+import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.data.di.ViewModelFactory
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityPostViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CommunityPostScreen(
-    navController: NavController,
-    postId: String? = null
+    navController: NavController
 ) {
+    val route = navController.currentBackStackEntry?.toRoute<Routes.CommunityPost>()
+    val postId = route?.postId
+
     val context = LocalContext.current
     val viewModel: CommunityPostViewModel = viewModel(
         factory = ViewModelFactory.communityPostViewModelFactory

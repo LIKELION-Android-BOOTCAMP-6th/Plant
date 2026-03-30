@@ -28,6 +28,33 @@ import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.data.di.ViewModelFactory
 import com.a32b.plant.data.model.Post
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityListViewModel
+import java.text.SimpleDateFormat
+import java.util.*
+
+fun formatTimeAgo(dateString: String): String {
+    return try {
+        // 데이터베이스의 날짜 형식에 맞춰 포맷 지정 (yyyy-MM-dd HH:mm 기준)
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.KOREA)
+        val date = sdf.parse(dateString) ?: return dateString
+        val now = System.currentTimeMillis()
+        val diff = now - date.time
+
+        val seconds = diff / 1000
+        val minutes = seconds / 60
+        val hours = minutes / 60
+        val days = hours / 24
+
+        when {
+            seconds < 60 -> "방금 전"
+            minutes < 60 -> "${minutes}분 전"
+            hours < 24 -> "${hours}시간 전"
+            days < 7 -> "${days}일 전"
+            else -> dateString
+        }
+    } catch (e: Exception) {
+        dateString
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,7 +99,12 @@ fun CommunityListScreen(navController: NavController) {
                 containerColor = Color(0xFFE6D5B8),
                 shape = CircleShape
             ) {
-                Icon(painter = painterResource(id = R.drawable.ic_edit), contentDescription = null, modifier = Modifier.size(26.dp))
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_edit),
+                    contentDescription = null,
+                    modifier = Modifier.size(26.dp),
+                    tint = Color.Black
+                )
             }
         }
     ) { innerPadding ->
@@ -95,7 +127,6 @@ fun CommunityListScreen(navController: NavController) {
             }
         }
     }
-
 
     if (showDialog) {
         CategoryDialog(
@@ -134,7 +165,8 @@ fun TagRowSection(
                     text = tag,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
                     fontSize = 12.sp,
-                    color = if (isSelected) Color(0xFF33691E) else Color.Gray,
+
+                    color = if (isSelected) Color(0xFF33691E) else Color.Black,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                 )
             }
@@ -147,7 +179,7 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit, onFilterCli
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
-        placeholder = { Text("검색어를 입력하세요", fontSize = 14.sp) },
+        placeholder = { Text("검색어를 입력하세요", fontSize = 14.sp, color = Color.Gray) },
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).height(56.dp),
         shape = RoundedCornerShape(12.dp),
         trailingIcon = {
@@ -157,13 +189,18 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit, onFilterCli
                         painter = painterResource(id = R.drawable.ic_community_filters),
                         contentDescription = "필터",
                         modifier = Modifier.size(22.dp),
-                        tint = if (isFilterActive) Color(0xFF4CAF50) else Color.Gray
+                        tint = if (isFilterActive) Color(0xFF4CAF50) else Color.Black // ✅ 필터 블랙
                     )
                 }
-                Icon(imageVector = Icons.Default.Search, contentDescription = "검색", modifier = Modifier.size(24.dp), tint = Color.Gray)
+                Icon(imageVector = Icons.Default.Search, contentDescription = "검색", modifier = Modifier.size(24.dp), tint = Color.Black) // ✅ 검색 블랙
             }
         },
-        colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color.White, focusedContainerColor = Color.White),
+        colors = OutlinedTextFieldDefaults.colors(
+            unfocusedContainerColor = Color.White,
+            focusedContainerColor = Color.White,
+            focusedTextColor = Color.Black,
+            unfocusedTextColor = Color.Black
+        ),
         singleLine = true
     )
 }
@@ -176,11 +213,11 @@ fun CategoryDialog(
 ) {
     var tempSelected by remember { mutableStateOf(currentSelected) }
     val filterTags = listOf("중학생", "고등학생", "취준", "자격증", "취미", "자랑", "공유")
-    val itemsPerRow = (filterTags.size + 1) / 2 
+    val itemsPerRow = (filterTags.size + 1) / 2
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("카테고리 중복 선택", fontWeight = FontWeight.Bold) },
+        title = { Text("카테고리 중복 선택", fontWeight = FontWeight.Bold, color = Color.Black) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 filterTags.chunked(itemsPerRow).forEach { rowTags ->
@@ -206,16 +243,11 @@ fun CategoryDialog(
                                 ) {
                                     Text(
                                         text = tag,
-                                        color = if (isSelected) Color.Black else Color.Gray,
+                                        color = Color.Black,
                                         fontSize = 12.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                     )
                                 }
-                            }
-                        }
-                        if (rowTags.size < itemsPerRow) {
-                            repeat(itemsPerRow - rowTags.size) {
-                                Spacer(modifier = Modifier.weight(1f))
                             }
                         }
                     }
@@ -223,17 +255,12 @@ fun CategoryDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = { onApply(tempSelected) },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9CCC65))
-            ) {
+            Button(onClick = { onApply(tempSelected) }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9CCC65))) {
                 Text("적용하기", color = Color.White)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("취소")
-            }
+            TextButton(onClick = onDismiss) { Text("취소", color = Color.Black) }
         },
         containerColor = Color.White,
         shape = RoundedCornerShape(16.dp)
@@ -250,24 +277,25 @@ fun PostCard(post: Post, onClick: () -> Unit) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(text = post.title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                Text(text = post.createdAt, fontSize = 11.sp, color = Color.Gray)
+
+                Text(text = post.title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.Black)
+                Text(text = formatTimeAgo(post.createdAt), fontSize = 11.sp, color = Color.Black)
             }
             Spacer(modifier = Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(modifier = Modifier.size(16.dp).clip(CircleShape).background(Color(0xFFC5E1A5)))
-                Text(text = "  ${post.nickName}", fontSize = 12.sp, color = Color.DarkGray)
+                Text(text = "  ${post.nickName}", fontSize = 12.sp, color = Color.Black)
             }
             Spacer(modifier = Modifier.height(8.dp))
             Row {
                 IconStat(R.drawable.ic_community_comment, post.commentCount.toString())
                 Spacer(modifier = Modifier.width(12.dp))
 
-                val isLiked = post.isLiked 
+                val isLiked = post.isLiked
                 IconStat(
                     iconRes = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     text = post.likeCount.toString(),
-                    tint = if (isLiked) Color.Red else Color.Gray
+                    tint = if (isLiked) Color.Red else Color.Black
                 )
             }
         }
@@ -275,7 +303,7 @@ fun PostCard(post: Post, onClick: () -> Unit) {
 }
 
 @Composable
-fun IconStat(iconRes: Any, text: String, tint: Color = Color.Gray) {
+fun IconStat(iconRes: Any, text: String, tint: Color = Color.Black) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         when (iconRes) {
             is Int -> Icon(painterResource(iconRes), null, Modifier.size(14.dp), tint)
@@ -288,6 +316,6 @@ fun IconStat(iconRes: Any, text: String, tint: Color = Color.Gray) {
 @Composable
 fun EmptyStateView() {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("찾으시는 게시글이 없어요 😭", color = Color.Gray)
+        Text("찾으시는 게시글이 없어요 😭", color = Color.Black)
     }
 }
