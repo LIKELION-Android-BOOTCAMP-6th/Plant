@@ -38,7 +38,7 @@ data class MyPageUiState(
 sealed class MyPageEvent {
     data class ShowToast(val message: String) : MyPageEvent()
     object NavigateToSignIn : MyPageEvent()// 로그인화면 보내기용 ************
-    object NavigateToMyCommunityFeed: MyPageEvent()
+    object NavigateToMyCommunityFeed : MyPageEvent()
 }
 
 
@@ -112,18 +112,29 @@ class MyPageViewModel(
         }
     }
 
-    // 검사o, 추가o, 삭제, 업데이트?
-    // 검사o, 추가o, 업데이트, 삭제?
     fun updateProfile(nickname: String, imageLevel: String) {
         val validationResult = checkNicknameValidation(nickname)
-        if (validationResult != null) {
-            _uiState.update {
-                it.copy(
-                    isUpdateSuccess = false,
-                    nicknameError = validationResult
-                )
-            }
+        val currentNickname = uiState.value.nickname
+        val currentImage = uiState.value.profileImg
+
+        // 닉네임과 이미지가 모두 현재 같으면 막기
+        if (nickname == currentNickname && imageLevel == currentImage) {
+            notifyUpdateFailure("변경사항이 없습니다.")
             return
+        }
+
+        if (validationResult != null) {
+            notifyUpdateFailure(validationResult)
+            return
+        }
+
+
+        Log.d("PlantLog", "출력 -----------------------")
+        Log.d("PlantLog", "$nickname")
+        Log.d("PlantLog", "$imageLevel")
+        Log.d("PlantLog", "완료 -----------------------")
+        if (nickname == uiState.value.nickname && imageLevel == uiState.value.profileImg) {
+            clearProfileState()
         }
         viewModelScope.launch {
             try {
@@ -132,12 +143,7 @@ class MyPageViewModel(
                 if (nickname != currentNickname) {
 ////                 닉네임 중복 검사
                     if (nicknameRepository.isNicknameTaken(nickname)) {
-                        _uiState.update {
-                            it.copy(
-                                isUpdateSuccess = false,
-                                nicknameError = "이미 사용중인 닉네임입니다"
-                            )
-                        }
+                        notifyUpdateFailure("이미 사용중인 닉네임입니다")
                         return@launch
                     }
                     nicknameRepository.registerNickname(nickname)
@@ -163,11 +169,41 @@ class MyPageViewModel(
 
             } catch (e: Exception) {
                 Log.e("error", e.message.toString())
-                _uiState.update { it.copy(isUpdateSuccess = false) }
+                notifyUpdateFailure("업데이트 중 오류가 발생했습니다")
             }
         }
     }
 
+    fun resetNicknameError() {
+        _uiState.update { it.copy(nicknameError = null) }
+    }
+
+    fun notifyUpdateFailure(errorMessage: String) {
+        _uiState.update {
+            it.copy(
+                isUpdateSuccess = false,
+                nicknameError = errorMessage
+            )
+        }
+    }
+
+    fun notifyUpdateSuccess() {
+        _uiState.update {
+            it.copy(
+                isUpdateSuccess = true,
+                nicknameError = null
+            )
+        }
+    }
+
+    fun clearProfileState() {
+        _uiState.update {
+            it.copy(
+                isUpdateSuccess = false,
+                nicknameError = null
+            )
+        }
+    }
 
     fun resetIsUpdateSuccess() {
         _uiState.update { it.copy(isUpdateSuccess = false) }

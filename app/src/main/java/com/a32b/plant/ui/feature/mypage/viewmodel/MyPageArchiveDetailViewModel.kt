@@ -23,7 +23,7 @@ data class MyPageArchiveDetailStatus(
 
 class MyPageArchiveDetailViewModel(
     private val potRepository: PotRepository,
-    private val potId: String?
+    private val potId: String
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MyPageArchiveDetailStatus())
@@ -31,7 +31,7 @@ class MyPageArchiveDetailViewModel(
 
     init {
         viewModelScope.launch {
-            val potInfo = potRepository.getPotById(potId) // 1. 먼저 데이터를 가져온다
+            val potInfo = potRepository.getUserPotById(CurrentUser.uid, potId) // 1. 먼저 데이터를 가져온다
 
             _uiState.update {
                 it.copy(
