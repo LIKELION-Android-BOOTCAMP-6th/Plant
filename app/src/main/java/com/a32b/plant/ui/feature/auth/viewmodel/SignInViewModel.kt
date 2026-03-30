@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import com.google.firebase.auth.GoogleAuthProvider
 
 // UI 상태
 data class SignInUiState(
@@ -64,7 +65,7 @@ class SignInViewModel(
         _uiState.update { it.copy(nicknameInput = value, nicknameError = null) }
     }
 
-    // 로그인 실행
+    // 이메일 로그인 실행
     fun signIn() {
         val state = _uiState.value
 
@@ -91,9 +92,10 @@ class SignInViewModel(
                 // 상세 설명: 아래 코드 한 줄이 동작하는 순간 Firebase SDK가 내부적으로 기기 로컬 저장소에 인증 토큰을 자동 저장
                 // auth.currentUser에 정보 저장됨 -> 이후 앱 껏다 켜도 로그인된 유저 정보 반환
                 val result = auth.signInWithEmailAndPassword(state.email, state.password).await()
-
                 val user = result.user
 
+                // 컴파일러 통과용 방어 코드
+                // result.user의 타입이 FirebaseUser?라서 nullable. null 체크 없이 아래에서 user.isEmailVerified, user.uid 같은 걸 쓰면 Kotlin 컴파일러가 빌드를 안 시켜줌.
                 if (user == null) {
                     sendToast("계정 정보가 올바르지 않습니다.")
                     return@launch
@@ -103,43 +105,13 @@ class SignInViewModel(
                 if (!user.isEmailVerified) {
                     auth.signOut()
                     _uiState.update { it.copy(email = "", password = "") }
-                    sendToast("이메일 인증을 진행해주세요.")
+                    sendToast("이메일을 인증해주세요.")
                     return@launch
                 }
 
-                loggedInUid = user.uid
+                // 이메일 로그인 성공 → 공통 프로필 처리
+                handleLoginSuccess(user.uid)
 
-
-                // 3. Firestore에 유저 문서가 있는지 확인 → 없으면 생성
-                var profile = userRepository.getUserProfileOnce(user.uid)
-
-                if (profile == null) {
-                    // 이메일 인증 후 첫 로그인 → Firestore에 유저 데이터 생성
-                    val createResult = userRepository.createUser(user.uid)
-                    if (createResult.isFailure) {
-                        sendToast("유저 정보 생성에 실패했습니다. 다시 시도해주세요.")
-                        auth.signOut()
-                        return@launch
-                    }
-                    // 생성 직후 다시 조회
-                    profile = userRepository.getUserProfileOnce(user.uid)
-                }
-
-                // 4. CurrentUser 싱글톤 세팅
-                CurrentUser.set(
-                    uid = user.uid,
-                    nickname = profile?.nickname ?: "",
-                    profileImg = profile?.profileImg ?: ""
-                )
-
-                // 5. 첫 로그인 여부에 따라 분기
-                if (profile?.isFirstLogin == true) {
-                    // 닉네임 설정 다이얼로그 표시
-                    _uiState.update { it.copy(showNicknameDialog = true) }
-                } else {
-                    // 홈 진입
-                    _eventChannel.send(SignInEvent.NavigateToHome)
-                }
 
             } catch (e: Exception) {
                 Log.e("SignIn", "로그인 실패: ${e.message}", e)
@@ -150,13 +122,80 @@ class SignInViewModel(
         }
     }
 
+
+    // 구글 로그인
+    // SignInScreen에서 구글 계정 선택 후 받은 idToken을 여기로 전달
+    fun handleGoogleSignIn(idToken: String) {
+        _uiState.update { it.copy(isLoading = true) }
+
+        viewModelScope.launch {
+            try {
+                // 1. Google idToken → Firebase 인증 정보로 변환
+                val credential = GoogleAuthProvider.getCredential(idToken, null)
+
+                // 2. Firebase Auth에 구글 계정으로 로그인
+                val result = auth.signInWithCredential(credential).await()
+                val user = result.user
+
+                if (user == null) {
+                    sendToast("잘못된 접근입니다.")
+                    return@launch
+                }
+
+                // 3. 구글 로그인 성공 → 공통 프로필 처리
+                // (이메일 인증 체크 불필요 — 구글 계정은 이미 인증된 상태)
+                handleLoginSuccess(user.uid)
+
+            } catch (e: Exception) {
+                Log.e("SignIn", "구글 로그인 실패: ${e.message}", e)
+                sendToast("잘못된 접근입니다.")
+            } finally {
+                _uiState.update { it.copy(isLoading = false) }
+            }
+        }
+    }
+
+    // 추가: 이메일/구글 로그인 공통 처리
+    // 로그인 성공 후 Firestore 프로필 확인 → 없으면 생성 → 닉네임 설정 or 홈 진입
+    private suspend fun handleLoginSuccess(uid: String) {
+        loggedInUid = uid
+
+        // 1. Firestore에 유저 문서가 있는지 확인 → 없으면 생성
+        var profile = userRepository.getUserProfileOnce(uid)
+
+        if (profile == null) {
+            val createResult = userRepository.createUser(uid)
+            if (createResult.isFailure) {
+                sendToast("정보 생성에 실패했습니다.\n다시 시도해주세요.")
+                auth.signOut()
+                return
+            }
+            profile = userRepository.getUserProfileOnce(uid)
+        }
+
+        // 2. CurrentUser 싱글톤 세팅
+        CurrentUser.set(
+            uid = uid,
+            nickname = profile?.nickname ?: "",
+            profileImg = profile?.profileImg ?: ""
+        )
+
+        // 3. 첫 로그인 여부에 따라 분기
+        if (profile?.isFirstLogin == true) {
+            _uiState.update { it.copy(showNicknameDialog = true) }
+        } else {
+            sendToast("${CurrentUser.nickname}님 환영합니다.")
+            _eventChannel.send(SignInEvent.NavigateToHome)
+        }
+    }
+
     // 닉네임 설정
     fun confirmNickname() {
         val nickname = _uiState.value.nicknameInput.trim()
 
         // 글자수 검증 (2~10자)
-        if (nickname.length < 2 || nickname.length > 10) {
-            _uiState.update { it.copy(nicknameError = "닉네임은 2자 이상 10자 이하로 입력해주세요.") }
+        if (nickname.length !in 2..10) {
+            _uiState.update { it.copy(nicknameError = "2자 이상 10자 이하로 입력해주세요.") }
             return
         }
 
@@ -168,7 +207,7 @@ class SignInViewModel(
                 val isDuplicate = nicknameRepository.isNicknameTaken(nickname)
                 if (isDuplicate) {
                     _uiState.update {
-                        it.copy(nicknameError = "이미 사용 중인 닉네임입니다.", isNicknameLoading = false)
+                        it.copy(nicknameError = "사용 중인 닉네임입니다.", isNicknameLoading = false)
                     }
                     return@launch
                 }
@@ -184,6 +223,7 @@ class SignInViewModel(
 
                 // 5. 다이얼로그 닫고 홈으로 이동
                 _uiState.update { it.copy(showNicknameDialog = false, isNicknameLoading = false) }
+                sendToast("${CurrentUser.nickname}님 환영합니다.")
                 _eventChannel.send(SignInEvent.NavigateToHome)
 
             } catch (e: Exception) {
@@ -191,6 +231,20 @@ class SignInViewModel(
                 _uiState.update {
                     it.copy(nicknameError = "닉네임 설정에 실패했습니다.", isNicknameLoading = false)
                 }
+            }
+        }
+    }
+
+
+    // 비밀번호 재설정 메일 전송
+    fun sendPasswordResetEmail(email: String) {
+        viewModelScope.launch {
+            try {
+                auth.sendPasswordResetEmail(email).await()
+                sendToast("재설정 메일을 전송했습니다.")
+            } catch (e: Exception) {
+                Log.e("SignIn", "비밀번호 재설정 메일 전송 실패: ${e.message}", e)
+                sendToast("메일 전송에 실패했습니다.\n이메일을 확인해주세요.")
             }
         }
     }
@@ -205,7 +259,7 @@ class SignInViewModel(
             // 이메일 형식 오류
             "ERROR_INVALID_EMAIL" -> {
                 _uiState.update { it.copy(email = "") }
-                sendToast("바른 이메일 형식을 입력해주세요")
+                sendToast("이메일 형식을 확인해주세요")
             }
             // 가입 정보 없음, 비밀번호 오류 -> '계정 정보가 올바르지 않습니다.' 로 통합
             "ERROR_USER_NOT_FOUND",
@@ -221,7 +275,7 @@ class SignInViewModel(
                         password = ""
                     )
                 }
-                sendToast("로그인에 실패했습니다. 다시 시도해주세요.")
+                sendToast("로그인에 실패했습니다. \n다시 시도해주세요.")
             }
 
             else -> {
@@ -231,7 +285,7 @@ class SignInViewModel(
                         password = ""
                     )
                 }
-                sendToast("로그인에 실패했습니다. 다시 시도해주세요.")
+                sendToast("로그인에 실패했습니다.\n다시 시도해주세요.")
             }
         }
     }

@@ -1,7 +1,10 @@
 package com.a32b.plant.core.util
 
+import com.google.firebase.Timestamp
+import java.text.SimpleDateFormat
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 object TimeFormatter {
     /**
@@ -14,6 +17,8 @@ object TimeFormatter {
      -> yyyy년 MM월 dd일
 
      로컬 시간 시간 표시 : fun formatToTimeOnly(dateTime: LocalDateTime): String
+
+     파이어스토어 타임스탬프 -> yyyy년 MM월 dd일 : fun formatTimestamp(timestamop: Timestamp): String
      */
     fun formatToMinute(time: Long): String = "${time/1000/60}분"
 
@@ -32,4 +37,7 @@ object TimeFormatter {
 
     fun formatToTimeOnly(dateTime: LocalDateTime): String
         = dateTime.format(DateTimeFormatter.ofPattern("HH:mm"))
+
+    fun formatTimestamp(timestamp: Timestamp): String
+        = SimpleDateFormat("yyyy년 MM월 dd일", Locale.KOREA).format(timestamp.toDate())
 }

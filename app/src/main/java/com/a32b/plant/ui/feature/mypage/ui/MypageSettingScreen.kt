@@ -67,6 +67,8 @@ fun MyPageSettingScreen(navController: NavController) {
                         // 모든 백스택 제거 → 뒤로가기해도 홈으로 안 돌아가게
                         popUpTo(0) { inclusive = true }
                     }
+                is MyPageEvent.NavigateToMyCommunityFeed ->
+                    navController.navigate(Routes.MyCommunityFeed)
             }
         }
     }

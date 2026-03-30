@@ -43,7 +43,8 @@ class PostRepository(
         }
         val subscription = db.collection("users").document(uid)
             .addSnapshotListener { snapshot, _ ->
-                trySend(snapshot?.toObject(Author::class.java))
+                val author = snapshot?.toObject(Author::class.java)?.copy(uid = uid)
+                trySend(author)
             }
         awaitClose { subscription.remove() }
     }
@@ -57,14 +58,14 @@ class PostRepository(
         awaitClose { subscription.remove() }
     }
 
-    suspend fun addComment(postId: String, nickName: String, content: String) {
+    suspend fun addComment(postId: String, uid: String, nickName: String, content: String) {
         val newComment = hashMapOf(
+            "uid" to uid,
             "nickName" to nickName,
             "content" to content,
             "createdAt" to System.currentTimeMillis()
         )
 
-        // 댓글 추가 및 댓글 수(commentCount) 1 증가
         db.collection("posts").document(postId)
             .update(
                 "comments", FieldValue.arrayUnion(newComment),
@@ -79,5 +80,30 @@ class PostRepository(
 
     suspend fun uploadPost(post: Post) {
         db.collection("posts").add(post).await()
+    }
+
+    suspend fun updatePost(postId: String, title: String, content: String, tag: String) {
+        db.collection("posts").document(postId)
+            .update(
+                "title", title,
+                "content", content,
+                "tag", tag
+            )
+            .await()
+    }
+
+    suspend fun toggleLike(postId: String, uid: String, isAlreadyLiked: Boolean) {
+        val postRef = db.collection("posts").document(postId)
+        if (isAlreadyLiked) {
+            postRef.update(
+                "likedBy", FieldValue.arrayRemove(uid),
+                "likeCount", FieldValue.increment(-1)
+            ).await()
+        } else {
+            postRef.update(
+                "likedBy", FieldValue.arrayUnion(uid),
+                "likeCount", FieldValue.increment(1)
+            ).await()
+        }
     }
 }

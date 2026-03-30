@@ -38,6 +38,7 @@ data class MyPageUiState(
 sealed class MyPageEvent {
     data class ShowToast(val message: String) : MyPageEvent()
     object NavigateToSignIn : MyPageEvent()// 로그인화면 보내기용 ************
+    object NavigateToMyCommunityFeed: MyPageEvent()
 }
 
 
@@ -197,6 +198,12 @@ class MyPageViewModel(
         // 로그인 화면 이동
         viewModelScope.launch {
             _eventChannel.send(MyPageEvent.NavigateToSignIn)
+        }
+    }
+
+    fun moveToMyCommunityFeed() {
+        viewModelScope.launch {
+            _eventChannel.send(MyPageEvent.NavigateToMyCommunityFeed)
         }
     }
 

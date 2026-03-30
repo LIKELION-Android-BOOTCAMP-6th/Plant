@@ -69,10 +69,10 @@ dependencies {
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.android.gms:play-services-auth:21.2.0")
 
-//구글 로그인 최신 버전 후순위 개발로 미뤄둘 것
-//    implementation("androidx.credentials:credentials:1.3.0")
-//    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
-//    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+    //구글 로그인 최신 버전 후순위 개발로 미뤄둘 것 -> '주석 해제'
+    implementation("androidx.credentials:credentials:1.3.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
     ///파이어스토어
     implementation("com.google.firebase:firebase-firestore")
     //realtime-database

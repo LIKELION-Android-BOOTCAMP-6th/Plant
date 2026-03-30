@@ -116,7 +116,16 @@ class UserRepository(private val db: FirebaseFirestore, private val auth: Fireba
 
     // 회원 탈퇴 -> 유저 문서 삭제
     suspend fun deleteUser(uid: String) {
-        db.collection("users").document(uid).delete().await()
+        val userDoc = db.collection("users").document(uid)
+
+        // 1. 하위 pots 컬렉션 문서 전부 삭제
+        val pots = userDoc.collection("pots").get().await()
+        for (pot in pots.documents) {
+            pot.reference.delete().await()
+        }
+
+        // 2. 유저 문서 삭제
+        userDoc.delete().await()
     }
 
     suspend fun getPotId() = "현재 팟 아이디"

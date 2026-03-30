@@ -3,6 +3,7 @@ package com.a32b.plant.ui.feature.community.ui
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,19 +35,36 @@ fun CommunityListScreen(navController: NavController) {
     val viewModel: CommunityListViewModel = viewModel(factory = ViewModelFactory.communityListViewModelFactory)
     val postList by viewModel.uiState.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val selectedTags by viewModel.selectedTags.collectAsStateWithLifecycle()
 
-    var selectedTags by remember { mutableStateOf(setOf<String>()) }
     var showDialog by remember { mutableStateOf(false) }
+    val filterTags = listOf("중학생", "고등학생", "취준", "자격증", "취미", "자랑", "공유")
 
     Scaffold(
         containerColor = Color(0xFFFDFDF0),
         topBar = {
-            SearchBarSection(
-                query = searchQuery,
-                onQueryChange = { viewModel.onSearchQueryChanged(it) },
-                onFilterClick = { showDialog = true },
-                isFilterActive = selectedTags.isNotEmpty()
-            )
+            Column(modifier = Modifier.background(Color(0xFFFDFDF0))) {
+                SearchBarSection(
+                    query = searchQuery,
+                    onQueryChange = { viewModel.onSearchQueryChanged(it) },
+                    onFilterClick = { showDialog = true },
+                    isFilterActive = selectedTags.isNotEmpty()
+                )
+
+                TagRowSection(
+                    tags = filterTags,
+                    selectedTags = selectedTags,
+                    onTagClick = { tag ->
+                        val newSelection = if (selectedTags.contains(tag)) {
+                            selectedTags - tag
+                        } else {
+                            selectedTags + tag
+                        }
+                        viewModel.onTagsChanged(newSelection)
+                    }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
         },
         floatingActionButton = {
             FloatingActionButton(
@@ -84,12 +102,46 @@ fun CommunityListScreen(navController: NavController) {
             currentSelected = selectedTags,
             onDismiss = { showDialog = false },
             onApply = { newSelection ->
-                selectedTags = newSelection
+                viewModel.onTagsChanged(newSelection)
                 showDialog = false
             }
         )
     }
 }
+
+@Composable
+fun TagRowSection(
+    tags: List<String>,
+    selectedTags: Set<String>,
+    onTagClick: (String) -> Unit
+) {
+    LazyRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(end = 16.dp)
+    ) {
+        items(tags) { tag ->
+            val isSelected = selectedTags.contains(tag)
+            Surface(
+                modifier = Modifier.clickable { onTagClick(tag) },
+                shape = RoundedCornerShape(20.dp),
+                color = if (isSelected) Color(0xFFC5E1A5) else Color.White,
+                border = BorderStroke(1.dp, if (isSelected) Color(0xFF9CCC65) else Color(0xFFE0E0E0))
+            ) {
+                Text(
+                    text = tag,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                    fontSize = 12.sp,
+                    color = if (isSelected) Color(0xFF33691E) else Color.Gray,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                )
+            }
+        }
+    }
+}
+
 @Composable
 fun SearchBarSection(query: String, onQueryChange: (String) -> Unit, onFilterClick: () -> Unit, isFilterActive: Boolean) {
     OutlinedTextField(
@@ -115,6 +167,7 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit, onFilterCli
         singleLine = true
     )
 }
+
 @Composable
 fun CategoryDialog(
     currentSelected: Set<String>,
@@ -123,28 +176,46 @@ fun CategoryDialog(
 ) {
     var tempSelected by remember { mutableStateOf(currentSelected) }
     val filterTags = listOf("중학생", "고등학생", "취준", "자격증", "취미", "자랑", "공유")
+    val itemsPerRow = (filterTags.size + 1) / 2 
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("카테고리 중복 선택", fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                filterTags.chunked(2).forEach { rowTags ->
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                filterTags.chunked(itemsPerRow).forEach { rowTags ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
                         rowTags.forEach { tag ->
                             val isSelected = tempSelected.contains(tag)
                             Surface(
-                                modifier = Modifier.weight(1f).clickable {
-
-                                    tempSelected = if (isSelected) tempSelected - tag else tempSelected + tag
-                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable {
+                                        tempSelected = if (isSelected) tempSelected - tag else tempSelected + tag
+                                    },
                                 shape = RoundedCornerShape(8.dp),
                                 color = if (isSelected) Color(0xFFC5E1A5) else Color(0xFFF5F5F5),
                                 border = BorderStroke(1.dp, if (isSelected) Color(0xFF9CCC65) else Color.LightGray)
                             ) {
-                                Box(modifier = Modifier.padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
-                                    Text(text = tag, color = if (isSelected) Color.Black else Color.Gray, fontSize = 13.sp)
+                                Box(
+                                    modifier = Modifier.padding(vertical = 12.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = tag,
+                                        color = if (isSelected) Color.Black else Color.Gray,
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                    )
                                 }
+                            }
+                        }
+                        if (rowTags.size < itemsPerRow) {
+                            repeat(itemsPerRow - rowTags.size) {
+                                Spacer(modifier = Modifier.weight(1f))
                             }
                         }
                     }
@@ -152,15 +223,23 @@ fun CategoryDialog(
             }
         },
         confirmButton = {
-            Button(onClick = { onApply(tempSelected) }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9CCC65))) {
+            Button(
+                onClick = { onApply(tempSelected) },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9CCC65))
+            ) {
                 Text("적용하기", color = Color.White)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("취소") }
-        }
+            TextButton(onClick = onDismiss) {
+                Text("취소")
+            }
+        },
+        containerColor = Color.White,
+        shape = RoundedCornerShape(16.dp)
     )
 }
+
 @Composable
 fun PostCard(post: Post, onClick: () -> Unit) {
     Card(
@@ -171,8 +250,8 @@ fun PostCard(post: Post, onClick: () -> Unit) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(text = post.content, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                Text(text = post.createdAt.toString(), fontSize = 11.sp, color = Color.Gray)
+                Text(text = post.title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(text = post.createdAt, fontSize = 11.sp, color = Color.Gray)
             }
             Spacer(modifier = Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -184,16 +263,17 @@ fun PostCard(post: Post, onClick: () -> Unit) {
                 IconStat(R.drawable.ic_community_comment, post.commentCount.toString())
                 Spacer(modifier = Modifier.width(12.dp))
 
+                val isLiked = post.isLiked 
                 IconStat(
-
-                    iconRes = if (post.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    iconRes = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     text = post.likeCount.toString(),
-                    tint = if (post.isLiked) Color.Red else Color.Gray
+                    tint = if (isLiked) Color.Red else Color.Gray
                 )
             }
         }
     }
 }
+
 @Composable
 fun IconStat(iconRes: Any, text: String, tint: Color = Color.Gray) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -204,6 +284,7 @@ fun IconStat(iconRes: Any, text: String, tint: Color = Color.Gray) {
         Text(text = " $text", fontSize = 11.sp, color = tint)
     }
 }
+
 @Composable
 fun EmptyStateView() {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

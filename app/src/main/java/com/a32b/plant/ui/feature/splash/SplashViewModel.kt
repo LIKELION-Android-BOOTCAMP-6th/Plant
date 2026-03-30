@@ -24,7 +24,7 @@ class SplashViewModel : ViewModel() {
 
     private fun checkAuthLogin() {
         viewModelScope.launch {
-            delay(1000)
+            delay(500)
 
             // autoLogin 동작 - firebase 로그인 세션 확인
             val firebaseUser = auth.currentUser
@@ -42,11 +42,6 @@ class SplashViewModel : ViewModel() {
                 // 로그인 세션 없음 → 로그인 화면
                 _destination.value = Routes.SignIn
             }
-
-//            ★★★★★★ 현재 로그아웃/회원탈퇴 기능이 없어 한번 로그인하면 자동로그인 되면서 로그인 화면으로 다시 올 수 없습니다.
-//            ★★★★★★ 혹시 로그인 화면으로 돌아가고 싶으시면 29줄~44줄을 주석처리하고 49줄만 주석해제를 하십시오.
-//            ★★★★★★ 로그아웃/회원탈퇴 기능 도입 시 해당 주석부분은 삭제하겠습니다.
-//            _destination.value = Routes.SignIn
 
         }
     }

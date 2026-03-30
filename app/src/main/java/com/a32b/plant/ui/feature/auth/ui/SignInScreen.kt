@@ -41,7 +41,21 @@ import com.a32b.plant.ui.theme.background
 import com.a32b.plant.ui.theme.fontColor
 import com.a32b.plant.ui.theme.fontColorSub
 import com.a32b.plant.ui.theme.primary
+import com.a32b.plant.ui.theme.sub2
 import com.a32b.plant.ui.theme.textFieldBackground
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
+import androidx.compose.ui.res.stringResource
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.launch
+
 
 @Composable
 fun SignInScreen(navController: NavController) {
@@ -50,6 +64,16 @@ fun SignInScreen(navController: NavController) {
     val context = LocalContext.current
 
     var passwordVisible by remember { mutableStateOf(false) }
+
+
+    // 비밀번호 찾기 다이얼로그 상태
+    var showFindPasswordDialog by remember { mutableStateOf(false) }
+
+    // 구글 로그인 설정 (Credential Manager 방식)
+    val webClientId = stringResource(R.string.default_web_client_id)
+    val credentialManager = remember { CredentialManager.create(context) }
+    val coroutineScope = rememberCoroutineScope()
+
 
     // 일회성 이벤트 수신 (토스트, 화면 전환)
     LaunchedEffect(Unit) {
@@ -177,6 +201,96 @@ fun SignInScreen(navController: NavController) {
             }
         }
     }
+
+
+    // 비밀번호 찾기 다이얼로그
+    if (showFindPasswordDialog) {
+        var findPwEmail by remember { mutableStateOf("") }
+        var findPwEmailError by remember { mutableStateOf<String?>(null) }
+
+        Dialog(onDismissRequest = { showFindPasswordDialog = false }) {
+            Card(
+                shape = RoundedCornerShape(8.dp),
+                colors = CardDefaults.cardColors(background)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Text("비밀번호 재설정", style = MaterialTheme.typography.titleSmall)
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        "가입한 이메일을 입력하면\n비밀번호 재설정 메일을 보내드립니다.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = fontColorSub
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    TextField(
+                        value = findPwEmail,
+                        onValueChange = {
+                            findPwEmail = it
+                            findPwEmailError = null
+                        },
+                        placeholder = {
+                            Text("이메일을 입력하세요", style = MaterialTheme.typography.bodySmall)
+                        },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = textFieldBackground,
+                            unfocusedContainerColor = textFieldBackground,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            focusedTextColor = fontColor,
+                            unfocusedTextColor = fontColor,
+                            focusedPlaceholderColor = fontColorSub,
+                            unfocusedPlaceholderColor = fontColorSub
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp),
+                        isError = findPwEmailError != null,
+                        supportingText = findPwEmailError?.let { { Text(it) } }
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Button(
+                            onClick = { showFindPasswordDialog = false },
+                            modifier = Modifier.height(45.dp).weight(1f),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(sub2)
+                        ) { Text("취소", style = MaterialTheme.typography.bodyMedium) }
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Button(
+                            onClick = {
+                                val regex = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
+                                if (findPwEmail.isBlank()) {
+                                    findPwEmailError = "이메일을 입력해주세요."
+                                } else if (!regex.matches(findPwEmail)) {
+                                    findPwEmailError = "이메일 형식이 올바르지 않습니다."
+                                } else {
+                                    viewModel.sendPasswordResetEmail(findPwEmail)
+                                    showFindPasswordDialog = false
+                                }
+                            },
+                            modifier = Modifier.height(45.dp).weight(1f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) { Text("전송", style = MaterialTheme.typography.titleSmall) }
+                    }
+                }
+            }
+        }
+    }
+
 
     // 초록 배경 전체
     Box(
@@ -319,7 +433,7 @@ fun SignInScreen(navController: NavController) {
                             fontSize = 13.sp,
                             color = fontColorSub,
                             modifier = Modifier.clickable {
-                                // TODO: FindPasswordDialog 연결
+                                showFindPasswordDialog = true
                             }
                         )
                     }
@@ -391,17 +505,44 @@ fun SignInScreen(navController: NavController) {
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // 구글 로그인 이미지
+
+                    // Credential Manager 방식 구글 로그인 버튼
                     Image(
                         painter = painterResource(id = R.drawable.ic_auth_google),
                         contentDescription = "Google 로그인",
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp)
-                            .clickable {
-                                // TODO: 구글 로그인 (후순위 개발)
-                                Toast.makeText(context, "구글 로그인은 추후 지원 예정입니다.", Toast.LENGTH_SHORT)
-                                    .show()
+                            .clickable {coroutineScope.launch {
+                                try {
+                                    // 1. 구글 로그인 옵션 설정
+                                    val googleIdOption = GetGoogleIdOption.Builder()
+                                        .setFilterByAuthorizedAccounts(false)  // 모든 구글 계정 표시
+                                        .setServerClientId(webClientId)
+                                        .build()
+
+                                    // 2. 인증 요청 생성
+                                    val request = GetCredentialRequest.Builder()
+                                        .addCredentialOption(googleIdOption)
+                                        .build()
+
+                                    // 3. 구글 계정 선택 팝업 표시 + 결과 받기
+                                    val result = credentialManager.getCredential(
+                                        request = request,
+                                        context = context
+                                    )
+
+                                    // 4. 결과에서 idToken 추출 → ViewModel로 전달
+                                    val googleIdTokenCredential =
+                                        GoogleIdTokenCredential.createFrom(result.credential.data)
+                                    viewModel.handleGoogleSignIn(googleIdTokenCredential.idToken)
+
+                                } catch (e: GetCredentialCancellationException) {
+                                    // 사용자가 계정 선택을 취소한 경우 → 무시
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "잘못된 접근입니다.", Toast.LENGTH_SHORT).show()
+                                }
+                            }
                             },
                         contentScale = ContentScale.Fit
                     )

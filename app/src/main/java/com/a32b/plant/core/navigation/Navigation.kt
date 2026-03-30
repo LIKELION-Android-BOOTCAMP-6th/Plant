@@ -19,6 +19,7 @@ import com.a32b.plant.ui.feature.auth.ui.SignUpScreen
 import com.a32b.plant.ui.feature.home.ui.HomeScreen
 import com.a32b.plant.ui.feature.home.ui.NewBornTreeScreen
 import com.a32b.plant.ui.feature.mypage.ui.MyPageArchiveDetailScreen
+import com.a32b.plant.ui.feature.mypage.ui.MyCommunityFeedScreen
 import com.a32b.plant.ui.feature.mypage.ui.MyPageArchiveScreen
 import com.a32b.plant.ui.feature.mypage.ui.MyPageScreen
 import com.a32b.plant.ui.feature.mypage.ui.MyPageSettingScreen
@@ -55,11 +56,10 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
                 CommunityListScreen(navController)
             }
 
-            composable<Routes.CommunityPost> {
-                val postVm: CommunityPostViewModel = viewModel(
-                    factory = ViewModelFactory.communityPostViewModelFactory
-                )
-                CommunityPostScreen(navController, postVm)
+            composable<Routes.CommunityPost> { backStackEntry ->
+
+                val route = backStackEntry.toRoute<Routes.CommunityPost>()
+                CommunityPostScreen(navController, postId = route.postId)
             }
 
 
@@ -72,7 +72,8 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
 
                 CommunityDetailScreen(
                     onBack = { navController.popBackStack() },
-                    viewModel = detailVm
+                    viewModel = detailVm,
+                    navController = navController
                 )
             }
 
@@ -82,6 +83,7 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
             composable<Routes.SignUp> { SignUpScreen(navController) }
             composable<Routes.NewBornTree> { NewBornTreeScreen(navController) }
             composable<Routes.StudyPlanDetail> { StudyPlanDetailScreen(navController = navController) }
+            composable<Routes.MyCommunityFeed> { MyCommunityFeedScreen(navController) }
         }
     }
 }

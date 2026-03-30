@@ -29,7 +29,7 @@ import com.a32b.plant.ui.feature.community.viewmodel.CommunityPostViewModel
 @Composable
 fun CommunityPostScreen(
     navController: NavController,
-    postVm: CommunityPostViewModel
+    postId: String? = null
 ) {
     val context = LocalContext.current
     val viewModel: CommunityPostViewModel = viewModel(
@@ -41,20 +41,31 @@ fun CommunityPostScreen(
     var selectedTag by remember { mutableStateOf("고등학생") }
     val tags = listOf("중학생", "고등학생", "취준", "자격증", "취미", "자랑", "공유")
 
+
+    LaunchedEffect(postId) {
+        if (postId != null) {
+            viewModel.getPost(postId) { post ->
+                title = post.title
+                content = post.content
+                selectedTag = post.tag
+            }
+        }
+    }
+
     Scaffold(
         containerColor = Color(0xFFFDFDF0),
         topBar = {
             PostTopBar(
+                isEditMode = postId != null,
                 onBackClick = { navController.popBackStack() },
                 onRegisterClick = {
                     if (title.isBlank() || content.isBlank()) {
                         Toast.makeText(context, "제목과 내용을 모두 입력해주세요.", Toast.LENGTH_SHORT).show()
                     } else {
-                        // 🚀 1. DB에 저장 시도
-                        viewModel.savePost(title, content, selectedTag) { isSuccess ->
+                        viewModel.savePost(postId, title, content, selectedTag) { isSuccess ->
                             if (isSuccess) {
-                                Toast.makeText(context, "성공적으로 등록되었습니다!", Toast.LENGTH_SHORT).show()
-                                // 🚀 2. 성공 시 커뮤니티 목록(CommunityScreen)으로 돌아가기
+                                val msg = if (postId != null) "수정되었습니다!" else "성공적으로 등록되었습니다!"
+                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                 navController.popBackStack()
                             } else {
                                 Toast.makeText(context, "등록에 실패했습니다.", Toast.LENGTH_SHORT).show()
@@ -74,7 +85,6 @@ fun CommunityPostScreen(
         ) {
             item { Spacer(modifier = Modifier.height(10.dp)) }
 
-            // 1. 제목 입력 (상단)
             item {
                 Text("제목", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
                 Spacer(modifier = Modifier.height(8.dp))
@@ -111,9 +121,9 @@ fun CommunityPostScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PostTopBar(onBackClick: () -> Unit, onRegisterClick: () -> Unit) {
+fun PostTopBar(isEditMode: Boolean, onBackClick: () -> Unit, onRegisterClick: () -> Unit) {
     CenterAlignedTopAppBar(
-        title = { Text("글쓰기", fontSize = 16.sp, fontWeight = FontWeight.Bold) },
+        title = { Text(if (isEditMode) "글 수정" else "글쓰기", fontSize = 16.sp, fontWeight = FontWeight.Bold) },
         navigationIcon = {
             IconButton(onClick = onBackClick) {
                 Icon(Icons.Default.ArrowBack, contentDescription = null, tint = Color.DarkGray)
@@ -128,7 +138,7 @@ fun PostTopBar(onBackClick: () -> Unit, onRegisterClick: () -> Unit) {
                 color = Color(0xFFC5E1A5)
             ) {
                 Text(
-                    text = "등록",
+                    text = if (isEditMode) "수정" else "등록",
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
