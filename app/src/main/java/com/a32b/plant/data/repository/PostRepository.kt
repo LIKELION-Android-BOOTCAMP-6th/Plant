@@ -79,7 +79,9 @@ class PostRepository(private val db: FirebaseFirestore) {
             .documents.mapNotNull { doc ->
                 doc.toObject(Comment::class.java)?.copy(commentId = doc.id)
             }
-            .sortedByDescending { it.createdAt }
+            // 정렬 방식 : 최신이 맨 아래로 가게
+            .sortedBy { it.createdAt }
+//            .sortedByDescending { it.createdAt }
     }
 //    suspend fun getComments(postId: String): List<Comment>{
 //       return  db.collection("posts").document(postId)
@@ -144,10 +146,29 @@ class PostRepository(private val db: FirebaseFirestore) {
     }
 
     suspend fun deletePost(postId: String) {
-        val activityId = getActivityId(postId)
-        db.collection("posts").document(postId).delete().await()
-        db.collection("activities").document(activityId).delete().await()
+        val postRef = db.collection("posts").document(postId)
+
+        // 1. 하위 컬렉션 comments 문서 삭제
+        val comments = postRef.collection("comments").get().await()
+        for (commentDoc in comments.documents) {
+            commentDoc.reference.delete().await()
+        }
+
+        // 2. 관련 activity 한번에 삭제 (게시글 + 댓글 activity 모두)
+        db.collection("activities")
+            .whereEqualTo("targetId", postId)
+            .get().await()
+            .documents
+            .forEach { doc -> doc.reference.delete().await() }
+
+        // 3. 게시글 문서 삭제
+        postRef.delete().await()
     }
+//    suspend fun deletePost(postId: String) {
+//        val activityId = getActivityId(postId)
+//        db.collection("posts").document(postId).delete().await()
+//        db.collection("activities").document(activityId).delete().await()
+//    }
 
     suspend fun updatePost(postId: String, title: String, content: String, tag: List<String>) {
         db.collection("posts").document(postId)

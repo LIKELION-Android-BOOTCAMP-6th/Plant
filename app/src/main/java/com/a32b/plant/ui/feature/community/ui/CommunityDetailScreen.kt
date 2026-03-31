@@ -238,7 +238,16 @@ fun CommentRow(
         ProfileImage(comment.user.profileImg, 24)
         Spacer(Modifier.width(8.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(comment.user.nickname, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.Black)
+            // 닉네임 + 작성 시간을 한 줄에 표시
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(comment.user.nickname, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.Black)
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = comment.createdAt?.let { TimeFormatter.formatTimestampTime(it) } ?: "",
+                    fontSize = 11.sp,
+                    color = Color.Gray
+                )
+            }
 
             if (isEditing) {
                 // 인라인 편집 모드
