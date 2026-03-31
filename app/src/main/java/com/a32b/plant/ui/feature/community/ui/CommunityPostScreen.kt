@@ -1,5 +1,6 @@
 package com.a32b.plant.ui.feature.community.ui
 
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
@@ -52,7 +53,11 @@ fun CommunityPostScreen(
 
     LaunchedEffect(postId, potId) {
         postId?.let { viewModel.getPost(postId) }
-        potId?.let { viewModel.onIsSharedChange() }
+        potId?.let {
+            viewModel.onIsSharedChange()
+            Log.d("tag", tag!!)
+
+        }
     }
     BackHandler { viewModel.onIsDismissDialogShowChange() }
 
@@ -106,14 +111,17 @@ fun CommunityPostScreen(
 
                 )
             }
+            Log.d("tagg", uiState.selected.toString())
 
             item {
-                Text("카테고리", style = Typography.bodyMedium, fontWeight = FontWeight.Bold)
+                Text("태그", style = Typography.bodyMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
-                TagGroup(tags, enable = !uiState.isShared){ selected ->
+                TagGroup(tags + if(uiState.isShared) listOf("공유") else emptyList(), enable = !uiState.isShared, init = uiState.selected){ selected ->
                     viewModel.onSelectedTagChange(selected)
 
                 }
+                Log.d("tagg", "아이템 안")
+
             }
 
             //⭐⭐⭐⭐ 공유됐을 때 게시글 세팅하고 터치불능? 글 내용 못 바꾸게 바꾸기 태그에 공유가 있는지로 확인해서 처리하기
@@ -123,9 +131,11 @@ fun CommunityPostScreen(
                     Card(shape = RoundedCornerShape(13.dp),
                         elevation = CardDefaults.elevatedCardElevation(2.dp),
                         colors = CardDefaults.cardColors(Color.White)) {
-                        Text("${log.title} [${TimeFormatter.formatToDigitalClock(log.studyingTime)}]", style = MaterialTheme.typography.titleSmall)
+                        Text("${log.title} [${TimeFormatter.formatToDigitalClock(log.studyingTime)}]", style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.padding(10.dp))
                         log.contents.forEach { content ->
-                            Text(content, style = Typography.bodyMedium)
+                            Text(content, style = Typography.bodyMedium,
+                                modifier = Modifier.padding(10.dp))
                         }
                     }
                     val content = studyLogs.joinToString("\n\n") { log ->

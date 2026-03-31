@@ -76,7 +76,7 @@ class CommunityPostViewModel(private val repository: PostRepository, private val
             _uiState.update { it.copy(isShared = true) }
             getStudyLog()
             onTitleChange(title!!)
-            onSelectedTagChange(listOf("공유", tag!!))
+            onSelectedTagChange(listOf( tag!!, "공유"))
         }
     }
 

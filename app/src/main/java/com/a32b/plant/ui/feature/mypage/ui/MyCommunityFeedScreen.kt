@@ -77,7 +77,7 @@ fun MyCommunityFeedScreen(navController: NavController) {
                 Text("커뮤니티 활동", style = Typography.titleLarge)
             }
 
-            TagGroup(list, false){ selected ->
+            TagGroup(list, isMultiSelected = false){ selected ->
                 viewModel.onSelectedChange(selected.get(0))
                 Log.d("뷰모델 확니", uiState.selected)
             }
