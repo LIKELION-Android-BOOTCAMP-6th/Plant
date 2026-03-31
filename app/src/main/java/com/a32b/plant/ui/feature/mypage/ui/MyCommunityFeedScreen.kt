@@ -57,6 +57,7 @@ fun MyCommunityFeedScreen(navController: NavController) {
         viewModel.event.collect { event ->
             when (event) {
                 is MyCommunityFeedEvent.NavigateToCommunityDetail -> {
+                    navController.navigate(Routes.CommunityList)
                     navController.navigate(Routes.CommunityDetail(event.postId ))
                 }
             }

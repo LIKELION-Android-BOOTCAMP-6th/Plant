@@ -26,6 +26,7 @@ import com.a32b.plant.core.component.TagGroup
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.data.di.ViewModelFactory
+import com.a32b.plant.ui.feature.community.viewmodel.CommunityPostEvent
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityPostViewModel
 import com.a32b.plant.ui.theme.Typography
 import com.a32b.plant.ui.theme.background
@@ -51,12 +52,22 @@ fun CommunityPostScreen(
     val tags = uiState.tags
 
 
-    LaunchedEffect(postId, potId) {
+    LaunchedEffect(postId, potId, Unit) {
         postId?.let { viewModel.getPost(postId) }
         potId?.let {
             viewModel.onIsSharedChange()
             Log.d("tag", tag!!)
 
+        }
+        viewModel.event.collect { event ->
+            when(event){
+                is CommunityPostEvent.NavigateToDetail -> {
+                    navController.navigate(Routes.CommunityList)
+                    navController.navigate(Routes.CommunityDetail(event.postId)){
+                        popUpTo<Routes.CommunityPost> { inclusive = true }
+                    }
+                }
+            }
         }
     }
     BackHandler { viewModel.onIsDismissDialogShowChange() }
@@ -100,7 +111,6 @@ fun CommunityPostScreen(
             item { Spacer(modifier = Modifier.height(10.dp)) }
 
             item {
-                //⭐⭐⭐⭐공유 됐을 때 글 제목 [태그] 제목 으로 바꿔주기
                 Text("제목", style = Typography.bodyMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
                 PostInputField(
@@ -124,7 +134,6 @@ fun CommunityPostScreen(
 
             }
 
-            //⭐⭐⭐⭐ 공유됐을 때 게시글 세팅하고 터치불능? 글 내용 못 바꾸게 바꾸기 태그에 공유가 있는지로 확인해서 처리하기
             if (uiState.isShared){
                 val studyLogs = uiState.studyLogs ?: emptyList()
                 items(studyLogs) { log ->

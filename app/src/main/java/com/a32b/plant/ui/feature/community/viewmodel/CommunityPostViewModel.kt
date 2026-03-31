@@ -10,10 +10,12 @@ import com.a32b.plant.data.model.PostAuthor
 import com.a32b.plant.data.model.StudyLog
 import com.a32b.plant.data.repository.PostRepository
 import com.a32b.plant.data.repository.PotRepository
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -28,12 +30,18 @@ data class CommunityPostUiState(
     val isShared: Boolean = false,
     val tags: List<String> = emptyList()
 )
+sealed class CommunityPostEvent{
+    data class NavigateToDetail(val postId: String) : CommunityPostEvent()
+}
 class CommunityPostViewModel(private val repository: PostRepository, private val potRepository: PotRepository,
-                             private val postId: String?, private val potId: String?, private val tag: String?, private val title: String?, private val studyLogIds: List<String>?
+                             private var postId: String?, private val potId: String?, private val tag: String?, private val title: String?, private val studyLogIds: List<String>?
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CommunityPostUiState())
     val uiState = _uiState.asStateFlow()
+
+    private val _eventChannel = Channel<CommunityPostEvent>(Channel.BUFFERED)
+    val event = _eventChannel.receiveAsFlow()
 
     init {
         fetchTags()
@@ -85,7 +93,7 @@ class CommunityPostViewModel(private val repository: PostRepository, private val
             try {
                 if (postId != null) {
                     // ✅ 수정 모드
-                    repository.updatePost(postId, _uiState.value.title, _uiState.value.content, _uiState.value.selected)
+                    repository.updatePost(postId!!, _uiState.value.title, _uiState.value.content, _uiState.value.selected)
                 } else {
 //                     ✅ 새 글 작성 모드
                     val newPost = Post(
@@ -98,12 +106,13 @@ class CommunityPostViewModel(private val repository: PostRepository, private val
                         content = _uiState.value.content,
                         tag = _uiState.value.selected
                     )
-                    repository.savePost(newPost, CommunityActivity(type = ActivityType.POST, title = _uiState.value.title))
+                    postId = repository.savePost(newPost, CommunityActivity(type = ActivityType.POST, title = _uiState.value.title))
                 }
                 onComplete(true)
             } catch (e: Exception) {
                 onComplete(false)
             }
+            _eventChannel.send(CommunityPostEvent.NavigateToDetail(postId!!))
         }
     }
 }

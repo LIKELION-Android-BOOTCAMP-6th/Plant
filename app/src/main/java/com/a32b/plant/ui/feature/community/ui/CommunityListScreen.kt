@@ -1,6 +1,7 @@
 package com.a32b.plant.ui.feature.community.ui
 
 import android.nfc.Tag
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -48,6 +49,12 @@ fun CommunityListScreen(navController: NavController) {
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
 
     val uiState by viewModel.uiState.collectAsState()
+
+    BackHandler {
+        navController.navigate(Routes.HomeMain) {
+            popUpTo(Routes.HomeMain) { inclusive = false }
+        }
+    }
 
     Scaffold(
         containerColor = background,

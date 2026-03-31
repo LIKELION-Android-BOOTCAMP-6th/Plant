@@ -57,7 +57,7 @@ class PostRepository(private val db: FirebaseFirestore) {
     }
 
     //게시글 저장
-    suspend fun savePost(post: Post, activity: CommunityActivity){
+    suspend fun savePost(post: Post, activity: CommunityActivity): String{
         val postRef = db.collection("posts").document()
         val activityRef = db.collection("activities").document()
 
@@ -68,6 +68,8 @@ class PostRepository(private val db: FirebaseFirestore) {
             batch.set(postRef, postWithAct)
             batch.set(activityRef, activityWithPost)
         }.await()
+
+        return postRef.id
     }
 
 
