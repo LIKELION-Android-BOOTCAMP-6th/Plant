@@ -1,6 +1,7 @@
 package com.a32b.plant.data.repository
 
 import android.util.Log
+import com.a32b.plant.data.di.AppContainer.firestore
 import com.a32b.plant.data.di.CurrentUser
 import com.a32b.plant.data.model.Post
 import com.a32b.plant.data.model.CommunityActivity
@@ -133,5 +134,8 @@ class PostRepository(
                 "likeCount", FieldValue.increment(1)
             ).await()
         }
+    }
+    suspend fun uploadPostAndReturnId(post: Post): String {
+        return db.collection("posts").add(post).await().id
     }
 }

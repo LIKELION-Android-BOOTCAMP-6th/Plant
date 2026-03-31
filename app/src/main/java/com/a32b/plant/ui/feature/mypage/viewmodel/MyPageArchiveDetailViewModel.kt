@@ -3,45 +3,141 @@ package com.a32b.plant.ui.feature.mypage.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.util.TimeFormatter.formatTimestamp
 import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
 import com.a32b.plant.data.di.CurrentUser
+import com.a32b.plant.data.model.Post
+import com.a32b.plant.data.model.PostAuthor
 import com.a32b.plant.data.model.PotInfo
+import com.a32b.plant.data.model.StudyLog
+import com.a32b.plant.data.repository.PostRepository
 import com.a32b.plant.data.repository.PotRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-//            Log.d("PlantLog", "")
-
+// 체크박스 체크, 해제 - list 해당 요소 id 값 넣기, 빼기
+// id list
+// - id 값으로 데이터 다시 불러온다
+// - or 현재 데이터 보유중, id 값으로 logList 데이터 탐색 -> 글쓰기
 data class MyPageArchiveDetailStatus(
     val nickname: String = "",
     val pot: PotInfo? = null,
-    val totalStudyTime: String = "00 : 00 : 00"
+    val totalStudyTime: String = "00 : 00 : 00",
+    val logs: List<StudyLog> = emptyList(),
+
+    val selectedIds: List<String> = emptyList(),
+    val isSelectionMode: Boolean = false
 )
 
 
 class MyPageArchiveDetailViewModel(
     private val potRepository: PotRepository,
+    private val postRepository: PostRepository,
     private val potId: String
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MyPageArchiveDetailStatus())
     val uiState = _uiState.asStateFlow()
+    private var isUploading = false
 
     init {
         viewModelScope.launch {
-            val potInfo = potRepository.getPotLogs(CurrentUser.uid, potId)
-
+            val potInfo = potRepository.getUserPotById(CurrentUser.uid, potId)
+            val logList = potRepository.getPotLogs(CurrentUser.uid, potId)
             _uiState.update {
                 it.copy(
                     nickname = CurrentUser.nickname,
-
+                    pot = potInfo,
+                    logs = logList,
+                    totalStudyTime = formatToDigitalClock(potInfo?.potTotalStudyingTime ?: 0L)
                 )
             }
-            Log.d("plantLog", "화분 데이터 로드 완료: ${_uiState.value.pot}")
-            Log.d("plantLog", "변환된 시간: ${_uiState.value.totalStudyTime}")
+        }
+    }
+
+    fun toggleSelectionMode(isEnabled: Boolean) {
+        _uiState.update {
+            it.copy(
+                isSelectionMode = isEnabled,
+                selectedIds = emptyList()
+            )
+        }
+    }
+
+    // 체크박스 클릭 시 실행
+    fun toggleSelection(logId: String) {
+        _uiState.update { currentState ->
+            val currentSelected = currentState.selectedIds.toMutableList()
+            // 포함되어 있으면 제거
+            if (currentSelected.contains(logId)) {
+                currentSelected.remove(logId)
+            } else {
+                currentSelected.add(logId)
+            }
+            currentState.copy(selectedIds = currentSelected)
+        }
+    }
+
+    // 체크한 아이템 반환
+    fun getSelectedLogsData(): List<StudyLog> {
+        return uiState.value.logs.filter { log ->
+            // id 가 포함되어 있으면 true / 없으면 제외
+            uiState.value.selectedIds.contains(log.id)
+        }
+    }
+
+    fun shareToPost(onSuccess: (String) -> Unit) {
+        val selectedLogs = getSelectedLogsData()
+        val pot = uiState.value.pot ?: return // Pot 정보가 없으면 중단
+        if (selectedLogs.isEmpty()) return
+
+        viewModelScope.launch {
+            // 화분 정보
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.KOREA)
+            val startDate = pot.createdAt?.let { formatTimestamp(it) } ?: ""
+            val endDate = pot.completedAt?.let { formatTimestamp(it) } ?: ""
+
+            val potHeader = """
+            [ 학습 정보 ]
+            시작일 : $startDate
+            종료일 : $endDate
+            총 공부 시간 : ${uiState.value.totalStudyTime}
+            ----------------------------
+        """.trimIndent()
+
+            // 선택된 리스트
+            val logsBody = selectedLogs.joinToString("\n\n") { log ->
+                val timeTitle = "${log.title} [${formatToDigitalClock(log.studyingTime)}]"
+                val memoLines = log.contents.joinToString("\n") { "• $it" }
+
+                "$timeTitle\n$memoLines"
+            }
+
+            val finalContent = "$potHeader\n\n$logsBody"
+
+            val newPost = Post(
+                author = PostAuthor(
+                    id = CurrentUser.uid,
+                    nickname = CurrentUser.nickname,
+                    profileImg = CurrentUser.profileImg
+                ),
+                title = "${uiState.value.pot?.name}",
+                content = finalContent,
+                tag = listOfNotNull("공유", pot.tag),
+                createdAt = com.google.firebase.Timestamp.now()
+            )
+
+            try {
+                val postId = postRepository.uploadPostAndReturnId(newPost)
+                if (postId.isNotEmpty()) {
+                    onSuccess(postId)
+                }
+                Log.d("plantLog", "종료 - uploadPost")
+            } catch (e: Exception) {
+                Log.e("plantLog", "${e.message}")
+            }
         }
     }
 }
-

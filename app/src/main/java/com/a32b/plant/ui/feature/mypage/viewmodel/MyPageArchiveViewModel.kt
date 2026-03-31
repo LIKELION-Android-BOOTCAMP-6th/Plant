@@ -29,8 +29,6 @@ class MyPageArchiveViewModel(private val potRepository: PotRepository) : ViewMod
                     potList = potRepository.getUserPotsByStatus(CurrentUser.uid, true)
                 )
             }
-            Log.d("PlantLog", "받은거 viewModel 출력 ${CurrentUser.uid}, ")
-            Log.d("PlantLog", "${_uiState.value.potList}")
         }
     }
 }

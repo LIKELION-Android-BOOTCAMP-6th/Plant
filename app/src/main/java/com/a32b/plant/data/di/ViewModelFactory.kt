@@ -73,7 +73,7 @@ object ViewModelFactory {
 
     fun myPageArchiveDetailViewModelFactory(potId: String) = object : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return MyPageArchiveDetailViewModel(AppContainer.potRepository, potId  ) as T
+            return MyPageArchiveDetailViewModel(AppContainer.potRepository, AppContainer.postRepository, potId  ) as T
         }
     }
 

@@ -143,7 +143,23 @@ class PotRepository(private val db: FirebaseFirestore) {
             .get().await().toObjects(PotInfo::class.java)
     }
 
-    suspend fun getPotLogs(uid: String, potId: String): List<LogInfo> {
+    suspend fun getUserPotById(uid: String, potId: String): PotInfo? {
+        return try {
+            val result = db.collection("users")
+                .document(uid)
+                .collection("pots")
+                .document(potId) // 문서 ID로 직접 접근
+                .get()
+                .await()
+            result.toObject(PotInfo::class.java)
+
+        } catch (e: Exception) {
+            Log.e("plantLog", "${e.message}")
+            null
+        }
+    }
+
+    suspend fun getPotLogs(uid: String, potId: String): List<StudyLog> {
         return try {
             val result = db.collection("users")
                 .document(uid)
@@ -151,7 +167,7 @@ class PotRepository(private val db: FirebaseFirestore) {
                 .document(potId)
                 .collection("logs")
                 .get().await()
-            result.toObjects(LogInfo::class.java)
+            result.toObjects(StudyLog::class.java)
         } catch (e: Exception) {
             Log.e("plantLog", "${e.message}")
             emptyList()

@@ -62,7 +62,9 @@ import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageUiState
 import com.a32b.plant.ui.theme.primary
 import com.a32b.plant.ui.theme.sub2
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.TextFieldDefaults
 import com.a32b.plant.ui.theme.background
+import com.a32b.plant.ui.theme.textFieldBackground
 
 
 @Composable
@@ -423,7 +425,7 @@ fun ProfileDialog(
     // 다이얼로그 안에서만 임시로 쓸 상태들 (입력 중인 값)
     var newUserName by remember { mutableStateOf(uiState.nickname) }
     var selectedImageLevel by remember { mutableStateOf(uiState.profileImg) }
-1
+    1
     val context = LocalContext.current
 
     // 업데이트 성공 시 창 닫기 로직
@@ -460,6 +462,11 @@ fun ProfileDialog(
                                 newUserName = it
                             viewModel.resetNicknameError()
                         },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = textFieldBackground,
+                            unfocusedContainerColor = textFieldBackground
+                        ),
+
                         label = { Text("닉네임 변경 (2~10자)", style = Typography.labelSmall) },
                         isError = uiState.nicknameError != null
                     )
