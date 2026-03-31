@@ -26,7 +26,7 @@ class CommunityListViewModel(private val repository: PostRepository) : ViewModel
     val selectedTags = _selectedTags.asStateFlow()
 
     val uiState: StateFlow<List<Post>> = combine(
-        repository.getPosts(),
+        repository.getPostList(),
         _searchQuery,
         _selectedTags
     ) { posts, query, tags ->

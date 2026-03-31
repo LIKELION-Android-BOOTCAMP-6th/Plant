@@ -26,7 +26,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.toRoute
 import com.a32b.plant.R
+import com.a32b.plant.core.component.ProfileImage
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.data.di.CurrentUser
 import com.a32b.plant.data.di.ViewModelFactory
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityDetailViewModel
@@ -45,9 +47,9 @@ fun CommunityDetailScreen(
     val viewModel: CommunityDetailViewModel = viewModel(
         factory = ViewModelFactory.communityDetailViewModelFactory(postId)
     )
+    val uiState by viewModel.uiState.collectAsState()
 
     val postState by viewModel.post.collectAsStateWithLifecycle()
-    val commentText by viewModel.commentText.collectAsStateWithLifecycle()
     val showDeleteDialog = viewModel.showDeleteDialog.value
 
 
@@ -113,7 +115,7 @@ fun CommunityDetailScreen(
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(currentPost.author.nickname, fontWeight = FontWeight.Medium, color = Color.Black)
                             Spacer(modifier = Modifier.weight(1f))
-                            Text(currentPost.createdAt.toString(), color = Color.Black, fontSize = 12.sp)
+                            Text(TimeFormatter.formatTimestamp(currentPost.createdAt), color = Color.Black, fontSize = 12.sp)
                         }
                         Spacer(modifier = Modifier.height(20.dp))
                     }
@@ -154,10 +156,10 @@ fun CommunityDetailScreen(
                                 IconButton(onClick = {
                                     navController.navigate(Routes.CommunityPost(postId = currentPost.postId))
                                 }) {
-                                    Icon(painterResource(id = R.drawable.ic_edit), null, tint = Color.Black)
+                                    Icon(painterResource(id = R.drawable.ic_edit), null, tint = Color.DarkGray, modifier = Modifier.size(22.dp))
                                 }
                                 IconButton(onClick = { viewModel.openDeleteDialog() }) {
-                                    Icon(Icons.Default.Delete, null, tint = Color.Black)
+                                    Icon(painterResource(id = R.drawable.ic_trash), null, tint = Color.DarkGray, modifier = Modifier.size(22.dp))
                                 }
                             }
                         }
@@ -167,7 +169,7 @@ fun CommunityDetailScreen(
                     item {
                         CommentInputSection(
                             nickname = CurrentUser.nickname,
-                            text = commentText,
+                            text = uiState.comment,
                             onTextChange = { viewModel.onCommentChange(it) },
                             onSend = { viewModel.addComment() }
                         )
@@ -175,8 +177,8 @@ fun CommunityDetailScreen(
                     }
 
 
-                    items(currentPost.comments) { commentData ->
-                        CommentRow(name = commentData.user.nickname, content = commentData.content)
+                    items(uiState.commentList) { commentData ->
+                        CommentRow(name = commentData.user.nickname, profileImg = commentData.user.profileImg,content = commentData.content)
                         Spacer(modifier = Modifier.height(12.dp))
                     }
                 }
@@ -186,9 +188,9 @@ fun CommunityDetailScreen(
 }
 
 @Composable
-fun CommentRow(name: String, content: String) {
+fun CommentRow(name: String, profileImg:String, content: String) {
     Row(verticalAlignment = Alignment.Top) {
-        Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(sub3))
+        ProfileImage(profileImg, 24)
         Spacer(Modifier.width(8.dp))
         Column {
             Text(name, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.Black)

@@ -4,16 +4,29 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.State
+import com.a32b.plant.core.util.ActivityType
 import com.a32b.plant.data.di.CurrentUser
+import com.a32b.plant.data.model.Comment
+import com.a32b.plant.data.model.CommentUser
+import com.a32b.plant.data.model.CommunityActivity
 import com.a32b.plant.data.model.Post
 import com.a32b.plant.data.repository.PostRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+data class CommunityDetailUiState(
+    //⭐⭐⭐⭐다른 것들도 여기로 넣어서 관리하기
+    val comment: String = "",
+    val commentList: List<Comment> = emptyList()
+
+)
 class CommunityDetailViewModel(
     private val repository: PostRepository,
     private val postId: String
 ) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(CommunityDetailUiState())
+    val uiState = _uiState.asStateFlow()
 
     private val _showDeleteDialog = mutableStateOf(false)
     val showDeleteDialog: State<Boolean> = _showDeleteDialog
@@ -22,39 +35,49 @@ class CommunityDetailViewModel(
     val post: StateFlow<Post?> = _post.asStateFlow()
 
 
-    var commentText = MutableStateFlow("")
-
-
     private val _isLikeProcessing = MutableStateFlow(false)
     val isLikeProcessing: StateFlow<Boolean> = _isLikeProcessing.asStateFlow()
 
-    init { loadPostDetail() }
-
-    private fun loadPostDetail() {
-        repository.getPost(postId).onEach { _post.value = it }.launchIn(viewModelScope)
+    init {
+        loadPostDetail()
+        loadComment()
     }
 
-    fun onCommentChange(newText: String) { commentText.value = newText }
+    private fun loadPostDetail() {
+        repository.getPostDetail(postId).onEach { _post.value = it }.launchIn(viewModelScope)
+    }
+
+    private fun loadComment(){
+        viewModelScope.launch {
+            _uiState.update { it.copy(commentList = repository.getComments(postId)) }
+        }
+    }
+
+    fun onCommentChange(newText: String) { _uiState.update { it.copy(comment = newText) } }
 
     fun openDeleteDialog() { _showDeleteDialog.value = true }
     fun closeDeleteDialog() { _showDeleteDialog.value = false }
 
     fun addComment() {
-        val content = commentText.value
 
-        if (CurrentUser.uid == null || content.isBlank()) return
+        if (_uiState.value.comment.isBlank()) return
 
         viewModelScope.launch {
             try {
-                repository.addComment(
-                    postId = postId,
-                    uid = CurrentUser.uid,
-                    nickName = CurrentUser.nickname,
-                    content = content
+                repository.addComment(postId = postId,
+                    comment = Comment(
+                        user = CommentUser(CurrentUser.uid, CurrentUser.nickname, CurrentUser.profileImg),
+                        content = _uiState.value.comment),
+                    activity = CommunityActivity(
+                        type = ActivityType.COMMENT,
+                        title = post.value!!.title,
+                        comment = _uiState.value.comment
+                    )
                 )
-                commentText.value = ""
             } catch (e: Exception) { e.printStackTrace() }
         }
+        _uiState.update{it.copy(comment = "")}
+        loadComment()
     }
 
     fun deletePost(onComplete: () -> Unit) {

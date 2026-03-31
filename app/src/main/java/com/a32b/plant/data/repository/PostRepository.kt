@@ -3,6 +3,7 @@ package com.a32b.plant.data.repository
 import android.util.Log
 import com.a32b.plant.data.di.AppContainer.firestore
 import com.a32b.plant.data.di.CurrentUser
+import com.a32b.plant.data.model.Comment
 import com.a32b.plant.data.model.Post
 import com.a32b.plant.data.model.CommunityActivity
 import com.google.firebase.Timestamp
@@ -10,17 +11,16 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.toObjects
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
-class PostRepository(
-    private val db: FirebaseFirestore
-) {
+class PostRepository(private val db: FirebaseFirestore) {
 
     //글 목록 조회
-    fun getPosts(): Flow<List<Post>> = callbackFlow {
+    fun getPostList(): Flow<List<Post>> = callbackFlow {
         val subscription = db.collection("posts")
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
@@ -42,8 +42,8 @@ class PostRepository(
         awaitClose { subscription.remove() }
     }
 
-    //상세 조회??
-    fun getPost(postId: String): Flow<Post?> = callbackFlow {
+    //상세 조회
+    fun getPostDetail(postId: String): Flow<Post?> = callbackFlow {
         val subscription = db.collection("posts").document(postId)
             .addSnapshotListener { snapshot, _ ->
                 val post = snapshot?.toObject(Post::class.java)?.copy(postId = snapshot.id)
@@ -52,6 +52,7 @@ class PostRepository(
         awaitClose { subscription.remove() }
     }
 
+    //게시글 저장
     suspend fun savePost(post: Post, activity: CommunityActivity){
         val postRef = db.collection("posts").document()
         val activityRef = db.collection("activities").document()
@@ -65,28 +66,46 @@ class PostRepository(
         }.await()
     }
 
-    suspend fun addComment(postId: String, uid: String, nickName: String, content: String) {
-        val newComment = hashMapOf(
-            "uid" to uid,
-            "nickName" to nickName,
-            "content" to content,
-            "createdAt" to System.currentTimeMillis()
-        )
+    suspend fun getComments(postId: String): List<Comment>{
+       return  db.collection("posts").document(postId)
+            .collection("comments")
+            .get()
+            .await()
+            .toObjects<Comment>()
+            .sortedByDescending { it.createdAt }
+
+    }
+
+    suspend fun addComment(postId: String, comment: Comment, activity: CommunityActivity) {
+
+        val commentRef = db.collection("posts").document(postId)
+                            .collection("comments").document()
+        val activityRef = db.collection("activities").document()
+
+        val commentWithAct = comment.copy(activityId = activityRef.id)
+        val activityWithCo = activity.copy(targetId = postId, commentId = commentRef.id)
+
+        db.runBatch { batch ->
+            batch.set(commentRef, commentWithAct)
+            batch.set(activityRef, activityWithCo)
+        }.await()
 
         db.collection("posts").document(postId)
-            .update(
-                "comments", FieldValue.arrayUnion(newComment),
-                "commentCount", FieldValue.increment(1)
-            )
+            .update("commentCount", FieldValue.increment(1))
+
+    }
+
+    suspend fun getActivityId(postId: String) : String{
+        return db.collection("posts").document(postId)
+            .get()
             .await()
+            .getString("activityId")!!
     }
 
     suspend fun deletePost(postId: String) {
+        val activityId = getActivityId(postId)
         db.collection("posts").document(postId).delete().await()
-    }
-
-    suspend fun uploadPost(post: Post) {
-        db.collection("posts").add(post).await()
+        db.collection("activities").document(activityId).delete().await()
     }
 
     suspend fun updatePost(postId: String, title: String, content: String, tag: List<String>) {
@@ -97,25 +116,13 @@ class PostRepository(
                 "tag", tag
             )
             .await()
-    }
-    suspend fun addCommunityActivity(activity: CommunityActivity){
-        //댓글, 좋아요 시 커뮤니티 활동 추가할 것
-        val data = hashMapOf(
-            "uid" to CurrentUser.uid,
-            "type" to activity.type,
-            "title" to activity.title,
-            "targetId" to activity.targetId,
-            "createdAt" to activity.createAt
-        )
-
-        activity.comment?.let { data["comment"] = it }
-
-        db.collection("activities")
-            .add(data)
+        db.collection("activities").document(getActivityId(postId))
+            .update("title", title)
             .await()
-
     }
+
     fun getLiked(): Boolean{
+        db.collection("post")
         //post/{postId}/liked/{Current.uid}
         // isLiked 여부를 리턴하는 걸로
         return false

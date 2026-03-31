@@ -283,7 +283,7 @@ fun PostCard(post: Post, isLiked: Boolean,onClick: () -> Unit ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
 
                 Text(text = post.title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.Black)
-                Text(text = formatTimeAgo(post.createdAt!!), fontSize = 11.sp, color = Color.Black)
+                Text(text = formatTimeAgo(post.createdAt), fontSize = 11.sp, color = Color.Black)
             }
             Spacer(modifier = Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {

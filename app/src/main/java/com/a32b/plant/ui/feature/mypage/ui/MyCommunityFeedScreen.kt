@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -79,9 +81,10 @@ fun MyCommunityFeedScreen(navController: NavController) {
                 viewModel.onSelectedChange(selected.get(0))
                 Log.d("뷰모델 확니", uiState.selected)
             }
+
             ContentList(uiState.activities){ targetId ->
                 Log.d("타겟 아이디", targetId)
-//                viewModel.moveToCommunityDetail(targetId)
+                viewModel.moveToCommunityDetail(targetId)
 
             }
         }
@@ -91,33 +94,36 @@ fun MyCommunityFeedScreen(navController: NavController) {
 @Composable
 fun ContentList(lists : List<CommunityActivity>, onClick: (String) -> Unit){
 
-    lists.forEach { list ->
-        Card(
-            modifier = Modifier.fillMaxWidth().padding(10.dp),
-            shape = RoundedCornerShape(7.dp),
-            colors = CardDefaults.cardColors(Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
-            onClick = {onClick(list.targetId)}
-        ) {
-            Column(
-                modifier = Modifier.padding(top = 13.dp, bottom = 13.dp, start = 7.dp, end = 7.dp)
+    LazyColumn {
+        items(lists) { list->
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(10.dp),
+                shape = RoundedCornerShape(7.dp),
+                colors = CardDefaults.cardColors(Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+                onClick = {onClick(list.targetId)}
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                Column(
+                    modifier = Modifier.padding(top = 13.dp, bottom = 13.dp, start = 7.dp, end = 7.dp)
                 ) {
-                    Text(list.title, style = Typography.titleSmall)
-                    Text(TimeFormatter.formatTimestamp(list.createAt), style = Typography.bodySmall)
-                }
-                list.comment?.let {
-                    Text(
-                        list.comment,
-                        style = Typography.bodyMedium,
-                        modifier = Modifier.padding(top = 5.dp)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(list.title, style = Typography.titleSmall)
+                        Text(TimeFormatter.formatTimestamp(list.createAt), style = Typography.bodySmall)
+                    }
+                    list.comment?.let {
+                        Text(
+                            list.comment,
+                            style = Typography.bodyMedium,
+                            modifier = Modifier.padding(top = 5.dp)
+                        )
+                    }
                 }
             }
+
         }
     }
 }
