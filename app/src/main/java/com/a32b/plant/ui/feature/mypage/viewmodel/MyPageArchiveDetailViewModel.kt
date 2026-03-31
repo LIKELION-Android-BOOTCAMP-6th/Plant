@@ -3,7 +3,6 @@ package com.a32b.plant.ui.feature.mypage.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.a32b.plant.core.util.TimeFormatter.formatTimestamp
 import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
 import com.a32b.plant.data.di.CurrentUser
 import com.a32b.plant.data.model.Post
@@ -41,7 +40,6 @@ class MyPageArchiveDetailViewModel(
     private val _uiState = MutableStateFlow(MyPageArchiveDetailStatus())
     val uiState = _uiState.asStateFlow()
     private var isUploading = false
-
     init {
         viewModelScope.launch {
             val potInfo = potRepository.getUserPotById(CurrentUser.uid, potId)
@@ -54,6 +52,9 @@ class MyPageArchiveDetailViewModel(
                     totalStudyTime = formatToDigitalClock(potInfo?.potTotalStudyingTime ?: 0L)
                 )
             }
+//            logList.forEachIndexed { index, log ->
+//                Log.d("plantLog", "순서: $index, 제목: ${log.title}, ID: ${log.id}")
+//            }
         }
     }
 
@@ -79,7 +80,6 @@ class MyPageArchiveDetailViewModel(
             currentState.copy(selectedIds = currentSelected)
         }
     }
-
     // 체크한 아이템 반환
     fun getSelectedLogsData(): List<StudyLog> {
         return uiState.value.logs.filter { log ->
@@ -88,56 +88,31 @@ class MyPageArchiveDetailViewModel(
         }
     }
 
-    fun shareToPost(onSuccess: (String) -> Unit) {
+    fun shareToPost(onSuccess: (String, String, String, List<String>) -> Unit) {
         val selectedLogs = getSelectedLogsData()
-        val pot = uiState.value.pot ?: return // Pot 정보가 없으면 중단
+        val pot = uiState.value.pot ?: return
+
+        // 체크박스 선택된 로그가 없으면
         if (selectedLogs.isEmpty()) return
 
         viewModelScope.launch {
-            // 화분 정보
-            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.KOREA)
-            val startDate = pot.createdAt?.let { formatTimestamp(it) } ?: ""
-            val endDate = pot.completedAt?.let { formatTimestamp(it) } ?: ""
+            val potId = pot.id ?: "temp_id"
+            val tag = pot.tag ?: "공유"
+            val title = pot.name ?: "제목 없음"
 
-            val potHeader = """
-            [ 학습 정보 ]
-            시작일 : $startDate
-            종료일 : $endDate
-            총 공부 시간 : ${uiState.value.totalStudyTime}
-            ----------------------------
-        """.trimIndent()
+            val studyLogIds  = selectedLogs.map { it.id }
 
-            // 선택된 리스트
-            val logsBody = selectedLogs.joinToString("\n\n") { log ->
-                val timeTitle = "${log.title} [${formatToDigitalClock(log.studyingTime)}]"
-                val memoLines = log.contents.joinToString("\n") { "• $it" }
+            Log.d("PlantLog", """
+            [----------- 확인  ]
+            potId: $potId
+            tag: $tag
+            title: $title
+            logIds: $studyLogIds  (총 ${studyLogIds .size}개)
+        """.trimIndent())
 
-                "$timeTitle\n$memoLines"
-            }
+            onSuccess(potId, tag, title, studyLogIds )
 
-            val finalContent = "$potHeader\n\n$logsBody"
-
-            val newPost = Post(
-                author = PostAuthor(
-                    id = CurrentUser.uid,
-                    nickname = CurrentUser.nickname,
-                    profileImg = CurrentUser.profileImg
-                ),
-                title = "${uiState.value.pot?.name}",
-                content = finalContent,
-                tag = listOfNotNull("공유", pot.tag),
-                createdAt = com.google.firebase.Timestamp.now()
-            )
-
-            try {
-                val postId = postRepository.uploadPostAndReturnId(newPost)
-                if (postId.isNotEmpty()) {
-                    onSuccess(postId)
-                }
-                Log.d("plantLog", "종료 - uploadPost")
-            } catch (e: Exception) {
-                Log.e("plantLog", "${e.message}")
-            }
+            Log.d("plantLog", "종료 - 데이터 전달 완료")
         }
     }
 }

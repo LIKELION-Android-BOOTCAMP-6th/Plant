@@ -85,6 +85,10 @@ class MyPageViewModel(
                         completedPotCount = myPotList.count { it.isCompleted }
                     )
                 }
+                myPotList.forEach { it->
+                    Log.d("plantLog", "id :  ${it.id}, isComplted : ${it.isCompleted}")
+                }
+
             } catch (e: Exception) {
                 Log.e("error", e.message.toString())
             }

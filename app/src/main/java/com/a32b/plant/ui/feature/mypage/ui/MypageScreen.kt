@@ -179,8 +179,8 @@ fun MyPageScreen(navController: NavController) {
             ButtonTemplate(text = "앱 설정") {
                 navController.navigate(Routes.MyPageSetting)
             }
-            ButtonTemplate(text = "공지사항") { }
-            ButtonTemplate(text = "비밀번호 재설정") { }
+//            ButtonTemplate(text = "공지사항") { }
+//            ButtonTemplate(text = "비밀번호 재설정") { }
             DarkModeToggleButton(
                 isDarkMode = uiState.isDarkMode,
                 onToggle = {

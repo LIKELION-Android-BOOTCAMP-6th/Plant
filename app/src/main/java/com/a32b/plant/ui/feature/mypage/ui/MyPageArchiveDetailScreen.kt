@@ -2,7 +2,9 @@ package com.a32b.plant.ui.feature.mypage.ui
 
 import android.R.attr.enabled
 import android.R.attr.onClick
+import android.R.attr.tag
 import android.R.attr.text
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
@@ -24,6 +26,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageArchiveDetailViewModel
 import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
@@ -60,7 +63,7 @@ fun MyPageArchiveDetailScreen(navController: NavController) {
     val pot = uiState.pot
     var isSelectionMode by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(false) }
-
+    val context = LocalContext.current
     Scaffold(
         topBar = {
             Row(
@@ -95,23 +98,20 @@ fun MyPageArchiveDetailScreen(navController: NavController) {
                         .weight(1f)
                         .padding(start = 8.dp)
                 )
-
                 IconButton(onClick = {
                     if (uiState.isSelectionMode) {
-                        // 공유
                         if (uiState.selectedIds.isNotEmpty()) {
                             showDialog = true
-                            // 공유 로직 실행 (예: viewModel.shareSelectedLogs(context))
+                        } else {
+                            Toast.makeText(context, "공유할 기록을 선택해 주세요.", Toast.LENGTH_SHORT).show()
                         }
                     } else {
-                        // 선택 모드 진입
                         viewModel.toggleSelectionMode(true)
                     }
                 }) {
                     Icon(
                         imageVector = if (uiState.isSelectionMode) Icons.Default.Check else Icons.Default.Share,
-                        contentDescription = "공유",
-                        modifier = Modifier.size(24.dp)
+                        contentDescription = "공유"
                     )
                 }
             }
@@ -189,7 +189,6 @@ fun MyPageArchiveDetailScreen(navController: NavController) {
                                         style = MaterialTheme.typography.titleMedium,
                                         modifier = Modifier.weight(1f)
                                     )
-
                                 }
                                 if (log.contents.isNotEmpty()) {
                                     Spacer(modifier = Modifier.height(8.dp))
@@ -209,22 +208,35 @@ fun MyPageArchiveDetailScreen(navController: NavController) {
             }
         }
     }
-    //------------------
+    // 공유 확인 다이얼로그
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.shareToPost { createdPostId ->
-                        if (createdPostId.isNotBlank()) {
-                            navController.navigate(Routes.CommunityDetail(postId = createdPostId)) {
+                TextButton(
+                    onClick = {
+                        viewModel.shareToPost { potId, tag, title, logIds ->
+                            navController.navigate(
+                                Routes.CommunityPost(
+                                    postId = null,
+                                    potId = potId,
+                                    tag = uiState.pot?.tag,
+                                    title = uiState.pot?.name,
+                                    studyLogIds = logIds
+                                )
+                            ) {
                                 launchSingleTop = true
                             }
+                            showDialog = false
+                            viewModel.toggleSelectionMode(false)
                         }
-                        showDialog = false
-                        viewModel.toggleSelectionMode(false)
                     }
-                }) { Text("확인") }
+                )
+                {
+                    Text(
+                        text = "확인",
+                    )
+                }
             },
             dismissButton = {
                 TextButton(onClick = { showDialog = false }) { Text("취소") }
