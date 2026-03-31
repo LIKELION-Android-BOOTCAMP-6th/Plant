@@ -176,10 +176,10 @@ fun MyPageSettingScreen(navController: NavController) {
                 modifier = Modifier.align(Alignment.Center)
             )
         }
-        ButtonTemplate(text = "이용약관") { }
-        ButtonTemplate(text = "FAQ") { }
-        ButtonTemplate(text = "사용설명서") { }
-        ButtonTemplate(text = "앱 테마") { }
+//        ButtonTemplate(text = "이용약관") { }
+//        ButtonTemplate(text = "FAQ") { }
+//        ButtonTemplate(text = "사용설명서") { }
+//        ButtonTemplate(text = "앱 테마") { }
 
         // **************************수정: 직접 deleteAccount() 호출 대신 다이얼로그 띄우기
         ButtonTemplate(text = "회원탈퇴") {
