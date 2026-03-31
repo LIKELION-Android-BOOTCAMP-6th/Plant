@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.*
@@ -33,6 +32,8 @@ import com.a32b.plant.data.di.CurrentUser
 import com.a32b.plant.data.di.ViewModelFactory
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityDetailViewModel
 import com.a32b.plant.ui.theme.*
+import com.a32b.plant.core.component.ConfirmDialog
+import com.a32b.plant.data.model.Comment
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,25 +57,45 @@ fun CommunityDetailScreen(
     val isLikedByMe = postState?.isLiked == true
 
 
+    // 게시글 삭제 다이얼로그 (core/component/ConfirmDialog.kt - 다이얼로그 공통소스 ConfirmDialog로 변경)
     if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { viewModel.closeDeleteDialog() },
-            title = { Text("게시글 삭제", color = Color.Black, fontWeight = FontWeight.Bold) },
-            text = { Text("정말로 삭제하시겠습니까?", color = Color.Black) },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deletePost { navController.popBackStack() }
-                    viewModel.closeDeleteDialog()
-                }) {
-                    Text("삭제", color = Color.Red, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.closeDeleteDialog() }) {
-                    Text("취소", color = Color.Black)
-                }
-            },
-            containerColor = sub2
+        ConfirmDialog(
+            text = "게시글을 삭제하시겠습니까?",
+            onDismiss = { viewModel.closeDeleteDialog() },
+            onConfirm = {
+                viewModel.deletePost { navController.popBackStack() }
+                viewModel.closeDeleteDialog()
+            }
+        )
+    }
+//    if (showDeleteDialog) {
+//        AlertDialog(
+//            onDismissRequest = { viewModel.closeDeleteDialog() },
+//            title = { Text("게시글 삭제", color = Color.Black, fontWeight = FontWeight.Bold) },
+//            text = { Text("정말로 삭제하시겠습니까?", color = Color.Black) },
+//            confirmButton = {
+//                TextButton(onClick = {
+//                    viewModel.deletePost { navController.popBackStack() }
+//                    viewModel.closeDeleteDialog()
+//                }) {
+//                    Text("삭제", color = Color.Red, fontWeight = FontWeight.Bold)
+//                }
+//            },
+//            dismissButton = {
+//                TextButton(onClick = { viewModel.closeDeleteDialog() }) {
+//                    Text("취소", color = Color.Black)
+//                }
+//            },
+//            containerColor = sub2
+//        )
+//    }
+
+    // 댓글 삭제 다이얼로그
+    if (uiState.deletingCommentId != null) {
+        ConfirmDialog(
+            text = "댓글을 삭제하시겠습니까?",
+            onDismiss = { viewModel.closeCommentDeleteDialog() },
+            onConfirm = { viewModel.deleteComment() }
         )
     }
 
@@ -176,10 +197,23 @@ fun CommunityDetailScreen(
                         Spacer(modifier = Modifier.height(20.dp))
                     }
 
-
+                    // CommentRow에 수정/삭제 기능 파라미터 전달
                     items(uiState.commentList) { commentData ->
-                        CommentRow(name = commentData.user.nickname, profileImg = commentData.user.profileImg,content = commentData.content)
+                        CommentRow(
+                            comment = commentData,
+                            isOwner = commentData.user.uid == CurrentUser.uid,
+                            isEditing = uiState.editingCommentId == commentData.commentId,
+                            editingText = uiState.editingCommentText,
+                            onEditTextChange = { viewModel.onEditCommentTextChange(it) },
+                            onEditStart = { viewModel.startEditComment(commentData) },
+                            onEditSubmit = { viewModel.submitEditComment() },
+                            onEditCancel = { viewModel.cancelEditComment() },
+                            onDeleteClick = { viewModel.openCommentDeleteDialog(commentData.commentId) }
+                        )
                         Spacer(modifier = Modifier.height(12.dp))
+//                    items(uiState.commentList) { commentData ->
+//                        CommentRow(name = commentData.user.nickname, profileImg = commentData.user.profileImg,content = commentData.content)
+//                        Spacer(modifier = Modifier.height(12.dp))
                     }
                 }
             }
@@ -187,17 +221,82 @@ fun CommunityDetailScreen(
     }
 }
 
+// CommentRow에 인라인 편집 모드 + 수정/삭제 아이콘 추가
 @Composable
-fun CommentRow(name: String, profileImg:String, content: String) {
+fun CommentRow(
+    comment: Comment,
+    isOwner: Boolean,
+    isEditing: Boolean,
+    editingText: String,
+    onEditTextChange: (String) -> Unit,
+    onEditStart: () -> Unit,
+    onEditSubmit: () -> Unit,
+    onEditCancel: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
     Row(verticalAlignment = Alignment.Top) {
-        ProfileImage(profileImg, 24)
+        ProfileImage(comment.user.profileImg, 24)
         Spacer(Modifier.width(8.dp))
-        Column {
-            Text(name, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.Black)
-            Text(content, fontSize = 14.sp, color = Color.Black)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(comment.user.nickname, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.Black)
+
+            if (isEditing) {
+                // 인라인 편집 모드
+                TextField(
+                    value = editingText,
+                    onValueChange = onEditTextChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                )
+                Row {
+                    TextButton(onClick = onEditSubmit) {
+                        Text("저장", color = primary, fontSize = 12.sp)
+                    }
+                    TextButton(onClick = onEditCancel) {
+                        Text("취소", color = Color.Gray, fontSize = 12.sp)
+                    }
+                }
+            } else {
+                Text(comment.content, fontSize = 14.sp, color = Color.Black)
+            }
+        }
+
+        // 본인 댓글이고 편집 중이 아닐 때만 수정/삭제 아이콘 표시
+        if (isOwner && !isEditing) {
+            IconButton(onClick = onEditStart, modifier = Modifier.size(28.dp)) {
+                Icon(
+                    painterResource(id = R.drawable.ic_edit), null,
+                    tint = Color.Gray, modifier = Modifier.size(14.dp)
+                )
+            }
+            IconButton(onClick = onDeleteClick, modifier = Modifier.size(28.dp)) {
+                Icon(
+                    painterResource(id = R.drawable.ic_trash), null,
+                    tint = Color.Gray, modifier = Modifier.size(14.dp)
+                )
+            }
         }
     }
 }
+//@Composable
+//fun CommentRow(name: String, profileImg:String, content: String) {
+//    Row(verticalAlignment = Alignment.Top) {
+//        ProfileImage(profileImg, 24)
+//        Spacer(Modifier.width(8.dp))
+//        Column {
+//            Text(name, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.Black)
+//            Text(content, fontSize = 14.sp, color = Color.Black)
+//        }
+//    }
+//}
 
 @Composable
 fun CommentInputSection(nickname: String, text: String, onTextChange: (String) -> Unit, onSend: () -> Unit) {

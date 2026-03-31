@@ -16,6 +16,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import kotlin.text.get
 
 class PostRepository(private val db: FirebaseFirestore) {
 
@@ -66,16 +67,30 @@ class PostRepository(private val db: FirebaseFirestore) {
         }.await()
     }
 
-    suspend fun getComments(postId: String): List<Comment>{
-       return  db.collection("posts").document(postId)
+
+    // 댓글 수정 하려면 commentId 필요! 아래의 원래 함수는 comments 컬렉션의 {commentsId} 문서 안의 필드를 전부 가져오나,
+    // 댓글 수정 및 삭제를 하려면 문서 {commentsId} 자체가 필요하고 firestore에서 문서 ID는 필드가 아니라 경로라서
+    // 아래와 같이 각 문서를 순회하면서 doc.id로 문서 ID를 직접 꺼내서 copy해야함.
+    suspend fun getComments(postId: String): List<Comment> {
+        return db.collection("posts").document(postId)
             .collection("comments")
             .get()
             .await()
-            .toObjects<Comment>()
+            .documents.mapNotNull { doc ->
+                doc.toObject(Comment::class.java)?.copy(commentId = doc.id)
+            }
             .sortedByDescending { it.createdAt }
-
     }
+//    suspend fun getComments(postId: String): List<Comment>{
+//       return  db.collection("posts").document(postId)
+//            .collection("comments")
+//            .get()
+//            .await()
+//            .toObjects<Comment>()
+//            .sortedByDescending { it.createdAt }
+//    }
 
+    // 댓글 남기기 함수
     suspend fun addComment(postId: String, comment: Comment, activity: CommunityActivity) {
 
         val commentRef = db.collection("posts").document(postId)
@@ -95,6 +110,32 @@ class PostRepository(private val db: FirebaseFirestore) {
 
     }
 
+    // 댓글 수정 함수
+    suspend fun updateComment(postId: String, commentId: String, newContent: String) {
+        db.collection("posts").document(postId)
+            .collection("comments").document(commentId)
+            .update("content", newContent)
+            .await()
+    }
+
+    // 댓글 삭제 함수 (activity도 함께 삭제 + commentCount 감소)
+    suspend fun deleteComment(postId: String, commentId: String) {
+        val commentDoc = db.collection("posts").document(postId)
+            .collection("comments").document(commentId)
+
+        // activityId가 있으면 activity도 삭제
+        val activityId = commentDoc.get().await().getString("activityId")
+
+        commentDoc.delete().await()
+
+        if (!activityId.isNullOrEmpty()) {
+            db.collection("activities").document(activityId).delete().await()
+        }
+
+        db.collection("posts").document(postId)
+            .update("commentCount", FieldValue.increment(-1))
+            .await()
+    }
     suspend fun getActivityId(postId: String) : String{
         return db.collection("posts").document(postId)
             .get()

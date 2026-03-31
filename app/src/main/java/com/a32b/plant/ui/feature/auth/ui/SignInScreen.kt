@@ -51,6 +51,7 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.launch
 import androidx.credentials.exceptions.NoCredentialException
+import android.app.Activity
 
 @Composable
 fun SignInScreen(navController: NavController) {
@@ -524,7 +525,7 @@ fun SignInScreen(navController: NavController) {
                                     // 3. 구글 계정 선택 팝업 표시 + 결과 받기
                                     val result = credentialManager.getCredential(
                                         request = request,
-                                        context = context
+                                        context = context as Activity
                                     )
 
                                     // 4. 결과에서 idToken 추출 → ViewModel로 전달

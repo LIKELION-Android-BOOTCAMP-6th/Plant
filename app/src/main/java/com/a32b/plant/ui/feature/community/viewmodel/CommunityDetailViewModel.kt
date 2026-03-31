@@ -17,9 +17,16 @@ import kotlinx.coroutines.launch
 data class CommunityDetailUiState(
     //⭐⭐⭐⭐다른 것들도 여기로 넣어서 관리하기
     val comment: String = "",
-    val commentList: List<Comment> = emptyList()
+    val commentList: List<Comment> = emptyList(),
 
+    // 댓글 수정 상태
+    val editingCommentId: String? = null,
+    val editingCommentText: String = "",
+
+    // 댓글 삭제 대상 ID
+    val deletingCommentId: String? = null
 )
+
 class CommunityDetailViewModel(
     private val repository: PostRepository,
     private val postId: String
@@ -75,9 +82,13 @@ class CommunityDetailViewModel(
                     )
                 )
             } catch (e: Exception) { e.printStackTrace() }
+
+            // loadComment()를 launch 안으로 이동하여 addComment 완료 '후' 호출되도록 보장
+            _uiState.update{it.copy(comment = "")}
+            loadComment()
         }
-        _uiState.update{it.copy(comment = "")}
-        loadComment()
+//        _uiState.update{it.copy(comment = "")}
+//        loadComment()
     }
 
     fun deletePost(onComplete: () -> Unit) {
@@ -107,4 +118,60 @@ class CommunityDetailViewModel(
             }
         }
     }
+
+    // 댓글 수정 관련 함수
+    fun startEditComment(comment: Comment) {
+        _uiState.update {
+            it.copy(editingCommentId = comment.commentId, editingCommentText = comment.content)
+        }
+    }
+
+    // 댓글 수정 관련 함수
+    fun onEditCommentTextChange(text: String) {
+        _uiState.update { it.copy(editingCommentText = text) }
+    }
+
+    // 댓글 수정 관련 함수
+    fun cancelEditComment() {
+        _uiState.update { it.copy(editingCommentId = null, editingCommentText = "") }
+    }
+
+    // 댓글 수정 관련 함수
+    fun submitEditComment() {
+        val state = _uiState.value
+        val commentId = state.editingCommentId ?: return
+        if (state.editingCommentText.isBlank()) return
+
+        viewModelScope.launch {
+            try {
+                repository.updateComment(postId, commentId, state.editingCommentText)
+            } catch (e: Exception) { e.printStackTrace() }
+            _uiState.update { it.copy(editingCommentId = null, editingCommentText = "") }
+            loadComment()
+        }
+    }
+
+    // 댓글 삭제 관련 함수
+    fun openCommentDeleteDialog(commentId: String) {
+        _uiState.update { it.copy(deletingCommentId = commentId) }
+    }
+
+    // 댓글 삭제 관련 함수
+    fun closeCommentDeleteDialog() {
+        _uiState.update { it.copy(deletingCommentId = null) }
+    }
+
+    // 댓글 삭제 관련 함수
+    fun deleteComment() {
+        val commentId = _uiState.value.deletingCommentId ?: return
+
+        viewModelScope.launch {
+            try {
+                repository.deleteComment(postId, commentId)
+            } catch (e: Exception) { e.printStackTrace() }
+            _uiState.update { it.copy(deletingCommentId = null) }
+            loadComment()
+        }
+    }
+
 }

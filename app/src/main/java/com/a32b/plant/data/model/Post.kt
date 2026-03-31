@@ -11,7 +11,7 @@ data class PostAuthor(
 
 // ▼▼▼ 추가: ERD의 comments 서브컬렉션 → user 중첩 맵에 맞추기
 data class CommentUser(
-    val id: String = "",
+    val uid: String = "",
     val nickname: String = "",
     val profileImg: String = ""
 )
