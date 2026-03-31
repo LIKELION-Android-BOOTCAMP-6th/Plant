@@ -85,6 +85,8 @@ class HomeViewModel(
         val potId = _interruptedUiState.value.interruptedStudySession!!.potId
         potRepository.createStudyLog(potId!!, studyLog )
         potRepository.updateTotalStudyTime(potId,studyTime)
+        studyingRepository.updateUserTotalStudyTime(studyTime)
+
     }
     private fun updateCurrentDate() {
         val current = LocalDateTime.now()

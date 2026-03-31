@@ -6,6 +6,7 @@ import com.a32b.plant.data.di.CurrentUser
 import com.a32b.plant.data.local.StudyingDataStore
 import com.a32b.plant.data.local.StudyingSession
 import com.a32b.plant.data.model.StudyingUser
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 
@@ -55,6 +56,10 @@ class StudyingRepository(private val db: FirebaseFirestore, private val appConte
             .addOnSuccessListener { doc ->
                 doc.firstOrNull()?.reference?.delete()
             }
+    }
+    fun updateUserTotalStudyTime(studyTime: Long) {
+        db.collection("users").document(CurrentUser.uid)
+            .update("totalStudyTime", FieldValue.increment(studyTime))
     }
 
     suspend fun saveSession(session: StudyingSession) = datasore.save(appContext, session)
