@@ -43,11 +43,6 @@ import com.a32b.plant.ui.theme.fontColorSub
 import com.a32b.plant.ui.theme.primary
 import com.a32b.plant.ui.theme.sub2
 import com.a32b.plant.ui.theme.textFieldBackground
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
 import androidx.compose.ui.res.stringResource
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
@@ -55,7 +50,7 @@ import androidx.credentials.exceptions.GetCredentialCancellationException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.launch
-
+import androidx.credentials.exceptions.NoCredentialException
 
 @Composable
 fun SignInScreen(navController: NavController) {
@@ -539,6 +534,13 @@ fun SignInScreen(navController: NavController) {
 
                                 } catch (e: GetCredentialCancellationException) {
                                     // 사용자가 계정 선택을 취소한 경우 → 무시
+                                } catch (e: NoCredentialException) {
+                                    // 폰에 구글 계정이 없는 경우
+                                    Toast.makeText(context, "기기에 Google 계정을 먼저 추가해주세요.", Toast.LENGTH_SHORT).show()
+
+                                    val intent = android.content.Intent(android.provider.Settings.ACTION_ADD_ACCOUNT)
+                                    intent.putExtra("account_types", arrayOf("com.google"))
+                                    context.startActivity(intent)
                                 } catch (e: Exception) {
                                     Toast.makeText(context, "잘못된 접근입니다.", Toast.LENGTH_SHORT).show()
                                 }
