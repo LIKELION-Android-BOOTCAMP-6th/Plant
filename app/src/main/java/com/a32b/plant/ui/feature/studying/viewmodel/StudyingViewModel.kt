@@ -153,6 +153,7 @@ class StudyingViewModel(
         fun setStudyLog(): StudyLog = StudyLog(timestamp, _uiState.value.studyLog, _uiState.value.timer)
         potRepository.createStudyLog(potId, setStudyLog())
         potRepository.updateTotalStudyTime(potId, _uiState.value.timer)
+        repository.updateUserTotalStudyTime(_uiState.value.timer)
         repository.deleteStudyingUser()
 
         viewModelScope.launch {
