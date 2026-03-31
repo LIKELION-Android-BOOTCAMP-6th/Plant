@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
+import kotlin.collections.sortedByDescending
 import kotlin.coroutines.resume
 import kotlin.jvm.java
 
@@ -172,6 +173,22 @@ class PotRepository(private val db: FirebaseFirestore) {
             Log.e("plantLog", "${e.message}")
             emptyList()
         }
+    }
+
+    //선택된 학습 기록 내용 조회
+    suspend fun getSelectedStudyLog(potId: String, logId: String): StudyLog?{
+        return try {
+            db.collection("users").document(uid)
+                .collection("pots").document(potId)
+                .collection("logs").document(logId)
+                .get()
+                .await()
+                .toObject(StudyLog::class.java)
+        }catch (e: Exception) {
+            Log.e("selectedStudyLog", "${e.message}")
+            null
+        }
+
     }
 
 

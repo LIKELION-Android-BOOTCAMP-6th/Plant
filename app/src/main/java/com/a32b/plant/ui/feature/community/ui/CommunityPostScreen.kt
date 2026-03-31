@@ -5,6 +5,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -22,6 +23,7 @@ import androidx.navigation.toRoute
 import com.a32b.plant.core.component.ConfirmDialog
 import com.a32b.plant.core.component.TagGroup
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.data.di.ViewModelFactory
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityPostViewModel
 import com.a32b.plant.ui.theme.Typography
@@ -36,19 +38,21 @@ fun CommunityPostScreen(
 
     val postId = args?.postId
     val potId = args?.potId
-    val studyLog = args?.studyLogId
+    val tag = args?.tag
+    val title = args?.title
+    val studyLogIds = args?.studyLogIds
     val viewModel: CommunityPostViewModel = viewModel(
-        factory = ViewModelFactory.communityPostViewModelFactory(postId, potId, studyLog)
+        factory = ViewModelFactory.communityPostViewModelFactory(postId, potId, tag,title,studyLogIds)
     )
 
     val uiState by viewModel.uiState.collectAsState()
 
-    val tags = listOf("중학생", "고등학생", "대학생","취준", "자격증")
+    val tags = uiState.tags
 
 
     LaunchedEffect(postId, potId) {
         postId?.let { viewModel.getPost(postId) }
-        potId?.let { viewModel.getStudyLog(potId) }
+        potId?.let { viewModel.onIsSharedChange() }
     }
     BackHandler { viewModel.onIsDismissDialogShowChange() }
 
@@ -106,23 +110,42 @@ fun CommunityPostScreen(
             item {
                 Text("카테고리", style = Typography.bodyMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
-                TagGroup(tags){ selected ->
+                TagGroup(tags, enable = !uiState.isShared){ selected ->
                     viewModel.onSelectedTagChange(selected)
 
                 }
             }
 
             //⭐⭐⭐⭐ 공유됐을 때 게시글 세팅하고 터치불능? 글 내용 못 바꾸게 바꾸기 태그에 공유가 있는지로 확인해서 처리하기
-            item {
-                Text("본문", style = Typography.bodyMedium, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(8.dp))
-                PostInputField(
-                    value = uiState.content,
-                    onValueChange = { viewModel.onContentChange(it) },
-                    placeholder = "나누고 싶은 이야기를 적어주세요.\n\n※ 비방이나 욕설은 제재 대상이 될 수 있습니다.",
-                    modifier = Modifier.heightIn(min = 400.dp)
-                )
+            if (uiState.isShared){
+                val studyLogs = uiState.studyLogs ?: emptyList()
+                items(studyLogs) { log ->
+                    Card(shape = RoundedCornerShape(13.dp),
+                        elevation = CardDefaults.elevatedCardElevation(2.dp),
+                        colors = CardDefaults.cardColors(Color.White)) {
+                        Text("${log.title} [${TimeFormatter.formatToDigitalClock(log.studyingTime)}]", style = MaterialTheme.typography.titleSmall)
+                        log.contents.forEach { content ->
+                            Text(content, style = Typography.bodyMedium)
+                        }
+                    }
+                    val content = studyLogs.joinToString("\n\n") { log ->
+                        "${log.title} [${TimeFormatter.formatToDigitalClock(log.studyingTime)}]\n${log.contents.joinToString("\n")}"
+                    }
+                    viewModel.onContentChange(content)
+                }
+            }else{
+                item {
+                    Text("본문", style = Typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    PostInputField(
+                        value = uiState.content,
+                        onValueChange = { viewModel.onContentChange(it) },
+                        placeholder = "나누고 싶은 이야기를 적어주세요.\n\n※ 비방이나 욕설은 제재 대상이 될 수 있습니다.",
+                        modifier = Modifier.heightIn(min = 400.dp)
+                    )
+                }
             }
+
 
             item { Spacer(modifier = Modifier.height(40.dp)) }
         }

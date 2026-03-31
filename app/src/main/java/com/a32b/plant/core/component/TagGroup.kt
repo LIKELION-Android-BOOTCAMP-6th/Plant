@@ -18,7 +18,7 @@ import com.a32b.plant.ui.theme.Typography
 import com.a32b.plant.ui.theme.primary
 
 @Composable
-fun TagGroup(tags: List<String>, isMultiSelected: Boolean = true, onSelectedChanged: (List<String>) -> Unit = {}) {
+fun TagGroup(tags: List<String>, isMultiSelected: Boolean = true, enable: Boolean = true, onSelectedChanged: (List<String>) -> Unit = {}) {
     val selectedTags = remember { mutableStateListOf<String>() }
     LazyRow {
         items(tags) { tag ->
@@ -27,6 +27,7 @@ fun TagGroup(tags: List<String>, isMultiSelected: Boolean = true, onSelectedChan
                 colors = CardDefaults.cardColors(containerColor = if (selectedTags.contains(tag)) primary else Color.White),
                 elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
                 modifier = Modifier.padding(5.dp),
+                enabled = enable,
                 onClick = {
                     if(isMultiSelected){
                         //다중 선택
