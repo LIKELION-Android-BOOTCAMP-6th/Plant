@@ -68,6 +68,8 @@ fun StudyPlanDetailScreen(
     //공유 모든 상태
     val isShareMode by viewModel.isShareMode.collectAsState()
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -334,7 +336,18 @@ fun StudyPlanDetailScreen(
                         text = "학습 완료",
                         semiText = "이 화분의 학습을 최종 완료 하시겠습니까?\n완료 후에는 '기른 나무'에서 확인 가능합니다.",
                         onDismiss = { viewModel.setCompleteDialogShown(false) },
-                        onConfirm = { viewModel.completeStudyPlan { navController.popBackStack() } }
+                        onConfirm = {
+                            viewModel.completeStudyPlan {
+                                val potName = potInfo?.name ?: "화분"
+
+                                android.widget.Toast.makeText(
+                                    context,
+                                    "\"$potName\"화분의 학습을 완료했어요!",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                                navController.popBackStack()
+                            }
+                        }
                     )
                 }
             }
