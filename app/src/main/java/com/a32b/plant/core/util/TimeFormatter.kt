@@ -35,6 +35,9 @@ object TimeFormatter {
     fun formatToKoreanDate(dateTime: LocalDateTime): String
         = dateTime.format(DateTimeFormatter.ofPattern("yyyy년 MM월 dd일"))
 
+    fun formatWithDayOfWeek(dateTime: LocalDateTime): String
+            = dateTime.format(DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 E요일", Locale.KOREAN))
+
     fun formatToTimeOnly(dateTime: LocalDateTime): String
         = dateTime.format(DateTimeFormatter.ofPattern("HH:mm"))
 
