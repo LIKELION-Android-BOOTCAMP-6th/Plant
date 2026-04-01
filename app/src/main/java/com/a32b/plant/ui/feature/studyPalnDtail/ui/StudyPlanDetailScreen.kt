@@ -98,7 +98,7 @@ fun StudyPlanDetailScreen(
                                         else R.drawable.ic_backbtn
                                 ),
                                 contentDescription = if (isShareMode) "공유 취소" else "뒤로가기",
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(19.dp)
                             )
                         }
                 },
@@ -109,7 +109,7 @@ fun StudyPlanDetailScreen(
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_edit),
                                 "수정하기",
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(19.dp)
                             )
                         }
                     }
@@ -121,9 +121,9 @@ fun StudyPlanDetailScreen(
                     } }) {
                         if (isShareMode) {
                             // 아이콘 벡터와 리소스 처리 분기
-                            Icon(Icons.Default.Check, contentDescription = "확인", modifier = Modifier.size(24.dp), tint = fontColorSub)
+                            Icon(Icons.Default.Check, contentDescription = "확인", modifier = Modifier.size(19.dp), tint = fontColorSub)
                         } else {
-                            Icon(painterResource(id = R.drawable.ic_share), contentDescription = "공유", modifier = Modifier.size(24.dp))
+                            Icon(painterResource(id = R.drawable.ic_share), contentDescription = "공유", modifier = Modifier.size(19.dp))
                         }
                     }
                 }
@@ -216,8 +216,8 @@ fun StudyPlanDetailScreen(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        contentPadding = PaddingValues(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(logs) { record ->
                             StudyRecordCard(
@@ -363,20 +363,19 @@ fun StudyRecordCard(
     onSelectionChange: (Boolean) -> Unit,
     onCardClick: () -> Unit,
     onDeleteClick: () -> Unit){
-    // Timestamp -> LocalDateTime 변환
     val dateTime = log.createAt.toDate().toInstant()
         .atZone(ZoneId.systemDefault())
         .toLocalDateTime()
     Card(
         modifier = Modifier.fillMaxWidth()
-            .padding(vertical = 4.dp)
+            .padding(vertical = 2.dp)
             .clickable{ onCardClick()},
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(3.dp),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if(isShareMode) {
@@ -384,10 +383,10 @@ fun StudyRecordCard(
                     checked = log.isSelected,
                     onCheckedChange = onSelectionChange
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(5.dp))
             }
             //리스트 상세 다이얼로그
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(10.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -395,7 +394,7 @@ fun StudyRecordCard(
                 // 날짜
                 Text(
                     text = if (log.title.isNotEmpty()) log.title else TimeFormatter.formatToKoreanDate(dateTime),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
@@ -404,7 +403,7 @@ fun StudyRecordCard(
                 // 2. 공부시간 (우측 고정)
                 Text(
                     text = "[${TimeFormatter.formatToDigitalClock(log.studyingTime)}]",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
                 )

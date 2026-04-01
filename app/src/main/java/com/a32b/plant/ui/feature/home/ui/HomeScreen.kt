@@ -353,7 +353,7 @@ fun InterruptedDialog(onDismiss: () -> Unit, onConfirm: (List<String>) -> Unit, 
                     Image(painter = painterResource(R.drawable.ic_studying_plus),
                         contentDescription = "추가 버튼")
                 }
-                Spacer(modifier = Modifier.height(30.dp))
+                //Spacer(modifier = Modifier.height(30.dp))
 
                 Row(modifier = Modifier.fillMaxWidth()) {
                     Button(onClick = onDismiss,
