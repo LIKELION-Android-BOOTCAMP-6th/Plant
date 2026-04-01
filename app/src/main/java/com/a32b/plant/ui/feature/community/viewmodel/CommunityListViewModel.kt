@@ -52,9 +52,8 @@ class CommunityListViewModel(private val repository: PostRepository) : ViewModel
         _uiState
     ) { posts, query, uiState ->
         posts.filter { post ->
-            val matchesQuery = if (query.isBlank()) true 
-                               else post.content!!.contains(query, ignoreCase = true) || post.title.contains(query, ignoreCase = true)
-
+            val matchesQuery = if (query.isBlank()) true
+            else (post.content?.contains(query, ignoreCase = true) ?: false) || post.title.contains(query, ignoreCase = true)
             //필터 검색 - 하나라도 들어있을 시
             val matchesTags = if (uiState.selected.isEmpty()) true
                               else uiState.selected.any{it in post.tag}
