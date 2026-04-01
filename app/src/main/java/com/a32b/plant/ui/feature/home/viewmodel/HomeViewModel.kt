@@ -102,6 +102,17 @@ class HomeViewModel(
                 profile?.let { user ->
                     _userName.value = user.nickname ?: "사용자"
 
+                    //레벨 DB 업데이트
+                    user.potList.forEach { pot ->
+                        val potId = pot.id ?: return@forEach
+                        val calculatedLevel = pot.level // PotInfo 내부 로직으로 계산된 값
+
+                        // DB에 저장된 값(imageUrl)과 계산값이 다르면 DB를 업데이트함
+                        if (pot.imageUrl != calculatedLevel) {
+                            potRepository.updatePotLevelOnly(potId, calculatedLevel)
+                        }
+                    }
+
                     // 완료 여부에 따른 필터 추가
                     val ongoingPots = user.potList.filter { !it.isCompleted }.toList()
                     _potList.value = ongoingPots

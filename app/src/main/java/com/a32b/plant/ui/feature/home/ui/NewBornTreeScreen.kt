@@ -74,7 +74,7 @@ fun NewBornTreeScreen(navController: NavController,
             // 하단 버튼
             Button(
                 onClick = {
-                    viewModel.createPot(selectedTag, potName){
+                    viewModel.createPot(selectedTag, potName.trim()){
                         navController.popBackStack()
                     }
                 },
@@ -171,8 +171,9 @@ fun NewBornTreeScreen(navController: NavController,
                         value = potName,
                         onValueChange = { input ->
                             // 줄바꿈 금지 & 글자 수 제한
-                            if(!input.contains("\n") && input.length <= 15){
-                            potName = input
+                            //공백 입력
+                            if(!input.contains("\n") && input.length <= 15 && input.isEmpty() || input.isNotBlank()){
+                                potName = input
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -188,7 +189,7 @@ fun NewBornTreeScreen(navController: NavController,
     }
 }
 fun checkEnable(selectedTag:String, potName:String, isUploading: Boolean): Boolean{
-    if(selectedTag.isNotEmpty() && potName.isNotEmpty() && !isUploading){
+    if(selectedTag.isNotEmpty() && potName.trim().isNotEmpty() && !isUploading){
         return true
     }
     return false

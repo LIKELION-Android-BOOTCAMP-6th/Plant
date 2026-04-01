@@ -193,5 +193,24 @@ class PotRepository(private val db: FirebaseFirestore) {
 
     }
 
+    fun updatePotLevelOnly(potId: String, newLevel: String){
+        val uid = CurrentUser.uid
+        if(uid.isEmpty()) return
+
+        val updates = mapOf(
+            "imageUrl" to newLevel,
+            "level" to newLevel
+        )
+        db.collection("users").document(uid)
+            .collection("pots").document(potId)
+            .update(updates)
+            .addOnSuccessListener {
+                Log.d("LevelSync", "화분($potId) DB 레벨이 ${newLevel}로 동기화되었습니다.")
+            }
+            .addOnFailureListener { e ->
+                Log.e("LevelSync", "레벨 업데이트 실패", e)
+            }
+    }
+
 
 }

@@ -17,6 +17,8 @@ import com.a32b.plant.ui.feature.studyPalnDtail.viewmodel.StudyPlanDetailViewMod
 import com.a32b.plant.R
 import com.a32b.plant.data.model.StudyLog
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -56,6 +58,9 @@ fun StudyPlanDetailScreen(
     //전체 선택 상태
     val isAllSelected = viewModel.isAllSelected
 
+    //공유 모든 상태
+    val isShareMode by viewModel.isShareMode.collectAsState()
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -66,35 +71,44 @@ fun StudyPlanDetailScreen(
                     } ?: Text("로딩 중...")
                 },
                 navigationIcon = {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(start = 8.dp)
-                    ) {
                         //뒤로 가기
-                        IconButton(onClick = { navController.popBackStack() }) {
+                        IconButton(onClick = {
+                            if(isShareMode) viewModel.setShareMode(false)
+                            else navController.popBackStack()
+                        }) {
                             Icon(
-                                painter = painterResource(id = R.drawable.ic_backbtn),
-                                contentDescription = "뒤로가기",
+                                painter = painterResource(
+                                    id = if(isShareMode) R.drawable.ic_study_result_close
+                                        else R.drawable.ic_backbtn
+                                ),
+                                contentDescription = if (isShareMode) "공유 취소" else "뒤로가기",
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                },
+                actions = {
+                    // 수정
+                    if(!isShareMode) {
+                        IconButton(onClick = { viewModel.setEditDialogShown(true) }) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_edit),
+                                "수정하기",
                                 modifier = Modifier.size(24.dp)
                             )
                         }
                     }
-                },
-                actions = {
-                    // 수정
-                    IconButton(onClick = { viewModel.setEditDialogShown(true) }) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_edit),
-                            contentDescription = "수정하기",
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                    IconButton(onClick = { viewModel.navigateToCommunityShare(navController) }) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_share),
-                            contentDescription = "공유하기",
-                            modifier = Modifier.size(24.dp)
-                        )
+                    IconButton(onClick = { if (!isShareMode) {
+                        viewModel.setShareMode(true)
+                    } else {
+                        // 2. 이미 공유 모드라면 데이터 전송(화면 이동) 수행
+                        viewModel.navigateToCommunityShare(navController)
+                    } }) {
+                        if (isShareMode) {
+                            // 아이콘 벡터와 리소스 처리 분기
+                            Icon(Icons.Default.Check, contentDescription = "확인", modifier = Modifier.size(24.dp), tint = fontColorSub)
+                        } else {
+                            Icon(painterResource(id = R.drawable.ic_share), contentDescription = "공유", modifier = Modifier.size(24.dp))
+                        }
                     }
                 }
             )
@@ -124,49 +138,48 @@ fun StudyPlanDetailScreen(
                         .padding(horizontal = 16.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        //전체 선택
-                        Checkbox(
-                            checked = isAllSelected,
-                            onCheckedChange = { viewModel.toggleAllSelection(it) }
-                        )
-                        Text("전체 선택", style = MaterialTheme.typography.bodyMedium)
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                    TextButton(
-                        onClick = { viewModel.setPotDeleteDialogShown(true) },
-                        modifier = Modifier.height(36.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp)
-
-                    ) {
-                        //선택 개수 표시
+                    if(isShareMode){
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            //전체 선택
+                            Checkbox(
+                                checked = isAllSelected,
+                             onCheckedChange = { viewModel.toggleAllSelection(it) }
+                            )
+                            Text("전체 선택", style = MaterialTheme.typography.bodyMedium)
+                        }
+                        Spacer(modifier = Modifier.weight(1f))
                         Text(
                             text = "${logs.count { it.isSelected }}개 선택됨",
                             style = MaterialTheme.typography.labelMedium,
                             color = fontColorSub
                         )
 
-
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_trash),
-                            contentDescription = "화분 전체 삭제",
-                            modifier = Modifier.size(18.dp),
-                            tint = fontColorSub
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            "화분 전체 삭제",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = fontColorSub
-                        )
+                    } else {
+                            Spacer(modifier = Modifier.weight(1f))
+                            TextButton(
+                                onClick = { viewModel.setPotDeleteDialogShown(true) },
+                                modifier = Modifier.height(36.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_trash),
+                                    contentDescription = "화분 전체 삭제",
+                                    modifier = Modifier.size(18.dp),
+                                    tint = fontColorSub
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    "화분 전체 삭제",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = fontColorSub
+                                )
+                        }
                     }
                 }
                 HorizontalDivider(thickness = 0.5.dp, color = fontColorSub)
             }
             // 학습 기록 리스트 영역
-            Box(
-                modifier = Modifier.weight(1f)
-            ) {
+            Box(modifier = Modifier.weight(1f)) {
                 //학습 기록 없을 시
                 if (logs.isEmpty()) {
                     Box(
@@ -190,10 +203,14 @@ fun StudyPlanDetailScreen(
                         items(logs) { record ->
                             StudyRecordCard(
                                 log = record,
+                                isShareMode = isShareMode,
                                 onSelectionChange = { isSelected ->
                                     viewModel.onLogSelectionChanged(record.id, isSelected)
                                 },
-                                onCardClick = { viewModel.onStudyLogClicked(record) },
+                                onCardClick = {
+                                    if (isShareMode) viewModel.onLogSelectionChanged(record.id, !record.isSelected)
+                                    else viewModel.onStudyLogClicked(record)
+                                },
                                 onDeleteClick = {
                                     viewModel.showDeleteDialog(record.id)
                                 }
@@ -328,6 +345,7 @@ fun StudyPlanDetailScreen(
 @Composable
 fun StudyRecordCard(
     log : StudyLog,
+    isShareMode: Boolean,
     onSelectionChange: (Boolean) -> Unit,
     onCardClick: () -> Unit,
     onDeleteClick: () -> Unit){
@@ -347,11 +365,13 @@ fun StudyRecordCard(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Checkbox(
-                checked = log.isSelected,
-                onCheckedChange = onSelectionChange
-            )
-
+            if(isShareMode) {
+                Checkbox(
+                    checked = log.isSelected,
+                    onCheckedChange = onSelectionChange
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+            }
             //리스트 상세 다이얼로그
             Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -376,15 +396,18 @@ fun StudyRecordCard(
                 )
                 Spacer(modifier = Modifier.width(5.dp))
 
-//                 //삭제 버튼
-                IconButton(
-                    onClick = onDeleteClick,
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(painterResource(R.drawable.ic_trash),
-                        contentDescription = "상세 공부 기록 삭제",
-                        tint = Color.LightGray
-                    )
+                if(!isShareMode) {
+                    //삭제 버튼
+                    IconButton(
+                        onClick = onDeleteClick,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            painterResource(R.drawable.ic_trash),
+                            contentDescription = "상세 공부 기록 삭제",
+                            tint = Color.LightGray
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
@@ -393,19 +416,19 @@ fun StudyRecordCard(
             val combinedContent = log.contents
                 .take(2)
                 .joinToString("\n") { "• $it" }
-            if(combinedContent.isNotEmpty()){
-                Text(
-                    text = combinedContent,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = fontColor,
-                    modifier = Modifier.fillMaxWidth(),
+                if(combinedContent.isNotEmpty()){
+                    Text(
+                        text = combinedContent,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = fontColor,
+                        modifier = Modifier.fillMaxWidth(),
 
-                    // 표시 줄 수
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+                        // 표시 줄 수
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
-        }
         }
     }
 }
