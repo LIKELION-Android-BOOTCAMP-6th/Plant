@@ -509,11 +509,11 @@ fun SignInScreen(navController: NavController) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp)
-                            .clickable {coroutineScope.launch {
-                                try {
+                            .clickable {
+                                coroutineScope.launch {
                                     // 1. 구글 로그인 옵션 설정
                                     val googleIdOption = GetGoogleIdOption.Builder()
-                                        .setFilterByAuthorizedAccounts(false)  // 모든 구글 계정 표시
+                                        .setFilterByAuthorizedAccounts(false)       // 모든 구글 계정 표시
                                         .setServerClientId(webClientId)
                                         .build()
 
@@ -522,30 +522,62 @@ fun SignInScreen(navController: NavController) {
                                         .addCredentialOption(googleIdOption)
                                         .build()
 
-                                    // 3. 구글 계정 선택 팝업 표시 + 결과 받기
-                                    val result = credentialManager.getCredential(
-                                        request = request,
-                                        context = context as Activity
-                                    )
+                                    try {
+                                        // 3. 구글 계정 선택 팝업 표시 + 결과 받기
+                                        val result = credentialManager.getCredential(
+                                            request = request,
+                                            context = context as Activity
+                                        )
 
-                                    // 4. 결과에서 idToken 추출 → ViewModel로 전달
-                                    val googleIdTokenCredential =
-                                        GoogleIdTokenCredential.createFrom(result.credential.data)
-                                    viewModel.handleGoogleSignIn(googleIdTokenCredential.idToken)
+                                        // 4. 결과에서 idToken 추출 → ViewModel로 전달
+                                        val googleIdTokenCredential =
+                                            GoogleIdTokenCredential.createFrom(result.credential.data)
+                                        viewModel.handleGoogleSignIn(googleIdTokenCredential.idToken)
 
-                                } catch (e: GetCredentialCancellationException) {
-                                    // 사용자가 계정 선택을 취소한 경우 → 무시
-                                } catch (e: NoCredentialException) {
-                                    // 폰에 구글 계정이 없는 경우
-                                    Toast.makeText(context, "기기에 Google 계정을 먼저 추가해주세요.", Toast.LENGTH_SHORT).show()
+                                    } catch (e: GetCredentialCancellationException) {
+                                        // 사용자가 계정 선택을 취소한 경우 → 무시
+                                    } catch (e: NoCredentialException) {
+                                        // 기기에 구글 계정이 있는지 확인
+                                        val accountManager =
+                                            android.accounts.AccountManager.get(context)
+                                        val hasGoogleAccount =
+                                            accountManager.getAccountsByType("com.google")
+                                                .isNotEmpty()
 
-                                    val intent = android.content.Intent(android.provider.Settings.ACTION_ADD_ACCOUNT)
-                                    intent.putExtra("account_types", arrayOf("com.google"))
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, "잘못된 접근입니다.", Toast.LENGTH_SHORT).show()
+                                        if (!hasGoogleAccount) {
+                                            // 진짜 구글 계정이 없는 경우 → 계정 추가 화면
+                                            Toast.makeText(
+                                                context,
+                                                "기기에 Google 계정을 먼저 추가해주세요.",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                            val intent =
+                                                android.content.Intent(android.provider.Settings.ACTION_ADD_ACCOUNT)
+                                            intent.putExtra("account_types", arrayOf("com.google"))
+                                            context.startActivity(intent)
+                                        } else {
+                                            // 계정은 있는데 실패 → 자동 재시도
+                                            try {
+                                                val retryResult = credentialManager.getCredential(
+                                                    request = request,
+                                                    context = context as Activity
+                                                )
+                                                val retryCredential =
+                                                    GoogleIdTokenCredential.createFrom(retryResult.credential.data)
+                                                viewModel.handleGoogleSignIn(retryCredential.idToken)
+                                            } catch (e2: Exception) {
+                                                Toast.makeText(
+                                                    context,
+                                                    "구글 로그인에 실패했습니다.\n다시 시도해주세요.",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "잘못된 접근입니다.", Toast.LENGTH_SHORT)
+                                            .show()
+                                    }
                                 }
-                            }
                             },
                         contentScale = ContentScale.Fit
                     )
