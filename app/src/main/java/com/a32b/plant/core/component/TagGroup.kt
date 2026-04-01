@@ -22,7 +22,6 @@ import com.a32b.plant.ui.theme.primary
 fun TagGroup(tags: List<String>, init: List<String> = emptyList(),isMultiSelected: Boolean = true, enable: Boolean = true, onSelectedChanged: (List<String>) -> Unit = {}) {
     val selectedTags = remember { mutableStateListOf<String>() }
     LaunchedEffect(init) {
-        Log.d("tag group", init.toString())
         selectedTags.clear()
         selectedTags.addAll(init)
     }

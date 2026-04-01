@@ -43,36 +43,24 @@ fun CommunityPostScreen(
     val tag = args?.tag
     val title = args?.title
     val studyLogIds = args?.studyLogIds
-    val tags = listOf(tag?.dropLast(2), tag?.takeLast(2))
     val viewModel: CommunityPostViewModel = viewModel(
         factory = ViewModelFactory.communityPostViewModelFactory(postId, potId, title,studyLogIds)
     )
 
-    Log.d("넘어온 거", tags.toString())
 
     val uiState by viewModel.uiState.collectAsState()
 
-//    val tags = uiState.tags
-    viewModel.onSelectedTagChange(tags.filterNotNull())
-
+    tag?.let {
+        val tags = listOf(tag.dropLast(2), tag.takeLast(2))
+        viewModel.onSelectedTagChange(tags)
+    }
 
     LaunchedEffect(postId,  Unit) {
-        Log.d("스크린","되라")
         postId?.let { viewModel.getPost(postId) }
         if(uiState.selected.contains("공유")){
             viewModel.onIsSharedChange()
         }
-//        potId?.let {
-//
-//            Log.d("tag", tag!!)
-//        }
-//        if (potId.isNullOrEmpty() && tags.contains("공유")){
-//
-//            Log.d("potId", potId.toString())
-//            Log.d("tag", tag!!)
-//
-//            viewModel.onIsSharedChange()
-//        }
+
         viewModel.event.collect { event ->
             when(event){
                 is CommunityPostEvent.NavigateToDetail -> {
@@ -92,7 +80,6 @@ fun CommunityPostScreen(
             PostTopBar(
                 isEditMode = postId != null,
                 onBackClick = {
-                    //⭐백버튼 클릭 시 정말 종료하겠냐는 다이얼로그 띄우기
                     viewModel.onIsDismissDialogShowChange()
                 },
                 onRegisterClick = {
@@ -137,7 +124,6 @@ fun CommunityPostScreen(
 
                 )
             }
-            Log.d("tagg", uiState.selected.toString())
 
             item {
                 Text("태그", style = Typography.bodyMedium, fontWeight = FontWeight.Bold)
@@ -146,8 +132,6 @@ fun CommunityPostScreen(
                     viewModel.onSelectedTagChange(selected)
 
                 }
-                Log.d("tagg", "아이템 안")
-
             }
 
             if (uiState.isShared){
