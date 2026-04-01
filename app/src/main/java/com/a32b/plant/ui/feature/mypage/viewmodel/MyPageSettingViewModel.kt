@@ -45,14 +45,14 @@ class MyPageSettingViewModel(
                     return@launch
                 }
 
-                // 2. nicknames 컬렉션에서 닉네임 문서 삭제
+                // 2. Firebase Auth 계정 삭제
+                firebaseUser.delete().await()
+
+                // 3. nicknames 컬렉션에서 닉네임 문서 삭제
                 nicknameRepository.deleteNickname(nickname)
 
-                // 3. Firestore users/{uid} 문서 삭제
+                // 4. Firestore users/{uid} 문서 삭제
                 userRepository.deleteUser(uid)
-
-                // 4. Firebase Auth 계정 삭제
-                firebaseUser.delete().await()
 
                 // 5. 로컬 유저 정보 초기화
                 CurrentUser.clear()
