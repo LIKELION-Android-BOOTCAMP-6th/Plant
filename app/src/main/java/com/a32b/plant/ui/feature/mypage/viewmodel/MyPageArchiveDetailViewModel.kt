@@ -106,14 +106,12 @@ class MyPageArchiveDetailViewModel(
 
         viewModelScope.launch {
             val potId = pot.id ?: "temp_id"
-            val tag = (pot.tag + "공유")
+            val tag = "${pot.tag ?: "기본"}공유"
             val title = pot.name ?: "제목 없음"
 
             val studyLogIds = selectedLogs.map { it.id }
 
             onSuccess(potId, tag, title, studyLogIds)
-
-            Log.d("plantLog", "종료 - 데이터 전달 완료")
         }
     }
 

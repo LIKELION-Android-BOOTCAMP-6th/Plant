@@ -14,10 +14,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.a32b.plant.R
 import com.a32b.plant.core.component.ProfileImage
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
@@ -37,13 +40,29 @@ fun MyPageArchiveScreen(navController: NavController) {
     Scaffold(
         topBar = {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp) // 표준 상단바 높이
+                    .padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                // 뒤로가기 버튼 or 선택 취소 버튼
+                IconButton(onClick = { navController.popBackStack() }) {
+                    Icon(
+                        painter = painterResource(
+                            id = R.drawable.ic_backbtn
+                        ),
+                        contentDescription = "뒤로가기",
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
                 Text(
-                    text = "${uiState.nickname}님의 기른 나무",
-                    style = MaterialTheme.typography.titleMedium
+                    text = "${uiState.nickname}의 기른 나무 수",
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 8.dp)
                 )
             }
 

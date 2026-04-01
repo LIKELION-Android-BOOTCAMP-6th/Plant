@@ -288,8 +288,8 @@ fun MyPageArchiveDetailScreen(navController: NavController) {
                         Routes.CommunityPost(
                             postId = null,
                             potId = potId,
-                            tag = uiState.pot?.tag,
-                            title = uiState.pot?.name,
+                            tag = tag,
+                            title = title,
                             studyLogIds = logIds
                         )
                     ) {
