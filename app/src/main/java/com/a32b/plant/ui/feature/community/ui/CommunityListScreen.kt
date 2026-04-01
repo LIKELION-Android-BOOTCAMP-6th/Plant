@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -142,7 +143,10 @@ fun PostCard(post: Post, isLiked: Boolean,onClick: () -> Unit ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
 
-                Text(text = post.title, fontWeight = FontWeight.Bold, style = Typography.bodyMedium)
+                Text(text = post.title, fontWeight = FontWeight.Bold, style = Typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f))
                 Text(text = TimeFormatter.formatTimeAgo(post.createdAt), fontSize = 11.sp, style = Typography.bodyMedium)
             }
             Spacer(modifier = Modifier.height(8.dp))

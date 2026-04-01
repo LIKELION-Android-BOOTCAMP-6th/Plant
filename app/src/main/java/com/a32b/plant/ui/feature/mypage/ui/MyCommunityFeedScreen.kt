@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -112,7 +113,9 @@ fun ContentList(lists : List<CommunityActivity>, onClick: (String) -> Unit){
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(list.title, style = Typography.titleSmall)
+                        Text(list.title, style = Typography.titleSmall,maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f))
                         Text(TimeFormatter.formatTimestamp(list.createAt), style = Typography.bodySmall)
                     }
                     list.comment?.let {
