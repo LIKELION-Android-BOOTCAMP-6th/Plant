@@ -68,53 +68,29 @@ fun HomeScreen(navController: NavController) {
         )
     }
     Scaffold(
-        topBar = {
-            Text(
-                text = "${userName}의 Garden",
-                modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.displayLarge
-            )
-        }
+        topBar = { HomeTopBar(userName) }
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(background),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            contentPadding = PaddingValues(bottom = 50.dp)
         ) {
             // [홈 1 영역] 상단 메인 카드
             item {
-                Spacer(modifier = Modifier.height(20.dp))
-                Text(currentDate,
-                    style = MaterialTheme.typography.titleSmall
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // 메인 카드
-                MainPlantCard(
-                    displayPot = displayPot,
-                    onStartClick = {
-                        // 화분이 있을 때만 공부 페이지로 이동
-                        if (!(displayPot.id.isNullOrEmpty())) {
-                            navController.navigate(
-                                Routes.Studying(displayPot.id!!, displayPot.tag?: "", displayPot.name ?: "", displayPot.level)
-                            )
-                        }
-                    },
-                    isTestMode = true
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-                Text("아래로 내려 화분 추가 & 확인하기",
-                    style = MaterialTheme.typography.bodySmall)
-                Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = Color.Gray)
-                Spacer(modifier = Modifier.height(30.dp))
+                HomeHeaderSection(currentDate, displayPot) {
+                    if(!displayPot.id.isNullOrEmpty()){
+                        navController.navigate(
+                            Routes.Studying(displayPot.id!!, displayPot.tag?: "", displayPot.name ?: "", displayPot.level)
+                        )
+                    }
+                }
             }
 
             // 하단 그리드
-            val chunkedPots = potList.chunked(3)
-
-            items(chunkedPots) { rowPots ->
+            items(potList.chunked(3)) { rowPots ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -170,9 +146,34 @@ fun HomeScreen(navController: NavController) {
 }
 
 @Composable
+fun HomeTopBar(userName: String){
+    Text(
+        text = "${userName}의 Garden",
+        modifier = Modifier.padding(16.dp),
+        style = MaterialTheme.typography.displayLarge
+    )
+}
+
+@Composable
+fun HomeHeaderSection(date: String, displayPot: PotInfo, onStartClick: () -> Unit){
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(vertical = 20.dp)
+    ) {
+        Text(date, style = MaterialTheme.typography.titleSmall)
+        Spacer(modifier = Modifier.height(20.dp))
+        MainPlantCard(displayPot = displayPot, onStartClick = onStartClick)
+        Spacer(modifier = Modifier.height(20.dp))
+        Text("아래로 내려 화분 추가 & 확인하기", style = MaterialTheme.typography.bodySmall)
+        Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = Color.Gray)
+    }
+}
+
+@Composable
 fun MainPlantCard(displayPot: PotInfo, onStartClick: () -> Unit,
                     isTestMode: Boolean = false // 테스트용 -> 실제는 삭제
 ) {
+    val isPotEmpty = displayPot.id.isNullOrEmpty()
     Card(
         modifier = Modifier.fillMaxWidth(0.85f),
         shape = RoundedCornerShape(24.dp),
@@ -184,7 +185,8 @@ fun MainPlantCard(displayPot: PotInfo, onStartClick: () -> Unit,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // 화분이 있을 때만 태그 표시 (ID가 비어있지 않을 때)
-            if (!displayPot.id.isNullOrEmpty() && !displayPot.tag.isNullOrEmpty()) {                Surface(
+            if (!isPotEmpty && !displayPot.tag.isNullOrEmpty()) {
+                Surface(
                     color = Color(0xFFE8F5E9),
                     shape = RoundedCornerShape(8.dp)
                 ) {
@@ -199,7 +201,8 @@ fun MainPlantCard(displayPot: PotInfo, onStartClick: () -> Unit,
 
             // 화분이 없으면 안내 문구 - Bold 적용
             Text(
-                text = if (displayPot.id.isNullOrEmpty()) "화분을 등록해보세요" else (displayPot.name ?: "이름 없음"),                style = MaterialTheme.typography.displayLarge,
+                text = if (isPotEmpty) "화분을 등록해보세요" else (displayPot.name ?: "이름 없음"),
+                style = MaterialTheme.typography.displayLarge,
                 color = fontColor
             )
 
@@ -211,10 +214,7 @@ fun MainPlantCard(displayPot: PotInfo, onStartClick: () -> Unit,
                 size = 150
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(40.dp))
 
             // [공부 시간] 화분이 없으면 00:00:00
             Text(
@@ -227,30 +227,17 @@ fun MainPlantCard(displayPot: PotInfo, onStartClick: () -> Unit,
             Button(
                 onClick = onStartClick,
                 // 화분이 있거나, 테스트 모드일 때 버튼을 활성화함
-                enabled = !displayPot.id.isNullOrEmpty() || isTestMode,
+                enabled = !isPotEmpty,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA5C16C))
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA5C16C),
+                    disabledContainerColor = Color.LightGray)
             ) {
                 Text(
-                    text = if (displayPot.id.isNullOrEmpty() && !isTestMode) "화분 없음" else "공부 시작",
+                    text = if (isPotEmpty && !isTestMode) "화분 없음" else "공부 시작",
                     style = MaterialTheme.typography.titleSmall,
                     color = background
                 )
             }
-//            // [버튼] 화분이 없을 때는 비활성화 처리
-//            Button(
-//                onClick = onStartClick,
-//                enabled = displayPot.id.isNotEmpty(),
-//                modifier = Modifier
-//                    .fillMaxWidth()
-//                    .height(50.dp),
-//                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA5C16C))
-//            ) {
-//                Text(if (displayPot.id.isEmpty()) "화분 없음" else "공부 시작",
-//                    style = MaterialTheme.typography.titleSmall,
-//                    color = background
-//                )
-//            }
         }
     }
 }

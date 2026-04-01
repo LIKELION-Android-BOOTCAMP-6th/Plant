@@ -94,11 +94,10 @@ class HomeViewModel(
     }
 
     private fun observeUserProfile() {
-        val uid = currentUid
-        if (uid.isEmpty()) return
+        if (currentUid.isEmpty()) return
 
         viewModelScope.launch {
-            userRepository.getUserProfile(uid).collectLatest { profile ->
+            userRepository.getUserProfile(currentUid).collectLatest { profile ->
                 profile?.let { user ->
                     _userName.value = user.nickname ?: "사용자"
 
