@@ -357,12 +357,53 @@ class StudyPlanDetailViewModel(
             navController.navigate(
                 Routes.CommunityPost(
                     potId = pot.id,
-                    tag = pot.tag,
+                    tag = pot.tag + "공유",
                     title = pot.name,
                     studyLogIds = selectedIds
                 )
             )
         }
     }
-    private fun inInvalidIds(vararg ids: String?): Boolean = ids.any{it.isNullOrEmpty()}
+    //공유 모드 상태
+    private val _isShareMode = MutableStateFlow(false)
+    val isShareMode = _isShareMode.asStateFlow()
+
+    //공유버튼 클릭
+    fun handleShareAction(navController: NavController){
+        if(!_isShareMode.value){
+            _isShareMode.value = true
+        } else{
+            val selectedIds = _studyLogs.value.filter { it.isSelected }.map { it.id }
+            val pot = _potDetail.value?: return
+
+            if(selectedIds.isNotEmpty()){
+                navController.navigate(
+                    Routes.CommunityPost(
+                        potId = pot.id,
+                        tag = pot.tag,
+                        title = pot.name,
+                        studyLogIds = selectedIds
+                    )
+                )
+                //이동 후 공유모드 해제
+                cancelShareMode()
+            } else {
+                _isShareMode.value = false
+            }
+        }
+    }
+
+    //공유 모드 취소 기능
+    fun cancelShareMode(){
+        _isShareMode.value = false
+        toggleAllSelection(false)
+    }
+
+    //공유모드 상태 변경
+    fun setShareMode(show: Boolean){
+        _isShareMode.value = show
+        if(!show){
+            toggleAllSelection(false)
+        }
+    }
 }
