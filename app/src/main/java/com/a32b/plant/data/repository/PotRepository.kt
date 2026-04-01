@@ -8,6 +8,7 @@ import com.a32b.plant.data.model.PotInfo
 import com.a32b.plant.data.model.LogInfo
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -167,6 +168,7 @@ class PotRepository(private val db: FirebaseFirestore) {
                 .collection("pots")
                 .document(potId)
                 .collection("logs")
+                .orderBy("createAt", Query.Direction.DESCENDING) // 내림차순
                 .get().await()
             result.toObjects(StudyLog::class.java)
         } catch (e: Exception) {

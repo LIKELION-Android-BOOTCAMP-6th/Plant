@@ -46,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.window.Dialog
 import com.a32b.plant.ui.theme.sub2
+import com.a32b.plant.core.component.ConfirmDialog
 
 @Composable
 fun MyPageSettingScreen(navController: NavController) {
@@ -67,84 +68,38 @@ fun MyPageSettingScreen(navController: NavController) {
                         // 모든 백스택 제거 → 뒤로가기해도 홈으로 안 돌아가게
                         popUpTo(0) { inclusive = true }
                     }
+
                 is MyPageEvent.NavigateToMyCommunityFeed ->
                     navController.navigate(Routes.MyCommunityFeed)
             }
         }
     }
-    // 로그아웃/회원탈퇴 공통 확인 다이얼로그
-    @Composable
-    fun ConfirmDialog(
-        message: String,
-        onDismiss: () -> Unit,
-        onConfirm: () -> Unit
-    ) {
-        Dialog(onDismissRequest = {}) {
-            Card(
-                shape = RoundedCornerShape(8.dp),
-                colors = CardDefaults.cardColors(background)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Spacer(modifier = Modifier.height(10.dp))
 
-                    Text(message, style = Typography.titleSmall)
-
-                    Spacer(modifier = Modifier.height(30.dp))
-
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        Button(
-                            onClick = onDismiss,
-                            modifier = Modifier
-                                .height(45.dp)
-                                .weight(1f),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(sub2)
-                        ) {
-                            Text("취소", style = Typography.bodyMedium)
-                        }
-
-                        Spacer(modifier = Modifier.width(16.dp))
-
-                        Button(
-                            onClick = onConfirm,
-                            modifier = Modifier
-                                .height(45.dp)
-                                .weight(1f),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text("확인", style = Typography.titleSmall)
-                        }
-                    }
-                }
-            }
-        }
-    }
 // 회원탈퇴 2단계 확인 다이얼로그
     // 1단계: "탈퇴 하시겠습니까?" → 확인 클릭 시 2단계로 전환 (다이얼로그 유지, 문구만 변경)
     // 2단계: "정말로 탈퇴하시겠습니까?" → 확인 클릭 시 실제 탈퇴 실행
     if (showDeleteDialog) {
-        ConfirmDialog(
-            message = if (isDeleteSecondConfirm) "정말로 탈퇴하시겠습니까?"
-            else "탈퇴 하시겠습니까?",
-            onDismiss = {
-                showDeleteDialog = false
-                isDeleteSecondConfirm = false   // 닫으면 1단계로 리셋
-            },
-            onConfirm = {
-                if (isDeleteSecondConfirm) {
-                    // 2단계 확인 → 실제 탈퇴 실행
+            ConfirmDialog(
+                text = if (isDeleteSecondConfirm) "정말로 탈퇴하시겠습니까?"
+                else "탈퇴 하시겠습니까?",
+                semiText = if (isDeleteSecondConfirm) "탈퇴 시 모든 학습 기록이 삭제되며 복구할 수 없습니다."
+                else "계정을 삭제하시려면 '예'를 눌러주세요.",
+                onDismiss = {
                     showDeleteDialog = false
-                    isDeleteSecondConfirm = false
-                    viewModel.deleteAccount()
-                } else {
-                    // 1단계 확인 → 2단계로 전환
-                    isDeleteSecondConfirm = true
+                    isDeleteSecondConfirm = false   // 닫으면 1단계로 리셋
+                },
+                onConfirm = {
+                    if (isDeleteSecondConfirm) {
+                        // 2단계 확인 → 실제 탈퇴 실행
+                        showDeleteDialog = false
+                        isDeleteSecondConfirm = false
+                        viewModel.deleteAccount()
+                    } else {
+                        // 1단계 확인 → 2단계로 전환
+                        isDeleteSecondConfirm = true
+                    }
                 }
-            }
-        )
+            )
     }
     // *********************************
 

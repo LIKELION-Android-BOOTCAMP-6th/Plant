@@ -11,6 +11,7 @@ import com.a32b.plant.data.model.PotInfo
 import com.a32b.plant.data.model.StudyLog
 import com.a32b.plant.data.repository.PostRepository
 import com.a32b.plant.data.repository.PotRepository
+import com.google.common.collect.Multimaps.index
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -52,9 +53,6 @@ class MyPageArchiveDetailViewModel(
                     totalStudyTime = formatToDigitalClock(potInfo?.potTotalStudyingTime ?: 0L)
                 )
             }
-//            logList.forEachIndexed { index, log ->
-//                Log.d("plantLog", "순서: $index, 제목: ${log.title}, ID: ${log.id}")
-//            }
         }
     }
 
@@ -101,14 +99,6 @@ class MyPageArchiveDetailViewModel(
             val title = pot.name ?: "제목 없음"
 
             val studyLogIds  = selectedLogs.map { it.id }
-
-            Log.d("PlantLog", """
-            [----------- 확인  ]
-            potId: $potId
-            tag: $tag
-            title: $title
-            logIds: $studyLogIds  (총 ${studyLogIds .size}개)
-        """.trimIndent())
 
             onSuccess(potId, tag, title, studyLogIds )
 

@@ -42,6 +42,7 @@ import com.a32b.plant.core.util.TimeFormatter.formatTimestamp
 import com.a32b.plant.data.di.ViewModelFactory
 import java.text.SimpleDateFormat
 import java.util.Locale
+import com.a32b.plant.core.component.ConfirmDialog
 
 //
 // 학습 완료 화분 리스트 -> 화분 상세 창
@@ -210,39 +211,31 @@ fun MyPageArchiveDetailScreen(navController: NavController) {
     }
     // 공유 확인 다이얼로그
     if (showDialog) {
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.shareToPost { potId, tag, title, logIds ->
-                            navController.navigate(
-                                Routes.CommunityPost(
-                                    postId = null,
-                                    potId = potId,
-                                    tag = uiState.pot?.tag,
-                                    title = uiState.pot?.name,
-                                    studyLogIds = logIds
-                                )
-                            ) {
-                                launchSingleTop = true
-                            }
-                            showDialog = false
-                            viewModel.toggleSelectionMode(false)
-                        }
+        ConfirmDialog(
+            text = "커뮤니티 공유",
+            semiText = "선택한 학습 기록을 커뮤니티에 공유하시겠습니까?",
+            onDismiss = {
+                showDialog = false
+            },
+            onConfirm = {
+                viewModel.shareToPost { potId, tag, title, logIds ->
+                    navController.navigate(
+                        Routes.CommunityPost(
+                            postId = null,
+                            potId = potId,
+                            tag = uiState.pot?.tag,
+                            title = uiState.pot?.name,
+                            studyLogIds = logIds
+                        )
+                    ) {
+                        launchSingleTop = true
                     }
-                )
-                {
-                    Text(
-                        text = "확인",
-                    )
+
+                    // 3. 다이얼로그 닫고 선택 모드 해제
+                    showDialog = false
+                    viewModel.toggleSelectionMode(false)
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDialog = false }) { Text("취소") }
-            },
-            title = { Text("커뮤니티 공유") },
-            text = { Text("공유하시겠습니까?") }
+            }
         )
     }
 }

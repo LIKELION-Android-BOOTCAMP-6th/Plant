@@ -62,9 +62,12 @@ import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageUiState
 import com.a32b.plant.ui.theme.primary
 import com.a32b.plant.ui.theme.sub2
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.TextFieldDefaults
 import com.a32b.plant.ui.theme.background
 import com.a32b.plant.ui.theme.textFieldBackground
+import com.a32b.plant.core.component.ConfirmDialog
+import com.a32b.plant.ui.theme.PlantTheme
 
 
 @Composable
@@ -73,130 +76,81 @@ fun MyPageScreen(navController: NavController) {
     val uiState by viewModel.uiState.collectAsState()
     // 로그아웃 확인 다이얼로그 상태
     var showLogoutDialog by remember { mutableStateOf(false) }
-
     val context = LocalContext.current
 
-    // 로그아웃
-    LaunchedEffect(Unit) {
-        viewModel.events.collect { event ->
-            when (event) {
-                is MyPageEvent.ShowToast ->
-                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+    PlantTheme(darkTheme = uiState.isDarkMode) {
+        // 로그아웃
+        LaunchedEffect(Unit) {
+            viewModel.events.collect { event ->
+                when (event) {
+                    is MyPageEvent.ShowToast ->
+                        Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
 
-                is MyPageEvent.NavigateToSignIn ->
-                    navController.navigate(Routes.SignIn) {
-                        popUpTo(0) { inclusive = true }
-                    }
-
-                is MyPageEvent.NavigateToMyCommunityFeed ->
-                    navController.navigate(Routes.MyCommunityFeed)
-            }
-        }
-    }
-
-    //  로그아웃/회원탈퇴 공통 확인 다이얼로그
-    @Composable
-    fun ConfirmDialog(
-        message: String,
-        onDismiss: () -> Unit,
-        onConfirm: () -> Unit
-    ) {
-        Dialog(onDismissRequest = onDismiss) {
-            Card(
-                shape = RoundedCornerShape(8.dp),
-                colors = CardDefaults.cardColors(background)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Text(message, style = Typography.titleSmall)
-
-                    Spacer(modifier = Modifier.height(30.dp))
-
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        Button(
-                            onClick = {
-                                viewModel.clearProfileState()
-                                onDismiss()
-                            },
-                            modifier = Modifier
-                                .height(45.dp)
-                                .weight(1f),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(sub2)
-                        ) {
-                            Text("취소", style = Typography.bodyMedium)
+                    is MyPageEvent.NavigateToSignIn ->
+                        navController.navigate(Routes.SignIn) {
+                            popUpTo(0) { inclusive = true }
                         }
 
-                        Spacer(modifier = Modifier.width(16.dp))
-
-                        Button(
-                            onClick = onConfirm,
-                            modifier = Modifier
-                                .height(45.dp)
-                                .weight(1f),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text("확인", style = Typography.titleSmall)
-                        }
-                    }
+                    is MyPageEvent.NavigateToMyCommunityFeed ->
+                        navController.navigate(Routes.MyCommunityFeed)
                 }
             }
         }
-    }
-    // 로그아웃 확인 다이얼로그
-    if (showLogoutDialog) {
-        ConfirmDialog(
-            message = "로그아웃 하시겠습니까?",
-            onDismiss = { showLogoutDialog = false },
-            onConfirm = {
-                showLogoutDialog = false
-                viewModel.logout()
-            }
-        )
-    }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // 프로필, 닉네임, 총 공부시간
-        ProfileRow(uiState = uiState, viewModel = viewModel)
-
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            GrownTreesButton(completedPotCount = uiState.completedPotCount) {
-                navController.navigate(Routes.MyPageArchive)
-            }
-            DividerImage()
-            ButtonTemplate(text = "커뮤니티 활동") {
-                viewModel.moveToMyCommunityFeed()
-            }
-            ButtonTemplate(text = "앱 설정") {
-                navController.navigate(Routes.MyPageSetting)
-            }
-//            ButtonTemplate(text = "공지사항") { }
-//            ButtonTemplate(text = "비밀번호 재설정") { }
-            DarkModeToggleButton(
-                isDarkMode = uiState.isDarkMode,
-                onToggle = {
-                    viewModel.toggleDarkMode()
+        // 로그아웃 확인 다이얼로그
+        if (showLogoutDialog) {
+            ConfirmDialog(
+                text = "로그아웃 하시겠습니까?",
+                onDismiss = {
+                    showLogoutDialog = false
+                    viewModel.clearProfileState()
+                },
+                onConfirm = {
+                    showLogoutDialog = false
+                    viewModel.logout()
                 }
             )
+        }
+        Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.background) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // 프로필, 닉네임, 총 공부시간
+                ProfileRow(uiState = uiState, viewModel = viewModel)
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    GrownTreesButton(completedPotCount = uiState.completedPotCount) {
+                        navController.navigate(Routes.MyPageArchive)
+                    }
+                    DividerImage()
+                    ButtonTemplate(text = "커뮤니티 활동") {
+                        viewModel.moveToMyCommunityFeed()
+                    }
+                    ButtonTemplate(text = "앱 설정") {
+                        navController.navigate(Routes.MyPageSetting)
+                    }
+//            ButtonTemplate(text = "공지사항") { }
+//            ButtonTemplate(text = "비밀번호 재설정") { }
+                    DarkModeToggleButton(
+                        isDarkMode = uiState.isDarkMode,
+                        onToggle = {
+                            viewModel.toggleDarkMode()
+                        }
+                    )
 //------------------로그아웃
 
-            ButtonTemplate(text = "로그아웃") {
-                showLogoutDialog = true
-            }
+                    ButtonTemplate(text = "로그아웃") {
+                        showLogoutDialog = true
+                    }
 //로그아웃------------------
+                }
+            }
         }
     }
 }
-
 
 @Composable
 fun DarkModeToggleButton(
@@ -208,8 +162,8 @@ fun DarkModeToggleButton(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Color.White,
-            contentColor = Color.Black
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
         ),
         elevation = ButtonDefaults.buttonElevation(
             defaultElevation = 2.dp,
@@ -230,8 +184,8 @@ fun DarkModeToggleButton(
                 checked = isDarkMode,
                 onCheckedChange = { onToggle() },
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = primary
+                    checkedThumbColor = MaterialTheme.colorScheme.surface,
+                    checkedTrackColor = MaterialTheme.colorScheme.onSurface
                 ),
             )
         }
@@ -247,8 +201,8 @@ fun GrownTreesButton(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Color.White,
-            contentColor = fontColor
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
         )
     ) {
         Row(
@@ -276,8 +230,8 @@ fun ButtonTemplate(text: String, onClick: () -> Unit) {
         onClick = onClick, modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Color.White,
-            contentColor = fontColor
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
         ),
         elevation = ButtonDefaults.buttonElevation(
             defaultElevation = 2.dp,
@@ -322,7 +276,7 @@ fun ProfileRow(uiState: MyPageUiState, viewModel: MyPageViewModel) {
                     .size(20.dp)
                     .align(Alignment.BottomEnd)
                     .offset(x = 3.dp, y = 3.dp),
-                tint = Color.Black
+                tint = MaterialTheme.colorScheme.onSurface
             )
         }
 
@@ -335,7 +289,7 @@ fun ProfileRow(uiState: MyPageUiState, viewModel: MyPageViewModel) {
                 Text(
                     text = "${uiState.nickname} 님",
                     style = Typography.bodyMedium,
-                    color = fontColor,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -344,12 +298,16 @@ fun ProfileRow(uiState: MyPageUiState, viewModel: MyPageViewModel) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(text = "총 공부 시간", style = Typography.bodySmall, color = fontColor)
+                Text(
+                    text = "총 공부 시간",
+                    style = Typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 Spacer(modifier = Modifier.width(14.dp))
                 Text(
                     text = uiState.totalStudyTime,
                     style = Typography.bodyMedium,
-                    color = fontColor,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -463,8 +421,8 @@ fun ProfileDialog(
                             viewModel.resetNicknameError()
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = textFieldBackground,
-                            unfocusedContainerColor = textFieldBackground
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
                         ),
 
                         label = { Text("닉네임 변경 (2~10자)", style = Typography.labelSmall) },
