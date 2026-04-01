@@ -68,7 +68,7 @@ fun StudyPlanDetailScreen(
             TopAppBar(
                 windowInsets = WindowInsets(top = 0.dp),
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White,
+                    containerColor = background,
                     titleContentColor = fontColor,
                     navigationIconContentColor = fontColor,
                     actionIconContentColor = fontColor
@@ -169,7 +169,7 @@ fun StudyPlanDetailScreen(
                             Spacer(modifier = Modifier.weight(1f))
                             TextButton(
                                 onClick = { viewModel.setPotDeleteDialogShown(true) },
-                                modifier = Modifier.height(36.dp),
+                                modifier = Modifier.height(20.dp),
                                 contentPadding = PaddingValues(horizontal = 8.dp)
                             ) {
                                 Icon(
@@ -178,7 +178,7 @@ fun StudyPlanDetailScreen(
                                     modifier = Modifier.size(18.dp),
                                     tint = fontColorSub
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
+                                Spacer(modifier = Modifier.width(2.dp))
                                 Text(
                                     "화분 전체 삭제",
                                     style = MaterialTheme.typography.labelSmall,
@@ -187,7 +187,6 @@ fun StudyPlanDetailScreen(
                         }
                     }
                 }
-                HorizontalDivider(thickness = 0.5.dp, color = fontColorSub)
             }
             // 학습 기록 리스트 영역
             Box(modifier = Modifier.weight(1f)) {
