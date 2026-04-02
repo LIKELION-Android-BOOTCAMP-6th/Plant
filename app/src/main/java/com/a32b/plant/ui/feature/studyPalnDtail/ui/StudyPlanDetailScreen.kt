@@ -112,6 +112,13 @@ fun StudyPlanDetailScreen(
                                 modifier = Modifier.size(19.dp)
                             )
                         }
+                        IconButton(onClick = { viewModel.setPotDeleteDialogShown(true) }) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_trash),
+                                "화분 전체 삭제하기",
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
                     }
                     IconButton(onClick = { if (!isShareMode) {
                         viewModel.setShareMode(true)
@@ -172,26 +179,6 @@ fun StudyPlanDetailScreen(
                         Text(
                             text = "${logs.count { it.isSelected }}개 선택됨",
                             style = MaterialTheme.typography.labelMedium,
-                            color = fontColorSub
-                        )
-                    }
-                } else {
-                    Spacer(modifier = Modifier.weight(1f))
-                    TextButton(
-                        onClick = { viewModel.setPotDeleteDialogShown(true) },
-                        modifier = Modifier.height(20.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_trash),
-                            contentDescription = "화분 전체 삭제",
-                            modifier = Modifier.size(18.dp),
-                            tint = fontColorSub
-                        )
-                        Spacer(modifier = Modifier.width(2.dp))
-                        Text(
-                            "화분 전체 삭제",
-                            style = MaterialTheme.typography.labelSmall,
                             color = fontColorSub
                         )
                     }
