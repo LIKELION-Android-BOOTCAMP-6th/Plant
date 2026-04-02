@@ -105,13 +105,12 @@ fun HomeScreen(navController: NavController) {
                         GridPlantItem(
                             pot = pot,
                             modifier = Modifier.weight(1f),
-                            // [콜백 1] 이미지 클릭 시 -> 메인 카드 교체
+                            // 이미지 클릭 시 -> 메인 카드 교체
                             onImageClick = {
                                 viewModel.selectPot(pot)
                             },
-                            // [콜백 2] 텍스트 클릭 시 -> 학습 계획창으로 이동
+                            // 텍스트 클릭 시 -> 학습 계획창으로 이동
                             onTextClick = {
-                                //  계획 페이지 개발 완료 시 아래 주석 해제
                                 pot.id?.let { id ->
                                     navController.navigate(Routes.StudyPlanDetail(id))
                                 }
@@ -167,7 +166,7 @@ fun HomeHeaderSection(date: String, displayPot: PotInfo, onStartClick: () -> Uni
         Text(date, style = MaterialTheme.typography.titleSmall)
         Spacer(modifier = Modifier.height(20.dp))
         MainPlantCard(displayPot = displayPot, onStartClick = onStartClick)
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(40.dp))
         Text("아래로 내려서 화분 확인하기", style = MaterialTheme.typography.bodySmall,fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(20.dp))
         Icon(
@@ -180,15 +179,13 @@ fun HomeHeaderSection(date: String, displayPot: PotInfo, onStartClick: () -> Uni
 }
 
 @Composable
-fun MainPlantCard(displayPot: PotInfo, onStartClick: () -> Unit,
-                    isTestMode: Boolean = false // 테스트용 -> 실제는 삭제
-) {
+fun MainPlantCard(displayPot: PotInfo, onStartClick: () -> Unit) {
     val isPotEmpty = displayPot.id.isNullOrEmpty()
     Card(
         modifier = Modifier.fillMaxWidth(0.85f),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(2.dp)
+        elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column(
             modifier = Modifier.padding(24.dp),
@@ -236,14 +233,20 @@ fun MainPlantCard(displayPot: PotInfo, onStartClick: () -> Unit,
 
             Button(
                 onClick = onStartClick,
-                // 화분이 있거나, 테스트 모드일 때 버튼을 활성화함
+                // 화분이 있을 때 버튼을 활성화함
                 enabled = !isPotEmpty,
-                modifier = Modifier.fillMaxWidth().height(50.dp),
+                modifier = Modifier.fillMaxWidth().height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA5C16C),
-                    disabledContainerColor = Color.LightGray)
+                    disabledContainerColor = Color.LightGray),
+                shape = RoundedCornerShape(12.dp),
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 6.dp,
+                    pressedElevation = 2.dp,
+                    disabledElevation = 0.dp
+                )
             ) {
                 Text(
-                    text = if (isPotEmpty && !isTestMode) "화분 없음" else "공부 시작",
+                    text = if (isPotEmpty) "화분을 등록해주세요" else "공부 시작",
                     style = MaterialTheme.typography.titleSmall,
                     color = background
                 )
@@ -283,11 +286,10 @@ fun GridPlantItem(
             Spacer(modifier = Modifier.height(8.dp))
 
             // 2. 화분 정보 (시간, 이름) - 학습 계획창 이동용
-            // 텍스트 영역 전체를 클릭할 수 있도록 Column으로 묶고 clickable을 적용합니다.
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onTextClick() }, // [클릭 2] 텍스트 클릭 시
+                    .clickable { onTextClick() },
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // 총 공부 시간 (Medium 적용)
@@ -375,19 +377,18 @@ fun InterruptedDialog(onDismiss: () -> Unit, onConfirm: (List<String>) -> Unit, 
                         }
                     }
                 }
-                //Spacer(modifier = Modifier.height(30.dp))
 
                 Row(modifier = Modifier.fillMaxWidth()) {
                     Button(onClick = onDismiss,
                         modifier = Modifier.height(30.dp).weight(1f),
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(sub2)) {
                         Text("취소", style = Typography.bodyMedium)
                     }
                     Spacer(modifier = Modifier.width(10.dp))
                     Button(onClick = {onConfirm(inputs.toList())},
                         modifier = Modifier.height(30.dp).weight(1f),
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(primary)) {
                         Text("저장", style = Typography.bodyMedium)
                     }
