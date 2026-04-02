@@ -45,19 +45,26 @@ class MyPageSettingViewModel(
                     return@launch
                 }
 
-                // 2. Firebase Auth 계정 삭제
+                // 1. Firebase Auth 계정 삭제
                 firebaseUser.delete().await()
 
-                // 3. nicknames 컬렉션에서 닉네임 문서 삭제
-                nicknameRepository.deleteNickname(nickname)
 
-                // 4. Firestore users/{uid} 문서 삭제
-                userRepository.deleteUser(uid)
+                try {
+                    // 2. nicknames 컬렉션에서 닉네임 문서 삭제
+                    if (nickname.isNotBlank()) {
+                        nicknameRepository.deleteNickname(nickname)
+                    }
+                    // 3. Firestore users/{uid} 문서 삭제
+                    userRepository.deleteUser(uid)
+                } catch (e: Exception) {
+                    // Firestore 정리 실패는 로그만 남기고 진행
+                    Log.e("MyPage", "Firestore 정리 중 오류: ${e.message}", e)
+                }
 
-                // 5. 로컬 유저 정보 초기화
+
+                // 4. 로컬 유저 정보 초기화
                 CurrentUser.clear()
-
-                // 6. 로그인 화면으로 이동
+                // 5. 로그인 화면으로 이동
                 _eventChannel.send(MyPageEvent.ShowToast("회원탈퇴가 완료되었습니다."))
                 _eventChannel.send(MyPageEvent.NavigateToSignIn)
 
