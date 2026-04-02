@@ -9,9 +9,11 @@ import com.a32b.plant.data.model.CommunityActivity
 import com.a32b.plant.data.model.Post
 import com.a32b.plant.data.model.PostAuthor
 import com.a32b.plant.data.model.StudyLog
+import com.a32b.plant.data.model.Tag
 import com.a32b.plant.data.repository.PostRepository
 import com.a32b.plant.data.repository.PotRepository
 import com.google.firebase.Timestamp
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,7 +32,7 @@ data class CommunityPostUiState(
     val studyLogs: List<StudyLog>? = null,
     val isDismissDialogShow: Boolean = false,
     val isShared: Boolean = false,
-    val tags: List<String> = emptyList()
+    val tags: List<Tag> = emptyList()
 )
 sealed class CommunityPostEvent{
     data class NavigateToDetail(val postId: String) : CommunityPostEvent()
@@ -49,13 +51,18 @@ class CommunityPostViewModel(private val repository: PostRepository, private val
         fetchTags()
     }
 
-    private fun fetchTags(){
-        viewModelScope.launch {
-            potRepository.getAvailableTags().collectLatest { tags ->
-                getTags(tags)
-            }
-        }
+//    private fun fetchTags(){
+//        viewModelScope.launch {
+//            potRepository.getAvailableTags().collectLatest { tags ->
+//                getTags(tags)
+//            }
+//        }
+//    }
+private fun fetchTags(){
+    viewModelScope.launch(Dispatchers.IO) {
+        getTags(repository.getTag())
     }
+}
     // ✅ 기존 글을 불러오는 함수
     fun getPost(postId: String) {
         viewModelScope.launch {
@@ -78,7 +85,7 @@ class CommunityPostViewModel(private val repository: PostRepository, private val
             _uiState.update { it.copy(studyLogs = (it.studyLogs?:emptyList()) + logs) }
         }
     }
-    fun getTags(list: List<String>) = _uiState.update { it.copy(tags = list) }
+    fun getTags(list: List<Tag>) = _uiState.update { it.copy(tags = list) }
     fun onTitleChange(title: String) = _uiState.update { it.copy(title = title) }
     fun onContentChange(content: String) = _uiState.update { it.copy(content = content) }
 

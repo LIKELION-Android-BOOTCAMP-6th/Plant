@@ -48,9 +48,9 @@ fun CommunityListScreen(navController: NavController) {
 
     val uiState by viewModel.uiState.collectAsState()
 
-    val tagList : List<Tag> = listOf(Tag(name = "국어", parentId = "1"),Tag(name = "영어", parentId = "1"),Tag(name = "기타", parentId = "1"),
-                                Tag(name = "자소서/이력서", parentId = "2"),Tag(name = "면접", parentId = "2"),Tag(name = "포트폴리오", parentId = "2"),Tag(name = "기타", parentId = "2"),
-                                    Tag(name = "중등국어", parentId = "3"),Tag(name = "중등영어", parentId = "3"),Tag(name = "기타", parentId = "3"),)
+//    val tagList : List<Tag> = listOf(Tag(name = "국어", parentId = "1"),Tag(name = "영어", parentId = "1"),Tag(name = "기타", parentId = "1"),
+//                                Tag(name = "자소서/이력서", parentId = "2"),Tag(name = "면접", parentId = "2"),Tag(name = "포트폴리오", parentId = "2"),Tag(name = "기타", parentId = "2"),
+//                                    Tag(name = "중등국어", parentId = "3"),Tag(name = "중등영어", parentId = "3"),Tag(name = "기타", parentId = "3"),)
 
     BackHandler {
         navController.navigate(Routes.HomeMain) {
@@ -73,14 +73,16 @@ fun CommunityListScreen(navController: NavController) {
                         modifier = Modifier.clickable{
                             viewModel.onIsTagSheetShownChange()
                         })
+                    uiState.selected.forEach { tag ->
+                        Text(tag.name, style = Typography.bodyMedium, fontSize = 13.sp,
+                            modifier = Modifier.padding(3.dp))
+                    }
                 }
                 if(uiState.isTagSheetShown){
                     TagSheet(uiState.tags, isMultiSelected = true) { selected ->
                         viewModel.onSelectedChanged(selected.toList())
-                        Log.d("선택된 거 ", selected.toString())
+                        Log.d("선택된 거 ", selected.toList().toString())
                     }
-                }else{
-                    viewModel.onSelectedChanged(emptyList())
                 }
 
 //                TagGroup(tags = uiState.tags + listOf("공유")){ selected ->
