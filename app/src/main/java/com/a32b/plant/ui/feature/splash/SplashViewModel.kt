@@ -1,5 +1,6 @@
 package com.a32b.plant.ui.feature.splash
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.navigation.Routes
@@ -11,13 +12,19 @@ import kotlinx.coroutines.launch
 
 
 class SplashViewModel : ViewModel() {
+
     private val auth = AppContainer.firebaseAuth
     private val userRepository = AppContainer.userRepository
 
     private val _destination = MutableStateFlow<Routes?>(null)
     val destination = _destination.asStateFlow()
 
+    // 다크모드 관리용
+    private val _isDarkMode = MutableStateFlow(false)
+    val isDarkMode = _isDarkMode.asStateFlow()
+
     init {
+        Log.d("plantLog", "------SplashViewModel")
         checkAuthLogin()
     }
 
@@ -43,7 +50,8 @@ class SplashViewModel : ViewModel() {
                     _destination.value = Routes.SignIn
                     return@launch
                 }
-
+                // 다크모드 관리용
+                _isDarkMode.value = profile.isDarkMode ?: false
                 CurrentUser.set(
                     uid = firebaseUser.uid,
                     nickname = profile?.nickname ?: "",
@@ -54,7 +62,17 @@ class SplashViewModel : ViewModel() {
                 // 로그인 세션 없음 → 로그인 화면
                 _destination.value = Routes.SignIn
             }
+        }
+    }
 
+    // 다크모드 관리용
+    private fun observeUserTheme() {
+        val uid = CurrentUser.uid
+        viewModelScope.launch {
+            userRepository.getUserFlow(uid).collect { userProfile ->
+                // 데이터가 바뀌면 여기 실행
+                _isDarkMode.value = userProfile?.isDarkMode ?: false
+            }
         }
     }
 }

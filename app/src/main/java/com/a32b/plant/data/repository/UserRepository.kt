@@ -2,6 +2,7 @@ package com.a32b.plant.data.repository
 
 import com.a32b.plant.data.model.PotInfo
 import android.util.Log
+import androidx.compose.runtime.retain.retain
 import com.google.firebase.firestore.FirebaseFirestore
 import com.a32b.plant.data.model.UserProfile
 import com.google.firebase.auth.FirebaseAuth
@@ -29,7 +30,7 @@ class UserRepository(private val db: FirebaseFirestore, private val auth: Fireba
         var currentOngoingPots: List<PotInfo> = emptyList()
 
         //공통 전송 로직
-        fun sendUpdate(){
+        fun sendUpdate() {
             trySend(userProfile?.copy(potList = currentOngoingPots))
         }
 
@@ -41,12 +42,12 @@ class UserRepository(private val db: FirebaseFirestore, private val auth: Fireba
 
         // 2. 화분 목록 실시간 리스너 (화분 추가/삭제 시에도 UI 즉시 반영)
         val potsListener = potsCollectionRef.whereEqualTo("isCompleted", false)
-            .addSnapshotListener{ potsSnapshot, _ ->
-            currentOngoingPots = potsSnapshot?.documents?.mapNotNull{ doc ->
-                doc.toObject(PotInfo::class.java)?.copy(id = doc.id)
-            }?: emptyList()
-            sendUpdate()
-        }
+            .addSnapshotListener { potsSnapshot, _ ->
+                currentOngoingPots = potsSnapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(PotInfo::class.java)?.copy(id = doc.id)
+                } ?: emptyList()
+                sendUpdate()
+            }
 
         awaitClose {
             userListener.remove()
@@ -225,5 +226,29 @@ class UserRepository(private val db: FirebaseFirestore, private val auth: Fireba
             emptyList()
         }
     }
-}
 
+    // 다크모드 관리용
+    // 테마 다크모드용 Flow
+    fun getUserFlow(uid: String): Flow<UserProfile?> = callbackFlow {
+        if (uid.isEmpty()) {
+            trySend(null)
+            return@callbackFlow
+        }
+        val userDocRef = db.collection("users").document(uid)
+        // 실시간 리스너 등록, 변경 사항 생길 때마다 알림 (내 앱한테)보내는  구독 상태로 만든 것
+        val userListener = userDocRef.addSnapshotListener { userSnapshot, error ->
+            // users 데이터 바뀔때마다 여기 실행
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+            // 받아온 데이터 UserProfile 객체로 변환
+            val userProfile = userSnapshot?.toObject(UserProfile::class.java)
+            trySend(userProfile)
+        }
+        // 이 Flow 사용하는 화면 닫힐 때 리스너 제거
+        awaitClose {
+            userListener.remove()
+        }
+    }
+}

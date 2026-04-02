@@ -1,6 +1,7 @@
 package com.a32b.plant
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -8,7 +9,10 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -25,7 +29,7 @@ class MainActivity : ComponentActivity() {
     private val viewModel: SplashViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
-
+        Log.d("plantLog", "-----MainActivity")
         val splashScreen = installSplashScreen()
         splashScreen.setKeepOnScreenCondition {
             //해당 값이 트루일 동안 스플래시 유지
@@ -35,27 +39,34 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            PlantTheme {
-                val navController = rememberNavController()
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
+            // 다크모드 관리용
+            // 원하는 페이지에 MaterialTheme.colorScheme.색상 입력한 뒤 화면 이동 -> 마이페이지 다크모드 ON OFF -> 화면 재확인 확인 가능
+            val isDarkMode by viewModel.isDarkMode.collectAsState()
+            PlantTheme(darkTheme = false) { // isDarkMode / 비활성화 = false
+                Surface(modifier = Modifier.fillMaxSize(),
+//                    color = MaterialTheme.colorScheme.background
+                ) {
+                    val navController = rememberNavController()
+                    val navBackStackEntry by navController.currentBackStackEntryAsState()
 
-                val showBottomBar = navBackStackEntry?.destination?.let { destination ->
-                    destination.hasRoute<Routes.HomeMain>() ||
-                            destination.hasRoute<Routes.CommunityList>() ||
-                            destination.hasRoute<Routes.Mypage>()
-                } ?: false
-                Scaffold(
-                    modifier = Modifier.fillMaxSize(),
-                    bottomBar = {
-                        if (showBottomBar) BottomBar(navController = navController)
-                    }
-                ) {innerPadding ->
-                    Box(modifier = Modifier.padding(innerPadding)){
-                        PlantAppNavigation(navController = navController, viewModel = viewModel)
+                    val showBottomBar = navBackStackEntry?.destination?.let { destination ->
+                        destination.hasRoute<Routes.HomeMain>() ||
+                                destination.hasRoute<Routes.CommunityList>() ||
+                                destination.hasRoute<Routes.Mypage>()
+                    } ?: false
+                    Scaffold(
+                        modifier = Modifier.fillMaxSize(),
+                        bottomBar = {
+                            if (showBottomBar) BottomBar(navController = navController)
+                        }
+                    ) { innerPadding ->
+                        Box(modifier = Modifier.padding(innerPadding)) {
+                            PlantAppNavigation(navController = navController, viewModel = viewModel)
+                        }
                     }
                 }
-            }
 
+            }
         }
     }
 }
