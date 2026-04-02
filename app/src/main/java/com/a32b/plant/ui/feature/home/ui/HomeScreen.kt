@@ -258,8 +258,8 @@ fun MainPlantCard(displayPot: PotInfo, onStartClick: () -> Unit) {
 fun GridPlantItem(
     pot: PotInfo,
     modifier: Modifier = Modifier,
-    onImageClick: () -> Unit, // 이미지 클릭
-    onTextClick: () -> Unit // 텍스트 클릭 여부
+    onImageClick: () -> Unit,
+    onTextClick: () -> Unit
 ) {
     // 화분 ID가 비어있지 않을 때만 실제 내용을 표시
     if (!pot.id.isNullOrEmpty()) {
@@ -271,11 +271,10 @@ fun GridPlantItem(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // 1. 화분 그림 (ProfileImage) - 메인 카드 교체용
-            // ProfileImage 내부에 Box를 감싸서 clickable을 적용합니다.
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp)) // 동그랗게 클릭 영역 제한
-                    .clickable { onImageClick() } // [클릭 1] 이미지 클릭 시
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { onImageClick() }
             ) {
                 ProfileImage(
                     level = pot.level,
