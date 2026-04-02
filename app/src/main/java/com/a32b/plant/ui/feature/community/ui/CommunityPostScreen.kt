@@ -132,7 +132,7 @@ fun CommunityPostScreen(
                 TagGroup(uiState.tags + if(uiState.isShared) listOf("공유") else emptyList(),
                     enable = !uiState.isShared,
                     editing = true,
-                    init = if(uiState.isShared)uiState.selected else emptyList()){ selected ->
+                    init = if(uiState.isShared || postId?.isNotEmpty()?:false)uiState.selected else emptyList()){ selected ->
                     viewModel.onSelectedTagChange(selected)
 
                 }

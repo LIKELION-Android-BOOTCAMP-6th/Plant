@@ -11,6 +11,7 @@ import com.a32b.plant.data.model.PostAuthor
 import com.a32b.plant.data.model.StudyLog
 import com.a32b.plant.data.repository.PostRepository
 import com.a32b.plant.data.repository.PotRepository
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -100,11 +101,15 @@ class CommunityPostViewModel(private val repository: PostRepository, private val
                 //게시글 수정
                 if (postId != null) {
                     //게시글이 공유글인지 판별 후
-                    repository.updatePost(isShared = isShared,
+                    repository.updatePost(
+                        isShared = isShared,
                         postId = postId!!,
                         title = _uiState.value.title,
                         content = if(isShared) null else _uiState.value.content,
-                        tag = if (isShared) null else _uiState.value.selected)
+                        tag = if (isShared) null else _uiState.value.selected,
+                        createdAt = if(isShared) null else Timestamp.now()
+                    )
+
 
                 } else {
 //                     ✅ 새 글 작성 모드

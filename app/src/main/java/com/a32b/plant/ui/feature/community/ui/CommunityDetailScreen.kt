@@ -119,13 +119,13 @@ fun CommunityDetailScreen(
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(currentPost.author.nickname,  style = Typography.bodyMedium)
                             Spacer(modifier = Modifier.weight(1f))
-                            Text(TimeFormatter.formatTimestamp(currentPost.createdAt), style = Typography.bodyMedium, fontSize = 12.sp)
+                            Text(TimeFormatter.formatTimestampTime(currentPost.createdAt), style = Typography.bodyMedium, fontSize = 12.sp)
                         }
                     }
                     item{
                         Row(modifier = Modifier.padding(start = 7.dp)) {
                             for (tag in currentPost.tag) {
-                                Tag(tag)
+                                Tag(tag, 15 )
                             }
                         }
                         Spacer(modifier = Modifier.height(20.dp))

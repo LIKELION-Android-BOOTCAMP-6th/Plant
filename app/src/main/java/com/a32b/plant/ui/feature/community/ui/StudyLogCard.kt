@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.data.model.StudyLog
 import com.a32b.plant.ui.theme.Typography
@@ -22,14 +23,15 @@ import com.a32b.plant.ui.theme.Typography
 fun StudyLogCard(studyLogs: List<StudyLog>) {
     Column {
         studyLogs.forEach { log ->
-            Card(shape = RoundedCornerShape(13.dp),
-                modifier = Modifier.padding(10.dp).fillMaxWidth(),
+            Card(shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.padding(start= 10.dp, end = 10.dp, top = 3.dp, bottom = 3.dp).fillMaxWidth(),
                 elevation = CardDefaults.elevatedCardElevation(2.dp),
                 colors = CardDefaults.cardColors(Color.White)) {
                 Text("${log.title} [${TimeFormatter.formatToDigitalClock(log.studyingTime)}]", style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.padding(10.dp))
+                    modifier = Modifier.padding(10.dp),
+                    fontSize = 15.sp)
                 log.contents.forEach { content ->
-                    Text(content, style = Typography.bodyMedium,
+                    Text(content, style = Typography.bodyMedium, fontSize = 13.sp,
                         modifier = Modifier.padding(10.dp))
                 }
             }
