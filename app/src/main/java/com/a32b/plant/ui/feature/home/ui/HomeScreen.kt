@@ -1,5 +1,6 @@
 package com.a32b.plant.ui.feature.home.ui
 
+import android.graphics.drawable.Icon
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -169,7 +170,12 @@ fun HomeHeaderSection(date: String, displayPot: PotInfo, onStartClick: () -> Uni
         Spacer(modifier = Modifier.height(20.dp))
         Text("아래로 내려서 화분 확인하기", style = MaterialTheme.typography.bodySmall,fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(20.dp))
-        Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = Color.Gray)
+        Icon(
+            painter = painterResource(id = R.drawable.ic_down_two),
+            contentDescription = "스크롤 안내",
+            tint = Color.LightGray
+        )
+
     }
 }
 
