@@ -79,7 +79,7 @@ fun CommunityListScreen(navController: NavController) {
                     }
                 }
                 if(uiState.isTagSheetShown){
-                    TagSheet(uiState.tags, isMultiSelected = true) { selected ->
+                    TagSheet(uiState.tags, isMultiSelected = true, init = uiState.selected) { selected ->
                         viewModel.onSelectedChanged(selected.toList())
                         Log.d("선택된 거 ", selected.toList().toString())
                     }
