@@ -30,6 +30,7 @@ import com.a32b.plant.ui.feature.home.ui.GridPlantItem
 import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageArchiveViewModel
 import com.a32b.plant.ui.theme.background
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyPageArchiveScreen(navController: NavController) {
     val viewModel: MyPageArchiveViewModel =
@@ -38,35 +39,33 @@ fun MyPageArchiveScreen(navController: NavController) {
 
 
     Scaffold(
+//---------------
         topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp) // 표준 상단바 높이
-                    .padding(horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // 뒤로가기 버튼 or 선택 취소 버튼
-                IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(
-                        painter = painterResource(
-                            id = R.drawable.ic_backbtn
-                        ),
-                        contentDescription = "뒤로가기",
-                        modifier = Modifier.size(24.dp)
+            TopAppBar(
+                title = {
+                    Text(
+                        "${uiState.nickname}의 기른 나무 수",
+                        style = MaterialTheme.typography.titleMedium
                     )
-                }
-                Text(
-                    text = "${uiState.nickname}의 기른 나무 수",
-                    style = MaterialTheme.typography.titleMedium,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(start = 8.dp)
-                )
-            }
-
+                },
+                navigationIcon = {
+                    //뒤로 가기
+                    IconButton(onClick = {
+                        navController.popBackStack()
+                    }) {
+                        Icon(
+                            painter = painterResource(
+                                id = R.drawable.ic_backbtn
+                            ),
+                            contentDescription = "뒤로가기",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                },
+            )
         }
+//---------------
+
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
@@ -84,18 +83,14 @@ fun MyPageArchiveScreen(navController: NavController) {
                     horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.Start)
                 ) {
                     rowPots.forEach { pot ->
-                        GridPlantItem(
+                        GridPlantItem (
                             pot = pot,
                             modifier = Modifier.weight(1f),
-                            // [콜백 1] 이미지 클릭 시 ->
-                            onImageClick = {
-                                navController.navigate(Routes.MyPageArchiveDetail(potId = pot.id.toString()))
-                                Log.d("plantLog", "id : ${pot.id}")
+                            onItemClick = {
+                                if (!pot.id.isNullOrEmpty()) {
+                                    navController.navigate(Routes.MyPageArchiveDetail(potId = pot.id.toString()))
+                                }
                             },
-                            // [콜백 2] 텍스트 클릭 시 ->
-                            onTextClick = {
-
-                            }
                         )
                     }
                     // 빈 칸 채우기 로직
@@ -107,53 +102,52 @@ fun MyPageArchiveScreen(navController: NavController) {
             }
         }
     }
-
-    @Composable
-    fun GridPlantItem(
-        pot: PotInfo,
-        modifier: Modifier = Modifier,
-        onImageClick: () -> Unit, // 이미지 클릭 - 영역 클릭 시 로 변경하기
+}
+@Composable
+fun GridPlantItem(
+    pot: PotInfo,
+    modifier: Modifier = Modifier,
+    onItemClick: () -> Unit, // 이미지 클릭 - 영역 클릭 시 로 변경하기
+) {
+    Log.d("plantLog", "----- $pot")
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(Color.White, RoundedCornerShape(16.dp))
+            .clickable{onItemClick()}
+            .padding(12.dp),
+        horizontalAlignment = Alignment.Start
     ) {
-        Log.d("plantLog", "----- $pot")
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp)) // 동그랗게 클릭 영역 제한
+        ) {
+            ProfileImage(
+                level = pot.level,
+                size = 60
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+        // 2. 화분 정보 (시간, 이름) -
         Column(
-            modifier = modifier
-                .fillMaxWidth()
-                .background(Color.White, RoundedCornerShape(16.dp))
-                .padding(12.dp),
+            modifier = Modifier
+                .fillMaxWidth(),
             horizontalAlignment = Alignment.Start
         ) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp)) // 동그랗게 클릭 영역 제한
-                    .clickable { onImageClick() } // [클릭 1] 이미지 클릭 시
-            ) {
-                ProfileImage(
-                    level = pot.level,
-                    size = 60
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-            // 2. 화분 정보 (시간, 이름) -
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.Start
-            ) {
-                // 총 공부 시간
-                Text(
-                    text = TimeFormatter.formatToDigitalClock(pot.potTotalStudyingTime ?: 0L),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Black
-                )
-                // 화분 이름
-                Text(
-                    text = pot.name ?: "이름 없음",
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+            // 총 공부 시간
+            Text(
+                text = TimeFormatter.formatToDigitalClock(pot.potTotalStudyingTime ?: 0L),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Black
+            )
+            // 화분 이름
+            Text(
+                text = pot.name ?: "이름 없음",
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

@@ -4,6 +4,7 @@ import android.R.attr.onClick
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -163,7 +164,7 @@ fun DarkModeToggleButton(
             .padding(vertical = 4.dp),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = Color.White,
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -173,6 +174,7 @@ fun DarkModeToggleButton(
                 .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
+
         ) {
             // 좌측
             Text(
@@ -205,7 +207,7 @@ fun GrownTreesButton(
             .height(50.dp),
         shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = Color.White,
             contentColor = MaterialTheme.colorScheme.onSurface,
         ),
         elevation = ButtonDefaults.buttonElevation(
@@ -239,7 +241,8 @@ fun ButtonTemplate(text: String, onClick: () -> Unit) {
             .height(50.dp),
         shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.surface,
+//            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = Color.White,
             contentColor = MaterialTheme.colorScheme.onSurface
         ),
         elevation = ButtonDefaults.buttonElevation(
@@ -282,7 +285,7 @@ fun ProfileRow(uiState: MyPageUiState, viewModel: MyPageViewModel) {
                 contentDescription = "프로필 수정",
 
                 modifier = Modifier
-                    .size(20.dp)
+                    .size(15.dp)
                     .align(Alignment.BottomEnd)
                     .offset(x = 3.dp, y = 3.dp),
                 tint = MaterialTheme.colorScheme.onSurface
