@@ -126,7 +126,6 @@ class PotRepository(private val db: FirebaseFirestore) {
         val docRef = db.collection("users").document(CurrentUser.uid)
             .collection("pots").document(potId)
             .collection("logs").document()
-
             docRef.set(studyLog.copy(id = docRef.id))
             .addOnSuccessListener {
                 Log.d("스터디로그", "성공적")
