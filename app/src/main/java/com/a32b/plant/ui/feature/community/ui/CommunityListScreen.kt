@@ -1,5 +1,6 @@
 package com.a32b.plant.ui.feature.community.ui
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -26,10 +27,12 @@ import com.a32b.plant.R
 import com.a32b.plant.core.component.ProfileImage
 import com.a32b.plant.core.component.Tag
 import com.a32b.plant.core.component.TagGroup
+import com.a32b.plant.core.component.TagSheet
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.data.di.ViewModelFactory
 import com.a32b.plant.data.model.Post
+import com.a32b.plant.data.model.Tag
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityListViewModel
 import com.a32b.plant.ui.theme.Typography
 import com.a32b.plant.ui.theme.background
@@ -45,6 +48,10 @@ fun CommunityListScreen(navController: NavController) {
 
     val uiState by viewModel.uiState.collectAsState()
 
+    val tagList : List<Tag> = listOf(Tag(name = "국어", parentId = "1"),Tag(name = "영어", parentId = "1"),Tag(name = "기타", parentId = "1"),
+                                Tag(name = "자소서/이력서", parentId = "2"),Tag(name = "면접", parentId = "2"),Tag(name = "포트폴리오", parentId = "2"),Tag(name = "기타", parentId = "2"),
+                                    Tag(name = "중등국어", parentId = "3"),Tag(name = "중등영어", parentId = "3"),Tag(name = "기타", parentId = "3"),)
+
     BackHandler {
         navController.navigate(Routes.HomeMain) {
             popUpTo(Routes.HomeMain) { inclusive = false }
@@ -59,6 +66,9 @@ fun CommunityListScreen(navController: NavController) {
                     query = searchQuery,
                     onQueryChange = { viewModel.onSearchQueryChanged(it) }
                 )
+                TagSheet(tagList) { selected ->
+                    Log.d("선택된 거 ", selected.toString())
+                }
                 TagGroup(tags = uiState.tags + listOf("공유")){ selected ->
                     viewModel.onSelectedChanged(selected.toList())
 
