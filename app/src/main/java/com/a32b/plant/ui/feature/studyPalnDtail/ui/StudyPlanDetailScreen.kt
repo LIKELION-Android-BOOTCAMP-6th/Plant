@@ -398,7 +398,8 @@ fun StudyRecordCard(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    color = Color.Black
             )
                 // 2. 공부시간 (우측 고정)
                 Text(
