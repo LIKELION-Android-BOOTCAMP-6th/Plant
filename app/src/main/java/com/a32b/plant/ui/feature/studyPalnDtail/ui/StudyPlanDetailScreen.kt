@@ -217,7 +217,7 @@ fun StudyPlanDetailScreen(
                         modifier = Modifier
                             .fillMaxSize(),
                         contentPadding = PaddingValues(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         items(logs) { record ->
                             StudyRecordCard(
@@ -276,7 +276,7 @@ fun StudyPlanDetailScreen(
 
                                 Spacer(modifier = Modifier.height(16.dp))
 
-                                // 입력창 (디자인에 어울리게 스타일링)
+                                // 입력창
                                 OutlinedTextField(
                                     value = editNameText,
                                     onValueChange = { editNameText = it },
@@ -292,7 +292,7 @@ fun StudyPlanDetailScreen(
 
                                 Spacer(modifier = Modifier.height(22.dp))
 
-                                // 버튼 영역 (이미지 디자인 그대로 반영)
+                                // 버튼 영역
                                 Row(modifier = Modifier.fillMaxWidth()) {
                                     Button(
                                         onClick = { viewModel.setEditDialogShown(false) },
@@ -386,7 +386,7 @@ fun StudyRecordCard(
                 Spacer(modifier = Modifier.width(5.dp))
             }
             //리스트 상세 다이얼로그
-            Column(modifier = Modifier.padding(10.dp)) {
+            Column(modifier = Modifier.padding(5.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -423,7 +423,7 @@ fun StudyRecordCard(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             // 학습 상세 내용 -> 2줄 제한
             val combinedContent = log.contents.take(2).joinToString("\n") { "• $it" }
