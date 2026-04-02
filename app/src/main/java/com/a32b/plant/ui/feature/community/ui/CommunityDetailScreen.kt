@@ -176,7 +176,7 @@ fun CommunityDetailScreen(
                                 IconButton(onClick = {
                                     navController.navigate(Routes.CommunityPost(postId = currentPost.postId))
                                 }) {
-                                    Icon(painterResource(id = R.drawable.ic_edit), null, tint = Color.DarkGray, modifier = Modifier.size(22.dp))
+                                    Icon(painterResource(id = R.drawable.ic_edit), null, tint = Color.DarkGray, modifier = Modifier.size(18.dp))
                                 }
                                 IconButton(onClick = { viewModel.openDeleteDialog() }) {
                                     Icon(painterResource(id = R.drawable.ic_trash), null, tint = Color.DarkGray, modifier = Modifier.size(22.dp))
