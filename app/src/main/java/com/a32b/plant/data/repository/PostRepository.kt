@@ -7,6 +7,7 @@ import com.a32b.plant.data.di.CurrentUser
 import com.a32b.plant.data.model.Comment
 import com.a32b.plant.data.model.Post
 import com.a32b.plant.data.model.CommunityActivity
+import com.a32b.plant.data.model.Tag
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -86,16 +87,8 @@ class PostRepository(private val db: FirebaseFirestore) {
             }
             // 정렬 방식 : 최신이 맨 아래로 가게
             .sortedBy { it.createdAt }
-//            .sortedByDescending { it.createdAt }
     }
-//    suspend fun getComments(postId: String): List<Comment>{
-//       return  db.collection("posts").document(postId)
-//            .collection("comments")
-//            .get()
-//            .await()
-//            .toObjects<Comment>()
-//            .sortedByDescending { it.createdAt }
-//    }
+
 
     // 댓글 남기기 함수
     suspend fun addComment(postId: String, comment: Comment, activity: CommunityActivity) {
@@ -176,11 +169,6 @@ class PostRepository(private val db: FirebaseFirestore) {
         // 3. 게시글 문서 삭제
         postRef.delete().await()
     }
-//    suspend fun deletePost(postId: String) {
-//        val activityId = getActivityId(postId)
-//        db.collection("posts").document(postId).delete().await()
-//        db.collection("activities").document(activityId).delete().await()
-//    }
 
     suspend fun updatePost(isShared: Boolean, postId: String, title: String, content: String? = null, tag: List<String>? = null, createdAt: Timestamp? = null) {
         if(isShared){
@@ -240,10 +228,21 @@ class PostRepository(private val db: FirebaseFirestore) {
                 .await()
         }
 
-
-
     }
-    suspend fun uploadPostAndReturnId(post: Post): String {
-        return db.collection("posts").add(post).await().id
+//    suspend fun uploadPostAndReturnId(post: Post): String {
+//        return db.collection("posts").add(post).await().id
+//    }
+
+
+    suspend fun getTag():List<Tag>{
+        return try {
+            db.collection("Tags")
+                .get()
+                .await()
+                .toObjects(Tag::class.java)
+        } catch (e: Exception){
+            emptyList()
+        }
+
     }
 }

@@ -66,13 +66,27 @@ fun CommunityListScreen(navController: NavController) {
                     query = searchQuery,
                     onQueryChange = { viewModel.onSearchQueryChanged(it) }
                 )
-                TagSheet(tagList) { selected ->
-                    Log.d("선택된 거 ", selected.toString())
+                Row() {
+                    Text("태그", style = Typography.titleSmall, modifier = Modifier.padding(start = 16.dp, top = 4.dp))
+                    Icon(painter = painterResource(id = if(uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
+                        contentDescription = "태그박스",
+                        modifier = Modifier.clickable{
+                            viewModel.onIsTagSheetShownChange()
+                        })
                 }
-                TagGroup(tags = uiState.tags + listOf("공유")){ selected ->
-                    viewModel.onSelectedChanged(selected.toList())
+                if(uiState.isTagSheetShown){
+                    TagSheet(uiState.tags, isMultiSelected = true) { selected ->
+                        viewModel.onSelectedChanged(selected.toList())
+                        Log.d("선택된 거 ", selected.toString())
+                    }
+                }else{
+                    viewModel.onSelectedChanged(emptyList())
+                }
 
-                }
+//                TagGroup(tags = uiState.tags + listOf("공유")){ selected ->
+//                    viewModel.onSelectedChanged(selected.toList())
+//
+//                }
             }
         },
         floatingActionButton = {
@@ -120,7 +134,7 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
         value = query,
         onValueChange = onQueryChange,
         placeholder = { Text("검색어를 입력하세요", style = Typography.bodyMedium, color = Color.Gray) },
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).height(56.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp).height(56.dp),
         shape = RoundedCornerShape(12.dp),
         trailingIcon = {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp)) {
