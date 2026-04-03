@@ -3,6 +3,7 @@ package com.a32b.plant.ui.feature.community.ui
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,23 +15,32 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.toRoute
+import com.a32b.plant.R
 import com.a32b.plant.core.component.ConfirmDialog
+import com.a32b.plant.core.component.TagChip
 import com.a32b.plant.core.component.TagGroup
+import com.a32b.plant.core.component.TagSheet
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.data.di.ViewModelFactory
+import com.a32b.plant.data.model.Tag
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityPostEvent
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityPostViewModel
 import com.a32b.plant.ui.theme.Typography
 import com.a32b.plant.ui.theme.background
+import com.a32b.plant.ui.theme.primary
+import com.a32b.plant.ui.theme.sub2
+import com.a32b.plant.ui.theme.sub_green1
 
 @Composable
 fun CommunityPostScreen(
@@ -41,26 +51,17 @@ fun CommunityPostScreen(
 
     val postId = args?.postId
     val potId = args?.potId
-    val tag = args?.tag
+    val tag = args?.tag //tag id
     val title = args?.title
     val studyLogIds = args?.studyLogIds
     val viewModel: CommunityPostViewModel = viewModel(
-        factory = ViewModelFactory.communityPostViewModelFactory(postId, potId, title,studyLogIds)
+        factory = ViewModelFactory.communityPostViewModelFactory(postId, potId, tag, title,studyLogIds)
     )
-
 
     val uiState by viewModel.uiState.collectAsState()
 
-    tag?.let {
-        val tags = listOf(tag.dropLast(2), tag.takeLast(2))
-        viewModel.onSelectedTagChange(tags)
-    }
-
     LaunchedEffect(postId,  Unit) {
         postId?.let { viewModel.getPost(postId) }
-        if(uiState.selected.contains("공유")){
-            viewModel.onIsSharedChange()
-        }
 
         viewModel.event.collect { event ->
             when(event){
@@ -88,7 +89,7 @@ fun CommunityPostScreen(
                             (uiState.studyLogs == null && uiState.content.isNullOrBlank())
                     if (isInvalid) {
                         Toast.makeText(context, "제목과 내용을 모두 입력해주세요.", Toast.LENGTH_SHORT).show()
-                    } else if(uiState.selected.isEmpty()){
+                    } else if(uiState.selected.id.isEmpty()){
                         Toast.makeText(context, "태그를 선택해주세요.", Toast.LENGTH_SHORT).show()
                     } else{
                         viewModel.savePost() { isSuccess ->
@@ -130,14 +131,27 @@ fun CommunityPostScreen(
             item {
                 Text("태그", style = Typography.bodyMedium, fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground)
+                Row {
+                    Text("태그", style = Typography.bodyMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
+                    Icon(painter = painterResource(id = if(uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
+                        contentDescription = "태그박스",
+                        modifier = Modifier.clickable{
+                            viewModel.onIsTagSheetShownChange()
+                        })
+                    Text(uiState.selected.name, style = Typography.bodyMedium, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+                }
                 Spacer(modifier = Modifier.height(8.dp))
-//                TagGroup(uiState.tags + if(uiState.isShared) listOf("공유") else emptyList(),
-//                    enable = !uiState.isShared,
-//                    editing = true,
-//                    init = if(uiState.isShared || postId?.isNotEmpty()?:false)uiState.selected else emptyList()){ selected ->
-//                    viewModel.onSelectedTagChange(selected)
-//
-//                }
+                if (uiState.isTagSheetShown){
+                    if(uiState.isShared) TagChip("공유", 20)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    TagSheet(uiState.tags,
+                        enable = !uiState.isShared,
+                        init = if(uiState.isShared || postId?.isNotEmpty()?:false) listOf(uiState.selected) else emptyList()) { selected->
+                        Log.d("선택된 거 ", selected.toList().toString())
+                        viewModel.onSelectedTagChange(selected[0])
+                    }
+                }
+
             }
 
             if (uiState.isShared){
@@ -159,7 +173,6 @@ fun CommunityPostScreen(
                     )
                 }
             }
-
 
             item { Spacer(modifier = Modifier.height(40.dp)) }
         }
@@ -194,6 +207,7 @@ fun PostTopBar(isEditMode: Boolean, onBackClick: () -> Unit, onRegisterClick: ()
                 shape = RoundedCornerShape(4.dp),
 //                color = Color(0xFFC5E1A5)
                 color = MaterialTheme.colorScheme.primaryContainer
+                color = primary
             ) {
                 Text(
                     text = if (isEditMode) "수정" else "등록",
@@ -202,38 +216,14 @@ fun PostTopBar(isEditMode: Boolean, onBackClick: () -> Unit, onRegisterClick: ()
                     fontWeight = FontWeight.Bold,
 //                    color = Color(0xFF33691E)
                     color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = background,
+                    style = Typography.bodyMedium
                 )
             }
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
     )
 }
-
-
-//@Composable
-//fun PostInputField(
-//    value: String?,
-//    onValueChange: (String) -> Unit,
-//    placeholder: String,
-//    modifier: Modifier = Modifier,
-//    singleLine: Boolean = false
-//) {
-//    TextField(
-//        value = value ?: "",
-//        onValueChange = onValueChange,
-//        placeholder = { Text(placeholder, color = Color.LightGray, style = Typography.bodyMedium) },
-//        modifier = modifier.fillMaxWidth(),
-//        singleLine = singleLine,
-//        colors = TextFieldDefaults.colors(
-//            focusedContainerColor = Color.White,
-//            unfocusedContainerColor = Color.White,
-//            focusedIndicatorColor = Color.Transparent,
-//            unfocusedIndicatorColor = Color.Transparent
-//        ),
-//        shape = RoundedCornerShape(8.dp),
-//        textStyle = Typography.bodyMedium
-//    )
-//}
 @Composable
 fun PostInputField(
     value: String?,
@@ -260,6 +250,10 @@ fun PostInputField(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = Typography.bodyMedium) },
             modifier = modifier.fillMaxWidth(),
+            placeholder = { Text(placeholder, color = Color.LightGray, style = Typography.bodyMedium) },
+            modifier = modifier.fillMaxWidth()
+                .shadow(elevation = 1.dp, shape = RoundedCornerShape(8.dp))
+                .background(background),
             singleLine = singleLine,
             colors = TextFieldDefaults.colors(
 //                focusedContainerColor = Color.White,

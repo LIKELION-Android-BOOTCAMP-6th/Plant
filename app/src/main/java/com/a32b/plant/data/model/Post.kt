@@ -24,13 +24,14 @@ data class Post(
     val author: PostAuthor = PostAuthor(),
     val title: String = "",
     val content: String? = null,
-    val tag: List<String> = emptyList(),
+    val tag: Tag = Tag(),
     val commentCount: Int = 0,
     val likeCount: Int = 0,
     val createdAt: Timestamp = Timestamp.now(),
     val activityId: String = "",
     val isLiked: Boolean = false, // likes 서브컬렉션에서 조회 후 설정
     val studyLogs: List<StudyLog>? = null,
+    val isShared: Boolean? = false,
 
     @get:Exclude
     val comments: List<Comment> = emptyList()   // comments 서브컬렉션에서 조회 후 설정

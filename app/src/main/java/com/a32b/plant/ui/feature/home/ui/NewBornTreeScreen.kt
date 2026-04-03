@@ -1,5 +1,6 @@
 package com.a32b.plant.ui.feature.home.ui
 
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -40,6 +41,7 @@ import com.a32b.plant.ui.theme.fontColor
 import com.a32b.plant.ui.theme.primary
 import com.a32b.plant.ui.theme.sub1
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.a32b.plant.data.di.ViewModelFactory
 import com.google.common.math.LinearTransformation.vertical
@@ -109,6 +111,8 @@ fun NewBornTreeScreen(navController: NavController,
             horizontalAlignment = Alignment.CenterHorizontally,
             contentPadding = PaddingValues(bottom = 20.dp)
         ) {
+
+
             // 화분 기본 이미지
             item {
                 Spacer(modifier = Modifier.height(20.dp))
@@ -175,6 +179,8 @@ fun NewBornTreeScreen(navController: NavController,
             }
             // 제목 입력
             item {
+                val maxLength = 15
+
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("화분 이름",
                         style = MaterialTheme.typography.titleSmall,
@@ -182,10 +188,15 @@ fun NewBornTreeScreen(navController: NavController,
                     androidx.compose.material3.OutlinedTextField(
                         value = potName,
                         onValueChange = { input ->
-                            // 줄바꿈 금지 & 글자 수 제한
-                            //공백 입력
-                            if(!input.contains("\n") && input.length <= 15 && input.isEmpty() || input.isNotBlank()){
-                                potName = input
+                            // 1. 줄바꿈 입력 방지
+                            if (!input.contains("\n")) {
+                                // 2. 글자 수 제한 및 토스트 알림 로직
+                                if (input.length <= maxLength) {
+                                    potName = input
+                                } else {
+                                    // 15글자를 초과해서 입력하려고 하면 토스트 발생
+                                    Toast.makeText(context, "${maxLength}글자 이하로 입력해주세요.", Toast.LENGTH_SHORT).show()
+                                }
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -196,10 +207,40 @@ fun NewBornTreeScreen(navController: NavController,
 
                         // 한 줄 입력 고정
                         singleLine = true,
+
+                        // 3. 텍스트필드 우측 하단에 실시간 글자수 표시
+                        supportingText = {
+                            Text(
+                                text = "${potName.length} / $maxLength",
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.End, // 우측 정렬
+                                color = if (potName.length >= maxLength) Color.Red else Color.Gray // 15글자 도달 시 붉은색
+                            )
+                        }
                     )
                 }
-
             }
+//            item {
+//                Column(modifier = Modifier.padding(16.dp)) {
+//                    Text("화분 이름", style = MaterialTheme.typography.titleSmall)
+//                    androidx.compose.material3.OutlinedTextField(
+//                        value = potName,
+//                        onValueChange = { input ->
+//                            // 줄바꿈 금지 & 글자 수 제한
+//                            //공백 입력
+//                            if(!input.contains("\n") && input.length <= 15 && (input.isEmpty() || input.isNotBlank())){
+//                                potName = input
+//                            }
+//                        },
+//                        modifier = Modifier.fillMaxWidth(),
+//                        placeholder = { Text("이름을 입력하세요 (최대 15글자)") },
+//
+//                        // 한 줄 입력 고정
+//                        singleLine = true,
+//                    )
+//                }
+//
+//            }
         }
     }
 }

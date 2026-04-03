@@ -47,7 +47,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.launch
 import androidx.credentials.exceptions.NoCredentialException
@@ -512,11 +512,8 @@ fun SignInScreen(navController: NavController) {
                             .height(48.dp)
                             .clickable {
                                 coroutineScope.launch {
-                                    // 1. GetGoogleIdOption 사용 및 필터링 해제 (핵심)
-                                    val googleIdOption = GetGoogleIdOption.Builder()
-                                        .setServerClientId(webClientId)
-                                        .setFilterByAuthorizedAccounts(false) // 이전에 로그인한 적 없는 기기 내 계정도 모두 표시
-                                        .setAutoSelectEnabled(true) // 계정이 1개뿐이면 팝업 없이 자동 선택
+                                    // 1. 등록된 구글 계정 찾기
+                                    val googleIdOption = GetSignInWithGoogleOption.Builder(webClientId)
                                         .build()
 
                                     // 2. 인증 요청 생성
@@ -538,7 +535,6 @@ fun SignInScreen(navController: NavController) {
                                     } catch (e: GetCredentialCancellationException) {
                                         // 사용자가 계정 선택창을 바깥 터치나 뒤로가기로 닫은 경우 무시
                                     } catch (e: NoCredentialException) {
-                                        // 필터링을 false로 했는데도 이 에러가 뜬다면, 정말로 기기에 등록된 구글 계정이 없는 경우입니다.
                                         Toast.makeText(
                                             context,
                                             "기기에 등록된 Google 계정이 없습니다. 설정에서 계정을 추가해주세요.",

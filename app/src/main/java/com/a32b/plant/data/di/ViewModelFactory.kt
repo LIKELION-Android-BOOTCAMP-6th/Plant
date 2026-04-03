@@ -125,9 +125,10 @@ object ViewModelFactory {
         }
     }
 
-    fun communityPostViewModelFactory(postId: String? = null, potId: String?=null, title: String?=null ,studyLogIds : List<String>? = emptyList()) = object : ViewModelProvider.Factory {
+    fun communityPostViewModelFactory(postId: String? = null, potId: String?=null, tagId: String? = null, title: String?=null ,studyLogIds : List<String>? = emptyList()) = object : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return CommunityPostViewModel(AppContainer.postRepository, AppContainer.potRepository, postId, potId, title,studyLogIds ) as T
+            return CommunityPostViewModel(AppContainer.postRepository, AppContainer.potRepository, postId, potId, tagId = tagId,
+                title = title, studyLogIds = studyLogIds ) as T
         }
     }
 

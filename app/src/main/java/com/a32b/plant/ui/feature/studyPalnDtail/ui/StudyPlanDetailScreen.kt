@@ -118,7 +118,8 @@ fun StudyPlanDetailScreen(
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_trash),
                                 "화분 전체 삭제하기",
-                                modifier = Modifier.size(19.dp)
+                                modifier = Modifier.size(24.dp)
+//                                modifier = Modifier.size(19.dp)
                             )
                         }
                     }

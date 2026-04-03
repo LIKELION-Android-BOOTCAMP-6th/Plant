@@ -1,5 +1,8 @@
 package com.a32b.plant.core.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -28,7 +31,13 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
 
     val destination by viewModel.destination.collectAsState()
     destination?.let { startRoute ->
-        NavHost(navController = navController, startDestination = startRoute) {
+        NavHost(navController = navController,
+            startDestination = startRoute,
+            enterTransition = { fadeIn(animationSpec = tween(600)) },
+            exitTransition = { fadeOut(animationSpec = tween(600)) },
+            popEnterTransition = { fadeIn(animationSpec = tween(600)) },
+            popExitTransition = { fadeOut(animationSpec = tween(600)) }
+        ) {
 
             composable<Routes.HomeMain> { HomeScreen(navController) }
             composable<Routes.Mypage> { MyPageScreen(navController) }

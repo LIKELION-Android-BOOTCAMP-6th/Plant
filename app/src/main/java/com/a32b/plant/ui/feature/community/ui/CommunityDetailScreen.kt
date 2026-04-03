@@ -34,7 +34,7 @@ import com.a32b.plant.data.di.ViewModelFactory
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityDetailViewModel
 import com.a32b.plant.ui.theme.*
 import com.a32b.plant.core.component.ConfirmDialog
-import com.a32b.plant.core.component.Tag
+import com.a32b.plant.core.component.TagChip
 import com.a32b.plant.data.model.Comment
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -124,9 +124,9 @@ fun CommunityDetailScreen(
                     }
                     item{
                         Row(modifier = Modifier.padding(start = 7.dp)) {
-                            for (tag in currentPost.tag) {
-                                Tag(tag, 15 )
-                            }
+                            if (currentPost.isShared?:false) TagChip("공유", 15)
+
+                            TagChip(currentPost.tag.name, 15 )
                         }
                         Spacer(modifier = Modifier.height(20.dp))
 

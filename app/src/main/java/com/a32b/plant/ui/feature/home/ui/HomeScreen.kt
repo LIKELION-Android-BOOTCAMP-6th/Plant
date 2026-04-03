@@ -10,17 +10,21 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
+import androidx.compose.material3.FloatingActionButtonDefaults.elevation
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -127,23 +131,49 @@ fun HomeScreen(navController: NavController) {
                 }
             }
             // [추가 버튼 영역]
+//             IconButton 대신 FloatingActionButton 사용
             item {
                 Spacer(modifier = Modifier.height(30.dp))
-                IconButton(
+
+                FloatingActionButton(
                     onClick = {
                         navController.navigate(Routes.NewBornTree)
                     },
-                    modifier = Modifier.size(56.dp)
+                    modifier = Modifier.size(56.dp),
+                    shape = CircleShape,
+                    containerColor = primary,
+                    elevation = elevation(
+                        defaultElevation = 6.dp,
+                        pressedElevation = 2.dp
+                    )
                 ) {
                     Icon(
-                        imageVector = Icons.Default.AddCircle,
+                        imageVector = Icons.Default.Add,
                         contentDescription = "화분 추가",
                         modifier = Modifier.fillMaxSize(),
                         tint = MaterialTheme.colorScheme.primary
+                        tint = background
                     )
                 }
                 Spacer(modifier = Modifier.height(50.dp))
             }
+//            item {
+//                Spacer(modifier = Modifier.height(30.dp))
+//                IconButton(
+//                    onClick = {
+//                        navController.navigate(Routes.NewBornTree)
+//                    },
+//                    modifier = Modifier.size(56.dp)
+//                ) {
+//                    Icon(
+//                        imageVector = Icons.Default.AddCircle,
+//                        contentDescription = "화분 추가",
+//                        modifier = Modifier.fillMaxSize(),
+//                        tint = Color(0xFFA5C16C)
+//                    )
+//                }
+//                Spacer(modifier = Modifier.height(50.dp))
+//            }
         }
     }
 }
@@ -245,6 +275,8 @@ fun MainPlantCard(displayPot: PotInfo, onStartClick: () -> Unit) {
                     containerColor = MaterialTheme.colorScheme.primary,
                     disabledContainerColor = MaterialTheme.colorScheme.outlineVariant,
                     disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                colors = ButtonDefaults.buttonColors(containerColor = primary,
+                    disabledContainerColor = Color.LightGray),
                 shape = RoundedCornerShape(12.dp),
                 elevation = ButtonDefaults.buttonElevation(
                     defaultElevation = 6.dp,

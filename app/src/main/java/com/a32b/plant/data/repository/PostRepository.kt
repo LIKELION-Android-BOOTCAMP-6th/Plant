@@ -170,7 +170,7 @@ class PostRepository(private val db: FirebaseFirestore) {
         postRef.delete().await()
     }
 
-    suspend fun updatePost(isShared: Boolean, postId: String, title: String, content: String? = null, tag: List<String>? = null, createdAt: Timestamp? = null) {
+    suspend fun updatePost(isShared: Boolean, postId: String, title: String, content: String? = null, tag: Tag? = null, createdAt: Timestamp? = null) {
         if(isShared){
             db.collection("posts").document(postId)
                 .update("title", title)

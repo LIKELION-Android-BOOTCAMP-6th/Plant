@@ -128,7 +128,7 @@ fun MyPageScreen(navController: NavController) {
                         navController.navigate(Routes.MyPageArchive)
                     }
                     DividerImage()
-                    ButtonTemplate(text = "커뮤니티 활동") {
+                    ButtonTemplate(text = "내 활동") {
                         viewModel.moveToMyCommunityFeed()
                     }
                     ButtonTemplate(text = "앱 설정") {

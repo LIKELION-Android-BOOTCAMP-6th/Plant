@@ -124,6 +124,35 @@ fun MyPageArchiveDetailScreen(navController: NavController) {
                             )
                         }
                     }
+                    //공유
+//                    IconButton(onClick = {
+//                        if (uiState.isSelectionMode) {
+//                            if (uiState.selectedIds.isNotEmpty()) {
+//                                showDialog = true
+//                            } else {
+//                                Toast.makeText(context, "공유할 기록을 선택해 주세요.", Toast.LENGTH_SHORT)
+//                                    .show()
+//                            }
+//                        } else {
+//                            viewModel.toggleSelectionMode(true)
+//                        }
+//                    }) {
+//
+//                        if (uiState.isSelectionMode) {
+//                            Icon(
+//                                Icons.Default.Check,
+//                                contentDescription = "확인",
+//                                modifier = Modifier.size(24.dp),
+//                                tint = fontColorSub
+//                            )
+//                        } else {
+//                            Icon(
+//                                painterResource(id = R.drawable.ic_share),
+//                                contentDescription = "공유",
+//                                modifier = Modifier.size(24.dp)
+//                            )
+//                        }
+//                    }
                 }
             )
 
