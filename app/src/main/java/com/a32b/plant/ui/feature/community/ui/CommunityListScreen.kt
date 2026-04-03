@@ -93,7 +93,7 @@ fun CommunityListScreen(navController: NavController) {
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { navController.navigate(Routes.CommunityPost()) },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                containerColor = MaterialTheme.colorScheme.secondary,
                 shape = CircleShape
             ) {
                 Icon(
@@ -150,10 +150,10 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
             }
         },
         colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-            focusedTextColor = MaterialTheme.colorScheme.primary,
-            unfocusedTextColor = MaterialTheme.colorScheme.outline
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            focusedTextColor = MaterialTheme.colorScheme.surfaceVariant,
+            unfocusedTextColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         singleLine = true
     )
@@ -164,7 +164,7 @@ fun PostCard(post: Post, isLiked: Boolean,onClick: () -> Unit ) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
 //            Color.White
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
