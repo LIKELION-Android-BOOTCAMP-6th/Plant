@@ -51,7 +51,7 @@ fun CommunityPostScreen(
 
     val postId = args?.postId
     val potId = args?.potId
-    val tag = args?.tag //tag id
+    val tag = args?.tagId //tag id
     val title = args?.title
     val studyLogIds = args?.studyLogIds
     val viewModel: CommunityPostViewModel = viewModel(
@@ -129,10 +129,8 @@ fun CommunityPostScreen(
             }
 
             item {
-                Text("태그", style = Typography.bodyMedium, fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground)
                 Row {
-                    Text("태그", style = Typography.bodyMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
+                    Text("태그", style = Typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground,fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
                     Icon(painter = painterResource(id = if(uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
                         contentDescription = "태그박스",
                         modifier = Modifier.clickable{

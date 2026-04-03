@@ -91,7 +91,7 @@ fun StudyingScreen(navController: NavController) {
     //이전 스택에서 보낸 값을 args에 넣어서 뽑아낼 수 있음
     val args = navController.currentBackStackEntry?.toRoute<Routes.Studying>()
 
-    val tag = args!!.tag
+    val tag = args!!.tagName
     val title = args.title
     val potId = args.potId
     val level = args.level

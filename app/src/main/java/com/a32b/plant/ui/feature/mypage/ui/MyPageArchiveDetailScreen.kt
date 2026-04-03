@@ -70,7 +70,7 @@ fun MyPageArchiveDetailScreen(navController: NavController) {
             TopAppBar(
                 title = {
                     Text(
-                        "[${pot?.tag ?: "태그"}] ${pot?.name ?: "제목"}",
+                        "[${pot?.tag_name ?: "태그"}] ${pot?.name ?: "제목"}",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -347,7 +347,7 @@ fun MyPageArchiveDetailScreen(navController: NavController) {
                         Routes.CommunityPost(
                             postId = null,
                             potId = potId,
-                            tag = tag,
+                            tagId = tag,
                             title = title,
                             studyLogIds = logIds
                         )

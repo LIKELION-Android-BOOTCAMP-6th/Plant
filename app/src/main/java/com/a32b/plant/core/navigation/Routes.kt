@@ -17,10 +17,10 @@ sealed interface Routes {
     @Serializable data object StudyCompleted: Routes
 
     @Serializable data class StudyPlanDetail(val potId: String) : Routes
-    @Serializable data class Studying(val potId: String, val tag: String, val title: String, val level: String): Routes
+    @Serializable data class Studying(val potId: String, val tagId: String, val tagName: String, val title: String, val level: String): Routes
     @Serializable data class StudyResult(val timestamp: String, val tag: String,val title: String, val log: List<String>, val time: Long, val potId: String, val level: String ) : Routes
 
-    @Serializable data class CommunityPost(val postId: String? = null, val potId: String? = null, val tag: String? = null, val title: String? = null, val studyLogIds: List<String>? = emptyList()) : Routes
+    @Serializable data class CommunityPost(val postId: String? = null, val potId: String? = null, val tagId: String? = null, val tagName: String? = null, val title: String? = null, val studyLogIds: List<String>? = emptyList()) : Routes
     @Serializable data class CommunityDetail(val postId: String) : Routes
     @Serializable data class StudyCompletedDetail(val potId: String): Routes
     @Serializable data class MyPageArchiveDetail(val potId: String): Routes

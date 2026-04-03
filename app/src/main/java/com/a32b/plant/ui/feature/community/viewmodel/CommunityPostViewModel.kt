@@ -74,7 +74,6 @@ class CommunityPostViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             repository.getPostDetail(postId).firstOrNull()?.let { post ->
                 Log.d("getPost", post.tag.toString())
-                //⭐⭐⭐⭐⭐ 디비에 저장되는 태그는 리스트 스트링인데, 우리가 쓰는 태그는 리스트 태그니까 형식 오류뜸 썅~! 받아와서 보여줄 땐 리스트 태그로 보여줘야 하는데 어카노
                 if (post.isShared?:false){
                     _uiState.update { it.copy(isShared = true,postId = post.postId,title = post.title, studyLogs = post.studyLogs, selected = post.tag) }
 
