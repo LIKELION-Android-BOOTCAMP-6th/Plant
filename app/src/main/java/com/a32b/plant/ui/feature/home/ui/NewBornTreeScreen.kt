@@ -43,8 +43,10 @@ import com.a32b.plant.ui.theme.sub1
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.a32b.plant.core.component.TagSheet
 import com.a32b.plant.data.di.ViewModelFactory
 import com.google.common.math.LinearTransformation.vertical
+import com.google.firebase.database.core.Tag
 
 @Composable
 fun NewBornTreeScreen(navController: NavController,
@@ -54,7 +56,7 @@ fun NewBornTreeScreen(navController: NavController,
     val tags by viewModel.dbTags.collectAsState()
     val isUploading by viewModel.isUploading.collectAsState()
 
-    var selectedTag by remember { mutableStateOf("") }
+    var selectedTag by remember { mutableStateOf<Tag?>(null) }
     var potName by remember {mutableStateOf("")}
     //실패
     LaunchedEffect(Unit) {
@@ -78,8 +80,10 @@ fun NewBornTreeScreen(navController: NavController,
             // 하단 버튼
             Button(
                 onClick = {
-                    viewModel.createPot(selectedTag, potName.trim()){
-                        navController.popBackStack()
+                    selectedTag?.let { tag ->
+                        viewModel.createPot(tag, potName.trim()) {
+                            navController.popBackStack()
+                        }
                     }
                 },
                 enabled = checkEnable(selectedTag,potName,isUploading),
@@ -145,33 +149,27 @@ fun NewBornTreeScreen(navController: NavController,
                     androidx.compose.foundation.lazy.LazyRow(
                         contentPadding = PaddingValues(vertical = 8.dp)
                     ) {
-                        items(tags.size){ index ->
-                            val tag = tags[index]
-                            androidx.compose.material3.FilterChip(
-                                selected = (selectedTag == tag),
-                                onClick = { selectedTag = tag},
-                                label = {
-                                    Text(tag, style = MaterialTheme.typography.bodySmall,color = MaterialTheme.colorScheme.onSurface)
-                                },
-                                modifier = Modifier.padding(end = 8.dp),
-                                // 선택 시 색상 변화
-                                border = androidx.compose.material3.FilterChipDefaults.filterChipBorder(
-                                    enabled = !isUploading,
-                                    selected = (selectedTag == tag),
-//                                    borderColor = androidx.compose.ui.graphics.Color.LightGray,
-                                    borderColor = MaterialTheme.colorScheme.outline,
-                                    selectedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
-                                    borderWidth = 1.dp,
-                                    selectedBorderWidth = 0.dp,
-                                ),
-                                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-                                colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onSurface,
-                                    labelColor = MaterialTheme.colorScheme.onSurface,
-                                    disabledLabelColor = MaterialTheme.colorScheme.onSurface
+                        item {
+                            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                                Text("태그 선택", style = Typography.titleSmall, modifier = Modifier.padding(vertical = 8.dp))
+
+                                TagSheet(
+                                    tags = tags,
+                                    init = emptyList(),
+                                    isMultiSelected = false, // 화분은 하나의 성격만 가지므로 단일 선택
+                                    enable = !isUploading,
+                                    onSelectedChange = { selectedList ->
+                                        if (selectedList.isNotEmpty()) {
+                                            selectedTag = selectedList[0]
+                                        }
+                                    }
                                 )
-                            )
+
+                                // 선택된 태그가 무엇인지 사용자에게 보여주는 피드백 (선택 사항)
+                                selectedTag?.let {
+                                    Text(text = "선택됨: ${it.name}", style = Typography.bodySmall, color = primary, modifier = Modifier.padding(start = 10.dp))
+                                }
+                            }
                         }
                     }
 
@@ -220,27 +218,6 @@ fun NewBornTreeScreen(navController: NavController,
                     )
                 }
             }
-//            item {
-//                Column(modifier = Modifier.padding(16.dp)) {
-//                    Text("화분 이름", style = MaterialTheme.typography.titleSmall)
-//                    androidx.compose.material3.OutlinedTextField(
-//                        value = potName,
-//                        onValueChange = { input ->
-//                            // 줄바꿈 금지 & 글자 수 제한
-//                            //공백 입력
-//                            if(!input.contains("\n") && input.length <= 15 && (input.isEmpty() || input.isNotBlank())){
-//                                potName = input
-//                            }
-//                        },
-//                        modifier = Modifier.fillMaxWidth(),
-//                        placeholder = { Text("이름을 입력하세요 (최대 15글자)") },
-//
-//                        // 한 줄 입력 고정
-//                        singleLine = true,
-//                    )
-//                }
-//
-//            }
         }
     }
 }

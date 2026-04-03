@@ -91,7 +91,13 @@ fun HomeScreen(navController: NavController) {
                 HomeHeaderSection(currentDate, displayPot) {
                     if(!displayPot.id.isNullOrEmpty()){
                         navController.navigate(
-                            Routes.Studying(displayPot.id!!, displayPot.tag?: "", displayPot.name ?: "", displayPot.level)
+                            Routes.Studying(
+                                potId = displayPot.id!!,
+                                tagId = displayPot.tag_id ?: "",     // PotInfo의 tag_id
+                                tagName = displayPot.tag_name ?: "", // PotInfo의 tag_name
+                                title = displayPot.name ?: "",
+                                level = displayPot.level
+                            )
                         )
                     }
                 }
@@ -151,29 +157,11 @@ fun HomeScreen(navController: NavController) {
                         imageVector = Icons.Default.Add,
                         contentDescription = "화분 추가",
                         modifier = Modifier.fillMaxSize(),
-                        tint = MaterialTheme.colorScheme.primary
-//                        tint = background
+                        tint = MaterialTheme.colorScheme.background
                     )
                 }
                 Spacer(modifier = Modifier.height(50.dp))
             }
-//            item {
-//                Spacer(modifier = Modifier.height(30.dp))
-//                IconButton(
-//                    onClick = {
-//                        navController.navigate(Routes.NewBornTree)
-//                    },
-//                    modifier = Modifier.size(56.dp)
-//                ) {
-//                    Icon(
-//                        imageVector = Icons.Default.AddCircle,
-//                        contentDescription = "화분 추가",
-//                        modifier = Modifier.fillMaxSize(),
-//                        tint = Color(0xFFA5C16C)
-//                    )
-//                }
-//                Spacer(modifier = Modifier.height(50.dp))
-//            }
         }
     }
 }
@@ -225,13 +213,13 @@ fun MainPlantCard(displayPot: PotInfo, onStartClick: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // 화분이 있을 때만 태그 표시 (ID가 비어있지 않을 때)
-            if (!isPotEmpty && !displayPot.tag.isNullOrEmpty()) {
+            if (!isPotEmpty && !displayPot.tag_name.isNullOrEmpty()) {
                 Surface(
                     color = MaterialTheme.colorScheme.primary,
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
-                        text = displayPot.tag,
+                        text = displayPot.tag_name!!,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                         color = MaterialTheme.colorScheme.onPrimary,
                         style = MaterialTheme.typography.bodySmall
