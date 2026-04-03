@@ -62,6 +62,10 @@ fun MyPageArchiveDetailScreen(navController: NavController) {
     var isSelectionMode by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
+
+    // 선택한 로그 상태
+    val selectedStudyLog by viewModel.selectedStudyLog.collectAsState()
+
     Scaffold(
         // ---------- 일반 모드 : 뒤로가기, [태그] 완료된 학습화분 이름, 공유하기 버튼
         // ---------- 공유 모드 : 취소버튼(일반모드로 변경), [태그] 완료된 학습화분 이름, 커뮤니티 공유 버튼
@@ -258,8 +262,16 @@ fun MyPageArchiveDetailScreen(navController: NavController) {
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp)
                                     .clickable(
-                                        enabled = isSelectionMode,
-                                        onClick = { viewModel.toggleSelection(log.id) }
+//                                        enabled = isSelectionMode,
+                                        onClick = {
+                                            if (uiState.isSelectionMode) {
+                                                Log.d("plantLog","-------------if 출력")
+                                                viewModel.toggleSelection(log.id)
+                                            }else{
+                                                Log.d("plantLog","-------------else 출력")
+                                                viewModel.onStudyLogClicked(log)
+                                            }
+                                        }
                                     ),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                                 shape = RoundedCornerShape(16.dp),
@@ -329,6 +341,16 @@ fun MyPageArchiveDetailScreen(navController: NavController) {
                             }
                         }
                     }
+                }
+                selectedStudyLog?.let { log ->
+                    Log.d("plantLog","클릭! -------------출력")
+                    ConfirmDialog(
+                        text = "상세 공부 기록",
+                        semiText = log.contents.joinToString("\n") { "• $it" } +
+                                "\n\n공부 시간: ${TimeFormatter.formatToDigitalClock(log.studyingTime)}",
+                        onDismiss = { viewModel.onDismissLogDialog() },
+                        onConfirm = { viewModel.onDismissLogDialog() }
+                    )
                 }
             }
         }

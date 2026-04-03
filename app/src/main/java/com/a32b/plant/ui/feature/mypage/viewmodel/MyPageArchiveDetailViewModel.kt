@@ -42,6 +42,21 @@ class MyPageArchiveDetailViewModel(
     val uiState = _uiState.asStateFlow()
     private var isUploading = false
 
+    //선택한 학습 로그
+    private val _selectedStudyLog = MutableStateFlow<StudyLog?>(null)
+    val selectedStudyLog = _selectedStudyLog.asStateFlow()
+
+    //리스트 클릭할 때
+    fun onStudyLogClicked(log: StudyLog){
+        _selectedStudyLog.value = log
+    }
+
+    //리스트 다이얼로그 닫을 때
+    fun onDismissLogDialog(){
+        _selectedStudyLog.value = null
+    }
+
+
     init {
         viewModelScope.launch {
             val potInfo = potRepository.getUserPotById(CurrentUser.uid, potId)
