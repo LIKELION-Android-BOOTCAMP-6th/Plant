@@ -105,22 +105,23 @@ fun CommunityListScreen(navController: NavController) {
                                 color = Color.White
                             )
                         }
-                        if (uiState.isTagSheetShown) {
-                            TagSheet(
-                                uiState.tags,
-                                isMultiSelected = true,
-                                init = uiState.selected
-                            ) { selected ->
-                                viewModel.onSelectedChanged(selected.toList())
-                                Log.d("선택된 거 ", selected.toList().toString())
-                            }
+                    }
+                    if (uiState.isTagSheetShown) {
+                        TagSheet(
+                            uiState.tags,
+                            isMultiSelected = true,
+                            init = uiState.selected
+                        ) { selected ->
+                            viewModel.onSelectedChanged(selected.toList())
+                            Log.d("선택된 거 ", selected.toList().toString())
                         }
+                    }
 
 //                TagGroup(tags = uiState.tags + listOf("공유")){ selected ->
 //                    viewModel.onSelectedChanged(selected.toList())
 //
 //                }
-                    }
+
                 }
             },
             floatingActionButton = {
@@ -175,7 +176,6 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
         placeholder = {
             Text(
                 "검색어를 입력하세요", style = Typography.bodyMedium,
-//            color = Color.Gray,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         },
@@ -205,8 +205,8 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-            focusedTextColor = MaterialTheme.colorScheme.surfaceVariant,
-            unfocusedTextColor = MaterialTheme.colorScheme.surfaceVariant
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
         ),
         singleLine = true
     )
