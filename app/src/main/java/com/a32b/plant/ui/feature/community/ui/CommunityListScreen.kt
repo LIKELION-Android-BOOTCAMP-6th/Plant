@@ -35,9 +35,8 @@ import com.a32b.plant.ui.feature.community.viewmodel.CommunityListViewModel
 import com.a32b.plant.ui.theme.Typography
 import com.a32b.plant.ui.theme.background
 import com.a32b.plant.ui.theme.primary
-import com.a32b.plant.ui.theme.sub1
 
-
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CommunityListScreen(navController: NavController) {
     val viewModel: CommunityListViewModel = viewModel(factory = ViewModelFactory.communityListViewModelFactory)
@@ -45,10 +44,6 @@ fun CommunityListScreen(navController: NavController) {
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
 
     val uiState by viewModel.uiState.collectAsState()
-
-//    val tagList : List<Tag> = listOf(Tag(name = "국어", parentId = "1"),Tag(name = "영어", parentId = "1"),Tag(name = "기타", parentId = "1"),
-//                                Tag(name = "자소서/이력서", parentId = "2"),Tag(name = "면접", parentId = "2"),Tag(name = "포트폴리오", parentId = "2"),Tag(name = "기타", parentId = "2"),
-//                                    Tag(name = "중등국어", parentId = "3"),Tag(name = "중등영어", parentId = "3"),Tag(name = "기타", parentId = "3"),)
 
     BackHandler {
         navController.navigate(Routes.HomeMain) {
@@ -65,16 +60,42 @@ fun CommunityListScreen(navController: NavController) {
                     onQueryChange = { viewModel.onSearchQueryChanged(it) }
                 )
                 Row() {
-                    Text("태그", style = Typography.titleSmall, modifier = Modifier.padding(start = 16.dp, top = 4.dp,),
-                        color = MaterialTheme.colorScheme.onBackground)
-                    Icon(painter = painterResource(id = if(uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
+                    Text(
+                        "태그",
+                        style = Typography.titleSmall,
+                        modifier = Modifier.padding(start = 16.dp, top = 4.dp,),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Icon(
+                        painter = painterResource(id = if (uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
                         contentDescription = "태그박스",
-                        modifier = Modifier.clickable{
+                        modifier = Modifier.clickable {
                             viewModel.onIsTagSheetShownChange()
                         })
-                    uiState.selected.forEach { tag ->
-                        Text(tag.name, style = Typography.bodyMedium, fontSize = 13.sp,
-                            modifier = Modifier.padding(3.dp))
+                }
+                // FlowRow를 사용하여 6개마다 줄바꿈 구현
+                ContextualFlowRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    itemCount = uiState.selected.size,
+                    maxItemsInEachRow = 6, // 한 줄에 최대 6개까지만 배치
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) { index ->
+                    val tag = uiState.selected[index]
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = tag.name,
+                            style = Typography.bodyMedium,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            color = Color.White
+                        )
                     }
                 }
                 if(uiState.isTagSheetShown){
@@ -83,11 +104,6 @@ fun CommunityListScreen(navController: NavController) {
                         Log.d("선택된 거 ", selected.toList().toString())
                     }
                 }
-
-//                TagGroup(tags = uiState.tags + listOf("공유")){ selected ->
-//                    viewModel.onSelectedChanged(selected.toList())
-//
-//                }
             }
         },
         floatingActionButton = {
