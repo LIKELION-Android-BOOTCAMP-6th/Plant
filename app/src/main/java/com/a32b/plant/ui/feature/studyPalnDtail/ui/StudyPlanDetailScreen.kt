@@ -83,7 +83,7 @@ fun StudyPlanDetailScreen(
                 ),
                 title = {
                     potInfo?.let {
-                        Text("[${it.tag}] ${it.name}",
+                        Text("[${it.tag_name}] ${it.name}",
                             style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface)
                     } ?: Text("로딩 중...", color = MaterialTheme.colorScheme.onSurfaceVariant)
