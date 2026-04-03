@@ -290,6 +290,7 @@ fun StudyPlanDetailScreen(
 
                                 Spacer(modifier = Modifier.height(22.dp))
 
+
                                 // 버튼 영역
                                 Row(modifier = Modifier.fillMaxWidth()) {
                                     Button(
