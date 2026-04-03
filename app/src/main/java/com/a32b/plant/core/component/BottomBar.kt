@@ -48,7 +48,14 @@ fun BottomBar(navController: NavController){
                 modifier = Modifier
                     .weight(1f)
                     .size(32.dp)
-                    .clickable{navController.navigate(Routes.CommunityList)}
+                    .clickable{
+                        if (!isCommunitySelected) {  // ★
+                            navController.navigate(Routes.CommunityList) {
+                                popUpTo(Routes.HomeMain) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
             )
 
             val isHomeSelected = currentDestination?.hasRoute<Routes.HomeMain>() == true
@@ -59,18 +66,32 @@ fun BottomBar(navController: NavController){
                     .weight(1f)
                     .width(24.dp)
                     .height(32.dp)
-                    .clickable{navController.navigate(Routes.HomeMain)}
+                    .clickable{
+                        if (!isHomeSelected) {  // ★
+                            navController.navigate(Routes.HomeMain) {
+                                popUpTo(Routes.HomeMain) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
             )
 
-            val isMypageSelected = currentDestination?.hasRoute<Routes.Mypage>() == true
+            val isMyPageSelected = currentDestination?.hasRoute<Routes.Mypage>() == true
             Image(
-                painter = painterResource(id = if(isMypageSelected) R.drawable.ic_bottom_mypage_selected else R.drawable.ic_bottom_mypage_normal),
+                painter = painterResource(id = if(isMyPageSelected) R.drawable.ic_bottom_mypage_selected else R.drawable.ic_bottom_mypage_normal),
                 contentDescription = "MYPAGE",
                 modifier = Modifier
                     .weight(1f)
                     .width(24.dp)
                     .height(32.dp)
-                    .clickable{navController.navigate(Routes.Mypage)}
+                    .clickable{
+                        if (!isMyPageSelected) {  // ★
+                            navController.navigate(Routes.Mypage) {
+                                popUpTo(Routes.HomeMain) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
             )
         }
     }

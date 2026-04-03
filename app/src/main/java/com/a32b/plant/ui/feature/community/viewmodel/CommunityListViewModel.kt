@@ -2,6 +2,7 @@ package com.a32b.plant.ui.feature.community.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.data.di.AppContainer.potRepository
 import com.a32b.plant.data.model.Post
 import com.a32b.plant.data.model.Tag
@@ -15,7 +16,7 @@ data class CommunityListUiState(
     val selected: List<Tag> = emptyList(),
     val isTagSheetShown: Boolean = false
 )
-class CommunityListViewModel(private val repository: PostRepository) : ViewModel() {
+class CommunityListViewModel(private val repository: PostRepository) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(CommunityListUiState())
     val uiState = _uiState.asStateFlow()
@@ -45,6 +46,8 @@ class CommunityListViewModel(private val repository: PostRepository) : ViewModel
     private fun fetchTags(){
         viewModelScope.launch(Dispatchers.IO) {
             getTags(repository.getTag())
+            // 빈화면 -> 홈화면
+            loaded()
         }
     }
     fun getTags(list: List<Tag>) = _uiState.update { it.copy(tags = list) }

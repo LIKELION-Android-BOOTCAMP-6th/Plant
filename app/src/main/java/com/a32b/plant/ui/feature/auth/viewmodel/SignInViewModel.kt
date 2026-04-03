@@ -3,6 +3,7 @@ package com.a32b.plant.ui.feature.auth.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.data.di.CurrentUser
 import com.a32b.plant.data.repository.NicknameRepository
 import com.a32b.plant.data.repository.UserRepository
@@ -148,7 +149,8 @@ class SignInViewModel(
 
             } catch (e: Exception) {
                 Log.e("SignIn", "구글 로그인 실패: ${e.message}", e)
-                sendToast("잘못된 접근입니다.")
+                Log.e("SignIn", "에러 타입: ${e.javaClass.simpleName}")
+                sendToast("구글 로그인 실패: ${e.message}")  // ★ 에러 메시지를 토스트에 직접 노출
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
             }
@@ -159,12 +161,15 @@ class SignInViewModel(
     // 로그인 성공 후 Firestore 프로필 확인 → 없으면 생성 → 닉네임 설정 or 홈 진입
     private suspend fun handleLoginSuccess(uid: String) {
         loggedInUid = uid
+        Log.d("SignIn", "handleLoginSuccess 시작: uid=$uid")
 
         // 1. Firestore에 유저 문서가 있는지 확인 → 없으면 생성
         var profile = userRepository.getUserProfileOnce(uid)
+        Log.d("SignIn", "프로필 조회 결과: $profile")
 
         if (profile == null) {
             val createResult = userRepository.createUser(uid)
+            Log.d("SignIn", "유저 생성 결과: $createResult")
             if (createResult.isFailure) {
                 sendToast("정보 생성에 실패했습니다.\n다시 시도해주세요.")
                 auth.signOut()

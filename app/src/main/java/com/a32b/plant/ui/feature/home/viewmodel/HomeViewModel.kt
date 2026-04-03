@@ -2,6 +2,7 @@ package com.a32b.plant.ui.feature.home.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.data.model.PotInfo
 import com.a32b.plant.data.model.UserProfile
 import com.a32b.plant.core.util.TimeFormatter
@@ -29,7 +30,7 @@ class HomeViewModel(
     private val userRepository: UserRepository,
     private val studyingRepository: StudyingRepository,
     private val potRepository: PotRepository
-) : ViewModel() {
+) : BaseViewModel() {
 
     // 현재 로그인된 유저 ID
     private val currentUid: String get() = CurrentUser.uid
@@ -118,6 +119,10 @@ class HomeViewModel(
 
                     // 화면에 보여줄 화분 결정
                     _displayPot.value = calculateDisplayPot(user, ongoingPots)
+
+                    // 빈화면 -> 홈화면
+                    loaded()
+
                 }
             }
         }

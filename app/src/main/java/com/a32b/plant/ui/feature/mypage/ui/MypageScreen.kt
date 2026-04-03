@@ -68,6 +68,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.ColorFilter
 import com.a32b.plant.core.component.ConfirmDialog
+import com.a32b.plant.core.component.LoadableScreen
 import com.a32b.plant.ui.theme.PlantTheme
 import com.a32b.plant.ui.theme.sub_green2
 
@@ -75,83 +76,91 @@ import com.a32b.plant.ui.theme.sub_green2
 @Composable
 fun MyPageScreen(navController: NavController) {
     val viewModel: MyPageViewModel = viewModel(factory = ViewModelFactory.myPageViewModelFactory)
-    val uiState by viewModel.uiState.collectAsState()
-    // 로그아웃 확인 다이얼로그 상태
-    var showLogoutDialog by remember { mutableStateOf(false) }
-    val context = LocalContext.current
 
-    PlantTheme(darkTheme = uiState.isDarkMode) {
-        // 로그아웃
-        LaunchedEffect(Unit) {
-            viewModel.events.collect { event ->
-                when (event) {
-                    is MyPageEvent.ShowToast ->
-                        Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+    //화면전환 빈화면 -> 홈화면
+    LoadableScreen(viewModel) {
+        val uiState by viewModel.uiState.collectAsState()
+        // 로그아웃 확인 다이얼로그 상태
+        var showLogoutDialog by remember { mutableStateOf(false) }
+        val context = LocalContext.current
 
-                    is MyPageEvent.NavigateToSignIn ->
-                        navController.navigate(Routes.SignIn) {
-                            popUpTo(0) { inclusive = true }
-                        }
+        PlantTheme(darkTheme = uiState.isDarkMode) {
+            // 로그아웃
+            LaunchedEffect(Unit) {
+                viewModel.events.collect { event ->
+                    when (event) {
+                        is MyPageEvent.ShowToast ->
+                            Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
 
-                    is MyPageEvent.NavigateToMyCommunityFeed ->
-                        navController.navigate(Routes.MyCommunityFeed)
+                        is MyPageEvent.NavigateToSignIn ->
+                            navController.navigate(Routes.SignIn) {
+                                popUpTo(0) { inclusive = true }
+                            }
+
+                        is MyPageEvent.NavigateToMyCommunityFeed ->
+                            navController.navigate(Routes.MyCommunityFeed)
+                    }
                 }
             }
-        }
 
-        // 로그아웃 확인 다이얼로그
-        if (showLogoutDialog) {
-            ConfirmDialog(
-                text = "로그아웃 하시겠습니까?",
-                onDismiss = {
-                    showLogoutDialog = false
-                    viewModel.clearProfileState()
-                },
-                onConfirm = {
-                    showLogoutDialog = false
-                    viewModel.logout()
-                }
-            )
-        }
-        Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.background) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                // 프로필, 닉네임, 총 공부시간
-                ProfileRow(uiState = uiState, viewModel = viewModel)
+            // 로그아웃 확인 다이얼로그
+            if (showLogoutDialog) {
+                ConfirmDialog(
+                    text = "로그아웃 하시겠습니까?",
+                    onDismiss = {
+                        showLogoutDialog = false
+                        viewModel.clearProfileState()
+                    },
+                    onConfirm = {
+                        showLogoutDialog = false
+                        viewModel.logout()
+                    }
+                )
+            }
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // 프로필, 닉네임, 총 공부시간
+                    ProfileRow(uiState = uiState, viewModel = viewModel)
 
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    GrownTreesButton(completedPotCount = uiState.completedPotCount) {
-                        navController.navigate(Routes.MyPageArchive)
-                    }
-                    DividerImage()
-                    ButtonTemplate(text = "내 활동") {
-                        viewModel.moveToMyCommunityFeed()
-                    }
-                    ButtonTemplate(text = "앱 설정") {
-                        navController.navigate(Routes.MyPageSetting)
-                    }
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        GrownTreesButton(completedPotCount = uiState.completedPotCount) {
+                            navController.navigate(Routes.MyPageArchive)
+                        }
+                        DividerImage()
+                        ButtonTemplate(text = "내 활동") {
+                            viewModel.moveToMyCommunityFeed()
+                        }
+                        ButtonTemplate(text = "앱 설정") {
+                            navController.navigate(Routes.MyPageSetting)
+                        }
 //            ButtonTemplate(text = "공지사항") { }
 //            ButtonTemplate(text = "비밀번호 재설정") { }
-                    DarkModeToggleButton(
-                        isDarkMode = uiState.isDarkMode,
-                        onToggle = {
-                            viewModel.toggleDarkMode()
-                        }
-                    )
+                        DarkModeToggleButton(
+                            isDarkMode = uiState.isDarkMode,
+                            onToggle = {
+                                viewModel.toggleDarkMode()
+                            }
+                        )
 //------------------로그아웃
 
-                    ButtonTemplate(text = "로그아웃") {
-                        showLogoutDialog = true
-                    }
+                        ButtonTemplate(text = "로그아웃") {
+                            showLogoutDialog = true
+                        }
 //로그아웃------------------
+                    }
                 }
             }
         }
     }
+
 }
 
 @Composable
@@ -176,7 +185,7 @@ fun DarkModeToggleButton(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
 
-        ) {
+            ) {
             // 좌측
             Text(
                 text = "다크모드",
@@ -258,8 +267,10 @@ fun ButtonTemplate(text: String, onClick: () -> Unit) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Start
         ) {
-            Text(text = text, style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface)
+            Text(
+                text = text, style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }

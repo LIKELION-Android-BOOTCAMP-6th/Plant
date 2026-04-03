@@ -45,33 +45,24 @@ class MyPageSettingViewModel(
                     return@launch
                 }
 
-                // 1. Firebase Auth 계정 삭제
-                firebaseUser.delete().await()
+                // 1. Firestore 데이터 먼저 삭제 (인증 세션이 살아있는 동안)
+                userRepository.deleteUser(uid)
 
-
-                try {
-                    // 2. nicknames 컬렉션에서 닉네임 문서 삭제
-                    if (nickname.isNotBlank()) {
-                        nicknameRepository.deleteNickname(nickname)
-                    }
-                    // 3. Firestore users/{uid} 문서 삭제
-                    userRepository.deleteUser(uid)
-                } catch (e: Exception) {
-                    // Firestore 정리 실패는 로그만 남기고 진행
-                    Log.e("MyPage", "Firestore 정리 중 오류: ${e.message}", e)
+                if (nickname.isNotBlank()) {
+                    nicknameRepository.deleteNickname(nickname)
                 }
 
+                // 2. Firebase Auth 계정은 맨 마지막에 삭제
+                firebaseUser.delete().await()
 
-                // 4. 로컬 유저 정보 초기화
+                // 3. 로컬 유저 정보 초기화
                 CurrentUser.clear()
-                // 5. 로그인 화면으로 이동
                 _eventChannel.send(MyPageEvent.ShowToast("회원탈퇴가 완료되었습니다."))
                 _eventChannel.send(MyPageEvent.NavigateToSignIn)
 
             } catch (e: Exception) {
                 Log.e("MyPage", "회원탈퇴 실패: ${e.message}", e)
 
-                // Firebase Auth는 최근 로그인이 아니면 재인증 필요...
                 if (e.message?.contains("RECENT_LOGIN_REQUIRED") == true) {
                     _eventChannel.send(MyPageEvent.ShowToast("보안을 위해 재로그인 후 다시 시도해주세요."))
                 } else {
@@ -80,6 +71,42 @@ class MyPageSettingViewModel(
             }
         }
     }
-
-
 }
+//                // 1. Firebase Auth 계정 삭제
+//                firebaseUser.delete().await()
+//
+//
+//                try {
+//                    // 2. nicknames 컬렉션에서 닉네임 문서 삭제
+//                    if (nickname.isNotBlank()) {
+//                        nicknameRepository.deleteNickname(nickname)
+//                    }
+//                    // 3. Firestore users/{uid} 문서 삭제
+//                    userRepository.deleteUser(uid)
+//                } catch (e: Exception) {
+//                    // Firestore 정리 실패는 로그만 남기고 진행
+//                    Log.e("MyPage", "Firestore 정리 중 오류: ${e.message}", e)
+//                }
+//
+//
+//                // 4. 로컬 유저 정보 초기화
+//                CurrentUser.clear()
+//                // 5. 로그인 화면으로 이동
+//                _eventChannel.send(MyPageEvent.ShowToast("회원탈퇴가 완료되었습니다."))
+//                _eventChannel.send(MyPageEvent.NavigateToSignIn)
+//
+//            } catch (e: Exception) {
+//                Log.e("MyPage", "회원탈퇴 실패: ${e.message}", e)
+//
+//                // Firebase Auth는 최근 로그인이 아니면 재인증 필요...
+//                if (e.message?.contains("RECENT_LOGIN_REQUIRED") == true) {
+//                    _eventChannel.send(MyPageEvent.ShowToast("보안을 위해 재로그인 후 다시 시도해주세요."))
+//                } else {
+//                    _eventChannel.send(MyPageEvent.ShowToast("회원탈퇴에 실패했습니다. 다시 시도해주세요."))
+//                }
+//            }
+//        }
+//    }
+//
+//
+//}

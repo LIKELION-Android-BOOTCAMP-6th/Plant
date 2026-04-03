@@ -33,10 +33,10 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
     destination?.let { startRoute ->
         NavHost(navController = navController,
             startDestination = startRoute,
-            enterTransition = { fadeIn(animationSpec = tween(600)) },
-            exitTransition = { fadeOut(animationSpec = tween(600)) },
-            popEnterTransition = { fadeIn(animationSpec = tween(600)) },
-            popExitTransition = { fadeOut(animationSpec = tween(600)) }
+            enterTransition = { fadeIn(animationSpec = tween(400)) },
+            exitTransition = { fadeOut(animationSpec = tween(400)) },
+            popEnterTransition = { fadeIn(animationSpec = tween(400)) },
+            popExitTransition = { fadeOut(animationSpec = tween(400)) }
         ) {
 
             composable<Routes.HomeMain> { HomeScreen(navController) }

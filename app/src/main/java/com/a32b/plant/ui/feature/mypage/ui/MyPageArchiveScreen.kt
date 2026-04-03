@@ -85,7 +85,7 @@ fun MyPageArchiveScreen(navController: NavController) {
                     horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.Start)
                 ) {
                     rowPots.forEach { pot ->
-                        GridPlantItem (
+                        GridPlantItem(
                             pot = pot,
                             modifier = Modifier.weight(1f),
                             onItemClick = {
@@ -105,6 +105,7 @@ fun MyPageArchiveScreen(navController: NavController) {
         }
     }
 }
+
 @Composable
 fun GridPlantItem(
     pot: PotInfo,
@@ -116,9 +117,10 @@ fun GridPlantItem(
         modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp))
-            .clickable{onItemClick()}
+            .clickable { onItemClick() }
             .padding(12.dp),
-        horizontalAlignment = Alignment.Start
+            horizontalAlignment = Alignment.CenterHorizontally
+
     ) {
         Box(
             modifier = Modifier
@@ -131,26 +133,27 @@ fun GridPlantItem(
         }
 
         Spacer(modifier = Modifier.height(8.dp))
+
+        // 총 공부 시간
+        Text(
+            text = TimeFormatter.formatToDigitalClock(pot.potTotalStudyingTime ?: 0L),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        // 화분 이름
+        Text(
+            text = pot.name ?: "이름 없음",
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = MaterialTheme.colorScheme.onSurface
+        )
         // 2. 화분 정보 (시간, 이름) -
         Column(
             modifier = Modifier
                 .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 총 공부 시간
-            Text(
-                text = TimeFormatter.formatToDigitalClock(pot.potTotalStudyingTime ?: 0L),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            // 화분 이름
-            Text(
-                text = pot.name ?: "이름 없음",
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+
         }
     }
 }
