@@ -4,6 +4,7 @@ import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -36,6 +37,7 @@ import com.a32b.plant.ui.theme.*
 import com.a32b.plant.core.component.ConfirmDialog
 import com.a32b.plant.core.component.TagChip
 import com.a32b.plant.data.model.Comment
+import com.google.common.math.LinearTransformation.horizontal
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,17 +83,21 @@ fun CommunityDetailScreen(
     }
 
     Scaffold(
-        containerColor = background,
+        containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
         val currentPost = postState ?: return@Scaffold
 
         Column(modifier = Modifier
             .padding(innerPadding)
             .fillMaxSize()
-            .padding(horizontal = 20.dp)) {
+            .padding(horizontal = 20.dp)
+            .background(MaterialTheme.colorScheme.background)) {
             Card(
                 modifier = Modifier.fillMaxSize(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(
+//                    containerColor = Color.White
+                            containerColor = MaterialTheme.colorScheme.surface
+                ),
                 shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(1.dp, Color.LightGray),
                 elevation = CardDefaults.elevatedCardElevation(1.dp)
@@ -108,6 +114,7 @@ fun CommunityDetailScreen(
                                     contentDescription = "뒤로가기")
                             }
                             Text(currentPost.title, fontSize = 24.sp,style = Typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.padding(horizontal = 46.dp),
                                 textAlign = TextAlign.Center)
 
@@ -117,9 +124,11 @@ fun CommunityDetailScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             ProfileImage(currentPost.author.profileImg, 36)
                             Spacer(modifier = Modifier.width(10.dp))
-                            Text(currentPost.author.nickname,  style = Typography.bodyMedium)
+                            Text(currentPost.author.nickname,  style = Typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface)
                             Spacer(modifier = Modifier.weight(1f))
-                            Text(TimeFormatter.formatTimestampTime(currentPost.createdAt), style = Typography.bodyMedium, fontSize = 12.sp)
+                            Text(TimeFormatter.formatTimestampTime(currentPost.createdAt), style = Typography.bodyMedium, fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurface)
                         }
                     }
                     item{
@@ -138,7 +147,8 @@ fun CommunityDetailScreen(
                         }
                     }else{
                         item {
-                        Text(currentPost.content?:"", style = Typography.bodyMedium)
+                            Text(currentPost.content?:"", style = Typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface)
 
                         }
                     }
@@ -146,15 +156,22 @@ fun CommunityDetailScreen(
                     item {
                         Spacer(modifier = Modifier.height(30.dp))
 
-                        HorizontalDivider(color = sub3.copy(alpha = 0.5f))
+                        HorizontalDivider(color =
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+//                            sub3.copy(alpha = 0.5f))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 12.dp)
                         ) {
-                            Icon(painterResource(id = R.drawable.ic_community_comment), null, tint = Color.Gray, modifier = Modifier.size(18.dp))
-                            Text(" ${currentPost.commentCount}", style = Typography.bodyMedium, modifier = Modifier.padding(end = 16.dp))
+                            Icon(painterResource(id = R.drawable.ic_community_comment), null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+//                                tint = Color.Gray
+                                modifier = Modifier.size(18.dp))
+                            Text(" ${currentPost.commentCount}", style = Typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(end = 16.dp))
 
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -162,11 +179,13 @@ fun CommunityDetailScreen(
                             ) {
                                 Icon(
                                     painterResource(id = if (isLikedByMe) R.drawable.ic_community_like_selected else R.drawable.ic_community_like_normal),
-                                    tint = if (isLikedByMe) primary else Color.Gray,
+//                                    tint = if (isLikedByMe) primary else Color.Gray,
+                                    tint = if (isLikedByMe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(18.dp),
                                     contentDescription = null
                                 )
-                                Text(" ${currentPost.likeCount}", style = Typography.bodyMedium)
+                                Text(" ${currentPost.likeCount}", style = Typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface)
                             }
 
                             Spacer(modifier = Modifier.weight(1f))
@@ -176,10 +195,16 @@ fun CommunityDetailScreen(
                                 IconButton(onClick = {
                                     navController.navigate(Routes.CommunityPost(postId = currentPost.postId))
                                 }) {
-                                    Icon(painterResource(id = R.drawable.ic_edit), null, tint = Color.DarkGray, modifier = Modifier.size(18.dp))
+                                    Icon(painterResource(id = R.drawable.ic_edit), null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+//                                        tint = Color.DarkGray,
+                                        modifier = Modifier.size(18.dp))
                                 }
                                 IconButton(onClick = { viewModel.openDeleteDialog() }) {
-                                    Icon(painterResource(id = R.drawable.ic_trash), null, tint = Color.DarkGray, modifier = Modifier.size(22.dp))
+                                    Icon(painterResource(id = R.drawable.ic_trash), null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+//                                        tint = Color.DarkGray,
+                                        modifier = Modifier.size(22.dp))
                                 }
                             }
                         }
@@ -239,12 +264,14 @@ fun CommentRow(
         Column(modifier = Modifier.weight(1f)) {
             // 닉네임 + 작성 시간을 한 줄에 표시
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(comment.user.nickname, fontWeight = FontWeight.Bold, fontSize = 13.sp, style = Typography.bodyMedium)
+                Text(comment.user.nickname, fontWeight = FontWeight.Bold, fontSize = 13.sp, style = Typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.width(6.dp))
                 Text(
                     text = comment.createdAt?.let { TimeFormatter.formatTimestampTime(it) } ?: "",
                     fontSize = 11.sp,
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+//                    color = Color.Gray,
                     style = Typography.bodyMedium
                 )
             }
@@ -260,34 +287,51 @@ fun CommentRow(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+//                        focusedContainerColor = Color.White,
+//                        unfocusedContainerColor = Color.White,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
-                        focusedTextColor = Color.Black,
-                        unfocusedTextColor = Color.Black
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+//                        focusedTextColor = Color.Black,
+//                        unfocusedTextColor = Color.Black
+                        cursorColor = MaterialTheme.colorScheme.primary
                     ),
                     shape = RoundedCornerShape(8.dp),
-                    textStyle = Typography.bodyMedium
+                    textStyle = Typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
+
                 )
                 Row {
                     TextButton(onClick = onEditSubmit) {
-                        Text("저장", color = primary, fontSize = 12.sp,style = Typography.bodyMedium)
+                        Text("저장",
+                              color = MaterialTheme.colorScheme.primary,
+//                            color = primary,
+                            fontSize = 12.sp,style = Typography.bodyMedium)
                     }
                     TextButton(onClick = onEditCancel) {
-                        Text("취소", color = Color.Gray, fontSize = 12.sp,style = Typography.bodyMedium)
+                        Text("취소",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+//                            color = Color.Gray,
+                            fontSize = 12.sp,style = Typography.bodyMedium)
                     }
                     Spacer(modifier = Modifier.weight(1f))
                     Text(
                         "${editingText.length} / $maxLength",
                         fontSize = 12.sp,
-                        color = if (editingText.length >= maxLength) Color.Red else Color.Gray,
+                        color = if (editingText.length >= maxLength)
+                            MaterialTheme.colorScheme.error
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant,
+//                        color = if (editingText.length >= maxLength) Color.Red else Color.Gray,
                         style = Typography.bodyMedium,
                         modifier = Modifier.padding(end = 40.dp)
                     )
                 }
             } else {
-                Text(comment.content, fontSize = 14.sp, style = Typography.bodyMedium)
+                Text(comment.content, fontSize = 14.sp, style = Typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface)
             }
         }
 
@@ -296,13 +340,17 @@ fun CommentRow(
             IconButton(onClick = onEditStart, modifier = Modifier.size(28.dp)) {
                 Icon(
                     painterResource(id = R.drawable.ic_edit), null,
-                    tint = Color.Gray, modifier = Modifier.size(14.dp)
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+//                        Color.Gray,
+                    modifier = Modifier.size(14.dp)
                 )
             }
             IconButton(onClick = onDeleteClick, modifier = Modifier.size(28.dp)) {
                 Icon(
                     painterResource(id = R.drawable.ic_trash), null,
-                    tint = Color.Gray, modifier = Modifier.size(14.dp)
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+//                    tint = Color.Gray,
+                    modifier = Modifier.size(14.dp)
                 )
             }
         }
@@ -315,13 +363,16 @@ fun CommentInputSection(nickname: String, text: String, onTextChange: (String) -
     val maxLength = 100
     val focus = LocalFocusManager.current
     Card(
-        colors = CardDefaults.cardColors(containerColor = textFieldBackground),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant),
+//            containerColor = textFieldBackground),
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.elevatedCardElevation(1.dp)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text(nickname, fontSize = 13.sp, fontWeight = FontWeight.Bold, style = Typography.bodyMedium)
+            Text(nickname, fontSize = 13.sp, fontWeight = FontWeight.Bold, style = Typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface)
             TextField(
                 value = text,
                 onValueChange = { input ->
@@ -331,14 +382,23 @@ fun CommentInputSection(nickname: String, text: String, onTextChange: (String) -
                     .fillMaxWidth()
                     .height(70.dp)
                     .padding(top = 8.dp),
-                placeholder = { Text("댓글을 남겨보세요...", fontSize = 13.sp, color = Color.Gray, style = Typography.bodyMedium) },
+                placeholder = { Text("댓글을 남겨보세요...", fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+//                    color = Color.Gray,
+                    style = Typography.bodyMedium) },
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+//                    focusedContainerColor = Color.White,
+//                    unfocusedContainerColor = Color.White,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
-                    focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.Black
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+//                    focusedTextColor = Color.Black,
+//                    unfocusedTextColor = Color.Black
+                    cursorColor = MaterialTheme.colorScheme.primary
+
                 ),
                 shape = RoundedCornerShape(8.dp)
             )
@@ -355,7 +415,7 @@ fun CommentInputSection(nickname: String, text: String, onTextChange: (String) -
                 Spacer(modifier = Modifier.weight(1f))
                 Button(
                     onClick = {onSend()
-                              focus.clearFocus()},
+                        focus.clearFocus()},
                     modifier = Modifier
                         .height(32.dp)
                         .padding(top = 4.dp),
