@@ -1,5 +1,6 @@
 package com.a32b.plant.ui.feature.studying.ui
 
+import android.R.attr.textStyle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -28,6 +29,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.InputTransformation.Companion.keyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
@@ -101,7 +103,7 @@ fun StudyingScreen(navController: NavController) {
 
     val uiState by viewModel.uiState.collectAsState()
     val timerButtonText = if (uiState.isStudying) "일시정지" else "학습하기"
-    val timerButtonBack = if (uiState.isStudying) sub2 else primary
+    val timerButtonBack = if (uiState.isStudying) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary
 
     BackHandler {
         viewModel.onFinishDialogShownChange()
@@ -132,7 +134,8 @@ fun StudyingScreen(navController: NavController) {
 
     val studyingUsers = uiState.studyingUsers
     Surface(modifier = Modifier.fillMaxSize(),
-        color = Color(0xFFF8F6F6)
+//        color = Color(0xFFF8F6F6)
+        color = MaterialTheme.colorScheme.background
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -143,14 +146,15 @@ fun StudyingScreen(navController: NavController) {
             StudyStatusBadge(tag, title)
 
             Spacer(modifier = Modifier.height(70.dp))
-            Text("$startTime ~", style = Typography.bodyMedium, fontSize = 13.sp)
+            Text("$startTime ~", style = Typography.bodyMedium, fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
             SetTimer(uiState.timer)
 
             Spacer(modifier = Modifier.height(30.dp))
             Row {
                 //일시정지/학습시작 버튼
                 StateChangeButton(timerButtonText, timerButtonBack){ viewModel.onStudyingStatusChange()}
-                StateChangeButton("학습종료", sub1) {
+                StateChangeButton("학습종료", MaterialTheme.colorScheme.primary) {
                     viewModel.onFinishDialogShownChange()
                 }
             }
@@ -175,12 +179,12 @@ fun StudyingScreen(navController: NavController) {
 fun StudyStatusBadge(tag: String, title: String){
     Surface(
         shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(0.7.dp, color = primary),
-        color = sub2
+        border = BorderStroke(0.7.dp, color = MaterialTheme.colorScheme.primary),
+        color = MaterialTheme.colorScheme.surfaceVariant
     ) {
         Text(
             text = "[$tag] $title 공부중",
-            color = primary,
+            color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
     }
@@ -197,7 +201,8 @@ fun SetTimer(time: Long){
             modifier = Modifier.matchParentSize(),
             contentScale = ContentScale.Fit
         )
-        Text(text = "${TimeFormatter.formatToDigitalClock(time)}", style = MaterialTheme.typography.titleLarge)
+        Text(text = "${TimeFormatter.formatToDigitalClock(time)}", style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface)
     }
 }
 @Composable
@@ -213,7 +218,8 @@ fun StateChangeButton(text: String, backColor: Color, function: () -> Unit){
     ) {
         Box(modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center){
-            Text("$text", style = MaterialTheme.typography.bodyMedium)
+            Text("$text", style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface)
         }
     }
 }
@@ -223,10 +229,11 @@ fun StudyingUserCard(users: List<StudyingUser>, tag: String){
     Card(
         modifier = Modifier.fillMaxWidth().height(200.dp),
         shape = RoundedCornerShape(topStart = 5.dp, topEnd = 5.dp, bottomEnd = 0.dp),
-        colors = CardDefaults.cardColors(containerColor = background),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         ) {
         Column(modifier = Modifier.padding(10.dp)) {
-            Text("$tag ${users.size}", style = MaterialTheme.typography.titleSmall)
+            Text("$tag ${users.size}", style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface)
             users.take(3).forEach { user ->
                 StudyinUserItem(user)
                 Spacer(modifier = Modifier.height(8.dp))
@@ -240,8 +247,9 @@ fun StudyinUserItem(user: StudyingUser){
     Row(Modifier.padding(10.dp),
         verticalAlignment = Alignment.CenterVertically) {
         ProfileImage(user.profileImg, 30)
-        Text(text = user.nickname, style = MaterialTheme.typography.bodyMedium)
-        Text(text = " ${TimeFormatter.formatToMinute(user.studyingTime)} 째 공부중!", style = MaterialTheme.typography.bodyMedium)
+        Text(text = user.nickname, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+        Text(text = " ${TimeFormatter.formatToMinute(user.studyingTime)} 째 공부중!", style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface)
     }
 }
 
@@ -265,7 +273,7 @@ fun StudyFinishDialog(
     Dialog(onDismissRequest = {}) {
         Card(
             shape = RoundedCornerShape(8.dp),
-            colors = CardDefaults.cardColors(background)) {
+            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceVariant)) {
             Column(modifier = Modifier.padding(16.dp)
                 .consumeWindowInsets(WindowInsets.ime) //키보드 패딩
                 .imePadding(),
@@ -278,11 +286,11 @@ fun StudyFinishDialog(
                     item {
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        Text("학습 종료", style = Typography.titleSmall)
+                        Text("학습 종료", style = Typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
 
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = MaterialTheme.colorScheme.onSurface)
 
-                        Text("[$tag] $title", style = Typography.titleSmall)
+                        Text("[$tag] $title", style = Typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
 
                         Spacer(modifier = Modifier.height(21.dp))
                     }
@@ -295,8 +303,14 @@ fun StudyFinishDialog(
                             onValueChange = { inputs[index] = it },
                             modifier = Modifier.fillMaxWidth()
                                 .focusRequester(focus[index]),
-                            placeholder = {Text("오늘의 학습을 기록해보세요!", style = Typography.bodyMedium, color = Color(0xFF858585))},
-                            textStyle = Typography.bodyMedium,
+                            placeholder = {Text(
+                                text = "오늘의 학습을 기록해보세요!",
+                                style = Typography.bodyMedium,
+//                                color = Color(0xFF858585))},
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)},
+                            textStyle =Typography.bodyMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurface
+                            ),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                             keyboardActions = KeyboardActions(
                                 onNext = {
@@ -315,7 +329,10 @@ fun StudyFinishDialog(
                             focus.add(FocusRequester())
                         }) {
                             Image(painter = painterResource(R.drawable.ic_studying_plus),
-                                contentDescription = "추가 버튼")
+                                contentDescription = "추가 버튼",
+                                colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(MaterialTheme.colorScheme.onSurface)
+                            )
+
                         }
 
                         Spacer(modifier = Modifier.height(30.dp))
@@ -326,7 +343,10 @@ fun StudyFinishDialog(
                     Button(onClick = onDismiss,
                         modifier = Modifier.height(45.dp).weight(1f),
                         shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(sub2)
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     ) { Text("취소", style = Typography.bodyMedium) }
 
                     Spacer(modifier = Modifier.width(16.dp))
@@ -334,7 +354,11 @@ fun StudyFinishDialog(
                     Button(
                         onClick = { onConfirm(inputs.toList()) },
                         modifier = Modifier.height(45.dp).weight(1f),
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        )
                     ) { Text("종료", style = Typography.titleSmall) }
                 }
             }

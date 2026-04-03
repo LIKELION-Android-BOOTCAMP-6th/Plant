@@ -4,8 +4,6 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -104,7 +102,6 @@ fun MyPageSettingScreen(navController: NavController) {
         )
     }
     // *********************************
-    PlantTheme(darkTheme = false) {
     Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.background) {
         Column(
             modifier = Modifier
@@ -125,12 +122,13 @@ fun MyPageSettingScreen(navController: NavController) {
                         painter = painterResource(id = R.drawable.ic_backbtn),
                         contentDescription = "뒤로가기",
                         modifier = Modifier.size(24.dp),
-                        tint = Color.Unspecified
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 Text(
                     text = "앱 설정",
                     style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.align(Alignment.Center)
                 )
             }
@@ -147,7 +145,6 @@ fun MyPageSettingScreen(navController: NavController) {
             // **************************
 //------------------회원탈퇴
         }
-    }
     }
 }
 

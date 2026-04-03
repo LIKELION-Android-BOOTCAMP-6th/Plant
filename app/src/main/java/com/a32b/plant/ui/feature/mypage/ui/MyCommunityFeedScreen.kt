@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -67,7 +68,7 @@ fun MyCommunityFeedScreen(navController: NavController) {
     }
 
     Surface(modifier = Modifier.fillMaxSize(),
-        color = background
+        color = MaterialTheme.colorScheme.background
     ) {
         Column(modifier = Modifier.fillMaxSize().padding(15.dp)) {
             Box(modifier = Modifier.fillMaxWidth(),
@@ -78,7 +79,7 @@ fun MyCommunityFeedScreen(navController: NavController) {
                     Image(painter = painterResource(R.drawable.ic_backbtn),
                         contentDescription = "뒤로가기")
                 }
-                Text("내 활동", style = Typography.titleLarge)
+                Text("내 활동", style = Typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
             }
 
             TagGroup(list, init = listOf(uiState.selected),isMultiSelected = false){ selected ->
@@ -103,7 +104,7 @@ fun ContentList(lists : List<CommunityActivity>, onClick: (String) -> Unit){
             Card(
                 modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 4.dp),
                 shape = RoundedCornerShape(7.dp),
-                colors = CardDefaults.cardColors(Color.White),
+                colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceVariant),
                 elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
                 onClick = {onClick(list.targetId)}
             ) {
@@ -117,19 +118,22 @@ fun ContentList(lists : List<CommunityActivity>, onClick: (String) -> Unit){
                     ) {
                         Text(list.title, style = Typography.titleSmall,maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f))
-                        Text(TimeFormatter.formatTimestamp(list.createAt), style = Typography.bodySmall)
+                            modifier = Modifier.weight(1f),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(TimeFormatter.formatTimestamp(list.createAt), style = Typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     list.comment?.let {
                         Text(
                             list.comment,
                             style = Typography.bodyMedium,
-                            modifier = Modifier.padding(top = 3.dp)
+                            modifier = Modifier.padding(top = 3.dp),
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
             }
-
         }
     }
 }

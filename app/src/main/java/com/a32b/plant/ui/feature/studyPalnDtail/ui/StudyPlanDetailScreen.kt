@@ -1,5 +1,6 @@
 package com.a32b.plant.ui.feature.studyPalnDtail.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
@@ -75,16 +76,17 @@ fun StudyPlanDetailScreen(
             TopAppBar(
                 windowInsets = WindowInsets(top = 0.dp),
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = background,
-                    titleContentColor = fontColor,
-                    navigationIconContentColor = fontColor,
-                    actionIconContentColor = fontColor
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface,
                 ),
                 title = {
                     potInfo?.let {
                         Text("[${it.tag}] ${it.name}",
-                            style = MaterialTheme.typography.titleMedium)
-                    } ?: Text("로딩 중...")
+                            style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface)
+                    } ?: Text("로딩 중...", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 },
                 navigationIcon = {
                         //뒤로 가기
@@ -98,7 +100,7 @@ fun StudyPlanDetailScreen(
                                         else R.drawable.ic_backbtn
                                 ),
                                 contentDescription = if (isShareMode) "공유 취소" else "뒤로가기",
-                                modifier = Modifier.size(19.dp)
+                                modifier = Modifier.size(19.dp),
                             )
                         }
                 },
@@ -144,7 +146,7 @@ fun StudyPlanDetailScreen(
                         .fillMaxWidth()
                         .padding(16.dp),
                     enabled = potInfo?.isCompleted == false,
-                    onClick = { viewModel.setCompleteDialogShown(true) }
+                    onClick = { viewModel.setCompleteDialogShown(true) },
                 ) {
                     Text(if (potInfo?.isCompleted == true) "완료된 학습" else "학습 완료하기")
                 }
@@ -154,6 +156,7 @@ fun StudyPlanDetailScreen(
         Column(modifier = Modifier
             .padding(innerPadding)
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
         ) {
             //전체 선택 체크 박스 + 삭제 버튼
             Row(
@@ -173,13 +176,13 @@ fun StudyPlanDetailScreen(
                                 checked = isAllSelected,
                                 onCheckedChange = { viewModel.toggleAllSelection(it) }
                             )
-                            Text("전체 선택", style = MaterialTheme.typography.bodyMedium)
+                            Text("전체 선택", style = MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurface)
                         }
                         Spacer(modifier = Modifier.weight(1f))
                         Text(
                             text = "${logs.count { it.isSelected }}개 선택됨",
                             style = MaterialTheme.typography.labelMedium,
-                            color = fontColorSub
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -195,14 +198,15 @@ fun StudyPlanDetailScreen(
                         Text(
                             text = "아직 학습 기록이 없습니다.",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = fontColor
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 } else {
                     //학습 기록 리스트
                     LazyColumn(
                         modifier = Modifier
-                            .fillMaxSize(),
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background),
                         contentPadding = PaddingValues(8.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
@@ -249,7 +253,8 @@ fun StudyPlanDetailScreen(
                         // 공용 다이얼로그와 동일한 모양의 Card 생성
                         Card(
                             shape = RoundedCornerShape(30.dp),
-                            colors = CardDefaults.cardColors(Color.White),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant),
                             elevation = CardDefaults.cardElevation(3.dp)
                         ) {
                             Column(
@@ -259,7 +264,9 @@ fun StudyPlanDetailScreen(
                                 Spacer(modifier = Modifier.height(10.dp))
 
                                 // 제목
-                                Text("제목 변경", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                Text("제목 변경", style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface)
 
                                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -267,13 +274,16 @@ fun StudyPlanDetailScreen(
                                 OutlinedTextField(
                                     value = editNameText,
                                     onValueChange = { editNameText = it },
-                                    placeholder = { Text("화분 이름을 입력하세요", style = MaterialTheme.typography.bodyMedium) },
+                                    placeholder = { Text("화분 이름을 입력하세요", style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant) },
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true,
                                     shape = RoundedCornerShape(12.dp),
                                     colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = Color(0xFFA5C16C), // 강조색 (primary)
-                                        unfocusedBorderColor = Color.LightGray
+//                                        focusedBorderColor = Color(0xFFA5C16C), // 강조색 (primary)
+                                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+//                                        unfocusedBorderColor = Color.LightGray
+                                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
                                     )
                                 )
 
@@ -285,9 +295,15 @@ fun StudyPlanDetailScreen(
                                         onClick = { viewModel.setEditDialogShown(false) },
                                         modifier = Modifier.height(36.dp).weight(1f),
                                         shape = RoundedCornerShape(8.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F3EE)) // sub2 색상 느낌
+//                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F3EE)) // sub2 색상 느낌
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                        )
                                     ) {
-                                        Text("취소", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                                        Text("취소", style = MaterialTheme.typography.bodyMedium,
+//                                            color = Color.Gray)
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer)
                                     }
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Button(
@@ -298,7 +314,9 @@ fun StudyPlanDetailScreen(
                                         },
                                         modifier = Modifier.height(36.dp).weight(1f),
                                         shape = RoundedCornerShape(8.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA5C16C)) // primary 색상
+                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary
+//                                            Color(0xFFA5C16C)) // primary 색상
+                                        )
                                     ) {
                                         Text("확인", style = MaterialTheme.typography.bodyMedium, color = Color.White)
                                     }
@@ -357,7 +375,7 @@ fun StudyRecordCard(
         modifier = Modifier.fillMaxWidth()
             .padding(vertical = 2.dp)
             .clickable{ onCardClick()},
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(3.dp),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
@@ -368,7 +386,10 @@ fun StudyRecordCard(
             if(isShareMode) {
                 Checkbox(
                     checked = log.isSelected,
-                    onCheckedChange = onSelectionChange
+                    onCheckedChange = onSelectionChange,
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = MaterialTheme.colorScheme.primary
+                    )
                 )
                 Spacer(modifier = Modifier.width(5.dp))
             }
@@ -386,14 +407,14 @@ fun StudyRecordCard(
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
             )
                 // 2. 공부시간 (우측 고정)
                 Text(
                     text = "[${TimeFormatter.formatToDigitalClock(log.studyingTime)}]",
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.width(5.dp))
 
@@ -406,7 +427,8 @@ fun StudyRecordCard(
                         Icon(
                             painterResource(R.drawable.ic_trash),
                             contentDescription = "상세 공부 기록 삭제",
-                            tint = Color.LightGray
+//                            tint = Color.LightGray
+                            tint = MaterialTheme.colorScheme.outline
                         )
                     }
                 }
@@ -424,7 +446,8 @@ fun StudyRecordCard(
                     Text(
                         text = finalContent,
                         style = MaterialTheme.typography.bodySmall,
-                        color = fontColor,
+//                        color = fontColor,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.fillMaxWidth(),
 
                         // 표시 줄 수

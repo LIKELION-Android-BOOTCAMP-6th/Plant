@@ -45,7 +45,8 @@ fun MyPageArchiveScreen(navController: NavController) {
                 title = {
                     Text(
                         "${uiState.nickname}의 기른 나무 수",
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 },
                 navigationIcon = {
@@ -58,7 +59,8 @@ fun MyPageArchiveScreen(navController: NavController) {
                                 id = R.drawable.ic_backbtn
                             ),
                             contentDescription = "뒤로가기",
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
@@ -71,7 +73,7 @@ fun MyPageArchiveScreen(navController: NavController) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(background),
+                .background(MaterialTheme.colorScheme.background),
         ) {
             // 하단 그리드
             val chunkedPots = uiState.potList.chunked(3)
@@ -113,7 +115,7 @@ fun GridPlantItem(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Color.White, RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp))
             .clickable{onItemClick()}
             .padding(12.dp),
         horizontalAlignment = Alignment.Start
@@ -133,20 +135,21 @@ fun GridPlantItem(
         Column(
             modifier = Modifier
                 .fillMaxWidth(),
-            horizontalAlignment = Alignment.Start
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // 총 공부 시간
             Text(
                 text = TimeFormatter.formatToDigitalClock(pot.potTotalStudyingTime ?: 0L),
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.Black
+                color = MaterialTheme.colorScheme.onSurface
             )
             // 화분 이름
             Text(
                 text = pot.name ?: "이름 없음",
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }

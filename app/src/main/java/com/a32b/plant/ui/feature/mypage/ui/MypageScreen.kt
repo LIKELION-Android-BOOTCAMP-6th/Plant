@@ -66,6 +66,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.ColorFilter
 import com.a32b.plant.core.component.ConfirmDialog
 import com.a32b.plant.ui.theme.PlantTheme
 import com.a32b.plant.ui.theme.sub_green2
@@ -164,7 +165,7 @@ fun DarkModeToggleButton(
             .padding(vertical = 4.dp),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -180,7 +181,8 @@ fun DarkModeToggleButton(
             Text(
                 text = "다크모드",
                 style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(start = 8.dp)
+                modifier = Modifier.padding(start = 8.dp),
+                color = MaterialTheme.colorScheme.onSurface
             )
             // 우측
             Switch(
@@ -188,8 +190,9 @@ fun DarkModeToggleButton(
                 modifier = Modifier.scale(0.9f),
                 onCheckedChange = { onToggle() },
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.surface,
-                    checkedTrackColor = sub_green2
+                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.outline
                 ),
             )
         }
@@ -207,7 +210,7 @@ fun GrownTreesButton(
             .height(50.dp),
         shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
             contentColor = MaterialTheme.colorScheme.onSurface,
         ),
         elevation = ButtonDefaults.buttonElevation(
@@ -222,11 +225,13 @@ fun GrownTreesButton(
         ) {
             Text(
                 text = "기른 나무 수",
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = "$completedPotCount 그루",
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -242,7 +247,7 @@ fun ButtonTemplate(text: String, onClick: () -> Unit) {
         shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.buttonColors(
 //            containerColor = MaterialTheme.colorScheme.surface,
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
             contentColor = MaterialTheme.colorScheme.onSurface
         ),
         elevation = ButtonDefaults.buttonElevation(
@@ -253,7 +258,8 @@ fun ButtonTemplate(text: String, onClick: () -> Unit) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Start
         ) {
-            Text(text = text, style = MaterialTheme.typography.bodyLarge)
+            Text(text = text, style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface)
         }
     }
 }
@@ -347,7 +353,7 @@ fun DividerImage() {
         Image(
             painter = painterResource(id = R.drawable.ic_mypage_divider),
             contentDescription = "구분선",
-            modifier = Modifier.size(45.dp)
+            modifier = Modifier.size(45.dp),
         )
     }
 }
@@ -374,7 +380,7 @@ fun SetImages(
                     .clip(CircleShape)
                     .border(
                         width = if (selectedImageLevel == level) 5.dp else 0.dp,
-                        color = sub_green1,
+                        color = MaterialTheme.colorScheme.primary,
                         shape = CircleShape
                     )
                     .clickable { onImageClick(level) }
@@ -416,6 +422,9 @@ fun ProfileDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
         ) {
             Column(
                 modifier = Modifier
@@ -436,7 +445,6 @@ fun ProfileDialog(
                             focusedContainerColor = MaterialTheme.colorScheme.surface,
                             unfocusedContainerColor = MaterialTheme.colorScheme.surface
                         ),
-
                         label = { Text("닉네임 변경 (2~10자)", style = Typography.labelSmall) },
                         isError = uiState.nicknameError != null
                     )
@@ -470,7 +478,10 @@ fun ProfileDialog(
                             .height(45.dp)
                             .weight(1f),
                         shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(sub2)
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
                     ) { Text("취소", style = MaterialTheme.typography.bodyMedium) }
 
                     Button(
@@ -481,7 +492,11 @@ fun ProfileDialog(
                         modifier = Modifier
                             .height(45.dp)
                             .weight(1f),
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        )
                     ) { Text("저장", style = Typography.bodyMedium) }
                 }
             }

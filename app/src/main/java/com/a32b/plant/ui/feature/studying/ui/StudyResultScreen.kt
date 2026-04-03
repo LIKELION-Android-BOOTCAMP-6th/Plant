@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -51,7 +52,7 @@ fun StudyResultScreen(navController: NavController) {
     val viewModel: StudyResultViewModel = viewModel(factory = ViewModelFactory.studyResultViewModelFactory(timestamp,tag,title,log, level))
 
     Surface(modifier = Modifier.fillMaxSize(),
-        color = sub2
+        color = MaterialTheme.colorScheme.surface
     ) {
         Column(modifier = Modifier.fillMaxSize().padding(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally) {
@@ -72,20 +73,25 @@ fun StudyResultScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(17.dp))
 
 
-            Text(timestamp , style = Typography.titleSmall , fontSize = 22.sp)
+            Text(timestamp , style = Typography.titleSmall , fontSize = 22.sp,
+                color = MaterialTheme.colorScheme.onSurface)
             Spacer(modifier = Modifier.height(13.dp))
 
             Card(modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(7.dp),
-                colors = CardDefaults.cardColors(background),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                ),
                 shape = RoundedCornerShape(20.dp)
 
             ) {
                 Spacer(modifier = Modifier.height(22.dp))
                 Text(modifier = Modifier.padding(start = 12.dp),
-                    text = "[$tag] $title", style = Typography.titleSmall)
+                    text = "[$tag] $title", style = Typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface)
 
                 log.forEach { text ->
-                    Text("- $text", style = Typography.bodyMedium, modifier = Modifier.padding(start = 22.dp, top = 10.dp, bottom = 10.dp))
+                    Text("- $text", style = Typography.bodyMedium, modifier = Modifier.padding(start = 22.dp, top = 10.dp, bottom = 10.dp),
+                        color = MaterialTheme.colorScheme.onSurface)
                 }
 
                 Column(modifier = Modifier.fillMaxWidth()
@@ -93,10 +99,11 @@ fun StudyResultScreen(navController: NavController) {
                     ProfileImage(level, 200)
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Text(TimeFormatter.formatToDigitalClock(time), style = Typography.titleLarge, fontSize = 50.sp)
+                    Text(TimeFormatter.formatToDigitalClock(time), style = Typography.titleLarge, fontSize = 50.sp,
+                        color = MaterialTheme.colorScheme.onSurface)
 
                     Spacer(modifier = Modifier.weight(1f))
-                    Text("식물이 한 뼘 더 자랐습니다!", style = Typography.bodySmall, color = primary)
+                    Text("식물이 한 뼘 더 자랐습니다!", style = Typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.height(22.dp))
 
                 }

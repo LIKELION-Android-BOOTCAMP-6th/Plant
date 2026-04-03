@@ -24,7 +24,6 @@ class SplashViewModel : ViewModel() {
     val isDarkMode = _isDarkMode.asStateFlow()
 
     init {
-        Log.d("plantLog", "------SplashViewModel")
         checkAuthLogin()
     }
 
@@ -50,13 +49,16 @@ class SplashViewModel : ViewModel() {
                     _destination.value = Routes.SignIn
                     return@launch
                 }
-                // 다크모드 관리용
-                _isDarkMode.value = profile.isDarkMode ?: false
+
                 CurrentUser.set(
                     uid = firebaseUser.uid,
                     nickname = profile?.nickname ?: "",
                     profileImg = profile?.profileImg ?: ""
                 )
+                // 다크모드 관리용
+                _isDarkMode.value = profile.isDarkMode ?: false
+                observeUserTheme()
+
                 _destination.value = Routes.HomeMain
             } else {
                 // 로그인 세션 없음 → 로그인 화면

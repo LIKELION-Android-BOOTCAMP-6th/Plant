@@ -59,15 +59,16 @@ fun CommunityListScreen(navController: NavController) {
     }
 
     Scaffold(
-        containerColor = background,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            Column(modifier = Modifier.background(background).padding(10.dp)) {
+            Column(modifier = Modifier.background(MaterialTheme.colorScheme.background).padding(10.dp)) {
                 SearchBarSection(
                     query = searchQuery,
                     onQueryChange = { viewModel.onSearchQueryChanged(it) }
                 )
                 Row() {
-                    Text("태그", style = Typography.titleSmall, modifier = Modifier.padding(start = 16.dp, top = 4.dp))
+                    Text("태그", style = Typography.titleSmall, modifier = Modifier.padding(start = 16.dp, top = 4.dp,),
+                        color = MaterialTheme.colorScheme.onBackground)
                     Icon(painter = painterResource(id = if(uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
                         contentDescription = "태그박스",
                         modifier = Modifier.clickable{
@@ -94,19 +95,20 @@ fun CommunityListScreen(navController: NavController) {
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { navController.navigate(Routes.CommunityPost()) },
-                containerColor = sub1,
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
                 shape = CircleShape
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_edit),
                     contentDescription = null,
                     modifier = Modifier.size(26.dp),
-                    tint = Color.Black
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
         }
     ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding)) {
+        Column(modifier = Modifier.padding(innerPadding)
+            .background(MaterialTheme.colorScheme.background)) {
             if (postList.isEmpty()) {
                 EmptyStateView()
             } else {
@@ -135,7 +137,9 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
-        placeholder = { Text("검색어를 입력하세요", style = Typography.bodyMedium, color = Color.Gray) },
+        placeholder = { Text("검색어를 입력하세요", style = Typography.bodyMedium,
+//            color = Color.Gray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant) },
         modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp).height(56.dp),
         shape = RoundedCornerShape(12.dp),
         trailingIcon = {
@@ -148,10 +152,10 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
             }
         },
         colors = OutlinedTextFieldDefaults.colors(
-            unfocusedContainerColor = Color.White,
-            focusedContainerColor = Color.White,
-            focusedTextColor = Color.Black,
-            unfocusedTextColor = Color.Black
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+            focusedTextColor = MaterialTheme.colorScheme.primary,
+            unfocusedTextColor = MaterialTheme.colorScheme.outline
         ),
         singleLine = true
     )
@@ -161,7 +165,10 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
 fun PostCard(post: Post, isLiked: Boolean,onClick: () -> Unit ) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+//            Color.White
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -169,10 +176,12 @@ fun PostCard(post: Post, isLiked: Boolean,onClick: () -> Unit ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
 
                 Text(text = post.title, fontWeight = FontWeight.Bold, style = Typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f))
-                Text(text = TimeFormatter.formatTimeAgo(post.createdAt), fontSize = 11.sp, style = Typography.bodyMedium)
+                Text(text = TimeFormatter.formatTimeAgo(post.createdAt), fontSize = 11.sp, style = Typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Row {
                 post.tag.forEach { Tag(it, 10) }
@@ -181,7 +190,8 @@ fun PostCard(post: Post, isLiked: Boolean,onClick: () -> Unit ) {
             Spacer(modifier = Modifier.height(3.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ProfileImage(level = post.author.profileImg, 16)
-                Text(text = "  ${post.author.nickname}", fontSize = 12.sp, style = Typography.bodyMedium)
+                Text(text = "  ${post.author.nickname}", fontSize = 12.sp, style = Typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface)
             }
             Spacer(modifier = Modifier.height(8.dp))
             Row {

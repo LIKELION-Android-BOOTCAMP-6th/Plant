@@ -42,9 +42,9 @@ class MainActivity : ComponentActivity() {
             // 다크모드 관리용
             // 원하는 페이지에 MaterialTheme.colorScheme.색상 입력한 뒤 화면 이동 -> 마이페이지 다크모드 ON OFF -> 화면 재확인 확인 가능
             val isDarkMode by viewModel.isDarkMode.collectAsState()
-            PlantTheme(darkTheme = false) { // isDarkMode / 비활성화 = false
+            PlantTheme(darkTheme = isDarkMode) { // isDarkMode / 비활성화 = false
                 Surface(modifier = Modifier.fillMaxSize(),
-//                    color = MaterialTheme.colorScheme.background
+                    color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
                     val navBackStackEntry by navController.currentBackStackEntryAsState()

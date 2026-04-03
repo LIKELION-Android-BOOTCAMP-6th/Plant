@@ -42,6 +42,7 @@ import com.a32b.plant.ui.theme.sub1
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.a32b.plant.data.di.ViewModelFactory
+import com.google.common.math.LinearTransformation.vertical
 
 @Composable
 fun NewBornTreeScreen(navController: NavController,
@@ -67,7 +68,8 @@ fun NewBornTreeScreen(navController: NavController,
             Text(
                 text = "Plant",
                 modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.displayLarge
+                style = MaterialTheme.typography.displayLarge,
+                color = MaterialTheme.colorScheme.primary
             )
           },
         bottomBar = {
@@ -83,13 +85,18 @@ fun NewBornTreeScreen(navController: NavController,
                     .fillMaxWidth()
                     .padding(20.dp)
                     .height(60.dp),
-                colors = ButtonDefaults.buttonColors(sub1),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    disabledContainerColor = MaterialTheme.colorScheme.outlineVariant,
+                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 if(isUploading){
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = background)
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
                 }else{
-                    Text("완료", style = MaterialTheme.typography.titleSmall, color = fontColor)
+                    Text("완료", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onPrimary)
                 }
             }
         }
@@ -98,7 +105,7 @@ fun NewBornTreeScreen(navController: NavController,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(background),
+                .background(MaterialTheme.colorScheme.background),
             horizontalAlignment = Alignment.CenterHorizontally,
             contentPadding = PaddingValues(bottom = 20.dp)
         ) {
@@ -109,7 +116,7 @@ fun NewBornTreeScreen(navController: NavController,
                     modifier = Modifier
                         .size(240.dp)
                         .clip(RoundedCornerShape(32.dp))
-                        .background(primary),
+                        .background(MaterialTheme.colorScheme.primary),
                     contentAlignment = Alignment.Center
                 ){
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -127,6 +134,7 @@ fun NewBornTreeScreen(navController: NavController,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                 ) {
                     Text("태그 선택", style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(vertical = 8.dp))
 
                     //태그
@@ -139,23 +147,25 @@ fun NewBornTreeScreen(navController: NavController,
                                 selected = (selectedTag == tag),
                                 onClick = { selectedTag = tag},
                                 label = {
-                                    Text(tag, style = MaterialTheme.typography.bodySmall)
+                                    Text(tag, style = MaterialTheme.typography.bodySmall,color = MaterialTheme.colorScheme.onSurface)
                                 },
                                 modifier = Modifier.padding(end = 8.dp),
                                 // 선택 시 색상 변화
                                 border = androidx.compose.material3.FilterChipDefaults.filterChipBorder(
                                     enabled = !isUploading,
                                     selected = (selectedTag == tag),
-                                    borderColor = androidx.compose.ui.graphics.Color.LightGray,
+//                                    borderColor = androidx.compose.ui.graphics.Color.LightGray,
+                                    borderColor = MaterialTheme.colorScheme.outline,
                                     selectedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
                                     borderWidth = 1.dp,
                                     selectedBorderWidth = 0.dp,
                                 ),
                                 shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
                                 colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = primary,
-                                    selectedLabelColor = background,
-                                    labelColor = fontColor
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onSurface,
+                                    labelColor = MaterialTheme.colorScheme.onSurface,
+                                    disabledLabelColor = MaterialTheme.colorScheme.onSurface
                                 )
                             )
                         }
@@ -166,7 +176,9 @@ fun NewBornTreeScreen(navController: NavController,
             // 제목 입력
             item {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("화분 이름", style = MaterialTheme.typography.titleSmall)
+                    Text("화분 이름",
+                        style = MaterialTheme.typography.titleSmall,
+                        color=MaterialTheme.colorScheme.onSurface)
                     androidx.compose.material3.OutlinedTextField(
                         value = potName,
                         onValueChange = { input ->
@@ -177,7 +189,10 @@ fun NewBornTreeScreen(navController: NavController,
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("이름을 입력하세요 (최대 15글자)") },
+                        placeholder = { Text(
+                            text="이름을 입력하세요 (최대 15글자)",
+                                      color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )},
 
                         // 한 줄 입력 고정
                         singleLine = true,

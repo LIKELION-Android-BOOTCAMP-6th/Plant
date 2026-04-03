@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,8 +39,10 @@ fun TagGroup(tags: List<String>, init: List<String> = emptyList(),
             Card(
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (selectedTags.contains(tag)) primary else Color.White,
-                    disabledContainerColor = if (selectedTags.contains(tag)) primary else Color.White),
+                    containerColor = if (selectedTags.contains(tag)) MaterialTheme.colorScheme.primary
+                                     else MaterialTheme.colorScheme.surfaceVariant,
+                    disabledContainerColor = if (selectedTags.contains(tag)) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.surfaceVariant),
                 elevation = CardDefaults.cardElevation(
                     defaultElevation = 3.dp,
                     disabledElevation = 3.dp),
@@ -69,7 +72,8 @@ fun TagGroup(tags: List<String>, init: List<String> = emptyList(),
                     onSelectedChanged(selectedTags)
                 }
             ) {
-                Text(tag, Modifier.padding(top = 5.dp, bottom = 5.dp, start = 10.dp, end = 10.dp), style = Typography.bodyMedium)
+                Text(tag, Modifier.padding(top = 5.dp, bottom = 5.dp, start = 10.dp, end = 10.dp), style = Typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface)
             }
         }
     }
