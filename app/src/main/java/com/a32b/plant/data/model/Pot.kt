@@ -8,7 +8,8 @@ import com.google.firebase.firestore.ServerTimestamp
 //화분 정보 모음
 data class PotInfo(
     val id: String? = null,
-    val tag: String? = null,
+    val tag_id: String? = null,
+    val tag_name: String? = null,
     val name: String? = null,
     val imageUrl: String? = null,
     val potTotalStudyingTime: Long? = null,
