@@ -82,28 +82,30 @@ fun CommunityListScreen(navController: NavController) {
                             })
                     }
                     // FlowRow를 사용하여 6개마다 줄바꿈 구현
-                    ContextualFlowRow(
+                    FlowRow(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
-                        itemCount = uiState.selected.size,
-                        maxItemsInEachRow = 6, // 한 줄에 최대 6개까지만 배치
+                        // itemCount 파라미터는 더 이상 필요 없습니다.
+                        maxItemsInEachRow = 6,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) { index ->
-                        val tag = uiState.selected[index]
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = tag.name,
-                                style = Typography.bodyMedium,
-                                fontSize = 12.sp,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                color = Color.White
-                            )
+                    ) {
+                        // index 기반이 아닌 리스트 아이템 기반(forEach)으로 직접 그립니다.
+                        uiState.selected.forEach { tag ->
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = tag.name,
+                                    style = Typography.bodyMedium,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    color = Color.White
+                                )
+                            }
                         }
                     }
                     if (uiState.isTagSheetShown) {
