@@ -85,24 +85,24 @@ fun StudyPlanDetailScreen(
                     potInfo?.let {
                         Text("[${it.tag_name}] ${it.name}",
                             style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface)
+                            color = MaterialTheme.colorScheme.onSurface)
                     } ?: Text("로딩 중...", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 },
                 navigationIcon = {
-                        //뒤로 가기
-                        IconButton(onClick = {
-                            if(isShareMode) viewModel.setShareMode(false)
-                            else navController.popBackStack()
-                        }) {
-                            Icon(
-                                painter = painterResource(
-                                    id = if(isShareMode) R.drawable.ic_study_result_close
-                                        else R.drawable.ic_backbtn
-                                ),
-                                contentDescription = if (isShareMode) "공유 취소" else "뒤로가기",
-                                modifier = Modifier.size(19.dp),
-                            )
-                        }
+                    //뒤로 가기
+                    IconButton(onClick = {
+                        if(isShareMode) viewModel.setShareMode(false)
+                        else navController.popBackStack()
+                    }) {
+                        Icon(
+                            painter = painterResource(
+                                id = if(isShareMode) R.drawable.ic_study_result_close
+                                else R.drawable.ic_backbtn
+                            ),
+                            contentDescription = if (isShareMode) "공유 취소" else "뒤로가기",
+                            modifier = Modifier.size(19.dp),
+                        )
+                    }
                 },
                 actions = {
                     // 수정
@@ -397,48 +397,48 @@ fun StudyRecordCard(
             }
             //리스트 상세 다이얼로그
             Column(modifier = Modifier.padding(5.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ){
-                // 날짜
-                Text(
-                    text = if (log.title.isNotEmpty()) log.title else TimeFormatter.formatToKoreanDate(dateTime),
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface
-            )
-                // 2. 공부시간 (우측 고정)
-                Text(
-                    text = "[${TimeFormatter.formatToDigitalClock(log.studyingTime)}]",
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.width(5.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ){
+                    // 날짜
+                    Text(
+                        text = if (log.title.isNotEmpty()) log.title else TimeFormatter.formatToKoreanDate(dateTime),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    // 2. 공부시간 (우측 고정)
+                    Text(
+                        text = "[${TimeFormatter.formatToDigitalClock(log.studyingTime)}]",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.width(5.dp))
 
-                if(!isShareMode) {
-                    //삭제 버튼
-                    IconButton(
-                        onClick = onDeleteClick,
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            painterResource(R.drawable.ic_trash),
-                            contentDescription = "상세 공부 기록 삭제",
+                    if(!isShareMode) {
+                        //삭제 버튼
+                        IconButton(
+                            onClick = onDeleteClick,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                painterResource(R.drawable.ic_trash),
+                                contentDescription = "상세 공부 기록 삭제",
 //                            tint = Color.LightGray
-                            tint = MaterialTheme.colorScheme.outline
-                        )
+                                tint = MaterialTheme.colorScheme.outline
+                            )
+                        }
                     }
                 }
-            }
-            Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
-            // 학습 상세 내용 -> 2줄 제한
-            val combinedContent = log.contents.take(2).joinToString("\n") { "• $it" }
+                // 학습 상세 내용 -> 2줄 제한
+                val combinedContent = log.contents.take(2).joinToString("\n") { "• $it" }
                 val finalContent = if (log.contents.size > 2) {
                     "$combinedContent\n..."
                 } else {
