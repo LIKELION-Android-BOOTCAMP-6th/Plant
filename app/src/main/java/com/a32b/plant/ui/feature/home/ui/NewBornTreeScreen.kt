@@ -114,10 +114,10 @@ fun NewBornTreeScreen(navController: NavController,
 
             // 화분 기본 이미지
             item {
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(15.dp))
                 Box(
                     modifier = Modifier
-                        .size(240.dp)
+                        .size(220.dp)
                         .clip(RoundedCornerShape(32.dp))
                         .background(MaterialTheme.colorScheme.primary),
                     contentAlignment = Alignment.Center
@@ -134,41 +134,37 @@ fun NewBornTreeScreen(navController: NavController,
             // 태그 출력
             item {
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                    modifier = Modifier.fillMaxWidth().padding(16.dp)
                 ) {
-                    Text("태그 선택", style = MaterialTheme.typography.titleSmall,
+                    Text(
+                        "태그 선택", style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(vertical = 8.dp))
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
 
                     //태그
-                    androidx.compose.foundation.lazy.LazyRow(
-                        contentPadding = PaddingValues(vertical = 8.dp)
-                    ) {
-                        item {
-                            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                                Text("태그 선택", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(vertical = 8.dp))
-
-                                TagSheet(
-                                    tags = tags,
-                                    init = emptyList(),
-                                    isMultiSelected = false, // 화분은 하나의 성격만 가지므로 단일 선택
-                                    enable = !isUploading,
-                                    onSelectedChange = { selectedList ->
-                                        if (selectedList.isNotEmpty()) {
-                                            selectedTag = selectedList[0]
-                                        }
-                                    }
-                                )
-
-                                // 선택된 태그가 무엇인지 사용자에게 보여주는 피드백 (선택 사항)
-                                selectedTag?.let {
-                                    Text(text = "선택됨: ${it.name}", style = MaterialTheme.typography.bodySmall, color = primary, modifier = Modifier.padding(start = 10.dp))
-                                }
+                    TagSheet(
+                        tags = tags,
+                        init = if (selectedTag != null) listOf(selectedTag!!) else emptyList(),
+                        isMultiSelected = false,
+                        enable = !isUploading,
+                        onSelectedChange = { selectedList ->
+                            if (selectedList.isNotEmpty()) {
+                                selectedTag = selectedList[0]
                             }
                         }
-                    }
+                    )
 
+                    selectedTag?.let {
+                        Text(
+                            text = "선택됨: ${it.name}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = primary,
+                            modifier = Modifier.padding(top = 8.dp, start = 4.dp)
+                        )
+                    }
                 }
+
             }
             // 제목 입력
             item {

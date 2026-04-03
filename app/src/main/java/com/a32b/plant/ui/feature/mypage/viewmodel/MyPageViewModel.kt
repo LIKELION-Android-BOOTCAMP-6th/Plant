@@ -3,6 +3,7 @@ package com.a32b.plant.ui.feature.mypage.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
 import com.a32b.plant.data.di.CurrentUser
 import com.a32b.plant.data.repository.NicknameRepository
@@ -47,7 +48,7 @@ class MyPageViewModel(
     private val potRepository: PotRepository,
     private val nicknameRepository: NicknameRepository,
     private val firebaseAuth: FirebaseAuth
-) : ViewModel() {
+) : BaseViewModel() {
     private val _uiState = MutableStateFlow(MyPageUiState())
     val uiState = _uiState.asStateFlow()
 
@@ -68,6 +69,10 @@ class MyPageViewModel(
                         )
                     }
                     getCompletedPotCount()
+
+                    // 빈화면 -> 홈화면
+                    loaded()
+
                 } else {
                     Log.e("error", "-----------사용자 정보 없음")
                 }

@@ -129,14 +129,35 @@ fun CommunityPostScreen(
             }
 
             item {
-                Row {
-                    Text("태그", style = Typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground,fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
-                    Icon(painter = painterResource(id = if(uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
-                        contentDescription = "태그박스",
-                        modifier = Modifier.clickable{
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = !uiState.isShared) {
                             viewModel.onIsTagSheetShownChange()
-                        })
-                    Text(uiState.selected.name, style = Typography.bodyMedium, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ){
+                    Text("태그", style = Typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground,fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
+
+                    if (!uiState.isShared) {
+                        Icon(
+                            painter = painterResource(id = if(uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
+                            contentDescription = "태그박스",
+                            modifier = Modifier.size(24.dp).padding(start = 4.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = uiState.selected.name,
+                        style = Typography.bodyMedium,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(top = 4.dp),
+                        // 공유 모드일 때는 텍스트 색상을 흐리게 하여 수정 불가임을 알림
+                        color = if (uiState.isShared) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onBackground
+                    )
+
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 if (uiState.isTagSheetShown){
@@ -144,9 +165,16 @@ fun CommunityPostScreen(
                     Spacer(modifier = Modifier.height(2.dp))
                     TagSheet(uiState.tags,
                         enable = !uiState.isShared,
-                        init = if(uiState.isShared || postId?.isNotEmpty()?:false) listOf(uiState.selected) else emptyList()) { selected->
-                        Log.d("선택된 거 ", selected.toList().toString())
-                        viewModel.onSelectedTagChange(selected[0])
+                        init = when {
+                            uiState.isShared || !postId.isNullOrEmpty() -> listOf(uiState.selected)
+                            uiState.selected.id.isNotEmpty() -> listOf(uiState.selected)
+                            else -> emptyList()
+                        }
+                    ) { selected ->
+                        if (selected.isNotEmpty()) {
+                            Log.d("선택된 거 ", selected[0].name)
+                            viewModel.onSelectedTagChange(selected[0])
+                        }
                     }
                 }
 

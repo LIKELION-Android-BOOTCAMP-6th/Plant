@@ -26,7 +26,7 @@ data class CommunityPostUiState(
     val postId: String? = null,
     val title: String = "",
     val content: String? = null,
-    val selected: Tag = Tag(),
+    val selected: Tag = Tag(id = "", name = "태그를 선택하세요"),
     val potId: String? = null,
     val studyLogs: List<StudyLog>? = null,
     val isDismissDialogShow: Boolean = false,
@@ -55,18 +55,30 @@ class CommunityPostViewModel(
 
     init {
         fetchTags()
-        matchSelectedTag()
         onIsSharedChange()
     }
-    fun onIsTagSheetShownChange() = _uiState.update { it.copy(isTagSheetShown = !_uiState.value.isTagSheetShown) }
+    fun onIsTagSheetShownChange() {
+        if (!_uiState.value.isShared) {
+            _uiState.update { it.copy(isTagSheetShown = !_uiState.value.isTagSheetShown) }
+        }
+    }
     private fun fetchTags(){
         viewModelScope.launch(Dispatchers.IO) {
-            getTags(repository.getTag())
+            val fetchedTags = repository.getTag()
+            _uiState.update { it.copy(tags = fetchedTags) }
+            matchSelectedTag()
+
         }
     }
     fun matchSelectedTag(){
-        tagId?.let {
-            onSelectedTagChange(_uiState.value.tags.find { it.id == tagId }!!)
+        val idToMatch = tagId ?: return // tagId가 없으면 중단
+
+        //!! 제거: find 결과를 안전하게 처리
+        val foundTag = _uiState.value.tags.find { it.id == idToMatch }
+        foundTag?.let {
+            _uiState.update { state -> state.copy(selected = it)}
+        } ?: run {
+            Log.e("CommunityPostVM", "전달된 tagId($idToMatch)를 tags 리스트에서 찾을 수 없습니다.")
         }
     }
     // ✅ 기존 글을 불러오는 함수
@@ -99,14 +111,18 @@ class CommunityPostViewModel(
     fun onTitleChange(title: String) = _uiState.update { it.copy(title = title) }
     fun onContentChange(content: String) = _uiState.update { it.copy(content = content) }
 
-    fun onSelectedTagChange(tag:Tag) = _uiState.update { it.copy(selected = tag) }
+    fun onSelectedTagChange(tag:Tag) {
+        if (!_uiState.value.isShared) {
+            _uiState.update { it.copy(selected = tag) }
+        }
+    }
     fun onIsDismissDialogShowChange() = _uiState.update { it.copy(isDismissDialogShow = !it.isDismissDialogShow) }
 
     fun onIsSharedChange(){
         potId?.let {
             _uiState.update { it.copy(isShared = true) }
             getStudyLog()
-            onTitleChange(title!!)
+            title?.let { onTitleChange(it) }
         }
     }
 
