@@ -50,72 +50,77 @@ fun CommunityListScreen(navController: NavController) {
 
         val uiState by viewModel.uiState.collectAsState()
 
-    BackHandler {
-        navController.navigate(Routes.HomeMain) {
-            popUpTo(Routes.HomeMain) { inclusive = false }
+        BackHandler {
+            navController.navigate(Routes.HomeMain) {
+                popUpTo(Routes.HomeMain) { inclusive = false }
+            }
         }
-
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            Column(modifier = Modifier.background(MaterialTheme.colorScheme.background).padding(10.dp)) {
-                SearchBarSection(
-                    query = searchQuery,
-                    onQueryChange = { viewModel.onSearchQueryChanged(it) }
-                )
-                Row() {
-                    Text(
-                        "태그",
-                        style = Typography.titleSmall,
-                        modifier = Modifier.padding(start = 16.dp, top = 4.dp,),
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Icon(
-                        painter = painterResource(id = if (uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
-                        contentDescription = "태그박스",
-                        modifier = Modifier.clickable {
-                            viewModel.onIsTagSheetShownChange()
-                        })
-                }
-                // FlowRow를 사용하여 6개마다 줄바꿈 구현
-                ContextualFlowRow(
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.background,
+            topBar = {
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    itemCount = uiState.selected.size,
-                    maxItemsInEachRow = 6, // 한 줄에 최대 6개까지만 배치
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) { index ->
-                    val tag = uiState.selected[index]
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(vertical = 2.dp)
-                    ) {
+                        .background(MaterialTheme.colorScheme.background)
+                        .padding(10.dp)
+                ) {
+                    SearchBarSection(
+                        query = searchQuery,
+                        onQueryChange = { viewModel.onSearchQueryChanged(it) }
+                    )
+                    Row() {
                         Text(
-                            text = tag.name,
-                            style = Typography.bodyMedium,
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            color = Color.White
+                            "태그",
+                            style = Typography.titleSmall,
+                            modifier = Modifier.padding(start = 16.dp, top = 4.dp),
+                            color = MaterialTheme.colorScheme.onBackground
                         )
+                        Icon(
+                            painter = painterResource(id = if (uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
+                            contentDescription = "태그박스",
+                            modifier = Modifier.clickable {
+                                viewModel.onIsTagSheetShownChange()
+                            })
                     }
-                    if (uiState.isTagSheetShown) {
-                        TagSheet(
-                            uiState.tags,
-                            isMultiSelected = true,
-                            init = uiState.selected
-                        ) { selected ->
-                            viewModel.onSelectedChanged(selected.toList())
-                            Log.d("선택된 거 ", selected.toList().toString())
+                    // FlowRow를 사용하여 6개마다 줄바꿈 구현
+                    ContextualFlowRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        itemCount = uiState.selected.size,
+                        maxItemsInEachRow = 6, // 한 줄에 최대 6개까지만 배치
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) { index ->
+                        val tag = uiState.selected[index]
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = tag.name,
+                                style = Typography.bodyMedium,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                color = Color.White
+                            )
                         }
-                    }
+                        if (uiState.isTagSheetShown) {
+                            TagSheet(
+                                uiState.tags,
+                                isMultiSelected = true,
+                                init = uiState.selected
+                            ) { selected ->
+                                viewModel.onSelectedChanged(selected.toList())
+                                Log.d("선택된 거 ", selected.toList().toString())
+                            }
+                        }
 
 //                TagGroup(tags = uiState.tags + listOf("공유")){ selected ->
 //                    viewModel.onSelectedChanged(selected.toList())
 //
 //                }
+                    }
                 }
             },
             floatingActionButton = {
@@ -231,7 +236,9 @@ fun PostCard(post: Post, isLiked: Boolean, onClick: () -> Unit) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
 
                 Text(
-                    text = post.title, fontWeight = FontWeight.Bold, style = Typography.bodyMedium,
+                    text = post.title,
+                    fontWeight = FontWeight.Bold,
+                    style = Typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
