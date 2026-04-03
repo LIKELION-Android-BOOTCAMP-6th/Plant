@@ -1,6 +1,5 @@
 package com.a32b.plant.ui.feature.home.ui
 
-import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -36,17 +35,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.ui.feature.home.viewmodel.NewBornTreeViewModel
-import com.a32b.plant.ui.theme.background
-import com.a32b.plant.ui.theme.fontColor
 import com.a32b.plant.ui.theme.primary
-import com.a32b.plant.ui.theme.sub1
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.a32b.plant.core.component.TagSheet
 import com.a32b.plant.data.di.ViewModelFactory
-import com.google.common.math.LinearTransformation.vertical
-import com.google.firebase.database.core.Tag
+import com.a32b.plant.data.model.Tag
 
 @Composable
 fun NewBornTreeScreen(navController: NavController,
@@ -151,7 +146,7 @@ fun NewBornTreeScreen(navController: NavController,
                     ) {
                         item {
                             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                                Text("태그 선택", style = Typography.titleSmall, modifier = Modifier.padding(vertical = 8.dp))
+                                Text("태그 선택", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(vertical = 8.dp))
 
                                 TagSheet(
                                     tags = tags,
@@ -167,7 +162,7 @@ fun NewBornTreeScreen(navController: NavController,
 
                                 // 선택된 태그가 무엇인지 사용자에게 보여주는 피드백 (선택 사항)
                                 selectedTag?.let {
-                                    Text(text = "선택됨: ${it.name}", style = Typography.bodySmall, color = primary, modifier = Modifier.padding(start = 10.dp))
+                                    Text(text = "선택됨: ${it.name}", style = MaterialTheme.typography.bodySmall, color = primary, modifier = Modifier.padding(start = 10.dp))
                                 }
                             }
                         }
@@ -221,8 +216,8 @@ fun NewBornTreeScreen(navController: NavController,
         }
     }
 }
-fun checkEnable(selectedTag:String, potName:String, isUploading: Boolean): Boolean{
-    if(selectedTag.isNotEmpty() && potName.trim().isNotEmpty() && !isUploading){
+fun checkEnable(selectedTag:Tag?, potName:String, isUploading: Boolean): Boolean{
+    if(selectedTag != null && potName.trim().isNotEmpty() && !isUploading){
         return true
     }
     return false
