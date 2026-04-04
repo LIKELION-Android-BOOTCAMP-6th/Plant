@@ -52,7 +52,7 @@ fun StudyResultScreen(navController: NavController) {
     val viewModel: StudyResultViewModel = viewModel(factory = ViewModelFactory.studyResultViewModelFactory(timestamp,tag,title,log, level))
 
     Surface(modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.surface
+        color = MaterialTheme.colorScheme.background
     ) {
         Column(modifier = Modifier.fillMaxSize().padding(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally) {

@@ -17,16 +17,23 @@ private val DarkColorScheme = darkColorScheme(
     primary = primary,
     onPrimary = Color(0xFF000000),
 
-    background = Color(0xFF121212),
+    background = Color(0xFF2D2D2D),
     onBackground = Color(0xFFE6E1D6),
+
+    //다이얼로그 백, 커뮤니티 포스트 입력창, 커뮤니티 디테일 내용
+    //기본 바탕이 흰 색인 것
+    secondaryContainer = Color(0xFF757575),
+    onSecondaryContainer = Color.White,
 
     onSurface = Color(0xFFE6E1E5),
 
-    surfaceVariant = Color(0xFF1E1E1E),
+    //홈의 카드, 개별학습기록 백, 공부중 백
+    //기본 바탕이 연한 회색인 것
+    surfaceVariant = Color(0xFF4A4A4A),
     onSurfaceVariant = Color(0xFFB0B0B0),
 
-    secondary = PurpleGrey80,
-    tertiary = Pink80,
+    secondary = Color(0xFFD8B787),
+    tertiary = Color(0xFF44474E),
 
 
 )
@@ -38,8 +45,11 @@ private val LightColorScheme = lightColorScheme(
     background = background,
     onBackground = Color(0xFF1C1B1F),
 
+    secondaryContainer = Color.White,
+    onSecondaryContainer = fontColor,
+
     onSurface = Color(0xFF1C1B1F),
-    surfaceVariant = Color.White,
+    surfaceVariant = Color(0xFFF8F6F6),
     onSurfaceVariant = Color(0xFF44474E),
 
     secondary = sub1,

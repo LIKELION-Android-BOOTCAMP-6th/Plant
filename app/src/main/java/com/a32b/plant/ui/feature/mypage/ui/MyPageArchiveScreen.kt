@@ -28,6 +28,7 @@ import com.a32b.plant.data.di.ViewModelFactory
 import com.a32b.plant.data.model.PotInfo
 import com.a32b.plant.ui.feature.home.ui.GridPlantItem
 import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageArchiveViewModel
+import com.a32b.plant.ui.theme.Typography
 import com.a32b.plant.ui.theme.background
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,10 +43,12 @@ fun MyPageArchiveScreen(navController: NavController) {
 //---------------
         topBar = {
             TopAppBar(
+                windowInsets = WindowInsets(top = 0.dp),
+                colors = TopAppBarDefaults.topAppBarColors(MaterialTheme.colorScheme.background),
                 title = {
                     Text(
                         "${uiState.nickname}의 기른 나무 수",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = Typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 },

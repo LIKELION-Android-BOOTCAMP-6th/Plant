@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,19 +40,20 @@ fun TagSheet(tags: List<Tag>, init : List<Tag> = emptyList(),
     Card(modifier = Modifier.padding(10.dp).fillMaxWidth(),
         shape = RoundedCornerShape(5.dp),
         elevation = CardDefaults.cardElevation(1.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)) {
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
         Column {
             Spacer(modifier = Modifier.height(8.dp))
             groupedTags.forEach { (parent, group) ->
-                Text(parent, style = Typography.titleSmall, modifier = Modifier.padding(start = 10.dp))
+                Text(parent, style = Typography.titleSmall, modifier = Modifier.padding(start = 10.dp),
+                    color = MaterialTheme.colorScheme.onSecondaryContainer)
 
                 LazyRow(modifier = Modifier.padding(start = 10.dp)) {
                     items(group) { tag ->
                         val isLocked = !enable && init.contains(tag)
                         Card(shape = RoundedCornerShape(20.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = if (selectedTags.contains(tag)) primary else Color.White,
-                                disabledContainerColor = if(selectedTags.contains(tag)) primary else Color.White
+                                containerColor = if (selectedTags.contains(tag)) primary else MaterialTheme.colorScheme.secondaryContainer,
+                                disabledContainerColor = if(selectedTags.contains(tag)) primary else MaterialTheme.colorScheme.secondaryContainer
                             ),
                             elevation = CardDefaults.cardElevation(
                                 defaultElevation = 2.dp,
@@ -69,7 +71,7 @@ fun TagSheet(tags: List<Tag>, init : List<Tag> = emptyList(),
                                 onSelectedChange(selectedTags)
                             }) {
                             Text(tag.name, modifier = Modifier.padding(top = 5.dp, bottom = 5.dp, start = 10.dp, end = 10.dp),
-                                style = Typography.bodyMedium
+                                style = Typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                         }
 

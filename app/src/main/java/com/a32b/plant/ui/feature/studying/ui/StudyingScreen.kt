@@ -82,6 +82,7 @@ import com.a32b.plant.ui.theme.background
 import com.a32b.plant.ui.theme.primary
 import com.a32b.plant.ui.theme.sub1
 import com.a32b.plant.ui.theme.sub2
+import com.a32b.plant.ui.theme.sub3
 import java.time.LocalDateTime
 import kotlin.math.log
 
@@ -103,7 +104,7 @@ fun StudyingScreen(navController: NavController) {
 
     val uiState by viewModel.uiState.collectAsState()
     val timerButtonText = if (uiState.isStudying) "일시정지" else "학습하기"
-    val timerButtonBack = if (uiState.isStudying) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary
+    val timerButtonBack = if (uiState.isStudying) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
 
     BackHandler {
         viewModel.onFinishDialogShownChange()
@@ -135,7 +136,7 @@ fun StudyingScreen(navController: NavController) {
     val studyingUsers = uiState.studyingUsers
     Surface(modifier = Modifier.fillMaxSize(),
 //        color = Color(0xFFF8F6F6)
-        color = MaterialTheme.colorScheme.background
+        color = MaterialTheme.colorScheme.surfaceVariant
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -154,7 +155,7 @@ fun StudyingScreen(navController: NavController) {
             Row {
                 //일시정지/학습시작 버튼
                 StateChangeButton(timerButtonText, timerButtonBack){ viewModel.onStudyingStatusChange()}
-                StateChangeButton("학습종료", MaterialTheme.colorScheme.primary) {
+                StateChangeButton("학습종료", MaterialTheme.colorScheme.secondary) {
                     viewModel.onFinishDialogShownChange()
                 }
             }
@@ -228,8 +229,8 @@ fun StateChangeButton(text: String, backColor: Color, function: () -> Unit){
 fun StudyingUserCard(users: List<StudyingUser>, tag: String){
     Card(
         modifier = Modifier.fillMaxWidth().height(200.dp),
-        shape = RoundedCornerShape(topStart = 5.dp, topEnd = 5.dp, bottomEnd = 0.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomEnd = 0.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
         ) {
         Column(modifier = Modifier.padding(10.dp)) {
             Text("$tag ${users.size}", style = MaterialTheme.typography.titleSmall,
@@ -247,7 +248,8 @@ fun StudyinUserItem(user: StudyingUser){
     Row(Modifier.padding(10.dp),
         verticalAlignment = Alignment.CenterVertically) {
         ProfileImage(user.profileImg, 30)
-        Text(text = user.nickname, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+        Text(text = user.nickname, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(top = 3.dp, start = 3.dp))
         Text(text = " ${TimeFormatter.formatToMinute(user.studyingTime)} 째 공부중!", style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface)
     }
@@ -344,7 +346,7 @@ fun StudyFinishDialog(
                         modifier = Modifier.height(45.dp).weight(1f),
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            containerColor = sub3,
                             contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     ) { Text("취소", style = Typography.bodyMedium) }

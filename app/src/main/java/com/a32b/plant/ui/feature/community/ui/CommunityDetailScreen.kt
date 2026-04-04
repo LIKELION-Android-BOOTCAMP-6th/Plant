@@ -96,7 +96,7 @@ fun CommunityDetailScreen(
                 modifier = Modifier.fillMaxSize(),
                 colors = CardDefaults.cardColors(
 //                    containerColor = Color.White
-                            containerColor = MaterialTheme.colorScheme.surface
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
                 ),
                 shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(1.dp, Color.LightGray),
@@ -271,7 +271,6 @@ fun CommentRow(
                     text = comment.createdAt?.let { TimeFormatter.formatTimestampTime(it) } ?: "",
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-//                    color = Color.Gray,
                     style = Typography.bodyMedium
                 )
             }
@@ -289,14 +288,10 @@ fun CommentRow(
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-//                        focusedContainerColor = Color.White,
-//                        unfocusedContainerColor = Color.White,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         focusedTextColor = MaterialTheme.colorScheme.onSurface,
                         unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-//                        focusedTextColor = Color.Black,
-//                        unfocusedTextColor = Color.Black
                         cursorColor = MaterialTheme.colorScheme.primary
                     ),
                     shape = RoundedCornerShape(8.dp),
@@ -307,13 +302,11 @@ fun CommentRow(
                     TextButton(onClick = onEditSubmit) {
                         Text("저장",
                               color = MaterialTheme.colorScheme.primary,
-//                            color = primary,
                             fontSize = 12.sp,style = Typography.bodyMedium)
                     }
                     TextButton(onClick = onEditCancel) {
                         Text("취소",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-//                            color = Color.Gray,
                             fontSize = 12.sp,style = Typography.bodyMedium)
                     }
                     Spacer(modifier = Modifier.weight(1f))
@@ -324,9 +317,8 @@ fun CommentRow(
                             MaterialTheme.colorScheme.error
                         else
                             MaterialTheme.colorScheme.onSurfaceVariant,
-//                        color = if (editingText.length >= maxLength) Color.Red else Color.Gray,
                         style = Typography.bodyMedium,
-                        modifier = Modifier.padding(end = 40.dp)
+                        modifier = Modifier.padding(end = 20.dp)
                     )
                 }
             } else {
@@ -341,7 +333,6 @@ fun CommentRow(
                 Icon(
                     painterResource(id = R.drawable.ic_edit), null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-//                        Color.Gray,
                     modifier = Modifier.size(14.dp)
                 )
             }
@@ -349,7 +340,6 @@ fun CommentRow(
                 Icon(
                     painterResource(id = R.drawable.ic_trash), null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-//                    tint = Color.Gray,
                     modifier = Modifier.size(14.dp)
                 )
             }
@@ -365,7 +355,6 @@ fun CommentInputSection(nickname: String, text: String, onTextChange: (String) -
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant),
-//            containerColor = textFieldBackground),
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.elevatedCardElevation(1.dp)
@@ -384,19 +373,14 @@ fun CommentInputSection(nickname: String, text: String, onTextChange: (String) -
                     .padding(top = 8.dp),
                 placeholder = { Text("댓글을 남겨보세요...", fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-//                    color = Color.Gray,
                     style = Typography.bodyMedium) },
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-//                    focusedContainerColor = Color.White,
-//                    unfocusedContainerColor = Color.White,
+                    focusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                     focusedTextColor = MaterialTheme.colorScheme.onSurface,
                     unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-//                    focusedTextColor = Color.Black,
-//                    unfocusedTextColor = Color.Black
                     cursorColor = MaterialTheme.colorScheme.primary
 
                 ),

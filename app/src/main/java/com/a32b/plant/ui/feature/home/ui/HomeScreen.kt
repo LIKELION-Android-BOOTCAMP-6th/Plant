@@ -375,7 +375,7 @@ fun InterruptedDialog(
     Dialog(onDismissRequest = {}) {
         Card(
             shape = RoundedCornerShape(30.dp),
-            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)
+            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.background)
         ) {
             Column(
                 modifier = Modifier
@@ -430,7 +430,7 @@ fun InterruptedDialog(
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                             },
-                            textStyle = Typography.bodyMedium,
+                            textStyle = Typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                             keyboardActions = KeyboardActions(
                                 onNext = {
@@ -453,6 +453,8 @@ fun InterruptedDialog(
                                 contentDescription = "추가 버튼"
                             )
                         }
+                        Spacer(modifier = Modifier.height(10.dp))
+
                     }
                 }
 

@@ -72,6 +72,8 @@ fun MyPageArchiveDetailScreen(navController: NavController) {
 //---------------
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                windowInsets = WindowInsets(top = 0.dp),
                 title = {
                     Text(
                         "[${pot?.tag_name ?: "태그"}] ${pot?.name ?: "제목"}",
@@ -176,7 +178,6 @@ fun MyPageArchiveDetailScreen(navController: NavController) {
                     ProfileImage(level = pot.level, size = 100)
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
-                        val sdf = remember { SimpleDateFormat("yyyy-MM-dd", Locale.KOREA) }
                         Text(
                             text = "시작일 : ${pot.createdAt?.let { formatTimestamp(it) } ?: ""}",
                             style = MaterialTheme.typography.bodyMedium,

@@ -165,7 +165,7 @@ fun DarkModeToggleButton(
             .padding(vertical = 4.dp),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -211,7 +211,7 @@ fun GrownTreesButton(
             .height(50.dp),
         shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
             contentColor = MaterialTheme.colorScheme.onSurface,
         ),
         elevation = ButtonDefaults.buttonElevation(
@@ -248,7 +248,7 @@ fun ButtonTemplate(text: String, onClick: () -> Unit) {
         shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.buttonColors(
 //            containerColor = MaterialTheme.colorScheme.surface,
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
             contentColor = MaterialTheme.colorScheme.onSurface
         ),
         elevation = ButtonDefaults.buttonElevation(
@@ -426,7 +426,7 @@ fun ProfileDialog(
                 .fillMaxWidth()
                 .wrapContentHeight(),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
+                containerColor = MaterialTheme.colorScheme.secondaryContainer
             ),
         ) {
             Column(
@@ -445,8 +445,8 @@ fun ProfileDialog(
                             viewModel.resetNicknameError()
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                            focusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.secondaryContainer
                         ),
                         label = { Text("닉네임 변경 (2~10자)", style = Typography.labelSmall) },
                         isError = uiState.nicknameError != null
@@ -482,7 +482,7 @@ fun ProfileDialog(
                             .weight(1f),
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
                             contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     ) { Text("취소", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondaryContainer) }

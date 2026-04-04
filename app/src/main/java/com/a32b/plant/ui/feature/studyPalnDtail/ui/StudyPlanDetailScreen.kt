@@ -376,7 +376,7 @@ fun StudyRecordCard(
         modifier = Modifier.fillMaxWidth()
             .padding(vertical = 2.dp)
             .clickable{ onCardClick()},
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(3.dp),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {

@@ -136,7 +136,7 @@ fun CommunityListScreen(navController: NavController) {
                         painter = painterResource(id = R.drawable.ic_edit),
                         contentDescription = null,
                         modifier = Modifier.size(26.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        tint = MaterialTheme.colorScheme.onBackground,
                     )
                 }
             }
@@ -200,13 +200,13 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
                             onQueryChange("")
                             focus.clearFocus()
                         },
-                    tint = Color.Black
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
             }
         },
         colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            focusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+            unfocusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
             focusedTextColor = MaterialTheme.colorScheme.onSurface,
             unfocusedTextColor = MaterialTheme.colorScheme.onSurface
         ),
@@ -221,8 +221,7 @@ fun PostCard(post: Post, isLiked: Boolean, onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-//            Color.White
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         shape = RoundedCornerShape(12.dp)

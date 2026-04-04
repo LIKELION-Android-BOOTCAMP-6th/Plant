@@ -12,6 +12,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -27,16 +28,16 @@ import com.a32b.plant.ui.theme.sub2
 fun ConfirmDialog(text: String, semiText:String? = null,onDismiss: () -> Unit, onConfirm: () -> Unit) {
     Dialog(onDismissRequest = {}) {
         Card(shape = RoundedCornerShape(30.dp),
-            colors = CardDefaults.cardColors(Color.White),
+            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.secondaryContainer),
             elevation = CardDefaults.cardElevation(3.dp)) {
             Column(horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(22.dp)) {
                 Spacer(modifier = Modifier.height(10.dp))
 
-                Text(text, style = Typography.titleSmall)
+                Text(text, style = Typography.titleSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
                 semiText?.let {
                     Spacer(modifier = Modifier.height(9.dp))
-                    Text(semiText, style = Typography.bodyMedium)
+                    Text(semiText, style = Typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
                 }
 
                 Spacer(modifier = Modifier.height(22.dp))
