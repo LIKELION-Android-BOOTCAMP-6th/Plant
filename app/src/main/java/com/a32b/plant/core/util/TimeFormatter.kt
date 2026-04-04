@@ -32,6 +32,8 @@ object TimeFormatter {
         return if (hours > 0) String.format("%02d:%02d:%02d", hours, minute, secs)
         else String.format("%02d:%02d", minute, secs)
     }
+    fun formatToDateOnly(dateTime: LocalDateTime): String
+        = dateTime.format(DateTimeFormatter.ofPattern("yyyyMMdd"))
 
     fun formatToKoreanDate(dateTime: LocalDateTime): String
         = dateTime.format(DateTimeFormatter.ofPattern("yyyy년 MM월 dd일"))

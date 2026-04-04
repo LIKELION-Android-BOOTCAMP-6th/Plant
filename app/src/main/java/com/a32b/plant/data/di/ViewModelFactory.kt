@@ -100,22 +100,9 @@ object ViewModelFactory {
         }
     }
 
-    fun studyResultViewModelFactory(
-        timestamp: String,
-        tag: String,
-        title: String,
-        log: List<String>,
-        level: String
-    ) = object : ViewModelProvider.Factory {
+    val studyResultViewModelFactory = object : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return StudyResultViewModel(
-                AppContainer.potRepository,
-                timestamp,
-                tag,
-                title,
-                log,
-                level
-            ) as T
+            return StudyResultViewModel() as T
         }
     }
 
