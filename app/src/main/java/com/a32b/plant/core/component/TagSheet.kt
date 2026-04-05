@@ -34,8 +34,10 @@ fun TagSheet(tags: List<Tag>, init : List<Tag> = emptyList(),
         selectedTags.clear()
         selectedTags.addAll(init)
     }
+    val order = listOf("중등", "고등", "대학교", "취업준비", "자기계발")
 
-    val groupedTags = tags.groupBy { it.parentId }
+    val groupedTags = tags.groupBy { it.parentId }.entries
+        .sortedBy { (parent, _) -> order.indexOf(parent) }
 
     Card(modifier = Modifier.padding(horizontal = 10.dp).fillMaxWidth(),
         shape = RoundedCornerShape(5.dp),

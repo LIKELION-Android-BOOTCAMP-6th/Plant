@@ -21,7 +21,7 @@ class PotRepository(private val db: FirebaseFirestore) {
 
     //태그 획득
     fun getAvailableTags(): Flow<List<Tag>> = callbackFlow {
-        val collectionRef = db.collection("Tags").orderBy("id")
+        val collectionRef = db.collection("Tags").orderBy("no")
 
         // 데이터 변경 감지
         val listener = collectionRef.addSnapshotListener { snapshot, error ->
@@ -67,51 +67,6 @@ class PotRepository(private val db: FirebaseFirestore) {
         }
 
 
-    //ARnkLKJE60MuhYMgivXweboI6ch2
-    //VosJjoUJp6SplH0siKyoAIBZ7fk2
-// 이상 없으면 오전에 물어보고 model에 넣기
-// https://stackoverflow.com/questions/48474957/how-to-add-a-timestamp-in-firestore-with-android/48475027#48475027
-// https://oneuptime.com/blog/post/2026-02-02-kotlin-firebase/view
-
-    //    "timestamp" to FieldValue.serverTimestamp()
-//    suspend fun createPot() {
-//        val pot = PotInfo(
-//            //사용자의 하위 컬렉션으로 화분 생성 -> uid 별도 기입 불필요
-//            // 테스트용인걸 알지만 오류가 나서 불가피하게 주석 처리
-//            //uid = "VosJjoUJp6SplH0siKyoAIBZ7fk2",
-//            tag = "자격증",
-//            name = "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
-//            potTotalStudyingTime = 0L,
-//            isCompleted = false
-//        )
-//
-//        val log = StudyLog(
-//            title = "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
-//            contents = listOf(
-//                "학습내용abcdabcdefghiabcdabcdefghiabcdabcdefghi",
-//                "학습내용5555555555555555555 5 5 55 55 5  5",
-//                "abcdabcdefghiabcdabcdefghiabcdabcdefghi",
-//                "ddddddddddsdfsdfsdf",
-//                ""
-//            ),
-//            studyingTime = 10L
-//        )
-//
-//        db.collection("pots")
-//            .add(pot)
-//            .addOnSuccessListener { document ->
-//                val potDocId = document.id
-//                Log.d("PlantLog", "생성 성공, ID : $potDocId")
-//                db.collection("pots")
-//                    .document(potDocId)
-//                    .collection("logs").add(log)
-//                    .addOnSuccessListener {
-//                        Log.d("PlantLog", "logs add 완료")
-//                    }
-//            }
-//    }
-
-
     suspend fun getDuplicationLevelList(uid: String): List<String> {
         val result = db.collection("users").document(uid).collection("pots")
             .get()
@@ -126,7 +81,7 @@ class PotRepository(private val db: FirebaseFirestore) {
         val docRef = db.collection("users").document(CurrentUser.uid)
             .collection("pots").document(potId)
             .collection("logs").document()
-            docRef.set(studyLog.copy(id = docRef.id))
+        docRef.set(studyLog.copy(id = docRef.id))
             .addOnSuccessListener {
                 Log.d("스터디로그", "성공적")
             }

@@ -25,6 +25,7 @@ class PostRepository(private val db: FirebaseFirestore) {
     //글 목록 조회
     fun getPostList(): Flow<List<Post>> = callbackFlow {
         val subscription = db.collection("posts")
+            .orderBy("createdAt", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     close(error)
@@ -39,7 +40,7 @@ class PostRepository(private val db: FirebaseFirestore) {
                         Log.e("파싱오류", "문서 ID: ${doc.id}, 데이터: ${doc.data}")
                         null
                     }
-                }?.sortedByDescending { it.createdAt } ?: emptyList()
+                } ?: emptyList()
 
                 trySend(posts)
             }
@@ -229,17 +230,16 @@ class PostRepository(private val db: FirebaseFirestore) {
         }
 
     }
-//    suspend fun uploadPostAndReturnId(post: Post): String {
-//        return db.collection("posts").add(post).await().id
-//    }
-
 
     suspend fun getTag():List<Tag>{
+        val order = listOf("중등", "고등", "대학교", "취업준비", "자기계발")
         return try {
             db.collection("Tags")
+                .orderBy("no")
                 .get()
                 .await()
                 .toObjects(Tag::class.java)
+                .sortedBy { order.indexOf(it.id) }
         } catch (e: Exception){
             emptyList()
         }
