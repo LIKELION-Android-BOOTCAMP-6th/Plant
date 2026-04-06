@@ -114,19 +114,6 @@ fun StudyingScreen(navController: NavController) {
         viewModel.onFinishDialogShownChange()
     }
 
-    val lifecycleOwner = LocalLifecycleOwner.current
-
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_PAUSE -> viewModel.stopStopwatch()  // 백그라운드 전환 시
-                else -> {}
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-
     LaunchedEffect(Unit) {
         viewModel.onStudyingUsersChange()
         viewModel.event.collect { event ->
