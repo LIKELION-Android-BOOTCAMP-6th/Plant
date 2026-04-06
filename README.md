@@ -147,7 +147,7 @@ UI (Composable) → ViewModel → Repository → DataSource (Firebase)
  
 ## 🚀 실행 방법
  
-- Android Studio Iguana 이상 권장
+- Android Studio Otter 이상 권장
 - JDK 11
 - Android SDK min 26 / target 36 / compile 36
 - 프로젝트 오픈 후 Gradle Sync
