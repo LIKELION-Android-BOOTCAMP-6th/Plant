@@ -38,7 +38,6 @@ class MyPageSettingViewModel(
                 val firebaseUser = firebaseAuth.currentUser // 기존 auth.currentUser
 
                 // 현재 firebase에 로그인 세션 없을 때
-                // 사실 없을 수가 없음
                 // auth.currentUser가 FirebaseUser? 타입이라 nullable인데, Kotlin 컴파일러가 null 체크 없이 .delete() 호출 불허..
                 if (firebaseUser == null) {
                     _eventChannel.send(MyPageEvent.ShowToast("로그인 정보가 없습니다."))
@@ -72,41 +71,3 @@ class MyPageSettingViewModel(
         }
     }
 }
-//                // 1. Firebase Auth 계정 삭제
-//                firebaseUser.delete().await()
-//
-//
-//                try {
-//                    // 2. nicknames 컬렉션에서 닉네임 문서 삭제
-//                    if (nickname.isNotBlank()) {
-//                        nicknameRepository.deleteNickname(nickname)
-//                    }
-//                    // 3. Firestore users/{uid} 문서 삭제
-//                    userRepository.deleteUser(uid)
-//                } catch (e: Exception) {
-//                    // Firestore 정리 실패는 로그만 남기고 진행
-//                    Log.e("MyPage", "Firestore 정리 중 오류: ${e.message}", e)
-//                }
-//
-//
-//                // 4. 로컬 유저 정보 초기화
-//                CurrentUser.clear()
-//                // 5. 로그인 화면으로 이동
-//                _eventChannel.send(MyPageEvent.ShowToast("회원탈퇴가 완료되었습니다."))
-//                _eventChannel.send(MyPageEvent.NavigateToSignIn)
-//
-//            } catch (e: Exception) {
-//                Log.e("MyPage", "회원탈퇴 실패: ${e.message}", e)
-//
-//                // Firebase Auth는 최근 로그인이 아니면 재인증 필요...
-//                if (e.message?.contains("RECENT_LOGIN_REQUIRED") == true) {
-//                    _eventChannel.send(MyPageEvent.ShowToast("보안을 위해 재로그인 후 다시 시도해주세요."))
-//                } else {
-//                    _eventChannel.send(MyPageEvent.ShowToast("회원탈퇴에 실패했습니다. 다시 시도해주세요."))
-//                }
-//            }
-//        }
-//    }
-//
-//
-//}
