@@ -98,8 +98,9 @@ class PostRepository(private val db: FirebaseFirestore) {
                             .collection("comments").document()
         val activityRef = db.collection("activities").document()
 
-        val commentWithAct = comment.copy(activityId = activityRef.id)
+        val commentWithAct = comment.copy(activityId = activityRef.id, commentId = commentRef.id)
         val activityWithCo = activity.copy(targetId = postId, commentId = commentRef.id)
+        Log.d("댓글", commentRef.id)
 
         db.runBatch { batch ->
             batch.set(commentRef, commentWithAct)

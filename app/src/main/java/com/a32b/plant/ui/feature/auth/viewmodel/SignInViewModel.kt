@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.data.di.CurrentUser
+import com.a32b.plant.data.di.UserModel
 import com.a32b.plant.data.repository.NicknameRepository
 import com.a32b.plant.data.repository.UserRepository
 import com.google.firebase.auth.FirebaseAuth
@@ -177,13 +178,16 @@ class SignInViewModel(
             }
             profile = userRepository.getUserProfileOnce(uid)
         }
+        userRepository.startUserListener()
 
         // 2. CurrentUser 싱글톤 세팅
-        CurrentUser.set(
-            uid = uid,
-            nickname = profile?.nickname ?: "",
-            profileImg = profile?.profileImg ?: ""
-        )
+//        CurrentUser.set(
+//            UserModel(
+//                uid = uid,
+//                nickname = profile?.nickname ?: "",
+//                profileImg = profile?.profileImg ?: ""
+//            )
+//        )
 
         // 3. 첫 로그인 여부에 따라 분기
         if (profile?.isFirstLogin == true) {
@@ -224,7 +228,7 @@ class SignInViewModel(
                 userRepository.completeFirstLogin(loggedInUid, nickname)
 
                 // 4. CurrentUser 업데이트
-                CurrentUser.nickname = nickname
+//                CurrentUser.set(UserModel(nickname = nickname))
 
                 // 5. 다이얼로그 닫고 홈으로 이동
                 _uiState.update { it.copy(showNicknameDialog = false, isNicknameLoading = false) }

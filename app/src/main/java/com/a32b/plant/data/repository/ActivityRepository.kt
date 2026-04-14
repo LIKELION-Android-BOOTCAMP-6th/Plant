@@ -12,6 +12,7 @@ import kotlinx.coroutines.tasks.await
 
 class ActivityRepository(private val db: FirebaseFirestore){
     fun getActivityList(selected: String): Flow<List<CommunityActivity>> = callbackFlow {
+        Log.d("uid", "${CurrentUser.uid} + $selected")
         val listener = db.collection("activities")
             .whereEqualTo("uid", CurrentUser.uid)
             .whereEqualTo("type", selected)

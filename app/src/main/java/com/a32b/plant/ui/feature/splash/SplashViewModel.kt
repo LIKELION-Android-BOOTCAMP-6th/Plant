@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.data.di.AppContainer
 import com.a32b.plant.data.di.CurrentUser
+import com.a32b.plant.data.di.UserModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -51,9 +52,11 @@ class SplashViewModel : ViewModel() {
                 }
 
                 CurrentUser.set(
-                    uid = firebaseUser.uid,
-                    nickname = profile?.nickname ?: "",
-                    profileImg = profile?.profileImg ?: ""
+                    UserModel(
+                        uid = firebaseUser.uid,
+                        nickname = profile.nickname ?: "",
+                        profileImg = profile.profileImg ?: ""
+                    )
                 )
                 // 다크모드 관리용
                 _isDarkMode.value = profile.isDarkMode ?: false

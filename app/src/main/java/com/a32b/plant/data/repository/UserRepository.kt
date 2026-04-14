@@ -3,9 +3,12 @@ package com.a32b.plant.data.repository
 import com.a32b.plant.data.model.PotInfo
 import android.util.Log
 import androidx.compose.runtime.retain.retain
+import com.a32b.plant.data.di.CurrentUser
+import com.a32b.plant.data.di.UserModel
 import com.google.firebase.firestore.FirebaseFirestore
 import com.a32b.plant.data.model.UserProfile
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -16,6 +19,30 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 class UserRepository(private val db: FirebaseFirestore, private val auth: FirebaseAuth) {
+
+    private var listenerRegistration: ListenerRegistration? = null
+
+    fun startUserListener(){
+        val uid = auth.currentUser?.uid?:return
+        listenerRegistration = db
+            .collection("users")
+            .document(uid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null || !snapshot.exists()) {
+                    CurrentUser.clear()
+                    return@addSnapshotListener
+                }
+                snapshot.toObject(UserModel::class.java)?.let {
+                    CurrentUser.set(it) // 전역 상태 업데이트
+                }
+            }
+    }
+    fun stopUserListener() {
+        listenerRegistration?.remove()
+        listenerRegistration = null
+        CurrentUser.clear()
+    }
+
     // 특정 유저의 데이터를 실시간 Flow로 반환
     // 특정 유저의 데이터 + 하위 pots 목록까지 "모두" 실시간으로 감지
     fun getUserProfile(uid: String): Flow<UserProfile?> = callbackFlow {

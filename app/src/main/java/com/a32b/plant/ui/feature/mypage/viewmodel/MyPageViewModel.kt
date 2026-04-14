@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
 import com.a32b.plant.data.di.CurrentUser
+import com.a32b.plant.data.di.UserModel
 import com.a32b.plant.data.repository.NicknameRepository
 import com.a32b.plant.data.repository.PotRepository
 import com.a32b.plant.data.repository.UserRepository
@@ -165,8 +166,12 @@ class MyPageViewModel(
                     )
                 }
 
-                CurrentUser.nickname = nickname
-                CurrentUser.profileImg = imageLevel
+                CurrentUser.set(UserModel(
+                    nickname = nickname,
+                    profileImg = imageLevel))
+
+//                CurrentUser.nickname = nickname
+//                CurrentUser.profileImg = imageLevel
 
             } catch (e: Exception) {
                 Log.e("error", e.message.toString())
