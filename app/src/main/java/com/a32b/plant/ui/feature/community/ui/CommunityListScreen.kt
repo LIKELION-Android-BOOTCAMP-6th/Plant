@@ -31,11 +31,10 @@ import com.a32b.plant.core.component.TagChip
 import com.a32b.plant.core.component.TagSheet
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
-import com.a32b.plant.data.di.ViewModelFactory
+import com.a32b.plant.di.ViewModelFactory
 import com.a32b.plant.data.model.Post
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityListViewModel
 import com.a32b.plant.ui.theme.Typography
-import com.a32b.plant.ui.theme.background
 import com.a32b.plant.ui.theme.primary
 
 @OptIn(ExperimentalLayoutApi::class)

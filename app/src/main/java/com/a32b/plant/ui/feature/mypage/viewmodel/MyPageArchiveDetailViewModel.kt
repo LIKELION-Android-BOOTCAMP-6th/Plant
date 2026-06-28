@@ -1,17 +1,13 @@
 package com.a32b.plant.ui.feature.mypage.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
-import com.a32b.plant.data.di.CurrentUser
-import com.a32b.plant.data.model.Post
-import com.a32b.plant.data.model.PostAuthor
+import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.data.model.PotInfo
 import com.a32b.plant.data.model.StudyLog
 import com.a32b.plant.data.repository.PostRepository
 import com.a32b.plant.data.repository.PotRepository
-import com.google.common.collect.Multimaps.index
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update

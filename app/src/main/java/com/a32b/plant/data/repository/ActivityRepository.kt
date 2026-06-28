@@ -1,14 +1,12 @@
 package com.a32b.plant.data.repository
 
 import android.util.Log
-import com.a32b.plant.data.di.CurrentUser
+import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.data.model.CommunityActivity
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.tasks.await
 
 class ActivityRepository(private val db: FirebaseFirestore){
     fun getActivityList(selected: String): Flow<List<CommunityActivity>> = callbackFlow {

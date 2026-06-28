@@ -4,7 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.util.ActivityType
-import com.a32b.plant.data.di.CurrentUser
+import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.data.model.CommunityActivity
 import com.a32b.plant.data.model.Post
 import com.a32b.plant.data.model.PostAuthor

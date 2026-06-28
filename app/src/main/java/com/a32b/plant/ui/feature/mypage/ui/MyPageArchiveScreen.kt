@@ -13,9 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -24,12 +22,10 @@ import com.a32b.plant.R
 import com.a32b.plant.core.component.ProfileImage
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
-import com.a32b.plant.data.di.ViewModelFactory
+import com.a32b.plant.di.ViewModelFactory
 import com.a32b.plant.data.model.PotInfo
-import com.a32b.plant.ui.feature.home.ui.GridPlantItem
 import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageArchiveViewModel
 import com.a32b.plant.ui.theme.Typography
-import com.a32b.plant.ui.theme.background
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

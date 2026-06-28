@@ -30,14 +30,13 @@ import com.a32b.plant.R
 import com.a32b.plant.core.component.ProfileImage
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
-import com.a32b.plant.data.di.CurrentUser
-import com.a32b.plant.data.di.ViewModelFactory
+import com.a32b.plant.di.CurrentUser
+import com.a32b.plant.di.ViewModelFactory
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityDetailViewModel
 import com.a32b.plant.ui.theme.*
 import com.a32b.plant.core.component.ConfirmDialog
 import com.a32b.plant.core.component.TagChip
 import com.a32b.plant.data.model.Comment
-import com.google.common.math.LinearTransformation.horizontal
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

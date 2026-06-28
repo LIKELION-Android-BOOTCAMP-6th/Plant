@@ -2,7 +2,7 @@ package com.a32b.plant.ui.feature.home.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.a32b.plant.data.di.CurrentUser
+import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.data.model.Tag
 import com.a32b.plant.data.repository.PotRepository
 import kotlinx.coroutines.flow.MutableStateFlow

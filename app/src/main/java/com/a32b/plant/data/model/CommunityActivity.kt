@@ -1,6 +1,6 @@
 package com.a32b.plant.data.model
 
-import com.a32b.plant.data.di.CurrentUser
+import com.a32b.plant.di.CurrentUser
 import com.google.firebase.Timestamp
 
 data class CommunityActivity(

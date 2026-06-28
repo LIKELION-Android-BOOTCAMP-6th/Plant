@@ -2,23 +2,19 @@ package com.a32b.plant.data.repository
 
 import android.util.Log
 import com.a32b.plant.core.util.ActivityType
-import com.a32b.plant.data.di.AppContainer.firestore
-import com.a32b.plant.data.di.CurrentUser
+import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.data.model.Comment
 import com.a32b.plant.data.model.Post
 import com.a32b.plant.data.model.CommunityActivity
 import com.a32b.plant.data.model.Tag
 import com.google.firebase.Timestamp
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.toObjects
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import kotlin.text.get
 
 class PostRepository(private val db: FirebaseFirestore) {
 

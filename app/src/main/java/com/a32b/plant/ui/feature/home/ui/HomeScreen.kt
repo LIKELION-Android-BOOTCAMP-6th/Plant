@@ -1,7 +1,5 @@
 package com.a32b.plant.ui.feature.home.ui
 
-import android.graphics.drawable.Icon
-import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,15 +14,12 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AddCircle
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.material3.FloatingActionButtonDefaults.elevation
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -41,17 +36,13 @@ import com.a32b.plant.core.component.LoadableScreen
 import com.a32b.plant.core.component.ProfileImage
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
-import com.a32b.plant.data.di.CurrentUser
-import com.a32b.plant.data.di.ViewModelFactory
+import com.a32b.plant.di.CurrentUser
+import com.a32b.plant.di.ViewModelFactory
 import com.a32b.plant.data.local.StudyingSession
 import com.a32b.plant.data.model.PotInfo
 import com.a32b.plant.ui.feature.home.viewmodel.HomeViewModel
-import com.a32b.plant.ui.feature.studying.ui.StudyingScreen
 import com.a32b.plant.ui.theme.Typography
-import com.a32b.plant.ui.theme.background
-import com.a32b.plant.ui.theme.fontColor
 import com.a32b.plant.ui.theme.primary
-import com.a32b.plant.ui.theme.sub2
 
 
 @Composable

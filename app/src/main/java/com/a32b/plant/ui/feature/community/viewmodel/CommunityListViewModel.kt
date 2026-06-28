@@ -1,9 +1,7 @@
 package com.a32b.plant.ui.feature.community.viewmodel
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
-import com.a32b.plant.data.di.AppContainer.potRepository
 import com.a32b.plant.data.model.Post
 import com.a32b.plant.data.model.Tag
 import com.a32b.plant.data.repository.PostRepository

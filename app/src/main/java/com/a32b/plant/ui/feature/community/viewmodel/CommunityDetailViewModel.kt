@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.State
 import com.a32b.plant.core.util.ActivityType
-import com.a32b.plant.data.di.CurrentUser
+import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.data.model.Comment
 import com.a32b.plant.data.model.CommentUser
 import com.a32b.plant.data.model.CommunityActivity

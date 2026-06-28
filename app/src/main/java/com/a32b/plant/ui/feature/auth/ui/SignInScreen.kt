@@ -34,7 +34,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
-import com.a32b.plant.data.di.ViewModelFactory
+import com.a32b.plant.di.ViewModelFactory
 import com.a32b.plant.ui.feature.auth.viewmodel.SignInEvent
 import com.a32b.plant.ui.feature.auth.viewmodel.SignInViewModel
 import com.a32b.plant.ui.theme.background
