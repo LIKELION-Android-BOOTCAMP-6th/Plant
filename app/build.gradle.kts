@@ -82,6 +82,8 @@ dependencies {
     implementation("com.google.firebase:firebase-database")
     //fcm
     implementation("com.google.firebase:firebase-messaging")
+    //function
+    implementation("com.google.firebase:firebase-functions")
 
     implementation(libs.compose.nav)
     implementation(libs.coroutine.core)

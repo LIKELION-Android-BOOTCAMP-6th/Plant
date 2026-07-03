@@ -22,8 +22,8 @@ import androidx.navigation.compose.rememberNavController
 import com.a32b.plant.core.component.BottomBar
 import com.a32b.plant.core.navigation.PlantAppNavigation
 import com.a32b.plant.core.navigation.Routes
-import com.a32b.plant.ui.feature.splash.SplashViewModel
-import com.a32b.plant.ui.theme.PlantTheme
+import com.a32b.plant.presentation.feature.splash.SplashViewModel
+import com.a32b.plant.presentation.theme.PlantTheme
 
 class MainActivity : ComponentActivity() {
     private val viewModel: SplashViewModel by viewModels()

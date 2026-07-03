@@ -1,6 +1,5 @@
 package com.a32b.plant.core.component
 
-import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
@@ -16,11 +15,9 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.a32b.plant.ui.theme.Typography
-import com.a32b.plant.ui.theme.primary
+import com.a32b.plant.presentation.theme.Typography
 
 @Composable
 fun TagGroup(tags: List<String>, init: List<String> = emptyList(),

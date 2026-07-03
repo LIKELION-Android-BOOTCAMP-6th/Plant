@@ -17,12 +17,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.a32b.plant.ui.theme.Typography
-import com.a32b.plant.ui.theme.primary
-import com.a32b.plant.ui.theme.sub2
+import com.a32b.plant.presentation.theme.Typography
+import com.a32b.plant.presentation.theme.primary
+import com.a32b.plant.presentation.theme.sub2
 
 @Composable
 fun ConfirmDialog(text: String, semiText:String? = null,onDismiss: () -> Unit, onConfirm: () -> Unit) {

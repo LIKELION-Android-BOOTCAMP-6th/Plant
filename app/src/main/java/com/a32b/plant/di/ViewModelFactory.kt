@@ -2,21 +2,21 @@ package com.a32b.plant.di
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.a32b.plant.ui.feature.auth.viewmodel.SignInViewModel
-import com.a32b.plant.ui.feature.auth.viewmodel.SignUpViewModel
-import com.a32b.plant.ui.feature.community.viewmodel.CommunityDetailViewModel
-import com.a32b.plant.ui.feature.community.viewmodel.CommunityListViewModel
-import com.a32b.plant.ui.feature.community.viewmodel.CommunityPostViewModel
-import com.a32b.plant.ui.feature.home.viewmodel.HomeViewModel
+import com.a32b.plant.presentation.feature.auth.viewmodel.SignInViewModel
+import com.a32b.plant.presentation.feature.auth.viewmodel.SignUpViewModel
+import com.a32b.plant.presentation.feature.community.viewmodel.CommunityDetailViewModel
+import com.a32b.plant.presentation.feature.community.viewmodel.CommunityListViewModel
+import com.a32b.plant.presentation.feature.community.viewmodel.CommunityPostViewModel
+import com.a32b.plant.presentation.feature.home.viewmodel.HomeViewModel
 //import com.a32b.plant.ui.feature.home.viewmodel.HomeViewModel
-import com.a32b.plant.ui.feature.home.viewmodel.NewBornTreeViewModel
-import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageArchiveDetailViewModel
-import com.a32b.plant.ui.feature.mypage.viewmodel.MyCommunityFeedViewModel
-import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageArchiveViewModel
-import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageSettingViewModel
-import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageViewModel
-import com.a32b.plant.ui.feature.studying.viewmodel.StudyResultViewModel
-import com.a32b.plant.ui.feature.studying.viewmodel.StudyingViewModel
+import com.a32b.plant.presentation.feature.home.viewmodel.NewBornTreeViewModel
+import com.a32b.plant.presentation.feature.mypage.viewmodel.MyPageArchiveDetailViewModel
+import com.a32b.plant.presentation.feature.mypage.viewmodel.MyCommunityFeedViewModel
+import com.a32b.plant.presentation.feature.mypage.viewmodel.MyPageArchiveViewModel
+import com.a32b.plant.presentation.feature.mypage.viewmodel.MyPageSettingViewModel
+import com.a32b.plant.presentation.feature.mypage.viewmodel.MyPageViewModel
+import com.a32b.plant.presentation.feature.studying.viewmodel.StudyResultViewModel
+import com.a32b.plant.presentation.feature.studying.viewmodel.StudyingViewModel
 
 object ViewModelFactory {
     val signInViewModelFactory = object : ViewModelProvider.Factory {
@@ -84,7 +84,7 @@ object ViewModelFactory {
     }
     val myCommunityFeedViewModelFactory = object : ViewModelProvider.Factory{
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return MyCommunityFeedViewModel(AppContainer.activityRepository) as T
+            return MyCommunityFeedViewModel(AppContainer.oldActivityRepository) as T
         }
     }
 

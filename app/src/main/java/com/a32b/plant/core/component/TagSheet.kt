@@ -18,11 +18,10 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.a32b.plant.data.model.Tag
-import com.a32b.plant.ui.theme.Typography
-import com.a32b.plant.ui.theme.primary
+import com.a32b.plant.domain.model.Tag
+import com.a32b.plant.presentation.theme.Typography
+import com.a32b.plant.presentation.theme.primary
 
 @Composable
 fun TagSheet(tags: List<Tag>, init : List<Tag> = emptyList(),

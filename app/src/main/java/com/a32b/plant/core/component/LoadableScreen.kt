@@ -8,7 +8,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.a32b.plant.core.base.BaseViewModel
-import com.a32b.plant.ui.theme.background
+import com.a32b.plant.presentation.theme.background
 
 @Composable
 fun LoadableScreen(
