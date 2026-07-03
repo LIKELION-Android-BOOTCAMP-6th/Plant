@@ -1,8 +1,7 @@
 package com.a32b.plant.data.repository
 
 import android.util.Log
-import com.a32b.plant.data.di.CurrentUser
-import com.a32b.plant.data.di.CurrentUser.uid
+import com.a32b.plant.di.CurrentUser.uid
 import com.a32b.plant.data.model.StudyLog
 import com.a32b.plant.data.model.PotInfo
 import com.a32b.plant.data.model.Tag
@@ -78,7 +77,7 @@ class PotRepository(private val db: FirebaseFirestore) {
     }
 
     fun createStudyLog(potId: String, studyLog: StudyLog) {
-        val docRef = db.collection("users").document(CurrentUser.uid)
+        val docRef = db.collection("users").document(uid)
             .collection("pots").document(potId)
             .collection("logs").document()
         docRef.set(studyLog.copy(id = docRef.id))
@@ -88,7 +87,7 @@ class PotRepository(private val db: FirebaseFirestore) {
     }
 
     fun updateTotalStudyTime(potId: String, studyTime: Long) {
-        db.collection("users").document(CurrentUser.uid)
+        db.collection("users").document(uid)
             .collection("pots").document(potId)
             .update("potTotalStudyingTime", FieldValue.increment(studyTime))
     }
@@ -148,7 +147,7 @@ class PotRepository(private val db: FirebaseFirestore) {
     }
 
     fun updatePotLevelOnly(potId: String, newLevel: String){
-        val uid = CurrentUser.uid
+        val uid = uid
         if(uid.isEmpty()) return
 
         val updates = mapOf(

@@ -40,7 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.a32b.plant.core.component.TagSheet
-import com.a32b.plant.data.di.ViewModelFactory
+import com.a32b.plant.di.ViewModelFactory
 import com.a32b.plant.data.model.Tag
 
 @Composable

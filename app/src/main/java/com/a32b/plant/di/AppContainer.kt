@@ -1,4 +1,4 @@
-package com.a32b.plant.data.di
+package com.a32b.plant.di
 
 import com.a32b.plant.PlantApplication
 import com.a32b.plant.data.repository.ActivityRepository

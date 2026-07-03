@@ -1,4 +1,4 @@
-package com.a32b.plant.data.di
+package com.a32b.plant.di
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

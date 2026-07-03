@@ -1,12 +1,11 @@
 package com.a32b.plant.ui.feature.splash
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.navigation.Routes
-import com.a32b.plant.data.di.AppContainer
-import com.a32b.plant.data.di.CurrentUser
-import com.a32b.plant.data.di.UserModel
+import com.a32b.plant.di.AppContainer
+import com.a32b.plant.di.CurrentUser
+import com.a32b.plant.di.UserModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch

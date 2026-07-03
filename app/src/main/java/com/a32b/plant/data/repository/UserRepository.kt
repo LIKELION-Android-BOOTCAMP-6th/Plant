@@ -2,9 +2,8 @@ package com.a32b.plant.data.repository
 
 import com.a32b.plant.data.model.PotInfo
 import android.util.Log
-import androidx.compose.runtime.retain.retain
-import com.a32b.plant.data.di.CurrentUser
-import com.a32b.plant.data.di.UserModel
+import com.a32b.plant.di.CurrentUser
+import com.a32b.plant.di.UserModel
 import com.google.firebase.firestore.FirebaseFirestore
 import com.a32b.plant.data.model.UserProfile
 import com.google.firebase.auth.FirebaseAuth
@@ -16,7 +15,6 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
 import kotlin.Boolean
 import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 class UserRepository(private val db: FirebaseFirestore, private val auth: FirebaseAuth) {
 

@@ -1,4 +1,4 @@
-package com.a32b.plant.data.di
+package com.a32b.plant.di
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider

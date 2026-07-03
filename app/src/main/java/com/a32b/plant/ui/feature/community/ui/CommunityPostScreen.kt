@@ -7,7 +7,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -27,20 +26,13 @@ import androidx.navigation.NavController
 import androidx.navigation.toRoute
 import com.a32b.plant.R
 import com.a32b.plant.core.component.ConfirmDialog
-import com.a32b.plant.core.component.TagChip
-import com.a32b.plant.core.component.TagGroup
 import com.a32b.plant.core.component.TagSheet
 import com.a32b.plant.core.navigation.Routes
-import com.a32b.plant.core.util.TimeFormatter
-import com.a32b.plant.data.di.ViewModelFactory
-import com.a32b.plant.data.model.Tag
+import com.a32b.plant.di.ViewModelFactory
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityPostEvent
 import com.a32b.plant.ui.feature.community.viewmodel.CommunityPostViewModel
 import com.a32b.plant.ui.theme.Typography
 import com.a32b.plant.ui.theme.background
-import com.a32b.plant.ui.theme.primary
-import com.a32b.plant.ui.theme.sub2
-import com.a32b.plant.ui.theme.sub_green1
 
 @Composable
 fun CommunityPostScreen(

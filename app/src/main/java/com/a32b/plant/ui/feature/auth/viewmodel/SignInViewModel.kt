@@ -3,9 +3,7 @@ package com.a32b.plant.ui.feature.auth.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.a32b.plant.core.base.BaseViewModel
-import com.a32b.plant.data.di.CurrentUser
-import com.a32b.plant.data.di.UserModel
+import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.data.repository.NicknameRepository
 import com.a32b.plant.data.repository.UserRepository
 import com.google.firebase.auth.FirebaseAuth

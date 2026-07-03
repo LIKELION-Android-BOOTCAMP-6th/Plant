@@ -1,10 +1,8 @@
 package com.a32b.plant.ui.feature.mypage.ui
 
-import android.R.attr.onClick
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -53,23 +51,17 @@ import androidx.navigation.NavController
 import com.a32b.plant.core.component.ProfileImage
 import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageViewModel
 import com.a32b.plant.ui.theme.Typography
-import com.a32b.plant.ui.theme.fontColor
-import com.a32b.plant.ui.theme.sub_green1
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
-import com.a32b.plant.data.di.ViewModelFactory
+import com.a32b.plant.di.ViewModelFactory
 import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageEvent
 import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageUiState
-import com.a32b.plant.ui.theme.primary
-import com.a32b.plant.ui.theme.sub2
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.ColorFilter
 import com.a32b.plant.core.component.ConfirmDialog
 import com.a32b.plant.ui.theme.PlantTheme
-import com.a32b.plant.ui.theme.sub_green2
 
 
 @Composable

@@ -1,12 +1,11 @@
 package com.a32b.plant.ui.feature.home.viewmodel
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.data.model.PotInfo
 import com.a32b.plant.data.model.UserProfile
 import com.a32b.plant.core.util.TimeFormatter
-import com.a32b.plant.data.di.CurrentUser
+import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.data.local.StudyingSession
 import com.a32b.plant.data.model.StudyLog
 import com.a32b.plant.data.repository.PotRepository

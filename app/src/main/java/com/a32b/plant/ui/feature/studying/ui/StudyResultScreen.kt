@@ -4,7 +4,6 @@ import android.graphics.Bitmap
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -42,12 +41,9 @@ import com.a32b.plant.core.component.ConfirmDialog
 import com.a32b.plant.core.component.ProfileImage
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
-import com.a32b.plant.data.di.ViewModelFactory
+import com.a32b.plant.di.ViewModelFactory
 import com.a32b.plant.ui.feature.studying.viewmodel.StudyResultViewModel
 import com.a32b.plant.ui.theme.Typography
-import com.a32b.plant.ui.theme.background
-import com.a32b.plant.ui.theme.primary
-import com.a32b.plant.ui.theme.sub2
 
 @Composable
 fun StudyResultScreen(navController: NavController) {

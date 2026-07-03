@@ -2,7 +2,7 @@ package com.a32b.plant.data.repository
 
 import android.content.Context
 import android.util.Log
-import com.a32b.plant.data.di.CurrentUser
+import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.data.local.StudyingDataStore
 import com.a32b.plant.data.local.StudyingSession
 import com.a32b.plant.data.model.StudyingUser

@@ -15,14 +15,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.a32b.plant.ui.feature.mypage.viewmodel.MyPageArchiveDetailViewModel
-import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -31,14 +28,9 @@ import com.a32b.plant.R
 import com.a32b.plant.core.component.ProfileImage
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter.formatTimestamp
-import com.a32b.plant.data.di.ViewModelFactory
-import java.text.SimpleDateFormat
-import java.util.Locale
+import com.a32b.plant.di.ViewModelFactory
 import com.a32b.plant.core.component.ConfirmDialog
 import com.a32b.plant.core.util.TimeFormatter
-import com.a32b.plant.data.model.StudyLog
-import com.a32b.plant.ui.theme.fontColor
-import com.a32b.plant.ui.theme.fontColorSub
 import java.time.ZoneId
 
 //
