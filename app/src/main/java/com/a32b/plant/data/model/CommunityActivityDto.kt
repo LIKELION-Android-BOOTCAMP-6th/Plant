@@ -14,10 +14,10 @@ data class CommunityActivityDto(
     @get:PropertyName("targetId") @set:PropertyName("targetId")
     var targetId:String = "",
     @get:PropertyName("comment") @set:PropertyName("comment")
-    var comment: String?,
+    var comment: String? = null,
     @get:PropertyName("commentId") @set:PropertyName("commentId")
-    var commentId: String?,
+    var commentId: String? = null,
     @get:PropertyName("createAt") @set:PropertyName("createAt")
-    var createAt: Timestamp
+    var createAt: Timestamp = Timestamp.now()
 
 )

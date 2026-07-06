@@ -1,23 +1,20 @@
 package com.a32b.plant.domain.model
 
-import com.google.firebase.Timestamp
-import com.google.firebase.firestore.PropertyName
-import com.google.firebase.firestore.ServerTimestamp
 
+/**
+ PotInfo -> Pot으로 변경
+ */
 //화분 정보 모음
-data class PotInfo(
-    val id: String? = null,
-    val tag_id: String? = null,
-    val tag_name: String? = null,
-    val name: String? = null,
-    val imageUrl: String? = null,
-    val potTotalStudyingTime: Long? = null,
-    @ServerTimestamp
-    val createdAt: Timestamp? = null,
-    val completedAt: Timestamp? = null,
-    @get:PropertyName("isCompleted")
-    @set:PropertyName("isCompleted")
-    var isCompleted: Boolean = false
+data class Pot(
+    val id: String,
+    val tagId: String,
+    val tagName: String,
+    val name: String,
+    val imageUrl: String,
+    val potTotalStudyingTime: Long,
+    val createdAt: Long?,
+    val completedAt: Long?,
+    val isCompleted: Boolean
 ){
     //레벨 업 계산
     val level: String get(){
