@@ -4,6 +4,7 @@ import com.a32b.plant.domain.model.CommentUser
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.Tag
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 data class PostAuthorDto(
     @get:PropertyName("id") @set:PropertyName("id")
@@ -25,7 +26,7 @@ data class CommentUserDto(
 )
 
 data class CommentDto(
-    @get:PropertyName("commentId") @set:PropertyName("commentId")
+    @DocumentId
     var commentId: String = "",
     @get:PropertyName("user") @set:PropertyName("user")
     var user: CommentUserDto = CommentUserDto(),      // ERD: user { id, nickname, profileImg }
@@ -37,7 +38,7 @@ data class CommentDto(
     var createdAt: Timestamp? = Timestamp.now()
 )
 data class PostDto(
-    @get:PropertyName("postId") @set:PropertyName("postId")
+    @DocumentId
     var postId : String = "",
     // ▼▼▼ 수정: authorId/authorNickname/authorProfileImg → 중첩 맵
     @get:PropertyName("author") @set:PropertyName("author")

@@ -5,13 +5,16 @@ import androidx.lifecycle.viewModelScope
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.State
 import androidx.lifecycle.SavedStateHandle
-import com.a32b.plant.core.util.ActivityType
+import com.a32b.plant.domain.type.ActivityType
 import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.CommentUser
 import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.domain.model.Post
 import com.a32b.plant.domain.model.StudyLog
+import com.a32b.plant.domain.result.onFailure
+import com.a32b.plant.domain.result.onSuccess
+import com.a32b.plant.domain.usecase.community.AddCommentUseCase
 import com.a32b.plant.origin.OldPostRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -35,6 +38,7 @@ data class CommunityDetailUiState(
 @HiltViewModel
 class CommunityDetailViewModel @Inject constructor(
     private val repository: OldPostRepository,
+    private val addCommentUseCase: AddCommentUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -85,22 +89,31 @@ class CommunityDetailViewModel @Inject constructor(
         if (_uiState.value.comment.isBlank()) return
 
         viewModelScope.launch {
-            try {
-                repository.addComment(postId = postId,
-                    comment = Comment(
-                        user = CommentUser(CurrentUser.uid, CurrentUser.nickname, CurrentUser.profileImg),
-                        content = _uiState.value.comment),
-                    activity = CommunityActivity(
-                        type = ActivityType.COMMENT,
-                        title = post.value!!.title,
-                        comment = _uiState.value.comment
-                    )
-                )
-            } catch (e: Exception) { e.printStackTrace() }
+            addCommentUseCase(postId, _post.value?.title ?: "", _uiState.value.comment)
+                .onSuccess {
+                    //TODO 댓글 등록 성공 토스트 띄우기
+                    _uiState.update{it.copy(comment = "")}
+                    loadComment()
+                }
+                .onFailure {
+                    //TODO 에러 메세지 오류 토스트 띄우기
+                }
+//            try {
+//                repository.addComment(postId = postId,
+//                    comment = Comment(
+//                        user = CommentUser(CurrentUser.uid, CurrentUser.nickname, CurrentUser.profileImg),
+//                        content = _uiState.value.comment),
+//                    activity = CommunityActivity(
+//                        type = ActivityType.COMMENT,
+//                        title = post.value!!.title,
+//                        comment = _uiState.value.comment
+//                    )
+//                )
+//            } catch (e: Exception) { e.printStackTrace() }
+
 
             // loadComment()를 launch 안으로 이동하여 addComment 완료 '후' 호출되도록 보장
-            _uiState.update{it.copy(comment = "")}
-            loadComment()
+
         }
 //        _uiState.update{it.copy(comment = "")}
 //        loadComment()

@@ -2,8 +2,8 @@ package com.a32b.plant.origin
 
 import android.util.Log
 import com.a32b.plant.di.CurrentUser.uid
+import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.model.StudyLog
-import com.a32b.plant.domain.model.PotInfo
 import com.a32b.plant.domain.model.Tag
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -44,13 +44,16 @@ class OldPotRepository(private val db: FirebaseFirestore) {
             val newDocRef = db.collection("users").document(uid).collection("pots").document()
 
             // 기본 값 저장
-            val newPot = PotInfo(
+            val newPot = Pot(
                 id = newDocRef.id,
-                tag_id = tag.id,
-                tag_name = tag.name,
+                tagId = tag.id,
+                tagName = tag.name,
                 name = name,
                 imageUrl = "0", //⭐⭐⭐일단 데이터클래스랑 맞춰놨는데, 디비에는 레벨로 표현되어 있어서 데이터클래스를 바꿔야 함
-                potTotalStudyingTime = 0L
+                potTotalStudyingTime = 0L,
+                createdAt = null,
+                completedAt = null,
+                isCompleted = false
             )
             Log.d("plantLog", "--------------------------------")
             Log.d("plantLog", "$newPot")
@@ -92,13 +95,13 @@ class OldPotRepository(private val db: FirebaseFirestore) {
             .update("potTotalStudyingTime", FieldValue.increment(studyTime))
     }
 
-    suspend fun getUserPotsByStatus(uid: String, isCompleted: Boolean): List<PotInfo> {
+    suspend fun getUserPotsByStatus(uid: String, isCompleted: Boolean): List<Pot> {
         return db.collection("users").document(uid).collection("pots")
             .whereEqualTo("isCompleted", isCompleted)
-            .get().await().toObjects(PotInfo::class.java)
+            .get().await().toObjects(Pot::class.java)
     }
 
-    suspend fun getUserPotById(uid: String, potId: String): PotInfo? {
+    suspend fun getUserPotById(uid: String, potId: String): Pot? {
         return try {
             val result = db.collection("users")
                 .document(uid)
@@ -106,7 +109,7 @@ class OldPotRepository(private val db: FirebaseFirestore) {
                 .document(potId) // 문서 ID로 직접 접근
                 .get()
                 .await()
-            result.toObject(PotInfo::class.java)
+            result.toObject(Pot::class.java)
 
         } catch (e: Exception) {
             Log.e("plantLog", "${e.message}")

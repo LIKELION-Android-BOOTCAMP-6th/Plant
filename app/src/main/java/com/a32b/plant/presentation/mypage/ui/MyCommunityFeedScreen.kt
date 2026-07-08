@@ -34,7 +34,7 @@ import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.presentation.core.component.TagGroup
 import com.a32b.plant.core.navigation.Routes
-import com.a32b.plant.core.util.ActivityType
+import com.a32b.plant.domain.type.ActivityType
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.presentation.mypage.viewmodel.MyCommunityFeedEvent

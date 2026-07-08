@@ -1,7 +1,7 @@
 package com.a32b.plant.origin
 
 import android.util.Log
-import com.a32b.plant.core.util.ActivityType
+import com.a32b.plant.domain.type.ActivityType
 import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.Post
@@ -87,7 +87,7 @@ class OldPostRepository(private val db: FirebaseFirestore) {
     }
 
 
-    // 댓글 남기기 함수
+    // 댓글 남기기 함수 -> 이전 완료
     suspend fun addComment(postId: String, comment: Comment, activity: CommunityActivity) {
 
         val commentRef = db.collection("posts").document(postId)
@@ -207,7 +207,7 @@ class OldPostRepository(private val db: FirebaseFirestore) {
     }
 
     suspend fun setLikedActivity(postId: String, title: String){
-        val data = CommunityActivity(type = ActivityType.LIKE, title = title, targetId = postId)
+        val data = CommunityActivity.like(uid = "", title = title, targetId = postId)
         db.collection("activities")
             .add(data)
             .await()

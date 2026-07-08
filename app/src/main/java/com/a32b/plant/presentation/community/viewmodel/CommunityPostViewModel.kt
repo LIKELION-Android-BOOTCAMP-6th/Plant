@@ -4,7 +4,7 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.a32b.plant.core.util.ActivityType
+import com.a32b.plant.domain.type.ActivityType
 import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.domain.model.Post

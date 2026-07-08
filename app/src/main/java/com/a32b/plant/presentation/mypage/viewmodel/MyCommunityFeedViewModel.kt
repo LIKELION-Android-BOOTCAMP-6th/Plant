@@ -2,7 +2,7 @@ package com.a32b.plant.presentation.mypage.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.a32b.plant.core.util.ActivityType
+import com.a32b.plant.domain.type.ActivityType
 import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.origin.OldActivityRepository
 import dagger.hilt.android.lifecycle.HiltViewModel

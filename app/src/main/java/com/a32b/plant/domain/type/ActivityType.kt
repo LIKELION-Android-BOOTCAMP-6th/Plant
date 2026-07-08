@@ -1,4 +1,4 @@
-package com.a32b.plant.core.util
+package com.a32b.plant.domain.type
 
 object ActivityType {
     const val POST = "게시물"
