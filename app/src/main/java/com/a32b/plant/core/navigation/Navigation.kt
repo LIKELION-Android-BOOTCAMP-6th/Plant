@@ -9,22 +9,22 @@ import androidx.compose.runtime.getValue
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.a32b.plant.presentation.feature.community.ui.CommunityDetailScreen
-import com.a32b.plant.presentation.feature.community.ui.CommunityListScreen
-import com.a32b.plant.presentation.feature.community.ui.CommunityPostScreen
-import com.a32b.plant.presentation.feature.auth.ui.SignInScreen
-import com.a32b.plant.presentation.feature.auth.ui.SignUpScreen
-import com.a32b.plant.presentation.feature.home.ui.HomeScreen
-import com.a32b.plant.presentation.feature.home.ui.NewBornTreeScreen
-import com.a32b.plant.presentation.feature.mypage.ui.MyPageArchiveDetailScreen
-import com.a32b.plant.presentation.feature.mypage.ui.MyCommunityFeedScreen
-import com.a32b.plant.presentation.feature.mypage.ui.MyPageArchiveScreen
-import com.a32b.plant.presentation.feature.mypage.ui.MyPageScreen
-import com.a32b.plant.presentation.feature.mypage.ui.MyPageSettingScreen
-import com.a32b.plant.presentation.feature.splash.SplashViewModel
-import com.a32b.plant.presentation.feature.studyPalnDtail.ui.StudyPlanDetailScreen
-import com.a32b.plant.presentation.feature.studying.ui.StudyResultScreen
-import com.a32b.plant.presentation.feature.studying.ui.StudyingScreen
+import com.a32b.plant.presentation.community.ui.CommunityDetailScreen
+import com.a32b.plant.presentation.community.ui.CommunityListScreen
+import com.a32b.plant.presentation.community.ui.CommunityPostScreen
+import com.a32b.plant.presentation.auth.ui.SignInScreen
+import com.a32b.plant.presentation.auth.ui.SignUpScreen
+import com.a32b.plant.presentation.home.ui.HomeScreen
+import com.a32b.plant.presentation.home.ui.NewBornTreeScreen
+import com.a32b.plant.presentation.mypage.ui.MyPageArchiveDetailScreen
+import com.a32b.plant.presentation.mypage.ui.MyCommunityFeedScreen
+import com.a32b.plant.presentation.mypage.ui.MyPageArchiveScreen
+import com.a32b.plant.presentation.mypage.ui.MyPageScreen
+import com.a32b.plant.presentation.mypage.ui.MyPageSettingScreen
+import com.a32b.plant.presentation.splash.SplashViewModel
+import com.a32b.plant.presentation.studyPlanDetail.ui.StudyPlanDetailScreen
+import com.a32b.plant.presentation.studying.ui.StudyResultScreen
+import com.a32b.plant.presentation.studying.ui.StudyingScreen
 
 @Composable
 fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewModel) {

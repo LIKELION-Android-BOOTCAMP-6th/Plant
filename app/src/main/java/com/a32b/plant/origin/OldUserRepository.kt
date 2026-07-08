@@ -4,6 +4,8 @@ import com.a32b.plant.domain.model.PotInfo
 import android.util.Log
 import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.di.UserModel
+import com.a32b.plant.domain.model.Pot
+import com.a32b.plant.domain.model.User
 import com.google.firebase.firestore.FirebaseFirestore
 import com.a32b.plant.domain.model.UserProfile
 import com.google.firebase.auth.FirebaseAuth
@@ -43,7 +45,7 @@ class OldUserRepository(private val db: FirebaseFirestore, private val auth: Fir
 
     // 특정 유저의 데이터를 실시간 Flow로 반환
     // 특정 유저의 데이터 + 하위 pots 목록까지 "모두" 실시간으로 감지
-    fun getUserProfile(uid: String): Flow<UserProfile?> = callbackFlow {
+    fun getUserProfile(uid: String): Flow<User?> = callbackFlow {
         if (uid.isEmpty()) {
             trySend(null)
             return@callbackFlow
@@ -51,8 +53,8 @@ class OldUserRepository(private val db: FirebaseFirestore, private val auth: Fir
         val userDocRef = db.collection("users").document(uid)
         val potsCollectionRef = userDocRef.collection("pots")
 
-        var userProfile: UserProfile? = null
-        var currentOngoingPots: List<PotInfo> = emptyList()
+        var userProfile: User? = null
+        var currentOngoingPots: List<Pot> = emptyList()
 
         //공통 전송 로직
         fun sendUpdate() {
@@ -61,7 +63,7 @@ class OldUserRepository(private val db: FirebaseFirestore, private val auth: Fir
 
         // 1. 유저 정보 실시간 리스너
         val userListener = userDocRef.addSnapshotListener { userSnapshot, _ ->
-            userProfile = userSnapshot?.toObject(UserProfile::class.java)
+            userProfile = userSnapshot?.toObject(User::class.java)
             sendUpdate()
         }
 
@@ -69,7 +71,7 @@ class OldUserRepository(private val db: FirebaseFirestore, private val auth: Fir
         val potsListener = potsCollectionRef.whereEqualTo("isCompleted", false)
             .addSnapshotListener { potsSnapshot, _ ->
                 currentOngoingPots = potsSnapshot?.documents?.mapNotNull { doc ->
-                    doc.toObject(PotInfo::class.java)?.copy(id = doc.id)
+                    doc.toObject(Pot::class.java)?.copy(id = doc.id)
                 } ?: emptyList()
                 sendUpdate()
             }
@@ -81,10 +83,10 @@ class OldUserRepository(private val db: FirebaseFirestore, private val auth: Fir
     }
 
     // 유저 프로필 1회성 가져오기 (로그인 시 isFirstLogin 체크용)
-    suspend fun getUserProfileOnce(uid: String): UserProfile? {
+    suspend fun getUserProfileOnce(uid: String): User? {
         return try {
             val snapshot = db.collection("users").document(uid).get().await()
-            snapshot.toObject(UserProfile::class.java)
+            snapshot.toObject(User::class.java)
         } catch (e: Exception) {
             Log.e("UserRepository", "getUserProfileOnce 실패: ${e.message}", e)
             null
@@ -94,7 +96,7 @@ class OldUserRepository(private val db: FirebaseFirestore, private val auth: Fir
     // suspendCancellableCoroutine , 유저 정보 생성
     suspend fun createUser(uid: String): Result<Unit> =
         suspendCancellableCoroutine { cont ->
-            val newUser = UserProfile(
+            val newUser = User(
                 isFirstLogin = true,  // 회원가입 시 true 유지 -> 첫 로그인 후 닉네임 설정하면 false
                 isDarkMode = false,
                 totalStudyTime = 0L,
@@ -248,10 +250,10 @@ class OldUserRepository(private val db: FirebaseFirestore, private val auth: Fir
     }
 
     // uid 로 users/pots 데이터 가져오기
-    suspend fun getUsersPots(uid: String): List<PotInfo> {
+    suspend fun getUsersPots(uid: String): List<Pot> {
         return try {
             db.collection("users").document(uid).collection("pots").get().await()
-                .toObjects(PotInfo::class.java)
+                .toObjects(Pot::class.java)
         } catch (e: Exception) {
             Log.e("error", e.message.toString())
             emptyList()
@@ -260,7 +262,7 @@ class OldUserRepository(private val db: FirebaseFirestore, private val auth: Fir
 
     // 다크모드 관리용
     // 테마 다크모드용 Flow
-    fun getUserFlow(uid: String): Flow<UserProfile?> = callbackFlow {
+    fun getUserFlow(uid: String): Flow<User?> = callbackFlow {
         if (uid.isEmpty()) {
             trySend(null)
             return@callbackFlow
@@ -274,7 +276,7 @@ class OldUserRepository(private val db: FirebaseFirestore, private val auth: Fir
                 return@addSnapshotListener
             }
             // 받아온 데이터 UserProfile 객체로 변환
-            val userProfile = userSnapshot?.toObject(UserProfile::class.java)
+            val userProfile = userSnapshot?.toObject(User::class.java)
             trySend(userProfile)
         }
         // 이 Flow 사용하는 화면 닫힐 때 리스너 제거

@@ -1,0 +1,283 @@
+package com.a32b.plant.presentation.community.ui
+
+import android.util.Log
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.navigation.NavController
+import androidx.navigation.toRoute
+import com.a32b.plant.R
+import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.core.component.TagSheet
+import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.presentation.community.viewmodel.CommunityPostEvent
+import com.a32b.plant.presentation.community.viewmodel.CommunityPostViewModel
+import com.a32b.plant.presentation.theme.Typography
+import com.a32b.plant.presentation.theme.background
+
+@Composable
+fun CommunityPostScreen(
+    navController: NavController, viewModel: CommunityPostViewModel = hiltViewModel()
+) {
+    val context = LocalContext.current
+    val args = navController.currentBackStackEntry?.toRoute<Routes.CommunityPost>()
+
+    val postId = args?.postId
+    val potId = args?.potId
+    val tag = args?.tagId //tag id
+    val title = args?.title
+    val studyLogIds = args?.studyLogIds
+
+    val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(postId,  Unit) {
+        postId?.let { viewModel.getPost(postId) }
+
+        viewModel.event.collect { event ->
+            when(event){
+                is CommunityPostEvent.NavigateToDetail -> {
+                    navController.navigate(Routes.CommunityList)
+                    navController.navigate(Routes.CommunityDetail(event.postId)){
+                        popUpTo<Routes.CommunityPost> { inclusive = true }
+                    }
+                }
+            }
+        }
+    }
+    BackHandler { viewModel.onIsDismissDialogShowChange() }
+
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            PostTopBar(
+                isEditMode = postId != null,
+                onBackClick = {
+                    viewModel.onIsDismissDialogShowChange()
+                },
+                onRegisterClick = {
+                    val isInvalid = uiState.title.isBlank() ||
+                            (uiState.studyLogs == null && uiState.content.isNullOrBlank())
+                    if (isInvalid) {
+                        Toast.makeText(context, "제목과 내용을 모두 입력해주세요.", Toast.LENGTH_SHORT).show()
+                    } else if(uiState.selected.id.isEmpty()){
+                        Toast.makeText(context, "태그를 선택해주세요.", Toast.LENGTH_SHORT).show()
+                    } else{
+                        viewModel.savePost() { isSuccess ->
+                            if (isSuccess) {
+                                val msg = if (postId != null) "수정되었습니다!" else "성공적으로 등록되었습니다!"
+                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                navController.popBackStack()
+                            } else {
+                                Toast.makeText(context, "등록에 실패했습니다.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item { Spacer(modifier = Modifier.height(10.dp)) }
+
+            item {
+                Text("제목", style = Typography.bodyMedium, fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground)
+                Spacer(modifier = Modifier.height(8.dp))
+                PostInputField(
+                    value = uiState.title,
+                    onValueChange = { viewModel.onTitleChange(it) },
+                    placeholder = "제목을 입력하세요",
+                    singleLine = true,
+                    maxLength = 50
+                )
+            }
+
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = !uiState.isShared) {
+                            viewModel.onIsTagSheetShownChange()
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ){
+                    Text("태그", style = Typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground,fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
+
+                    if (!uiState.isShared) {
+                        Icon(
+                            painter = painterResource(id = if(uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
+                            contentDescription = "태그박스",
+                            modifier = Modifier.size(24.dp).padding(start = 4.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = "${uiState.selected.name}${(if (uiState.isShared) ", 공유" else "")}",
+                        style = Typography.bodyMedium,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(top = 4.dp),
+                        // 공유 모드일 때는 텍스트 색상을 흐리게 하여 수정 불가임을 알림
+                        color = if (uiState.isShared) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onBackground
+                    )
+
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                if (uiState.isTagSheetShown){
+                    Spacer(modifier = Modifier.height(2.dp))
+                    TagSheet(uiState.tags,
+                        enable = !uiState.isShared,
+                        init = when {
+                            uiState.isShared || !postId.isNullOrEmpty() -> listOf(uiState.selected)
+                            uiState.selected.id.isNotEmpty() -> listOf(uiState.selected)
+                            else -> emptyList()
+                        }
+                    ) { selected ->
+                        if (selected.isNotEmpty()) {
+                            Log.d("선택된 거 ", selected[0].name)
+                            viewModel.onSelectedTagChange(selected[0])
+                        }
+                    }
+                }
+
+            }
+
+            if (uiState.isShared){
+                val studyLogs = uiState.studyLogs ?: emptyList()
+                item {
+                    StudyLogCard(studyLogs)
+                }
+            }else{
+                item {
+                    Text("본문", style = Typography.bodyMedium, fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    PostInputField(
+                        value = uiState.content,
+                        onValueChange = { viewModel.onContentChange(it) },
+                        placeholder = "나누고 싶은 이야기를 적어주세요.\n\n※ 비방이나 욕설은 제재 대상이 될 수 있습니다.",
+                        modifier = Modifier.heightIn(min = 400.dp),
+                        maxLength = 1000
+                    )
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(40.dp)) }
+        }
+    }
+
+    if (uiState.isDismissDialogShow)
+        ConfirmDialog("게시글 작성을 종료하시겠습니까?",
+            semiText = "작성된 게시글은 저장되지 않습니다.",
+            onDismiss = {viewModel.onIsDismissDialogShowChange()},
+            onConfirm = {navController.popBackStack()
+            }
+        )
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PostTopBar(isEditMode: Boolean, onBackClick: () -> Unit, onRegisterClick: () -> Unit) {
+    CenterAlignedTopAppBar(
+        title = { Text(if (isEditMode) "글 수정" else "글쓰기", style = Typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface) },
+        navigationIcon = {
+            IconButton(onClick = onBackClick) {
+                Icon(Icons.Default.ArrowBack, contentDescription = null, tint = Color.DarkGray)
+            }
+        },
+        actions = {
+            Surface(
+                modifier = Modifier
+                    .padding(end = 12.dp)
+                    .clickable { onRegisterClick() },
+                shape = RoundedCornerShape(4.dp),
+                color = MaterialTheme.colorScheme.primary
+            ) {
+                Text(
+                    text = if (isEditMode) "수정" else "등록",
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    style = Typography.bodyMedium
+                )
+            }
+        },
+        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
+    )
+}
+@Composable
+fun PostInputField(
+    value: String?,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+    singleLine: Boolean = false,
+    maxLength: Int = Int.MAX_VALUE
+) {
+    val context = LocalContext.current
+
+    Column {
+        TextField(
+            value = value ?: "",
+            onValueChange = { input ->
+                if (input.length <= maxLength) {
+                    onValueChange(input)
+                } else {
+                    Toast.makeText(context, "${maxLength}자 이하로 입력해주세요.", Toast.LENGTH_SHORT).show()
+                }
+            },
+
+            placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant, style = Typography.bodyMedium) },
+            modifier = modifier.fillMaxWidth()
+                .shadow(elevation = 1.dp, shape = RoundedCornerShape(8.dp))
+                .background(background),
+            singleLine = singleLine,
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                unfocusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+            ),
+            shape = RoundedCornerShape(8.dp),
+            textStyle = Typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
+        )
+
+        Text(
+            "${value?.length ?: 0} / $maxLength",
+            style = Typography.bodyMedium,
+            color = if ((value?.length ?: 0) >= maxLength)
+                MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .align(Alignment.End)
+                .padding(end = 8.dp, top = 4.dp)
+        )
+    }
+}

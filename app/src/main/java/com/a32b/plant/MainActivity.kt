@@ -19,12 +19,14 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.a32b.plant.core.component.BottomBar
+import com.a32b.plant.presentation.core.component.BottomBar
 import com.a32b.plant.core.navigation.PlantAppNavigation
 import com.a32b.plant.core.navigation.Routes
-import com.a32b.plant.presentation.feature.splash.SplashViewModel
+import com.a32b.plant.presentation.splash.SplashViewModel
 import com.a32b.plant.presentation.theme.PlantTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val viewModel: SplashViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {

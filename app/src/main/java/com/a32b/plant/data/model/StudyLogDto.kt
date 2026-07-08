@@ -13,7 +13,5 @@ data class StudyLogDto(
     @get:PropertyName("createAt") @set:PropertyName("createAt")
     var createAt: Timestamp = Timestamp.now(),
     @get:PropertyName("id") @set:PropertyName("id")
-    var id: String = "",
-    @get:PropertyName("isSelected") @set:PropertyName("isSelected")
-    var isSelected: Boolean = false
+    var id: String = ""
 )
