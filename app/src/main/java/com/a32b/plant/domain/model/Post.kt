@@ -30,7 +30,40 @@ data class Post(
     val studyLogs: List<StudyLog>?,
     var isShared: Boolean?,
     val comments: List<Comment> = emptyList()   // comments 서브컬렉션에서 조회 후 설정
-)
+){
+    companion object{
+        fun createOriginal(author: PostAuthor, title: String, content: String, tag: Tag) = Post(
+            postId = "",
+            author = author,
+            title = title,
+            content = content,
+            tag = tag,
+            commentCount = 0,
+            likeCount = 0,
+            createdAt = null,
+            activityId = "",
+            isLiked = false,
+            studyLogs = null,
+            isShared = false
+        )
+
+        fun createShared(author: PostAuthor, title: String, studyLogs: List<StudyLog>, tag: Tag) = Post(
+            postId = "",
+            author = author,
+            title = title,
+            content = null,
+            tag = tag,
+            commentCount = 0,
+            likeCount = 0,
+            createdAt = null,
+            activityId = "",
+            isLiked = false,
+            studyLogs = studyLogs,
+            isShared = true
+        )
+
+    }
+}
 
 //posts/{postId}/comments/{commentId}
 data class Comment(

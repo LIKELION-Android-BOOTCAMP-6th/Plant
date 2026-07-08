@@ -77,7 +77,7 @@ fun CommunityPostScreen(
                             (uiState.studyLogs == null && uiState.content.isNullOrBlank())
                     if (isInvalid) {
                         Toast.makeText(context, "제목과 내용을 모두 입력해주세요.", Toast.LENGTH_SHORT).show()
-                    } else if(uiState.selected.id.isEmpty()){
+                    } else if(uiState.selected?.id?.isEmpty() == true){
                         Toast.makeText(context, "태그를 선택해주세요.", Toast.LENGTH_SHORT).show()
                     } else{
                         viewModel.savePost() { isSuccess ->
@@ -138,7 +138,7 @@ fun CommunityPostScreen(
                     Spacer(modifier = Modifier.width(8.dp))
 
                     Text(
-                        text = "${uiState.selected.name}${(if (uiState.isShared) ", 공유" else "")}",
+                        text = "${uiState.selected!!.name}${(if (uiState.isShared) ", 공유" else "")}",
                         style = Typography.bodyMedium,
                         fontSize = 13.sp,
                         modifier = Modifier.padding(top = 4.dp),
@@ -153,8 +153,8 @@ fun CommunityPostScreen(
                     TagSheet(uiState.tags,
                         enable = !uiState.isShared,
                         init = when {
-                            uiState.isShared || !postId.isNullOrEmpty() -> listOf(uiState.selected)
-                            uiState.selected.id.isNotEmpty() -> listOf(uiState.selected)
+                            uiState.isShared || !postId.isNullOrEmpty() -> listOf(uiState.selected!!)
+                            uiState.selected?.id?.isNotEmpty() == true -> listOf(uiState.selected!!)
                             else -> emptyList()
                         }
                     ) { selected ->

@@ -32,11 +32,11 @@ data class CommunityActivity(
             createAt = null
         )
 
-        fun post(uid: String, title: String, targetId: String) = CommunityActivity(
+        fun post(uid: String, title: String) = CommunityActivity(
             uid = uid,
             type = ActivityType.POST,
             title = title,
-            targetId = targetId,
+            targetId = "",
             comment = null,
             commentId = null,
             createAt = null

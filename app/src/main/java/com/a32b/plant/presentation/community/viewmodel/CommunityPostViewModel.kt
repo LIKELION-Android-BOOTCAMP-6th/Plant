@@ -29,7 +29,7 @@ data class CommunityPostUiState(
     val postId: String? = null,
     val title: String = "",
     val content: String? = null,
-    val selected: Tag = Tag(id = "", name = "태그를 선택하세요"),
+    val selected: Tag? = null,
     val potId: String? = null,
     val studyLogs: List<StudyLog>? = null,
     val isDismissDialogShow: Boolean = false,
@@ -153,18 +153,33 @@ class CommunityPostViewModel @Inject constructor(
 
                 } else {
 //                     ✅ 새 글 작성 모드
-                    val newPost = Post(
-                        author = PostAuthor(
-                            CurrentUser.uid,
-                            CurrentUser.nickname,
-                            CurrentUser.profileImg),
-                        title = _uiState.value.title,
-                        content = if(isShared) null else _uiState.value.content,
-                        studyLogs = if(isShared)_uiState.value.studyLogs else null,
-                        tag = _uiState.value.selected,
-                        isShared = _uiState.value.isShared
-                    )
-                    postId = repository.savePost(newPost, CommunityActivity(type = ActivityType.POST, title = _uiState.value.title))
+//                    val newPost = Post(
+//                        author = PostAuthor(
+//                            CurrentUser.uid,
+//                            CurrentUser.nickname,
+//                            CurrentUser.profileImg),
+//                        title = _uiState.value.title,
+//                        content = if(isShared) null else _uiState.value.content,
+//                        studyLogs = if(isShared)_uiState.value.studyLogs else null,
+//                        tag = _uiState.value.selected,
+//                        isShared = _uiState.value.isShared
+//                    )
+                    val newPost = if (isShared) {
+                        Post.createShared(
+                            author = PostAuthor(CurrentUser.uid, CurrentUser.nickname, CurrentUser.profileImg),
+                            title = _uiState.value.title,
+                            studyLogs = _uiState.value.studyLogs ?: emptyList(),
+                            tag = _uiState.value.selected!!
+                        )
+                    } else {
+                        Post.createOriginal(
+                            author = PostAuthor(CurrentUser.uid, CurrentUser.nickname, CurrentUser.profileImg),
+                            title = _uiState.value.title,
+                            content = _uiState.value.content ?: "",
+                            tag = _uiState.value.selected!!
+                        )
+                    }
+                    postId = repository.savePost(newPost, CommunityActivity.post(CurrentUser.uid, _uiState.value.title))
                 }
                 onComplete(true)
             } catch (e: Exception) {
