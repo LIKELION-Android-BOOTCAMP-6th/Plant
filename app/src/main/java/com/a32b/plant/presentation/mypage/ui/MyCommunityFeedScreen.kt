@@ -111,7 +111,7 @@ fun ContentList(lists : List<CommunityActivity>, onClick: (String) -> Unit){
                             modifier = Modifier.weight(1f),
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Text(TimeFormatter.formatTimestamp(list.createAt), style = Typography.bodySmall,
+                        Text(TimeFormatter.formatTimeToDate(list.createAt), style = Typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     list.comment?.let {

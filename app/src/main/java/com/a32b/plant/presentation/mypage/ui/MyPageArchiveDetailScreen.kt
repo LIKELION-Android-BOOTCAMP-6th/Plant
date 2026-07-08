@@ -27,7 +27,7 @@ import androidx.navigation.toRoute
 import com.a32b.plant.R
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.core.navigation.Routes
-import com.a32b.plant.core.util.TimeFormatter.formatTimestamp
+import com.a32b.plant.core.util.TimeFormatter.formatTimeToDate
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.core.util.TimeFormatter
 import java.time.ZoneId
@@ -168,12 +168,12 @@ fun MyPageArchiveDetailScreen(navController: NavController, viewModel: MyPageArc
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
                         Text(
-                            text = "시작일 : ${pot.createdAt?.let { formatTimestamp(it) } ?: ""}",
+                            text = "시작일 : ${pot.createdAt?.let { formatTimeToDate(it) } ?: ""}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "종료일 : ${pot.completedAt?.let { formatTimestamp(it) } ?: ""}",
+                            text = "종료일 : ${pot.completedAt?.let { formatTimeToDate(it) } ?: ""}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )

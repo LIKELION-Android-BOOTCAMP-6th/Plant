@@ -117,7 +117,7 @@ fun CommunityDetailScreen(
                             Text(currentPost.author.nickname,  style = Typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface)
                             Spacer(modifier = Modifier.weight(1f))
-                            Text(TimeFormatter.formatTimestampTime(currentPost.createdAt.toTimestamp()), style = Typography.bodyMedium, fontSize = 12.sp,
+                            Text(TimeFormatter.formatTimeWithClock(currentPost.createdAt ?: 0), style = Typography.bodyMedium, fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurface)
                         }
                     }
@@ -258,7 +258,7 @@ fun CommentRow(
                     color = MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    text = comment.createdAt?.let { TimeFormatter.formatTimestampTime(it) } ?: "",
+                    text = comment.createdAt?.let { TimeFormatter.formatTimeWithClock(it) } ?: "",
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = Typography.bodyMedium
