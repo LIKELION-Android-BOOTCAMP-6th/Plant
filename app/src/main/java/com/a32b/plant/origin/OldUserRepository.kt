@@ -1,13 +1,11 @@
 package com.a32b.plant.origin
 
-import com.a32b.plant.domain.model.PotInfo
 import android.util.Log
 import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.di.UserModel
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.model.User
 import com.google.firebase.firestore.FirebaseFirestore
-import com.a32b.plant.domain.model.UserProfile
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.channels.awaitClose
@@ -96,12 +94,7 @@ class OldUserRepository(private val db: FirebaseFirestore, private val auth: Fir
     // suspendCancellableCoroutine , 유저 정보 생성
     suspend fun createUser(uid: String): Result<Unit> =
         suspendCancellableCoroutine { cont ->
-            val newUser = User(
-                isFirstLogin = true,  // 회원가입 시 true 유지 -> 첫 로그인 후 닉네임 설정하면 false
-                isDarkMode = false,
-                totalStudyTime = 0L,
-                completedPotsCount = 0
-            )
+            val newUser = User.create()
             db.collection("users")
                 .document(uid)
                 .set(newUser)

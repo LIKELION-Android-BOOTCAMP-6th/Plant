@@ -14,4 +14,15 @@ data class User(
     var isFirstLogin: Boolean?, // 회원가입 시 true 유지 -> 첫 로그인 후 닉네임 재설정 하고 false 바꾸기
     var isDarkMode: Boolean,
     val totalStudyTime: Long
-)
+) {
+    companion object{
+        fun create() = User(
+            nickname = "",
+            profileImg = "",
+            lastSelectedPotId = "",
+            isFirstLogin = true, // 회원가입 시 true 유지 -> 첫 로그인 후 닉네임 설정하면 false
+            isDarkMode = false,
+            totalStudyTime = 0L
+        )
+    }
+}
