@@ -34,7 +34,7 @@ data class Pot(
     }
 
     companion object {
-        fun isEmpty() = Pot(
+        val EMPTY = Pot(
             id = "",
             tagId = "",
             tagName = "",

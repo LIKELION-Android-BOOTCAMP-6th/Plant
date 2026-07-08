@@ -65,7 +65,7 @@ fun MyPageArchiveDetailScreen(navController: NavController, viewModel: MyPageArc
                 windowInsets = WindowInsets(top = 0.dp),
                 title = {
                     Text(
-                        "[${pot?.tagN ?: "태그"}] ${pot?.name ?: "제목"}",
+                        "[${pot?.tagName ?: "태그"}] ${pot?.name ?: "제목"}",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -243,9 +243,7 @@ fun MyPageArchiveDetailScreen(navController: NavController, viewModel: MyPageArc
                         items(uiState.logs) { log ->
                             Log.d("plantLog", "${log.title}")
 //
-                            val dateTime = log.createAt.toDate().toInstant()
-                                .atZone(ZoneId.systemDefault())
-                                .toLocalDateTime()
+                            val dateTime = TimeFormatter.formatTimeToDate(log.createAt ?: 0)
 //
                             Card(
                                 modifier = Modifier
@@ -289,9 +287,7 @@ fun MyPageArchiveDetailScreen(navController: NavController, viewModel: MyPageArc
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(
-                                                text = if (log.title.isNotEmpty()) log.title else TimeFormatter.formatToKoreanDate(
-                                                    dateTime
-                                                ),
+                                                text = if (log.title.isNotEmpty()) log.title else dateTime,
                                                 modifier = Modifier.weight(1f),
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis,

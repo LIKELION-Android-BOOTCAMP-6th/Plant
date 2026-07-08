@@ -15,8 +15,9 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
 
-class OldPostRepository(private val db: FirebaseFirestore) {
+class OldPostRepository @Inject constructor(private val db: FirebaseFirestore) {
 
     //글 목록 조회
     fun getPostList(): Flow<List<Post>> = callbackFlow {

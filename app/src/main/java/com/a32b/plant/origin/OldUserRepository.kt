@@ -13,10 +13,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
 import kotlin.Boolean
 import kotlin.coroutines.resume
 
-class OldUserRepository(private val db: FirebaseFirestore, private val auth: FirebaseAuth) {
+class OldUserRepository @Inject constructor(private val db: FirebaseFirestore, private val auth: FirebaseAuth) {
 
     private var listenerRegistration: ListenerRegistration? = null
 

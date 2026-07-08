@@ -6,6 +6,7 @@ import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.di.UserModel
 import com.a32b.plant.domain.repository.UserRepository
+import com.a32b.plant.origin.OldUserRepository
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +17,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SplashViewModel @Inject constructor(
     private val auth: FirebaseAuth,
-    private val userRepository: UserRepository
+    private val userRepository: OldUserRepository
     ) : ViewModel() {
 
 

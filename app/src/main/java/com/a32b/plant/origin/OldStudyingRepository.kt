@@ -8,9 +8,13 @@ import com.a32b.plant.data.local.StudyingSession
 import com.a32b.plant.domain.model.StudyingUser
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
 
-class OldStudyingRepository(private val db: FirebaseFirestore, private val appContext: Context) {
+class OldStudyingRepository@Inject constructor (
+    private val db: FirebaseFirestore,
+    @ApplicationContext private val appContext: Context) {
     private val datasore = StudyingDataStore
     suspend fun getStudyingUser(tag: String): List<StudyingUser>{
         return try{

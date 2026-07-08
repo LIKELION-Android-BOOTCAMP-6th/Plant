@@ -83,7 +83,7 @@ fun StudyPlanDetailScreen(
                 ),
                 title = {
                     potInfo?.let {
-                        Text("[${it.tag_name}] ${it.name}",
+                        Text("[${it.tagName}] ${it.name}",
                             style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface)
                     } ?: Text("로딩 중...", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -369,9 +369,7 @@ fun StudyRecordCard(
     onSelectionChange: (Boolean) -> Unit,
     onCardClick: () -> Unit,
     onDeleteClick: () -> Unit){
-    val dateTime = log.createAt.toDate().toInstant()
-        .atZone(ZoneId.systemDefault())
-        .toLocalDateTime()
+
     Card(
         modifier = Modifier.fillMaxWidth()
             .padding(vertical = 2.dp)
@@ -402,7 +400,7 @@ fun StudyRecordCard(
             ){
                 // 날짜
                 Text(
-                    text = if (log.title.isNotEmpty()) log.title else TimeFormatter.formatToKoreanDate(dateTime),
+                    text = if (log.title.isNotEmpty()) log.title else TimeFormatter.formatTimeToDate(log.createAt ?: 0),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),

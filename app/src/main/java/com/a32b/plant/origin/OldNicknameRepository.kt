@@ -3,8 +3,9 @@ package com.a32b.plant.origin
 import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
 
-class OldNicknameRepository(private val db: FirebaseFirestore) {
+class OldNicknameRepository @Inject constructor(private val db: FirebaseFirestore) {
 
     // 닉네임 중복 여부 확인
     suspend fun isNicknameTaken(nickname: String): Boolean {

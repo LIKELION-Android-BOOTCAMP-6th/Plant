@@ -13,10 +13,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.jvm.java
 
-class OldPotRepository(private val db: FirebaseFirestore) {
+class OldPotRepository @Inject constructor(private val db: FirebaseFirestore) {
 
     //태그 획득
     fun getAvailableTags(): Flow<List<Tag>> = callbackFlow {

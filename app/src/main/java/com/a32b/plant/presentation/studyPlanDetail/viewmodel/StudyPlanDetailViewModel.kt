@@ -144,7 +144,7 @@ class StudyPlanDetailViewModel @Inject constructor(
             .get()
             .addOnSuccessListener { document ->
                 if (document.exists()) {
-                    _potDetail.value = document.toObject(PotInfo::class.java)?.copy(id = document.id)
+                    _potDetail.value = document.toObject(Pot::class.java)?.copy(id = document.id)
                 }
             }
             .addOnFailureListener { e ->
@@ -351,7 +351,7 @@ class StudyPlanDetailViewModel @Inject constructor(
             navController.navigate(
                 Routes.CommunityPost(
                     potId = pot.id,
-                    tagId = pot.tag_id,
+                    tagId = pot.tagId,
                     title = pot.name,
                     studyLogIds = selectedIds
                 )
@@ -374,7 +374,7 @@ class StudyPlanDetailViewModel @Inject constructor(
                 navController.navigate(
                     Routes.CommunityPost(
                         potId = pot.id,
-                        tagId = pot.tag_id,
+                        tagId = pot.tagId,
                         title = pot.name,
                         studyLogIds = selectedIds
                     )

@@ -58,15 +58,17 @@ class MyPageArchiveDetailViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val potInfo = potRepository.getUserPotById(CurrentUser.uid, potId)
-            val logList = potRepository.getPotLogs(CurrentUser.uid, potId)
-            _uiState.update {
-                it.copy(
-                    nickname = CurrentUser.nickname,
-                    pot = potInfo,
-                    logs = logList,
-                    totalStudyTime = formatToDigitalClock(potInfo?.potTotalStudyingTime ?: 0L)
-                )
+            potId?.let {
+                val potInfo = potRepository.getUserPotById(CurrentUser.uid, it )
+                val logList = potRepository.getPotLogs(CurrentUser.uid, it)
+                _uiState.update {
+                    it.copy(
+                        nickname = CurrentUser.nickname,
+                        pot = potInfo,
+                        logs = logList,
+                        totalStudyTime = formatToDigitalClock(potInfo?.potTotalStudyingTime ?: 0L)
+                    )
+                }
             }
         }
     }
@@ -120,7 +122,7 @@ class MyPageArchiveDetailViewModel @Inject constructor(
 
         viewModelScope.launch {
             val potId = pot.id ?: "temp_id"
-            val tag = pot.tag_id ?: "기본"
+            val tag = pot.tagId ?: "기본"
             val title = pot.name ?: "제목 없음"
 
             val studyLogIds = selectedLogs.map { it.id }

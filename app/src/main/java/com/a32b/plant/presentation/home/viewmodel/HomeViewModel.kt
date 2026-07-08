@@ -42,7 +42,7 @@ class HomeViewModel @Inject constructor(
     private val _currentDate = MutableStateFlow("")
     val currentDate = _currentDate.asStateFlow()
 
-    private val _displayPot = MutableStateFlow<Pot?>(null)
+    private val _displayPot = MutableStateFlow(Pot.EMPTY)
     val displayPot = _displayPot.asStateFlow()
 
     private val _potList = MutableStateFlow<List<Pot>>(emptyList())
@@ -133,8 +133,8 @@ class HomeViewModel @Inject constructor(
     private fun calculateDisplayPot(user: User, ongoingPots: List<Pot>): Pot {
         val pots = ongoingPots
         return when {
-            // case 1: 화분이 아예 없는 경우 ⭐️
-            ongoingPots.isEmpty() -> Pot.isEmpty()
+            // case 1: 화분이 아예 없는 경우
+            ongoingPots.isEmpty() -> Pot.EMPTY
             // case 2: 화분이 하나만 있는 경우
             ongoingPots.size == 1 -> ongoingPots[0]
             // case 3: 화분이 여러 개인 경우 마지막 선택한 화분 찾기

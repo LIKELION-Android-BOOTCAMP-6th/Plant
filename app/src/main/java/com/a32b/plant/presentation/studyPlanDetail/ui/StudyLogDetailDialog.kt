@@ -39,9 +39,6 @@ fun StudyLogDetailDialog(
     log: StudyLog,
     ondismiss: ()-> Unit
 ){
-    val dateTime = log.createAt.toDate().toInstant()
-        .atZone(ZoneId.systemDefault())
-        .toLocalDateTime()
 
     Dialog(onDismissRequest = ondismiss) {
         Card(
@@ -86,7 +83,7 @@ fun StudyLogDetailDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ){
-                    Text(text = TimeFormatter.formatToKoreanDate(dateTime),
+                    Text(text = TimeFormatter.formatTimeToDate(log.createAt ?: 0),
                         style = MaterialTheme.typography.bodySmall,
                         color = fontColor
                     )

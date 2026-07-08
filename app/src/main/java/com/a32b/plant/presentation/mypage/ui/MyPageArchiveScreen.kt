@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,12 +23,14 @@ import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.Pot
+import com.a32b.plant.presentation.mypage.viewmodel.MyPageArchiveDetailViewModel
+import com.a32b.plant.presentation.mypage.viewmodel.MyPageArchiveViewModel
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageViewModel
 import com.a32b.plant.presentation.theme.Typography
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyPageArchiveScreen(navController: NavController, viewModel: MyPageViewModel = hiltViewModel()) {
+fun MyPageArchiveScreen(navController: NavController, viewModel: MyPageArchiveViewModel = hiltViewModel()) {
 
     val uiState by viewModel.uiState.collectAsState()
 
