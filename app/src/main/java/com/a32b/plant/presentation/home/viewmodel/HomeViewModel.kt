@@ -84,7 +84,7 @@ class HomeViewModel @Inject constructor(
         val title = TimeFormatter.formatToKoreanDate(LocalDateTime.now())
         val contents = _interruptedUiState.value.log
         val studyTime = _interruptedUiState.value.interruptedStudySession!!.time
-        val studyLog = StudyLog(title,contents,studyTime!!)
+        val studyLog = StudyLog(title,contents,studyTime!!, createAt = null, id = "", isSelected = false)
         val potId = _interruptedUiState.value.interruptedStudySession!!.potId
         potRepository.createStudyLog(potId!!, studyLog )
         potRepository.updateTotalStudyTime(potId,studyTime)
@@ -105,7 +105,7 @@ class HomeViewModel @Inject constructor(
                     _userName.value = user.nickname ?: "사용자"
 
                     //레벨 DB 업데이트
-                    user.pot.forEach { pot ->
+                    user.potList.forEach { pot ->
                         val potId = pot.id ?: return@forEach
                         val calculatedLevel = pot.level // PotInfo 내부 로직으로 계산된 값
 
@@ -130,11 +130,11 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun calculateDisplayPot(user: User, ongoingPots: List<>): Pot {
+    private fun calculateDisplayPot(user: User, ongoingPots: List<Pot>): Pot {
         val pots = ongoingPots
         return when {
-            // case 1: 화분이 아예 없는 경우
-            ongoingPots.isEmpty() -> Pot(id = "", name = "화분을 추가해주세요")
+            // case 1: 화분이 아예 없는 경우 ⭐️
+            ongoingPots.isEmpty() -> Pot.isEmpty()
             // case 2: 화분이 하나만 있는 경우
             ongoingPots.size == 1 -> ongoingPots[0]
             // case 3: 화분이 여러 개인 경우 마지막 선택한 화분 찾기

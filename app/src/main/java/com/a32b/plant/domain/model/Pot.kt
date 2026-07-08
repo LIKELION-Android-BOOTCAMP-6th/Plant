@@ -32,4 +32,18 @@ data class Pot(
         }
         return calculatedLevel.toString()
     }
+
+    companion object {
+        fun isEmpty() = Pot(
+            id = "",
+            tagId = "",
+            tagName = "",
+            name = "화분을 추가해주세요.",
+            imageUrl = "",
+            potTotalStudyingTime = 0L,
+            createdAt = null,
+            completedAt = null,
+            isCompleted = false
+        )
+    }
 }
