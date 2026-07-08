@@ -8,4 +8,16 @@ data class StudyLog(
     val createAt: Long?,
     val id: String,
     val isSelected: Boolean
-    )
+){
+    companion object{
+        fun write(title: String, contents: List<String>, time: Long) = StudyLog(
+            title = title,
+            contents = contents,
+            studyingTime = time,
+            createAt = null,
+            id = "",
+            isSelected = false
+        )
+    }
+
+}

@@ -35,7 +35,7 @@ data class StudyingUiState(
     val isStudyFinish: Boolean = false, //true시 학습 완전 종료, 디비로 값 넘기기
     val isInterruptedSession: Boolean = false, //비정상 종료 여부 체크
     val interruptedStudyLog: StudyingSession? = null,
-    val startTime: Long = 0L
+    val startTime: String = ""
 )
 
 sealed class StudyingEvent{
@@ -57,10 +57,6 @@ class StudyingViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 
 ) : ViewModel() {
-
-    private val _uiState = MutableStateFlow(StudyingUiState(tag = tag))
-    val uiState = _uiState.asStateFlow()
-
     private val _eventChannel = Channel<StudyingEvent>(Channel.BUFFERED)
     val event = _eventChannel.receiveAsFlow()
 
@@ -68,6 +64,9 @@ class StudyingViewModel @Inject constructor(
     private val title: String = savedStateHandle["title"] ?: ""
     private val potId: String = savedStateHandle["potId"] ?: ""
     private val level: String = savedStateHandle["level"] ?: ""
+
+    private val _uiState = MutableStateFlow(StudyingUiState(tag = tag))
+    val uiState = _uiState.asStateFlow()
 
     /** 비정상 종료 대비 로컬 디비에 데이터 저장   */
 
@@ -150,9 +149,9 @@ class StudyingViewModel @Inject constructor(
     fun onFinishStudyingClick() {
 
         //개별 학습 기록의 제목
-        val timestamp = "${TimeFormatter.formatToKoreanDate(LocalDateTime.now())} $startTime ~ ${getCurrentTime()}"
-        val resultTimestamp = "${TimeFormatter.formatWithDayOfWeek(LocalDateTime.now())} $startTime ~ ${getCurrentTime()}"
-        fun setStudyLog(): StudyLog = StudyLog(timestamp, _uiState.value.studyLog, _uiState.value.timer)
+        val timestamp = "${TimeFormatter.formatToKoreanDate(LocalDateTime.now())} ${_uiState.value.startTime} ~ ${getCurrentTime()}"
+        val resultTimestamp = "${TimeFormatter.formatWithDayOfWeek(LocalDateTime.now())} ${_uiState.value.startTime} ~ ${getCurrentTime()}"
+        fun setStudyLog(): StudyLog = StudyLog.write(timestamp, _uiState.value.studyLog, _uiState.value.timer)
         potRepository.createStudyLog(potId, setStudyLog())
         potRepository.updateTotalStudyTime(potId, _uiState.value.timer)
         repository.updateUserTotalStudyTime(_uiState.value.timer)
@@ -175,9 +174,7 @@ class StudyingViewModel @Inject constructor(
             ))
         }
     }
-
-
-
+    fun onStartTimeChange(value : String) = _uiState.update { it.copy(startTime = value) }
 
 
 }

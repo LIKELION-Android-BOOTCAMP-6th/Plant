@@ -82,6 +82,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
     val startTime = remember {
         val now = LocalDateTime.now()
         TimeFormatter.formatToTimeOnly(now) }
+    viewModel.onStartTimeChange(startTime)
 
     val uiState by viewModel.uiState.collectAsState()
     val timerButtonText = if (uiState.isStudying) "일시정지" else "학습하기"

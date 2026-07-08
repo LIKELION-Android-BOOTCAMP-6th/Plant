@@ -1,6 +1,7 @@
 package com.a32b.plant.data.model
 
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 
 data class StudyLogDto(
@@ -12,6 +13,6 @@ data class StudyLogDto(
     var studyingTime: Long = 0L,
     @get:PropertyName("createAt") @set:PropertyName("createAt")
     var createAt: Timestamp = Timestamp.now(),
-    @get:PropertyName("id") @set:PropertyName("id")
+    @DocumentId
     var id: String = ""
 )
