@@ -1,9 +1,5 @@
 package com.a32b.plant.domain.model
 
-/**
- UserProfile -> User로 변경
- currentPot, completedPotsCount 제거
- */
 data class User(
     val nickname: String,
     val profileImg: String,
@@ -13,7 +9,18 @@ data class User(
     val potList: List<Pot> = emptyList(),
     var isFirstLogin: Boolean?, // 회원가입 시 true 유지 -> 첫 로그인 후 닉네임 재설정 하고 false 바꾸기
     var isDarkMode: Boolean,
-    val totalStudyTime: Long
+    val totalStudyTime: Long,
+    val coin: Int,
+    val isDailyChecked: Boolean,
+    val count: Int, //출석횟수
+    //===아이템===
+    val heart: Int,
+    val sun: Int,
+    val water: Int,
+    val fertilizer: Int,
+    val nutrient: Int,
+    val box: Int,
+
 ) {
     companion object{
         fun create() = User(
@@ -22,7 +29,17 @@ data class User(
             lastSelectedPotId = "",
             isFirstLogin = true, // 회원가입 시 true 유지 -> 첫 로그인 후 닉네임 설정하면 false
             isDarkMode = false,
-            totalStudyTime = 0L
+            totalStudyTime = 0L,
+            coin = 0,
+            isDailyChecked = false,
+            count = 0,
+            heart = 0,
+            sun = 0,
+            water = 0,
+            fertilizer = 0,
+            nutrient = 0,
+            box = 0,
+
         )
     }
 }
