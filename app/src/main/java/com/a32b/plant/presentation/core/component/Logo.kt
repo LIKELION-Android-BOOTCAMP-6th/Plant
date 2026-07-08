@@ -11,7 +11,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.a32b.plant.R
-import com.a32b.plant.core.util.PlantLevel
 
 @Composable
 fun getLogoImage(){
