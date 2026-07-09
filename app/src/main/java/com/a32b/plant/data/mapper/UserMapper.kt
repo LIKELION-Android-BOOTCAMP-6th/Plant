@@ -3,12 +3,27 @@ package com.a32b.plant.data.mapper
 import com.a32b.plant.data.model.DailyCheckThisMonthDto
 import com.a32b.plant.data.model.ItemDto
 import com.a32b.plant.data.model.UserDto
+import com.a32b.plant.domain.model.DailyCheckThisMonth
+import com.a32b.plant.domain.model.Item
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.model.User
 
 /**
  User <-> UserDto
  */
+fun DailyCheckThisMonthDto.toDomain() : DailyCheckThisMonth = DailyCheckThisMonth(
+    isDailyChecked, count
+)
+fun DailyCheckThisMonth.toDto() : DailyCheckThisMonthDto = DailyCheckThisMonthDto(
+    isDailyChecked, count
+)
+
+fun ItemDto.toDomain() : Item = Item(
+    heart, sun, water, fertilizer, nutrient, box
+)
+fun Item.toDto() : ItemDto = ItemDto(
+    heart, sun, water, fertilizer, nutrient, box
+)
 
 fun UserDto.toDomain(potLIst: List<Pot>) : User = User(
     nickname = nickname,
@@ -19,14 +34,8 @@ fun UserDto.toDomain(potLIst: List<Pot>) : User = User(
     totalStudyTime = totalStudyTime,
     potList = potLIst,
     coin = coin,
-    isDailyChecked = monthCheck.isDailyChecked,
-    count = monthCheck.count,
-    heart = item.heart,
-    sun = item.sun,
-    water = item.water,
-    fertilizer = item.fertilizer,
-    nutrient = item.nutrient,
-    box = item.box
+    monthCheck = monthCheck.toDomain(),
+    item = item.toDomain()
 )
 
 fun User.toDto(): UserDto = UserDto(
@@ -37,6 +46,6 @@ fun User.toDto(): UserDto = UserDto(
     isDarkMode = isDarkMode,
     totalStudyTime = totalStudyTime,
     coin = coin,
-    monthCheck = DailyCheckThisMonthDto(isDailyChecked, count),
-    item = ItemDto(heart, sun, water, fertilizer, nutrient, box)
+    monthCheck = monthCheck.toDto(),
+    item = item.toDto()
 )

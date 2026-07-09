@@ -1,5 +1,18 @@
 package com.a32b.plant.domain.model
 
+data class DailyCheckThisMonth(
+    val isDailyChecked: Boolean,
+    val count: Int
+)
+
+data class Item(
+    val heart: Int,
+    val sun: Int,
+    val water: Int,
+    val fertilizer: Int,
+    val nutrient: Int,
+    val box: Int,
+)
 data class User(
     val nickname: String,
     val profileImg: String,
@@ -11,15 +24,10 @@ data class User(
     var isDarkMode: Boolean,
     val totalStudyTime: Long,
     val coin: Int,
-    val isDailyChecked: Boolean,
-    val count: Int, //출석횟수
+    val monthCheck: DailyCheckThisMonth,
+    val item: Item
     //===아이템===
-    val heart: Int,
-    val sun: Int,
-    val water: Int,
-    val fertilizer: Int,
-    val nutrient: Int,
-    val box: Int,
+
 
 ) {
     companion object{
@@ -31,14 +39,8 @@ data class User(
             isDarkMode = false,
             totalStudyTime = 0L,
             coin = 0,
-            isDailyChecked = false,
-            count = 0,
-            heart = 0,
-            sun = 0,
-            water = 0,
-            fertilizer = 0,
-            nutrient = 0,
-            box = 0,
+            monthCheck = DailyCheckThisMonth(false, 0),
+            item = Item(0,0,0,0,0,0)
 
         )
     }
