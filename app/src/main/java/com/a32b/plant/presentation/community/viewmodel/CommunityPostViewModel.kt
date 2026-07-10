@@ -11,8 +11,8 @@ import com.a32b.plant.domain.model.Post
 import com.a32b.plant.domain.model.PostAuthor
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.Tag
+import com.a32b.plant.domain.repository.PotRepository
 import com.a32b.plant.origin.OldPostRepository
-import com.a32b.plant.origin.OldPotRepository
 import com.google.firebase.Timestamp
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -43,10 +43,10 @@ sealed class CommunityPostEvent{
 @HiltViewModel
 class CommunityPostViewModel @Inject constructor(
     private val repository: OldPostRepository,
-    private val potRepository: OldPotRepository,
+    private val potRepository: PotRepository,
     savedStateHandle: SavedStateHandle,
 
-) : ViewModel() {
+    ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CommunityPostUiState())
     val uiState = _uiState.asStateFlow()
@@ -106,10 +106,12 @@ class CommunityPostViewModel @Inject constructor(
     }
 
     fun getStudyLog(){
+        val currentPotId = potId ?: return
+        val currentStudyLogIds = studyLogIds ?: return
         //개별 학습 기록 공유 시
         viewModelScope.launch(Dispatchers.IO) {
-            val logs = studyLogIds!!.mapNotNull { id->
-                potRepository.getSelectedStudyLog(potId!!, id)
+            val logs = studyLogIds.mapNotNull { id->
+                potRepository.getSelectedStudyLog(potId, id)
             }
             _uiState.update { it.copy(studyLogs = (it.studyLogs?:emptyList()) + logs) }
         }
@@ -136,7 +138,7 @@ class CommunityPostViewModel @Inject constructor(
     fun savePost(onComplete: (Boolean) -> Unit) {
         viewModelScope.launch {
             val isShared = _uiState.value.isShared
-
+            val selectedTag = _uiState.value.selected ?: return@launch
             try {
                 //게시글 수정
                 if (postId != null) {
@@ -146,7 +148,7 @@ class CommunityPostViewModel @Inject constructor(
                         postId = postId!!,
                         title = _uiState.value.title,
                         content = if(isShared) null else _uiState.value.content,
-                        tag = if (isShared) null else _uiState.value.selected,
+                        tag = if (isShared) null else selectedTag,
                         createdAt = if(isShared) null else Timestamp.now()
                     )
 
@@ -169,20 +171,21 @@ class CommunityPostViewModel @Inject constructor(
                             author = PostAuthor(CurrentUser.uid, CurrentUser.nickname, CurrentUser.profileImg),
                             title = _uiState.value.title,
                             studyLogs = _uiState.value.studyLogs ?: emptyList(),
-                            tag = _uiState.value.selected!!
+                            tag = selectedTag
                         )
                     } else {
                         Post.createOriginal(
                             author = PostAuthor(CurrentUser.uid, CurrentUser.nickname, CurrentUser.profileImg),
                             title = _uiState.value.title,
                             content = _uiState.value.content ?: "",
-                            tag = _uiState.value.selected!!
+                            tag = selectedTag
                         )
                     }
                     postId = repository.savePost(newPost, CommunityActivity.post(CurrentUser.uid, _uiState.value.title))
                 }
                 onComplete(true)
             } catch (e: Exception) {
+                Log.e("CommunityPostVM", "Save post failed", e)
                 onComplete(false)
             }
             _eventChannel.send(CommunityPostEvent.NavigateToDetail(postId!!))

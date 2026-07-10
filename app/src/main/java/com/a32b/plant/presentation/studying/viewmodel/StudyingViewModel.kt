@@ -8,7 +8,7 @@ import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.data.local.StudyingSession
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.StudyingUser
-import com.a32b.plant.origin.OldPotRepository
+import com.a32b.plant.domain.repository.PotRepository
 import com.a32b.plant.origin.OldStudyingRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -53,7 +53,7 @@ sealed class StudyingEvent{
 @HiltViewModel
 class StudyingViewModel @Inject constructor(
     private val repository: OldStudyingRepository,
-    private val potRepository: OldPotRepository,
+    private val potRepository: PotRepository,
     savedStateHandle: SavedStateHandle
 
 ) : ViewModel() {

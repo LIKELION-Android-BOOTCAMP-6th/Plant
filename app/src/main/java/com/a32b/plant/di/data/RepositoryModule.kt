@@ -1,5 +1,7 @@
 package com.a32b.plant.di.data
 
+import com.a32b.plant.data.datasource.pot.PotRemoteDataSource
+import com.a32b.plant.data.datasource.pot.PotRemoteDataSourceImpl
 import com.a32b.plant.data.repository.AuthRepositoryImpl
 import com.a32b.plant.data.repository.CommunityRepositoryImpl
 import com.a32b.plant.data.repository.PotRepositoryImpl

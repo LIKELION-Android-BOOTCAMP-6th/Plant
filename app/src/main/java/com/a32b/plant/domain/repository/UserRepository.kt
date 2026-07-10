@@ -8,4 +8,5 @@ interface UserRepository {
     val currentUser : StateFlow<User?>
     fun setCurrentUser(user: User)
     fun clearCurrentUser()
+    suspend fun updateLastSelectedPot(uid: String, potId: String)
 }
