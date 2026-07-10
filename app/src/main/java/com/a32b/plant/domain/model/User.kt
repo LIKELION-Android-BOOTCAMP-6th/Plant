@@ -14,6 +14,7 @@ data class Item(
     val box: Int,
 )
 data class User(
+    val uid: String,
     val nickname: String,
     val profileImg: String,
     // [추가] 마지막으로 공부를 시작했던 화분의 ID
