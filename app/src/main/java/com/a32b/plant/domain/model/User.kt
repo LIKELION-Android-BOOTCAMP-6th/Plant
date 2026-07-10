@@ -33,6 +33,7 @@ data class User(
 ) {
     companion object{
         fun create() = User(
+            uid = "", //머지 후 수정 예정
             nickname = "",
             profileImg = "",
             lastSelectedPotId = "",
