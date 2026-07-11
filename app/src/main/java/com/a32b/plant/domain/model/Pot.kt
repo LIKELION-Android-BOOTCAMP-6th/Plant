@@ -16,18 +16,19 @@ data class Pot(
     val completedAt: Long?,
     val isCompleted: Boolean
 ){
-    //레벨 업 계산
+    //레벨 업 계산 -> 시간만 변경, 아이템 획득 여부는 별도 필요
     val level: String get(){
         if (id.isNullOrEmpty()) return "EMPTY"
 
         val rawMillis = potTotalStudyingTime ?: 0L
         val hours = rawMillis / 3600000.0
         val calculatedLevel =  when {
-            hours >= 77.0 -> 5
-            hours >= 50.0 -> 4
-            hours >= 30.0 -> 3
-            hours >= 10.0 -> 2
-            hours >= 3.0 -> 1
+            hours >= 500.0 -> 6
+            hours >= 200.0 -> 5
+            hours >= 90.0 -> 4
+            hours >= 40.0 -> 3
+            hours >= 15.0 -> 2
+            hours >= 5.0 -> 1
             else -> 0
         }
         return calculatedLevel.toString()

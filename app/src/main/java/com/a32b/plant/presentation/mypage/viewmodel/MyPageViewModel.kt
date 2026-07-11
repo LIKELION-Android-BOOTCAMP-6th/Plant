@@ -6,8 +6,8 @@ import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
 import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.di.UserModel
+import com.a32b.plant.domain.repository.PotRepository
 import com.a32b.plant.origin.OldNicknameRepository
-import com.a32b.plant.origin.OldPotRepository
 import com.a32b.plant.origin.OldUserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -47,7 +47,7 @@ sealed class MyPageEvent {
 @HiltViewModel
 class MyPageViewModel @Inject constructor(
     private val userRepository: OldUserRepository,
-    private val potRepository: OldPotRepository,
+    private val potRepository: PotRepository,
     private val nicknameRepository: OldNicknameRepository,
     private val firebaseAuth: FirebaseAuth
 ) : BaseViewModel() {

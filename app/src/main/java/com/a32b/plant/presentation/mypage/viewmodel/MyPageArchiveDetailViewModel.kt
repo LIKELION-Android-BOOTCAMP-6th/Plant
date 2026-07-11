@@ -7,8 +7,8 @@ import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
 import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.model.StudyLog
+import com.a32b.plant.domain.repository.PotRepository
 import com.a32b.plant.origin.OldPostRepository
-import com.a32b.plant.origin.OldPotRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,7 +32,7 @@ data class MyPageArchiveDetailStatus(
 
 @HiltViewModel
 class MyPageArchiveDetailViewModel @Inject constructor(
-    private val potRepository: OldPotRepository,
+    private val potRepository: PotRepository,
     private val postRepository: OldPostRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {

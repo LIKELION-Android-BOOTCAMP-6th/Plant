@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.domain.model.Pot
-import com.a32b.plant.origin.OldPotRepository
+import com.a32b.plant.domain.repository.PotRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,7 +18,7 @@ data class MyPageArchiveUiState(
     val potList: List<Pot> = emptyList()
 )
 @HiltViewModel
-class MyPageArchiveViewModel @Inject constructor(private val potRepository: OldPotRepository) : ViewModel() {
+class MyPageArchiveViewModel @Inject constructor(private val potRepository: PotRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(MyPageArchiveUiState())
     val uiState = _uiState.asStateFlow()
 
