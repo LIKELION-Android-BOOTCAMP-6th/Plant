@@ -26,6 +26,7 @@ fun Item.toDto() : ItemDto = ItemDto(
 )
 
 fun UserDto.toDomain(potLIst: List<Pot>) : User = User(
+    uid = uid,
     nickname = nickname,
     profileImg = profileImg,
     lastSelectedPotId = lastSelectedPotId,
@@ -39,6 +40,7 @@ fun UserDto.toDomain(potLIst: List<Pot>) : User = User(
 )
 
 fun User.toDto(): UserDto = UserDto(
+    uid = uid,
     nickname = nickname,
     profileImg = profileImg,
     lastSelectedPotId = lastSelectedPotId,
