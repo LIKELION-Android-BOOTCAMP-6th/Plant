@@ -24,12 +24,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -40,27 +43,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.a32b.plant.presentation.core.component.ProfileImage
-import com.a32b.plant.presentation.mypage.viewmodel.MyPageViewModel
-import com.a32b.plant.presentation.theme.Typography
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageEvent
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageUiState
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Surface
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.ui.draw.scale
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.mypage.viewmodel.MyPageViewModel
 import com.a32b.plant.presentation.theme.PlantTheme
+import com.a32b.plant.presentation.theme.Typography
 
 
 @Composable
@@ -68,6 +68,8 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
     val uiState by viewModel.uiState.collectAsState()
     // 로그아웃 확인 다이얼로그 상태
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var isDeleteSecondConfirm by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     PlantTheme(darkTheme = uiState.isDarkMode) {
@@ -103,6 +105,29 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                 }
             )
         }
+
+        if (showDeleteDialog) {
+            ConfirmDialog(
+                text = if (isDeleteSecondConfirm) "정말로 탈퇴하시겠습니까?"
+                else "탈퇴 하시겠습니까?",
+                semiText =
+                    if (isDeleteSecondConfirm) "탈퇴 시 모든 학습 기록이 삭제되며 복구할 수 없습니다."
+                    else "계정을 삭제하시려면 '예'를 눌러주세요.",
+                onDismiss = {
+                    showDeleteDialog = false
+                    isDeleteSecondConfirm = false
+                },
+                onConfirm = {
+                    if (isDeleteSecondConfirm) {
+                        showDeleteDialog = false
+                        isDeleteSecondConfirm = false
+                        viewModel.deleteAccount()
+                    } else {
+                        isDeleteSecondConfirm = true
+                    }
+                }
+            )
+        }
         Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.background) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // 프로필, 닉네임, 총 공부시간
@@ -132,12 +157,14 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                             viewModel.toggleDarkMode()
                         }
                     )
-//------------------로그아웃
-
+// 계정 관리 버튼
                     ButtonTemplate(text = "로그아웃") {
                         showLogoutDialog = true
                     }
-//로그아웃------------------
+                    ButtonTemplate(text = "회원탈퇴") {
+                        isDeleteSecondConfirm = false
+                        showDeleteDialog = true
+                    }
                 }
             }
         }
@@ -475,7 +502,13 @@ fun ProfileDialog(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
                             contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                         )
-                    ) { Text("취소", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondaryContainer) }
+                    ) {
+                        Text(
+                            "취소",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
 
                     Button(
                         onClick = {

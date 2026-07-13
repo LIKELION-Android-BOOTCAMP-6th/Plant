@@ -7,17 +7,18 @@ import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
 import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.di.UserModel
 import com.a32b.plant.domain.repository.PotRepository
+import com.a32b.plant.domain.usecase.mypage.DeleteAccountUseCase
 import com.a32b.plant.origin.OldNicknameRepository
 import com.a32b.plant.origin.OldUserRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 
@@ -49,7 +50,8 @@ class MyPageViewModel @Inject constructor(
     private val userRepository: OldUserRepository,
     private val potRepository: PotRepository,
     private val nicknameRepository: OldNicknameRepository,
-    private val firebaseAuth: FirebaseAuth
+    private val firebaseAuth: FirebaseAuth,
+    private val deleteAccountUseCase: DeleteAccountUseCase
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow(MyPageUiState())
     val uiState = _uiState.asStateFlow()
@@ -144,7 +146,7 @@ class MyPageViewModel @Inject constructor(
                 val currentNickname = _uiState.value.nickname
 //                 닉네임 같으면 프로필 사진만 변경하려는 의도로 판단
                 if (nickname != currentNickname) {
-////                 닉네임 중복 검사
+//                 닉네임 중복 검사
                     if (nicknameRepository.isNicknameTaken(nickname)) {
                         notifyUpdateFailure("이미 사용중인 닉네임입니다")
                         return@launch
@@ -167,9 +169,12 @@ class MyPageViewModel @Inject constructor(
                     )
                 }
 
-                CurrentUser.set(UserModel(
-                    nickname = nickname,
-                    profileImg = imageLevel))
+                CurrentUser.set(
+                    UserModel(
+                        nickname = nickname,
+                        profileImg = imageLevel
+                    )
+                )
 
 //                CurrentUser.nickname = nickname
 //                CurrentUser.profileImg = imageLevel
@@ -247,6 +252,26 @@ class MyPageViewModel @Inject constructor(
     fun moveToMyCommunityFeed() {
         viewModelScope.launch {
             _eventChannel.send(MyPageEvent.NavigateToMyCommunityFeed)
+        }
+    }
+
+    fun deleteAccount() {
+        viewModelScope.launch {
+            deleteAccountUseCase()
+                .onSuccess {
+                    _eventChannel.send(MyPageEvent.ShowToast("회원탈퇴가 완료되었습니다."))
+                    _eventChannel.send(MyPageEvent.NavigateToSignIn)
+                }
+                .onFailure { e ->
+                    Log.e("MyPage", "회원탈퇴 실패: ${e.message}", e)
+                    val message = if (e.message?.contains("RECENT_LOGIN_REQUIRED") == true) {
+                        "보안을 위해 재로그인 후 다시 시도해주세요"
+                    } else {
+                        e.message ?: "회원탈퇴에 실패했습니다. 다시 시도해주세요."
+                    }
+
+                    _eventChannel.send(MyPageEvent.ShowToast(message))
+                }
         }
     }
 
