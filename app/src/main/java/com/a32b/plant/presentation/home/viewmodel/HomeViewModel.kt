@@ -34,11 +34,53 @@ class HomeViewModel @Inject constructor(
     private val _tempSelectedPot = MutableStateFlow<Pot?>(null)
     val tempSelectedPot = _tempSelectedPot.asStateFlow()
 
+    //에러 상태
+    private val _isLoginError = MutableStateFlow(false)
+    val isLoginError = _isLoginError.asStateFlow()
+
     init {
         loadActivePot()
         loadAllPots()
+        observeUserData()
+        checkUserAndLoadData()
     }
+    private fun checkUserAndLoadData() {
+        viewModelScope.launch {
+            // 유저 리포지토리의 현재 유저 상태를 확인
+            val user = userRepository.currentUser.value
+            if (user == null || user.uid.isEmpty()) {
+                _isLoginError.value = true // 로그인 실패 상태로 전환
+            } else {
+                loadData(user.uid)
+            }
+        }
+    }
+    private fun observeUserData() {
+        viewModelScope.launch {
+            userRepository.currentUser.collectLatest { user ->
+                // user가 null이 아니고 uid가 있을 때만 데이터 로드 시작
+                user?.let {
+                    loadData(it.uid)
+                }
+            }
+        }
+    }
+    private fun loadData(uid: String) {
+        val lastId = userRepository.currentUser.value?.lastSelectedPotId ?: ""
 
+        viewModelScope.launch {
+            // 화분 목록 로드
+            getPotListUseCase(uid).collect { _allPots.value = it }
+        }
+
+        viewModelScope.launch {
+            // 현재 화분 로드
+            getActivePotUseCase(uid, lastId).collect {
+                _displayPot.value = it
+                loaded()
+            }
+        }
+    }
     private fun loadActivePot() {
         viewModelScope.launch {
             val uid = CurrentUser.uid
