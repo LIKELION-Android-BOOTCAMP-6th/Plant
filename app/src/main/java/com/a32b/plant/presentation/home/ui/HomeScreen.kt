@@ -23,12 +23,23 @@ import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
 
 @Composable
 fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltViewModel()) {
+    val isLoginError by viewModel.isLoginError.collectAsState()
+
     // 상태
     val displayPot by viewModel.displayPot.collectAsState()
     val showDialog by viewModel.showPotChangeDialog.collectAsState()
     val allPots by viewModel.allPots.collectAsState()
-
-    LoadableScreen(viewModel) {
+    if (isLoginError) {
+        // 로그인 에러 시 보여줄 화면
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                text = "정보를 가져오는데 실패했어요.\n앱 종료 후 다시 실행해주세요.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+    } else {
+        LoadableScreen(viewModel) {
         val displayPot by viewModel.displayPot.collectAsState()
 
         Scaffold(
@@ -69,6 +80,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                 )
             }
         }
+    }
     }
 }
 
