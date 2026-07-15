@@ -78,7 +78,8 @@ class MyPageViewModel @Inject constructor(
                     loaded()
 
                 } else {
-                    Log.e("error", "-----------사용자 정보 없음")
+                    Log.e("error", "-----사용자 정보 없음")
+                    loaded()
                 }
             }
         }

@@ -19,8 +19,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -48,6 +50,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -55,6 +58,7 @@ import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageEvent
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageUiState
@@ -70,6 +74,8 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var isDeleteSecondConfirm by remember { mutableStateOf(false) }
+    // 프로필 수정 다이얼로그 상태
+    var showProfileDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     PlantTheme(darkTheme = uiState.isDarkMode) {
@@ -128,46 +134,135 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                 }
             )
         }
-        Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.background) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                // 프로필, 닉네임, 총 공부시간
-                ProfileRow(uiState = uiState, viewModel = viewModel)
 
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    GrownTreesButton(completedPotCount = uiState.completedPotCount) {
-                        navController.navigate(Routes.MyPageArchive)
-                    }
-                    DividerImage()
-                    ButtonTemplate(text = "내 활동") {
-                        viewModel.moveToMyCommunityFeed()
-                    }
-                    ButtonTemplate(text = "앱 설정") {
-                        navController.navigate(Routes.MyPageSetting)
-                    }
-//            ButtonTemplate(text = "공지사항") { }
-//            ButtonTemplate(text = "비밀번호 재설정") { }
-                    DarkModeToggleButton(
-                        isDarkMode = uiState.isDarkMode,
-                        onToggle = {
-                            viewModel.toggleDarkMode()
-                        }
-                    )
-// 계정 관리 버튼
-                    ButtonTemplate(text = "로그아웃") {
-                        showLogoutDialog = true
-                    }
-                    ButtonTemplate(text = "회원탈퇴") {
-                        isDeleteSecondConfirm = false
-                        showDeleteDialog = true
-                    }
+        if (showProfileDialog) {
+            ProfileDialog(
+                onDismiss = {
+                    viewModel.clearProfileState()
+                    showProfileDialog = false
+                },
+                uiState = uiState,
+                viewModel = viewModel
+            )
+        }
+        LoadableScreen(viewModel) {
+            MyPageContent(
+                uiState = uiState,
+                onProfileClick = {
+                    viewModel.getImageLevelList()
+                    showProfileDialog = true
+                },
+                onArchiveClick = {
+                    navController.navigate(Routes.MyPageArchive)
+                },
+                onMyActivityClick = {
+                    viewModel.moveToMyCommunityFeed()
+                },
+                onSettingClick = {
+                    navController.navigate(Routes.MyPageSetting)
+                },
+                onDarkModeToggle = {
+                    viewModel.toggleDarkMode()
+                },
+                onGuideClick = {
+                    Toast.makeText(context, "준비 중입니다.", Toast.LENGTH_SHORT).show()
+                },
+                onTermsClick = {
+                    Toast.makeText(context, "준비 중입니다.", Toast.LENGTH_SHORT).show()
+                },
+                onPrivacyClick = {
+                    Toast.makeText(context, "준비 중입니다.", Toast.LENGTH_SHORT).show()
+                },
+                onLogoutClick = {
+                    showLogoutDialog = true
+                },
+                onDeleteAccountClick = {
+                    isDeleteSecondConfirm = false
+                    showDeleteDialog = true
                 }
+            )
+        }
+
+    }
+}
+
+
+@Composable
+private fun MyPageContent(
+    uiState: MyPageUiState,
+    onProfileClick: () -> Unit,
+    onArchiveClick: () -> Unit,
+    onMyActivityClick: () -> Unit,
+    onSettingClick: () -> Unit,
+    onDarkModeToggle: () -> Unit,
+    onGuideClick: () -> Unit,
+    onTermsClick: () -> Unit,
+    onPrivacyClick: () -> Unit,
+    onLogoutClick: () -> Unit,
+    onDeleteAccountClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            ProfileRow(
+                uiState = uiState,
+                onProfileClick = onProfileClick
+            )
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                GrownTreesButton(
+                    completedPotCount = uiState.completedPotCount,
+                    onClick = onArchiveClick
+                )
+                DividerImage()
+                ButtonTemplate(text = "내 활동", onClick = onMyActivityClick)
+                ButtonTemplate(text = "앱 설정", onClick = onSettingClick)
+                DarkModeToggleButton(
+                    isDarkMode = uiState.isDarkMode,
+                    onToggle = onDarkModeToggle
+                )
+                ButtonTemplate(text = "사용 가이드", onClick = onGuideClick)
+                ButtonTemplate(text = "서비스 이용약관", onClick = onTermsClick)
+                ButtonTemplate(text = "개인정보처리방침", onClick = onPrivacyClick)
+                ButtonTemplate(text = "로그아웃", onClick = onLogoutClick)
+                ButtonTemplate(text = "회원탈퇴", onClick = onDeleteAccountClick)
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun MyPageContentPreview() {
+    PlantTheme {
+        MyPageContent(
+            uiState = MyPageUiState(
+                nickname = "USER",
+                profileImg = "1",
+                isDarkMode = false,
+                totalStudyTime = "4시간 10분",
+                completedPotCount = 6
+            ),
+            onProfileClick = {},
+            onArchiveClick = {},
+            onMyActivityClick = {},
+            onSettingClick = {},
+            onDarkModeToggle = {},
+            onGuideClick = {},
+            onTermsClick = {},
+            onPrivacyClick = {},
+            onLogoutClick = {},
+            onDeleteAccountClick = {}
+        )
     }
 }
 
@@ -285,9 +380,10 @@ fun ButtonTemplate(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun ProfileRow(uiState: MyPageUiState, viewModel: MyPageViewModel) {
-    var isOpenDialog by remember { mutableStateOf(false) }
-
+fun ProfileRow(
+    uiState: MyPageUiState,
+    onProfileClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -296,10 +392,7 @@ fun ProfileRow(uiState: MyPageUiState, viewModel: MyPageViewModel) {
     ) {
         Box(
             modifier = Modifier
-                .clickable {
-                    viewModel.getImageLevelList()
-                    isOpenDialog = true
-                }
+                .clickable { onProfileClick() }
         ) {
 
             ProfileImage(
@@ -350,17 +443,6 @@ fun ProfileRow(uiState: MyPageUiState, viewModel: MyPageViewModel) {
                 )
             }
         }
-    }
-
-    if (isOpenDialog) {
-        ProfileDialog(
-            onDismiss = {
-                viewModel.clearProfileState()
-                isOpenDialog = false
-            },
-            uiState = uiState,
-            viewModel = viewModel
-        )
     }
 }
 
@@ -421,7 +503,7 @@ fun ProfileDialog(
     // 다이얼로그 안에서만 임시로 쓸 상태들 (입력 중인 값)
     var newUserName by remember { mutableStateOf(uiState.nickname) }
     var selectedImageLevel by remember { mutableStateOf(uiState.profileImg) }
-    1
+
     val context = LocalContext.current
 
     // 업데이트 성공 시 창 닫기 로직
