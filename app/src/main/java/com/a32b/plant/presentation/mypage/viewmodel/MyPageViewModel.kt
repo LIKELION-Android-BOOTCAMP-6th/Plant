@@ -8,9 +8,9 @@ import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.di.UserModel
 import com.a32b.plant.domain.repository.PotRepository
 import com.a32b.plant.domain.usecase.mypage.DeleteAccountUseCase
+import com.a32b.plant.domain.usecase.mypage.LogoutUseCase
 import com.a32b.plant.origin.OldNicknameRepository
 import com.a32b.plant.origin.OldUserRepository
-import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,8 +50,8 @@ class MyPageViewModel @Inject constructor(
     private val userRepository: OldUserRepository,
     private val potRepository: PotRepository,
     private val nicknameRepository: OldNicknameRepository,
-    private val firebaseAuth: FirebaseAuth,
-    private val deleteAccountUseCase: DeleteAccountUseCase
+    private val deleteAccountUseCase: DeleteAccountUseCase,
+    private val logoutUseCase: LogoutUseCase
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow(MyPageUiState())
     val uiState = _uiState.asStateFlow()
@@ -239,14 +239,15 @@ class MyPageViewModel @Inject constructor(
     }
 
     fun logout() {
-        // auth.signOut(): Firebase Auth 세션 제거 -> 다음 앱 실행 시 auth.currentUser == null -> 스플래시 to 로그인 화면
-//        auth.signOut()
-        firebaseAuth.signOut()
-        // CurrentUser.clear(): 앱 메모리(CurrentUser 내 uid, nickname, profileImg 초기화
-        CurrentUser.clear()
-        // 로그인 화면 이동
         viewModelScope.launch {
-            _eventChannel.send(MyPageEvent.NavigateToSignIn)
+            logoutUseCase()
+                .onSuccess {
+                    _eventChannel.send(MyPageEvent.NavigateToSignIn)
+                }
+                .onFailure { e ->
+                    Log.e("MyPage", "로그아웃 실패: ${e.message}", e)
+                    _eventChannel.send(MyPageEvent.ShowToast("로그아웃에 실패했습니다. 다시 시도해주세요."))
+                }
         }
     }
 
