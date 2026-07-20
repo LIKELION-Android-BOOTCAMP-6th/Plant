@@ -1,0 +1,194 @@
+package com.a32b.plant.presentation.community.viewmodel
+
+import android.util.Log
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.a32b.plant.domain.type.ActivityType
+import com.a32b.plant.di.CurrentUser
+import com.a32b.plant.domain.model.CommunityActivity
+import com.a32b.plant.domain.model.Post
+import com.a32b.plant.domain.model.PostAuthor
+import com.a32b.plant.domain.model.StudyLog
+import com.a32b.plant.domain.model.Tag
+import com.a32b.plant.domain.repository.PotRepository
+import com.a32b.plant.origin.OldPostRepository
+import com.google.firebase.Timestamp
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+data class CommunityPostUiState(
+    val postId: String? = null,
+    val title: String = "",
+    val content: String? = null,
+    val selected: Tag? = null,
+    val potId: String? = null,
+    val studyLogs: List<StudyLog>? = null,
+    val isDismissDialogShow: Boolean = false,
+    val isShared: Boolean = false,
+    val tags: List<Tag> = emptyList(),
+    val isTagSheetShown: Boolean = false
+)
+sealed class CommunityPostEvent{
+    data class NavigateToDetail(val postId: String) : CommunityPostEvent()
+}
+@HiltViewModel
+class CommunityPostViewModel @Inject constructor(
+    private val repository: OldPostRepository,
+    private val potRepository: PotRepository,
+    savedStateHandle: SavedStateHandle,
+
+    ) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(CommunityPostUiState())
+    val uiState = _uiState.asStateFlow()
+
+    private val _eventChannel = Channel<CommunityPostEvent>(Channel.BUFFERED)
+    val event = _eventChannel.receiveAsFlow()
+
+    private var postId: String? = savedStateHandle["postId"]
+    private val potId: String? = savedStateHandle["potId"]
+    private val title: String? = savedStateHandle["title"]
+    private val studyLogIds: List<String>? = savedStateHandle["studyLogIds"]
+    private val tagId: String? = savedStateHandle["tagId"]
+
+    init {
+        fetchTags()
+        onIsSharedChange()
+    }
+    fun onIsTagSheetShownChange() {
+        if (!_uiState.value.isShared) {
+            _uiState.update { it.copy(isTagSheetShown = !_uiState.value.isTagSheetShown) }
+        }
+    }
+    private fun fetchTags(){
+        viewModelScope.launch(Dispatchers.IO) {
+            val fetchedTags = repository.getTag()
+            _uiState.update { it.copy(tags = fetchedTags) }
+            matchSelectedTag()
+
+        }
+    }
+    fun matchSelectedTag(){
+        val idToMatch = tagId ?: return // tagId가 없으면 중단
+
+        //!! 제거: find 결과를 안전하게 처리
+        val foundTag = _uiState.value.tags.find { it.id == idToMatch }
+        foundTag?.let {
+            _uiState.update { state -> state.copy(selected = it)}
+        } ?: run {
+            Log.e("CommunityPostVM", "전달된 tagId($idToMatch)를 tags 리스트에서 찾을 수 없습니다.")
+        }
+    }
+    // ✅ 기존 글을 불러오는 함수
+    fun getPost(postId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.getPostDetail(postId).firstOrNull()?.let { post ->
+                Log.d("getPost", post.tag.toString())
+                if (post.isShared?:false){
+                    _uiState.update { it.copy(isShared = true,postId = post.postId,title = post.title, studyLogs = post.studyLogs, selected = post.tag) }
+
+                }
+                else{
+                    _uiState.update { it.copy( postId = post.postId,title = post.title, content = post.content, selected = post.tag) }
+                }
+            }
+
+        }
+    }
+
+    fun getStudyLog(){
+        val currentPotId = potId ?: return
+        val currentStudyLogIds = studyLogIds ?: return
+        //개별 학습 기록 공유 시
+        viewModelScope.launch(Dispatchers.IO) {
+            val logs = studyLogIds.mapNotNull { id->
+                potRepository.getSelectedStudyLog(potId, id)
+            }
+            _uiState.update { it.copy(studyLogs = (it.studyLogs?:emptyList()) + logs) }
+        }
+    }
+    fun getTags(list: List<Tag>) = _uiState.update { it.copy(tags = list) }
+    fun onTitleChange(title: String) = _uiState.update { it.copy(title = title) }
+    fun onContentChange(content: String) = _uiState.update { it.copy(content = content) }
+
+    fun onSelectedTagChange(tag:Tag) {
+        if (!_uiState.value.isShared) {
+            _uiState.update { it.copy(selected = tag) }
+        }
+    }
+    fun onIsDismissDialogShowChange() = _uiState.update { it.copy(isDismissDialogShow = !it.isDismissDialogShow) }
+
+    fun onIsSharedChange(){
+        potId?.let {
+            _uiState.update { it.copy(isShared = true) }
+            getStudyLog()
+            title?.let { onTitleChange(it) }
+        }
+    }
+
+    fun savePost(onComplete: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val isShared = _uiState.value.isShared
+            val selectedTag = _uiState.value.selected ?: return@launch
+            try {
+                //게시글 수정
+                if (postId != null) {
+                    //게시글이 공유글인지 판별 후
+                    repository.updatePost(
+                        isShared = isShared,
+                        postId = postId!!,
+                        title = _uiState.value.title,
+                        content = if(isShared) null else _uiState.value.content,
+                        tag = if (isShared) null else selectedTag,
+                        createdAt = if(isShared) null else Timestamp.now()
+                    )
+
+
+                } else {
+//                     ✅ 새 글 작성 모드
+//                    val newPost = Post(
+//                        author = PostAuthor(
+//                            CurrentUser.uid,
+//                            CurrentUser.nickname,
+//                            CurrentUser.profileImg),
+//                        title = _uiState.value.title,
+//                        content = if(isShared) null else _uiState.value.content,
+//                        studyLogs = if(isShared)_uiState.value.studyLogs else null,
+//                        tag = _uiState.value.selected,
+//                        isShared = _uiState.value.isShared
+//                    )
+                    val newPost = if (isShared) {
+                        Post.createShared(
+                            author = PostAuthor(CurrentUser.uid, CurrentUser.nickname, CurrentUser.profileImg),
+                            title = _uiState.value.title,
+                            studyLogs = _uiState.value.studyLogs ?: emptyList(),
+                            tag = selectedTag
+                        )
+                    } else {
+                        Post.createOriginal(
+                            author = PostAuthor(CurrentUser.uid, CurrentUser.nickname, CurrentUser.profileImg),
+                            title = _uiState.value.title,
+                            content = _uiState.value.content ?: "",
+                            tag = selectedTag
+                        )
+                    }
+                    postId = repository.savePost(newPost, CommunityActivity.post(CurrentUser.uid, _uiState.value.title))
+                }
+                onComplete(true)
+            } catch (e: Exception) {
+                Log.e("CommunityPostVM", "Save post failed", e)
+                onComplete(false)
+            }
+            _eventChannel.send(CommunityPostEvent.NavigateToDetail(postId!!))
+        }
+    }
+}
