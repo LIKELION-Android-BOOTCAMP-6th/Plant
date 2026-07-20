@@ -5,11 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.di.CurrentUser
-import com.a32b.plant.data.local.StudyingSession
+import com.a32b.plant.data.model.StudyingSession
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.domain.repository.PotRepository
-import com.a32b.plant.origin.OldStudyingRepository
+import com.a32b.plant.domain.repository.StudyingRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -35,7 +35,8 @@ data class StudyingUiState(
     val isStudyFinish: Boolean = false, //true시 학습 완전 종료, 디비로 값 넘기기
     val isInterruptedSession: Boolean = false, //비정상 종료 여부 체크
     val interruptedStudyLog: StudyingSession? = null,
-    val startTime: String = ""
+    val startTime: String = "",
+    val isLoading: Boolean = false
 )
 
 sealed class StudyingEvent{
@@ -52,7 +53,7 @@ sealed class StudyingEvent{
 }
 @HiltViewModel
 class StudyingViewModel @Inject constructor(
-    private val repository: OldStudyingRepository,
+    private val repository: StudyingRepository,
     private val potRepository: PotRepository,
     savedStateHandle: SavedStateHandle
 

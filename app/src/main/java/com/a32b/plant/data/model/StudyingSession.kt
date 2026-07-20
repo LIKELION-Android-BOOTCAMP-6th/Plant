@@ -1,4 +1,4 @@
-package com.a32b.plant.data.local
+package com.a32b.plant.data.model
 
 data class StudyingSession(
     val userId : String? = null,
