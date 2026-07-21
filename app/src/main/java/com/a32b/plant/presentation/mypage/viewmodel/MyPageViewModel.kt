@@ -4,13 +4,12 @@ import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
-import com.a32b.plant.di.CurrentUser
-import com.a32b.plant.di.UserModel
-import com.a32b.plant.domain.repository.PotRepository
 import com.a32b.plant.domain.usecase.mypage.DeleteAccountUseCase
+import com.a32b.plant.domain.usecase.mypage.GetMyPageProfileUseCase
+import com.a32b.plant.domain.usecase.mypage.GetProfileImageLevelListUseCase
 import com.a32b.plant.domain.usecase.mypage.LogoutUseCase
-import com.a32b.plant.origin.OldNicknameRepository
-import com.a32b.plant.origin.OldUserRepository
+import com.a32b.plant.domain.usecase.mypage.UpdateDarkModeUseCase
+import com.a32b.plant.domain.usecase.mypage.UpdateProfileUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,7 +35,6 @@ data class MyPageUiState(
     val isLoading: Boolean = false,
     val nicknameError: String? = null,
     val totalStudyTime: String = "0시간 0분",
-    val completedPotCount: Int = 0,
 )
 
 sealed class MyPageEvent {
@@ -47,11 +45,12 @@ sealed class MyPageEvent {
 
 @HiltViewModel
 class MyPageViewModel @Inject constructor(
-    private val userRepository: OldUserRepository,
-    private val potRepository: PotRepository,
-    private val nicknameRepository: OldNicknameRepository,
     private val deleteAccountUseCase: DeleteAccountUseCase,
-    private val logoutUseCase: LogoutUseCase
+    private val getMyPageProfileUseCase: GetMyPageProfileUseCase,
+    private val getProfileImageLevelListUseCase: GetProfileImageLevelListUseCase,
+    private val logoutUseCase: LogoutUseCase,
+    private val updateDarkModeUseCase: UpdateDarkModeUseCase,
+    private val updateProfileUseCase: UpdateProfileUseCase
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow(MyPageUiState())
     val uiState = _uiState.asStateFlow()
@@ -62,7 +61,7 @@ class MyPageViewModel @Inject constructor(
     init {
         viewModelScope.launch {
 //            potRepository.createPot()
-            userRepository.getUserProfile(CurrentUser.uid).collectLatest { profile ->
+            getMyPageProfileUseCase().collectLatest { profile ->
                 if (profile != null) {
                     _uiState.update {
                         it.copy(
@@ -72,11 +71,8 @@ class MyPageViewModel @Inject constructor(
                             totalStudyTime = formatToDigitalClock(profile.totalStudyTime ?: 0L)
                         )
                     }
-                    getCompletedPotCount()
-
                     // 빈화면 -> 홈화면
                     loaded()
-
                 } else {
                     Log.e("error", "-----사용자 정보 없음")
                     loaded()
@@ -85,82 +81,25 @@ class MyPageViewModel @Inject constructor(
         }
     }
 
-    // 사용자의 완료 화분 개수 구해 _uiState.completedPotCount 에 넣기
-    fun getCompletedPotCount() {
-        viewModelScope.launch {
-            try {
-                val myPotList = userRepository.getUsersPots(CurrentUser.uid)
-                _uiState.update { it ->
-                    it.copy(
-                        completedPotCount = myPotList.count { it.isCompleted }
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e("error", e.message.toString())
-            }
-        }
-    }
-
     // 보유한 레벨 중복 제거 레벨 리스트 가져오기
     fun getImageLevelList() {
         viewModelScope.launch {
-            val resultList = potRepository.getDuplicationLevelList(CurrentUser.uid).toMutableList()
-            if (resultList.isEmpty()) {
-                resultList.add("")
-            }
-            _uiState.update { it.copy(levelList = resultList) }
-        }
-    }
-
-    // 닉네임 검사용 2~10글자 허용
-    private fun checkNicknameValidation(text: String): String? {
-        val len = text.length
-        return if (len !in 2..10) {
-            "닉네임은 2자 이상 10자 이하로 입력해주세요"
-        } else {
-            null
+            val levelList = getProfileImageLevelListUseCase()
+            _uiState.update { it.copy(levelList = levelList) }
         }
     }
 
     fun updateProfile(nickname: String, imageLevel: String) {
-        val validationResult = checkNicknameValidation(nickname)
         val currentNickname = uiState.value.nickname
         val currentImage = uiState.value.profileImg
 
-        // 닉네임과 이미지가 모두 현재 같으면 막기
-        if (nickname == currentNickname && imageLevel == currentImage) {
-            notifyUpdateFailure("변경사항이 없습니다.")
-            return
-        }
-
-        if (validationResult != null) {
-            notifyUpdateFailure(validationResult)
-            return
-        }
-
-
-        if (nickname == uiState.value.nickname && imageLevel == uiState.value.profileImg) {
-            clearProfileState()
-        }
         viewModelScope.launch {
-            try {
-                val currentNickname = _uiState.value.nickname
-//                 닉네임 같으면 프로필 사진만 변경하려는 의도로 판단
-                if (nickname != currentNickname) {
-//                 닉네임 중복 검사
-                    if (nicknameRepository.isNicknameTaken(nickname)) {
-                        notifyUpdateFailure("이미 사용중인 닉네임입니다")
-                        return@launch
-                    }
-                    nicknameRepository.registerNickname(nickname)
-                    nicknameRepository.deleteNickname(currentNickname)
-                }
-
-                userRepository.updateNicknameAndImage(
-                    CurrentUser.uid,
-                    nickname,
-                    imageLevel
-                )
+            updateProfileUseCase(
+                currentNickname = currentNickname,
+                currentImageLevel = currentImage,
+                newNickname = nickname,
+                newImageLevel = imageLevel
+            ).onSuccess {
                 _uiState.update {
                     it.copy(
                         nickname = nickname,
@@ -169,20 +108,9 @@ class MyPageViewModel @Inject constructor(
                         nicknameError = null
                     )
                 }
-
-                CurrentUser.set(
-                    UserModel(
-                        nickname = nickname,
-                        profileImg = imageLevel
-                    )
-                )
-
-//                CurrentUser.nickname = nickname
-//                CurrentUser.profileImg = imageLevel
-
-            } catch (e: Exception) {
-                Log.e("error", e.message.toString())
-                notifyUpdateFailure("업데이트 중 오류가 발생했습니다")
+            }.onFailure { e ->
+                Log.e("MyPage", "프로필 수정 실패: ${e.message}", e)
+                notifyUpdateFailure(e.message ?: "업데이트 중 오류가 발생했습니다")
             }
         }
     }
@@ -226,15 +154,13 @@ class MyPageViewModel @Inject constructor(
     fun toggleDarkMode() {
         val state = !uiState.value.isDarkMode
         viewModelScope.launch {
-            try {
-                userRepository.updateIsDarkMode(
-                    uid = CurrentUser.uid,
-                    state = state
-                )
-                _uiState.update { it.copy(isDarkMode = state) }
-            } catch (e: Exception) {
-                Log.e("error", e.message.toString())
-            }
+            updateDarkModeUseCase(state)
+                .onSuccess {
+                    _uiState.update { it.copy(isDarkMode = state) }
+                }
+                .onFailure { e ->
+                    Log.e("MyPage", "다크모드 변경 실패: ${e.message}", e)
+                }
         }
     }
 

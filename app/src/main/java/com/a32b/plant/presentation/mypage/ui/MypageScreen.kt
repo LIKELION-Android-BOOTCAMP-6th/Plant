@@ -152,9 +152,6 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                     viewModel.getImageLevelList()
                     showProfileDialog = true
                 },
-                onArchiveClick = {
-                    navController.navigate(Routes.MyPageArchive)
-                },
                 onMyActivityClick = {
                     viewModel.moveToMyCommunityFeed()
                 },
@@ -191,7 +188,6 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
 private fun MyPageContent(
     uiState: MyPageUiState,
     onProfileClick: () -> Unit,
-    onArchiveClick: () -> Unit,
     onMyActivityClick: () -> Unit,
     onSettingClick: () -> Unit,
     onDarkModeToggle: () -> Unit,
@@ -219,10 +215,6 @@ private fun MyPageContent(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                GrownTreesButton(
-                    completedPotCount = uiState.completedPotCount,
-                    onClick = onArchiveClick
-                )
                 DividerImage()
                 ButtonTemplate(text = "내 활동", onClick = onMyActivityClick)
                 ButtonTemplate(text = "앱 설정", onClick = onSettingClick)
@@ -249,11 +241,9 @@ private fun MyPageContentPreview() {
                 nickname = "USER",
                 profileImg = "1",
                 isDarkMode = false,
-                totalStudyTime = "4시간 10분",
-                completedPotCount = 6
+                totalStudyTime = "4시간 10분"
             ),
             onProfileClick = {},
-            onArchiveClick = {},
             onMyActivityClick = {},
             onSettingClick = {},
             onDarkModeToggle = {},
@@ -311,45 +301,6 @@ fun DarkModeToggleButton(
         }
     }
 }
-
-@Composable
-fun GrownTreesButton(
-    completedPotCount: Int, onClick: () -> Unit
-) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(50.dp),
-        shape = RoundedCornerShape(8.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-        ),
-        elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 2.dp,
-        )
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-
-        ) {
-            Text(
-                text = "기른 나무 수",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = "$completedPotCount 그루",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-    }
-}
-
 
 @Composable
 fun ButtonTemplate(text: String, onClick: () -> Unit) {
