@@ -10,6 +10,7 @@ import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.domain.repository.PotRepository
 import com.a32b.plant.domain.repository.StudyingRepository
+import com.a32b.plant.domain.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -54,7 +55,7 @@ sealed class StudyingEvent{
 @HiltViewModel
 class StudyingViewModel @Inject constructor(
     private val repository: StudyingRepository,
-    private val potRepository: PotRepository,
+    private val userRepository: UserRepository,
     savedStateHandle: SavedStateHandle
 
 ) : ViewModel() {
@@ -69,13 +70,16 @@ class StudyingViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(StudyingUiState(tag = tag))
     val uiState = _uiState.asStateFlow()
 
+    private val currentUser = userRepository.currentUser
+
+
     /** 비정상 종료 대비 로컬 디비에 데이터 저장   */
 
     fun saveSession(){
         viewModelScope.launch(Dispatchers.IO) {
             while (_uiState.value.isStudying){
                 delay(5000L)
-                repository.saveSession(StudyingSession(CurrentUser.uid, tag, title, potId, _uiState.value.timer))
+                repository.saveLocalSession(StudyingSession(currentUser.value?.uid, tag, title, potId, _uiState.value.timer))
             }
         }
     }
@@ -83,7 +87,10 @@ class StudyingViewModel @Inject constructor(
     /** db에서 같은 태그로 공부중인 사용자 데이터 가져오기 */
     fun onStudyingUsersChange(){
         viewModelScope.launch(Dispatchers.IO) {
-            _uiState.update { it.copy(studyingUsers = repository.getStudyingUser(tag)) }
+            repository.observeStudyingUser(tag)
+                .collect { users ->
+                    _uiState.update { it.copy(studyingUsers = users) }
+                }
         }
     }
 
@@ -115,9 +122,7 @@ class StudyingViewModel @Inject constructor(
 
     fun updateUser(){
         viewModelScope.launch(Dispatchers.IO) {
-            repository.updateStudyingUser(
-                StudyingUser(CurrentUser.uid, CurrentUser.nickname, CurrentUser.profileImg, tag, _uiState.value.timer)
-            )
+            repository.updateStudyingTime(tag, _uiState.value.timer)
         }
 
     }
@@ -129,7 +134,20 @@ class StudyingViewModel @Inject constructor(
     init {
         startStopwatch()
         saveSession()
-        updateUser()
+        viewModelScope.launch {
+            initStudyingUser()
+        }
+    }
+
+    suspend fun initStudyingUser(){
+        currentUser.value?.let {
+            withContext(Dispatchers.IO){
+                repository.initStudyingUser(StudyingUser(it.uid, it.nickname, it.profileImg, tag, _uiState.value.timer))
+
+            }
+        }
+
+
     }
 
     /**  학습 종료 버튼 클릭 시 학습 기록하는 다이얼로그 표출    */
@@ -153,15 +171,14 @@ class StudyingViewModel @Inject constructor(
         val timestamp = "${TimeFormatter.formatToKoreanDate(LocalDateTime.now())} ${_uiState.value.startTime} ~ ${getCurrentTime()}"
         val resultTimestamp = "${TimeFormatter.formatWithDayOfWeek(LocalDateTime.now())} ${_uiState.value.startTime} ~ ${getCurrentTime()}"
         fun setStudyLog(): StudyLog = StudyLog.write(timestamp, _uiState.value.studyLog, _uiState.value.timer)
-        potRepository.createStudyLog(potId, setStudyLog())
-        potRepository.updateTotalStudyTime(potId, _uiState.value.timer)
-        repository.updateUserTotalStudyTime(_uiState.value.timer)
-        repository.deleteStudyingUser()
 
         viewModelScope.launch{
             //종료 시 로컬디비에 저장된 데이터 삭제
             withContext(Dispatchers.IO) {
-                repository.clearSession()
+                repository.saveStudyLog(potId, setStudyLog())
+                repository.updateTotalStudyTime(tag, _uiState.value.timer)
+                repository.deleteStudyingUserInfo()
+                repository.clearLocalSession()
             }
 
             _eventChannel.send(StudyingEvent.NavigateToStudyResult(
