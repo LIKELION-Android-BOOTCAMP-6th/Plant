@@ -176,7 +176,7 @@ class StudyingViewModel @Inject constructor(
             //종료 시 로컬디비에 저장된 데이터 삭제
             withContext(Dispatchers.IO) {
                 repository.saveStudyLog(potId, setStudyLog())
-                repository.updateTotalStudyTime(tag, _uiState.value.timer)
+                repository.updateTotalStudyTime(potId, _uiState.value.timer)
                 repository.deleteStudyingUserInfo()
                 repository.clearLocalSession()
             }

@@ -20,7 +20,8 @@ class StudyingRemoteDataSourceImpl @Inject constructor(
     private val auth: FirebaseAuth,
     private val db: FirebaseFirestore,
 ): StudyingRemoteDataSource {
-    private val uid : String = auth.currentUser?.uid ?: ""
+    private val uid: String
+        get() = auth.currentUser?.uid ?: ""
     override fun observeStudyingUser(tag: String): Flow<List<StudyingUserDto>> = callbackFlow {
         val listener = db.collection("studying")
             .whereEqualTo("tag", tag)
@@ -78,7 +79,7 @@ class StudyingRemoteDataSourceImpl @Inject constructor(
     override fun updateTotalStudyTime(potId: String,time: Long) {
         db.collection("users")
             .document(uid)
-            .collection("ppts")
+            .collection("pots")
             .document(potId)
             .update("potTotalStudyingTime", FieldValue.increment(time))
     }
