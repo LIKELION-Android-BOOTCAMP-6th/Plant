@@ -4,6 +4,7 @@ import android.util.Log
 import com.a32b.plant.data.datasource.user.UserRemoteDataSource
 import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.mapper.toDto
+import com.a32b.plant.di.qualifier.ApplicationScope
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.User
 import com.a32b.plant.domain.repository.UserRepository
@@ -11,9 +12,13 @@ import com.a32b.plant.domain.result.Result
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,16 +26,35 @@ import javax.inject.Singleton
 @Singleton
 class UserRepositoryImpl @Inject constructor(
     private val userRemoteDataSource: UserRemoteDataSource,
-    private val db: FirebaseFirestore
+    private val db: FirebaseFirestore,
+    @param:ApplicationScope private val scope: CoroutineScope
 ): UserRepository {
     private val _currentUser = MutableStateFlow<User?>(null)
+    private var sessionJob: Job? = null
 
     override val currentUser: StateFlow<User?> = _currentUser.asStateFlow()
 
-    override fun setCurrentUser(user: User) {
+    override fun startUserSession(user: User) {
+        // 초기값을 즉시 세팅해 HomeViewModel 등이 init에서 currentUser.value를
+        // 곧바로 읽어도 null로 오인해 로그인 에러 처리하지 않도록 한다.
         _currentUser.value = user
+
+        sessionJob?.cancel()
+        sessionJob = scope.launch {
+            userRemoteDataSource.observeUser(user.uid)
+                // 로그아웃/회원탈퇴 시 인증 토큰이 먼저 무효화되면 서버가 PERMISSION_DENIED를
+                // 반환할 수 있다. 리스너 에러가 이 스코프 밖으로 전파되면 앱 전체가 죽으므로
+                // 여기서 흡수한다. (endUserSession으로 정상 종료되는 경로와는 별개의 방어선)
+                .catch { e -> Log.e("UserRepository", "currentUser 실시간 구독 실패: ${e.message}", e) }
+                .collect { dto ->
+                    dto?.let { _currentUser.value = it.toDomain() }
+                }
+        }
     }
-    override fun clearCurrentUser() {
+
+    override fun endUserSession() {
+        sessionJob?.cancel()
+        sessionJob = null
         _currentUser.value = null
     }
 
@@ -41,7 +65,7 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getUser(uid: String): Result<User?> = runCatching {
-        userRemoteDataSource.getUser(uid)?.toDomain(emptyList())
+        userRemoteDataSource.getUser(uid)?.toDomain()
     }.fold(
         onSuccess = { Result.Success(it) },
         onFailure = { e -> Result.Failure(handleError(e, "유저 정보 조회 실패")) }

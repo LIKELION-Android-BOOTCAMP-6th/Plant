@@ -2,6 +2,9 @@ package com.a32b.plant.data.datasource.user
 
 import com.a32b.plant.data.model.UserDto
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -14,6 +17,23 @@ class UserRemoteDataSourceImpl @Inject constructor(
     override suspend fun getUser(uid: String): UserDto? {
         val snapshot = db.collection("users").document(uid).get().await()
         return snapshot.toObject(UserDto::class.java)
+    }
+
+    override fun observeUser(uid: String): Flow<UserDto?> = callbackFlow {
+        if (uid.isEmpty()) {
+            trySend(null)
+            close()
+            return@callbackFlow
+        }
+        val listener = db.collection("users").document(uid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                trySend(snapshot?.toObject(UserDto::class.java))
+            }
+        awaitClose { listener.remove() }
     }
 
     override suspend fun createUser(uid: String, user: UserDto) {

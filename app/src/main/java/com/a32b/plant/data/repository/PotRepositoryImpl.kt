@@ -1,8 +1,8 @@
 package com.a32b.plant.data.repository
 
+import android.util.Log
 import com.a32b.plant.data.datasource.pot.PotRemoteDataSource
 import com.a32b.plant.data.mapper.toDomain
-import com.a32b.plant.data.model.PotDto
 import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.model.StudyLog
@@ -13,6 +13,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -25,7 +26,11 @@ class PotRepositoryImpl @Inject constructor(
 ) : PotRepository {
 
     override fun getPots(uid: String): Flow<List<Pot>> =
-        potRemoteDataSource.getPots(uid).map { dtoList -> dtoList.map { it.toDomain() } }
+        potRemoteDataSource.getPots(uid)
+            .map { dtoList -> dtoList.map { it.toDomain() } }
+            // 로그아웃 등으로 인증 토큰이 무효화된 직후에도 리스너가 잠깐 살아있을 수 있다.
+            // 이때 서버가 PERMISSION_DENIED를 반환하는데, 처리하지 않으면 앱 전체가 죽는다.
+            .catch { e -> Log.e("PotRepository", "화분 목록 구독 실패: ${e.message}", e) }
 
     // user uid 없음 -> 합친 후에 변경 예정
 //    override fun getPots(uid: String): Flow<List<PotDto>> = callbackFlow {
@@ -70,6 +75,7 @@ class PotRepositoryImpl @Inject constructor(
             .collection("pots").document(potId)
             .update("potTotalStudyingTime", FieldValue.increment(studyTime))
     }
+
     //특정 화분 정보 조회
     override suspend fun getUserPotById(uid: String, potId: String): Pot? {
         return db.collection("users").document(uid)
@@ -96,6 +102,7 @@ class PotRepositoryImpl @Inject constructor(
             .distinct()
             .sorted()
     }
+
     override suspend fun getUserPotsByStatus(uid: String, isCompleted: Boolean): List<Pot> {
         val snapshot = db.collection("users").document(uid)
             .collection("pots")
@@ -104,6 +111,7 @@ class PotRepositoryImpl @Inject constructor(
             .await()
         return snapshot.toObjects(Pot::class.java)
     }
+
     override fun getAvailableTags(): Flow<List<Tag>> = callbackFlow {
         val collectionRef = db.collection("Tags").orderBy("no")
         val listener = collectionRef.addSnapshotListener { snapshot, error ->
@@ -116,6 +124,7 @@ class PotRepositoryImpl @Inject constructor(
         }
         awaitClose { listener.remove() }
     }
+
     override suspend fun getSelectedStudyLog(potId: String, logId: String): StudyLog? {
         return db.collection("users").document(CurrentUser.uid)
             .collection("pots").document(potId)

@@ -23,14 +23,12 @@ class SetNicknameUseCase @Inject constructor(
         val completeResult = userRepository.completeFirstLogin(uid, nickname)
         if (completeResult is Result.Failure) return completeResult
 
-        userRepository.currentUser.value?.let { current ->
-            val updated = current.copy(nickname = nickname, isFirstLogin = false)
-            userRepository.setCurrentUser(updated)
-            // TODO: CurrentUser 전역 싱글톤 제거 대상.
-            //  아직 CurrentUser를 직접 읽는 화면이 남아 있어 과도기 동안 함께 세팅한다.
-            //  모든 화면이 UserRepository로 전환되면 이 줄과 di/CurrentUser.kt를 함께 삭제할 것.
-            CurrentUser.set(UserModel(uid, updated.nickname, updated.profileImg))
-        }
+        // users 문서가 갱신되면 UserRepository의 실시간 구독이 currentUser를 자동으로 최신화한다.
+        // TODO: CurrentUser 전역 싱글톤 제거 대상.
+        //  아직 CurrentUser를 직접 읽는 화면이 남아 있어 과도기 동안 함께 세팅한다.
+        //  모든 화면이 UserRepository로 전환되면 이 줄과 di/CurrentUser.kt를 함께 삭제할 것.
+        val profileImg = userRepository.currentUser.value?.profileImg.orEmpty()
+        CurrentUser.set(UserModel(uid, nickname, profileImg))
 
         return Result.Success(Unit)
     }
