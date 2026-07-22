@@ -1,6 +1,8 @@
 package com.a32b.plant.origin
 
 import android.util.Log
+import com.a32b.plant.data.mapper.toDomain
+import com.a32b.plant.data.model.UserDto
 import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.di.UserModel
 import com.a32b.plant.domain.model.Pot
@@ -62,7 +64,7 @@ class OldUserRepository @Inject constructor(private val db: FirebaseFirestore, p
 
         // 1. 유저 정보 실시간 리스너
         val userListener = userDocRef.addSnapshotListener { userSnapshot, _ ->
-            userProfile = userSnapshot?.toObject(User::class.java)
+            userProfile = userSnapshot?.toObject(UserDto::class.java)?.toDomain(emptyList())
             sendUpdate()
         }
 
@@ -270,7 +272,7 @@ class OldUserRepository @Inject constructor(private val db: FirebaseFirestore, p
                 return@addSnapshotListener
             }
             // 받아온 데이터 UserProfile 객체로 변환
-            val userProfile = userSnapshot?.toObject(User::class.java)
+            val userProfile = userSnapshot?.toObject(UserDto::class.java)?.toDomain(emptyList())
             trySend(userProfile)
         }
         // 이 Flow 사용하는 화면 닫힐 때 리스너 제거
