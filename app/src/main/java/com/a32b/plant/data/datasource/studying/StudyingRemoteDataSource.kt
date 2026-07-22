@@ -18,11 +18,11 @@ interface StudyingRemoteDataSource {
     suspend fun updateStudyingTime(tag: String, time: Long)
 
     /** 학습 기록 저장*/
-    fun saveStudyLog(potId: String, log: StudyLogDto)
+    suspend fun saveStudyLog(potId: String, log: StudyLogDto)
 
     /** 학습 종료 후 유저 정보 삭제*/
-    fun deleteStudyingUserInfo()
+    suspend fun deleteStudyingUserInfo()
 
     /** 학습 종료 후 화분 총 시간 업데이트*/
-    fun updateTotalStudyTime(potId: String, time: Long)
+    suspend fun updateTotalStudyTime(potId: String, time: Long)
 }

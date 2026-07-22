@@ -11,6 +11,7 @@ import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.domain.repository.PotRepository
 import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.repository.UserRepository
+import com.a32b.plant.domain.result.onFailure
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -174,6 +175,7 @@ class StudyingViewModel @Inject constructor(
 
         viewModelScope.launch{
             //종료 시 로컬디비에 저장된 데이터 삭제
+            //TODO 실패 시 오류 알림 다이얼로그 띄우기
             withContext(Dispatchers.IO) {
                 repository.saveStudyLog(potId, setStudyLog())
                 repository.updateTotalStudyTime(potId, _uiState.value.timer)

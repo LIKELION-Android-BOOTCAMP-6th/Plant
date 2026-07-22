@@ -78,22 +78,28 @@ class StudyingRepositoryImpl @Inject constructor(
         }
     )
 
-    override suspend fun saveStudyLog(potId: String, log: StudyLog): Result<Unit> = runCatching {
-        studyingRemoteDataSource.saveStudyLog(potId, log.toDto())
-    }.fold(
-        onSuccess = { Result.Success(Unit)},
-        onFailure = { e ->
-            if (e is CancellationException) throw e
-            Log.e("Studying", "학습 기록 저장", e)
-
-            val error = when(e){
-                is IllegalArgumentException -> AppError.Unknown("유저 정보를 찾을 수 없습니다.")
-                else -> AppError.Custom("학습 기록 저장에 실패했습니다.")
+    override suspend fun saveStudyLog(potId: String, log: StudyLog): Result<Unit> {
+        val result = runCatching { studyingRemoteDataSource.saveStudyLog(potId, log.toDto()) }
+            .recoverCatching {
+                if (it is CancellationException) throw it
+                studyingRemoteDataSource.saveStudyLog(potId, log.toDto())
             }
 
-            Result.Failure(error)
-        }
-    )
+        return result.fold(
+            onSuccess = { Result.Success(Unit) },
+            onFailure = { e ->
+                if (e is CancellationException) throw e
+                Log.e("Studying", "학습 기록 저장", e)
+
+                val error = when (e) {
+                    is IllegalArgumentException -> AppError.Unknown("유저 정보를 찾을 수 없습니다.")
+                    else -> AppError.Custom("학습 기록 저장에 실패했습니다.")
+                }
+
+                Result.Failure(error)
+            }
+        )
+    }
 
     override suspend fun deleteStudyingUserInfo(): Result<Unit> = runCatching {
         studyingRemoteDataSource.deleteStudyingUserInfo()

@@ -61,27 +61,30 @@ class StudyingRemoteDataSourceImpl @Inject constructor(
             .await()
     }
 
-    override fun saveStudyLog(potId: String, log: StudyLogDto){
+    override suspend fun saveStudyLog(potId: String, log: StudyLogDto){
         db.collection("users")
             .document(uid)
             .collection("pots")
             .document(potId)
             .collection("logs")
             .add(log)
+            .await()
     }
 
-    override fun deleteStudyingUserInfo(){
+    override suspend fun deleteStudyingUserInfo(){
         db.collection("studying")
             .document(uid)
             .delete()
+            .await()
     }
 
-    override fun updateTotalStudyTime(potId: String,time: Long) {
+    override suspend fun updateTotalStudyTime(potId: String,time: Long) {
         db.collection("users")
             .document(uid)
             .collection("pots")
             .document(potId)
             .update("potTotalStudyingTime", FieldValue.increment(time))
+            .await()
     }
 
 
