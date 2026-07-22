@@ -56,6 +56,23 @@ fun BottomBar(navController: NavController){
                     }
             )
 
+            val isPotSelected = currentDestination?.hasRoute<Routes.PotList>() == true
+            Image(
+                painter = painterResource(id = if(isPotSelected) R.drawable.ic_bottom_pot_selected else R.drawable.ic_bottom_pot_normal),
+                contentDescription = "POTLIST",
+                modifier = Modifier
+                    .weight(1f)
+                    .size(32.dp)
+                    .clickable{
+                        if (!isPotSelected) {  // ★
+                            navController.navigate(Routes.PotList) {
+                                popUpTo(Routes.HomeMain) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
+            )
+
             val isHomeSelected = currentDestination?.hasRoute<Routes.HomeMain>() == true
             Image(
                 painter = painterResource(id = if(isHomeSelected) R.drawable.ic_bottom_home_selected else R.drawable.ic_bottom_home_normal),
@@ -73,6 +90,24 @@ fun BottomBar(navController: NavController){
                         }
                     }
             )
+
+            val isReportSelected = currentDestination?.hasRoute<Routes.Report>() == true
+            Image(
+                painter = painterResource(id = if(isReportSelected) R.drawable.ic_bottom_report_selected else R.drawable.ic_bottom_report_nomal),
+                contentDescription = "REPORT",
+                modifier = Modifier
+                    .weight(1f)
+                    .size(32.dp)
+                    .clickable{
+                        if (!isReportSelected) {  // ★
+                            navController.navigate(Routes.Report) {
+                                popUpTo(Routes.HomeMain) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
+            )
+
 
             val isMyPageSelected = currentDestination?.hasRoute<Routes.Mypage>() == true
             Image(
