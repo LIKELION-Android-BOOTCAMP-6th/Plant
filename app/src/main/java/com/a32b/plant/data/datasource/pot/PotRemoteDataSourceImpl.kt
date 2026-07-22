@@ -31,8 +31,11 @@ class PotRemoteDataSourceImpl @Inject constructor(
                 return@addSnapshotListener
             }
 
-            // Firebase -> PotDto 리스트 변환
-            val pots = snapshot?.toObjects(PotDto::class.java) ?: emptyList()
+            // Firebase -> PotDto 리스트 변환. 문서 ID는 doc.id로 직접 채운다
+            // (필드 자체가 없거나 값이 어긋난 문서가 있어도 항상 올바른 ID를 보장한다).
+            val pots = snapshot?.documents?.mapNotNull { doc ->
+                doc.toObject(PotDto::class.java)?.copy(id = doc.id)
+            } ?: emptyList()
             trySend(pots)
         }
 

@@ -168,6 +168,7 @@ class MyPageViewModel @Inject constructor(
                 }
 
                 CurrentUser.set(UserModel(
+                    uid = CurrentUser.uid,
                     nickname = nickname,
                     profileImg = imageLevel))
 

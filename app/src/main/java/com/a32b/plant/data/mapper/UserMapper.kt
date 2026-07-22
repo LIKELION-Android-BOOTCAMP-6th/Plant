@@ -5,7 +5,6 @@ import com.a32b.plant.data.model.ItemDto
 import com.a32b.plant.data.model.UserDto
 import com.a32b.plant.domain.model.DailyCheckThisMonth
 import com.a32b.plant.domain.model.Item
-import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.model.User
 
 /**
@@ -25,7 +24,7 @@ fun Item.toDto() : ItemDto = ItemDto(
     heart, sun, water, fertilizer, nutrient, box
 )
 
-fun UserDto.toDomain(potLIst: List<Pot>) : User = User(
+fun UserDto.toDomain() : User = User(
     uid = uid,
     nickname = nickname,
     profileImg = profileImg,
@@ -33,7 +32,6 @@ fun UserDto.toDomain(potLIst: List<Pot>) : User = User(
     isFirstLogin = isFirstLogin,
     isDarkMode = isDarkMode,
     totalStudyTime = totalStudyTime,
-    potList = potLIst,
     coin = coin,
     monthCheck = monthCheck.toDomain(),
     item = item.toDomain()
