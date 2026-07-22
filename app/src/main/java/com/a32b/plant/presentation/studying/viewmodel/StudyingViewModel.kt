@@ -4,14 +4,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.util.TimeFormatter
-import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.data.model.StudyingSession
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.StudyingUser
-import com.a32b.plant.domain.repository.PotRepository
 import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.repository.UserRepository
-import com.a32b.plant.domain.result.onFailure
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -80,7 +77,10 @@ class StudyingViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             while (_uiState.value.isStudying){
                 delay(5000L)
-                repository.saveLocalSession(StudyingSession(currentUser.value?.uid, tag, title, potId, _uiState.value.timer))
+
+                currentUser.value?.uid?.let {
+                    repository.saveLocalSession(StudyingSession(it, tag, title, potId, _uiState.value.timer))
+                }
             }
         }
     }
@@ -112,10 +112,8 @@ class StudyingViewModel @Inject constructor(
             while (true){
                 delay(1000)
                 onTimerChange()
-//                if(_uiState.value.timer % 600000L == 0L){
-                if(_uiState.value.timer % 6000L == 0L){
+                if(_uiState.value.timer % 60_000L == 0L){
                     updateUser()
-                    onStudyingUsersChange()
                 }
             }
         }
@@ -138,6 +136,7 @@ class StudyingViewModel @Inject constructor(
         viewModelScope.launch {
             initStudyingUser()
         }
+        onStudyingUsersChange()
     }
 
     suspend fun initStudyingUser(){

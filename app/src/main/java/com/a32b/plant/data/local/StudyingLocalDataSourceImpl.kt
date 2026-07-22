@@ -32,11 +32,11 @@ class StudyingLocalDataSourceImpl @Inject constructor(
 
     override suspend fun save(studying: StudyingSession) {
         context.dataStore.edit { preferences ->
-            preferences[USER_ID] = studying.userId!!
-            preferences[POT_ID] = studying.potId!!
-            preferences[TAG] = studying.tag!!
-            preferences[TITLE] = studying.title!!
-            preferences[TIME] = studying.time!!
+            preferences[USER_ID] = studying.userId
+            preferences[POT_ID] = studying.potId
+            preferences[TAG] = studying.tag
+            preferences[TITLE] = studying.title
+            preferences[TIME] = studying.time
         }
     }
 
@@ -46,13 +46,17 @@ class StudyingLocalDataSourceImpl @Inject constructor(
             .first()
 
         val userId = preferences[USER_ID] ?: return null
+        val potId = preferences[POT_ID] ?: return null
+        val tag = preferences[TAG] ?: return null
+        val title = preferences[TITLE] ?: return null
+        val time = preferences[TIME] ?: return null
 
         return StudyingSession(
             userId = userId,
-            potId = preferences[POT_ID],
-            tag = preferences[TAG],
-            title = preferences[TITLE],
-            time = preferences[TIME]
+            potId = potId,
+            tag = tag,
+            title = title,
+            time = time
         )
     }
 
