@@ -1,6 +1,6 @@
 package com.a32b.plant.domain.usecase.auth
 
-import com.a32b.plant.di.CurrentUserBridge
+import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.repository.AuthRepository
 import com.a32b.plant.domain.repository.UserRepository
@@ -29,8 +29,10 @@ class DeleteAccountUseCase @Inject constructor(
         if (deleteAuthResult is Result.Failure) return deleteAuthResult
 
         userRepository.clearCurrentUser()
-        // TODO: CurrentUser 제거 대상 - 사유는 CurrentUserBridge의 KDoc 참고
-        CurrentUserBridge.clear()
+        // TODO: CurrentUser 전역 싱글톤 제거 대상.
+        //  아직 CurrentUser를 직접 읽는 화면이 남아 있어 과도기 동안 함께 초기화한다.
+        //  모든 화면이 UserRepository로 전환되면 이 줄과 di/CurrentUser.kt를 함께 삭제할 것.
+        CurrentUser.clear()
 
         return Result.Success(Unit)
     }
