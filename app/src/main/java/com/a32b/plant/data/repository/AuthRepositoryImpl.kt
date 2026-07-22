@@ -94,6 +94,9 @@ class AuthRepositoryImpl @Inject constructor(
             "ERROR_EMAIL_ALREADY_IN_USE" -> AppError.Custom("이미 등록된 계정입니다.")
             else -> when (e) {
                 is FirebaseNetworkException -> AppError.Network()
+                // datasource에서 uid/현재 유저를 가져오지 못했을 때 던지는 예외.
+                // 상세 사유는 위 Log.e에 남고, 사용자에게는 공통 문구를 보여준다.
+                is IllegalStateException -> AppError.Auth("인증 정보를 가져오지 못했습니다. 다시 시도해주세요.")
                 else -> AppError.Unknown()
             }
         }
