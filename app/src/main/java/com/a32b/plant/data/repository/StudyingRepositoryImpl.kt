@@ -78,6 +78,21 @@ class StudyingRepositoryImpl @Inject constructor(
         }
     )
 
+    override suspend fun updateUserTotalStudyTime(time: Long): Result<Unit> = runCatching {
+        studyingRemoteDataSource.updateUserTotalStudyTime(time)
+    }.fold(
+        onSuccess = { Result.Success(Unit)},
+        onFailure = {e ->
+            Log.e("Studying", "유저 총 학습 시간 업데이트", e)
+
+            val error = when(e){
+                is IllegalArgumentException -> AppError.Unknown("유저 정보를 찾을 수 없습니다.")
+                else -> AppError.Update()
+            }
+            Result.Failure(error)
+        }
+    )
+
     override suspend fun saveStudyLog(potId: String, log: StudyLog): Result<Unit> {
         val result = runCatching { studyingRemoteDataSource.saveStudyLog(potId, log.toDto()) }
             .recoverCatching {

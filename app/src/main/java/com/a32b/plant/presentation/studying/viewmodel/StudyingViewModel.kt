@@ -178,6 +178,7 @@ class StudyingViewModel @Inject constructor(
             withContext(Dispatchers.IO) {
                 repository.saveStudyLog(potId, setStudyLog())
                 repository.updateTotalStudyTime(potId, _uiState.value.timer)
+                repository.updateUserTotalStudyTime(_uiState.value.timer)
                 repository.deleteStudyingUserInfo()
                 repository.clearLocalSession()
             }

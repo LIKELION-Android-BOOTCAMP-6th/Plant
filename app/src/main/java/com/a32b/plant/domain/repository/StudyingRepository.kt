@@ -20,17 +20,21 @@ interface StudyingRepository {
     /** 학습 종료 시 화분 총 공부 시간 업데이트 */
     suspend fun updateTotalStudyTime(potId: String, studyTime: Long): Result<Unit>
 
+    /** 유저 총 학습 시간 업데이트 */
+    suspend fun updateUserTotalStudyTime(time: Long) : Result<Unit>
+
     /** 학습 기록 저장 */
     suspend fun saveStudyLog(potId: String, log: StudyLog): Result<Unit>
 
     /** 학습 종료 시 유저 정보 삭제 */
     suspend fun deleteStudyingUserInfo(): Result<Unit>
 
+
+    /** 로컬 DB 저장/읽기/삭제 */
     suspend fun saveLocalSession(studying : StudyingSession): Result<Unit>
 
     suspend fun readLocalSession(): Result<StudyingSession?>
 
     suspend fun clearLocalSession(): Result<Unit>
-
 
 }

@@ -87,5 +87,12 @@ class StudyingRemoteDataSourceImpl @Inject constructor(
             .await()
     }
 
+    override suspend fun updateUserTotalStudyTime(time: Long) {
+        db.collection("users")
+            .document(uid)
+            .update("totalStudyTime", FieldValue.increment(time))
+            .await()
+    }
+
 
 }

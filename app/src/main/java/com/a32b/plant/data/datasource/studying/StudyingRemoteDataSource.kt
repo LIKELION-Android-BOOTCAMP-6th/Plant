@@ -25,4 +25,7 @@ interface StudyingRemoteDataSource {
 
     /** 학습 종료 후 화분 총 시간 업데이트*/
     suspend fun updateTotalStudyTime(potId: String, time: Long)
+
+    /** 학습 종료 후 유저 총 공부 시간 업데이트*/
+    suspend fun updateUserTotalStudyTime(time: Long)
 }
