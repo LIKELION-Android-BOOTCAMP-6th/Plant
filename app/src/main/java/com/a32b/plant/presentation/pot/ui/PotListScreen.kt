@@ -7,11 +7,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
 import com.a32b.plant.presentation.pot.viewmodel.PotListViewModel
 
 @Composable
 fun PotListScreen(
-    viewModel: PotListViewModel = hiltViewModel()
+    viewModel: PotListViewModel = hiltViewModel(), navController: NavController
 ) {
     val pots by viewModel.pots.collectAsState()
 

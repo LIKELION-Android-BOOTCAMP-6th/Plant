@@ -68,8 +68,7 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
             composable<Routes.StudyPlanDetail> { StudyPlanDetailScreen(navController = navController) }
             composable<Routes.MyCommunityFeed> { MyCommunityFeedScreen(navController) }
 
-            //TODO 화분 개발 시 팟리스트 스크린에 네브컨트롤러 추가하고 아랫부분 주석 해제하기
-//            composable<Routes.PotList> { PotListScreen(navController = navController) }
+            composable<Routes.PotList> { PotListScreen(navController = navController) }
             composable<Routes.Report> { ReportScreen(navController) }
 
 
