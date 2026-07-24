@@ -72,8 +72,6 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
     val uiState by viewModel.uiState.collectAsState()
     // 로그아웃 확인 다이얼로그 상태
     var showLogoutDialog by remember { mutableStateOf(false) }
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    var isDeleteSecondConfirm by remember { mutableStateOf(false) }
     // 프로필 수정 다이얼로그 상태
     var showProfileDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -108,29 +106,6 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                 onConfirm = {
                     showLogoutDialog = false
                     viewModel.logout()
-                }
-            )
-        }
-
-        if (showDeleteDialog) {
-            ConfirmDialog(
-                text = if (isDeleteSecondConfirm) "정말로 탈퇴하시겠습니까?"
-                else "탈퇴 하시겠습니까?",
-                semiText =
-                    if (isDeleteSecondConfirm) "탈퇴 시 모든 학습 기록이 삭제되며 복구할 수 없습니다."
-                    else "계정을 삭제하시려면 '예'를 눌러주세요.",
-                onDismiss = {
-                    showDeleteDialog = false
-                    isDeleteSecondConfirm = false
-                },
-                onConfirm = {
-                    if (isDeleteSecondConfirm) {
-                        showDeleteDialog = false
-                        isDeleteSecondConfirm = false
-                        viewModel.deleteAccount()
-                    } else {
-                        isDeleteSecondConfirm = true
-                    }
                 }
             )
         }
@@ -172,10 +147,6 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                 },
                 onLogoutClick = {
                     showLogoutDialog = true
-                },
-                onDeleteAccountClick = {
-                    isDeleteSecondConfirm = false
-                    showDeleteDialog = true
                 }
             )
         }
@@ -194,8 +165,7 @@ private fun MyPageContent(
     onGuideClick: () -> Unit,
     onTermsClick: () -> Unit,
     onPrivacyClick: () -> Unit,
-    onLogoutClick: () -> Unit,
-    onDeleteAccountClick: () -> Unit
+    onLogoutClick: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -226,7 +196,6 @@ private fun MyPageContent(
                 ButtonTemplate(text = "서비스 이용약관", onClick = onTermsClick)
                 ButtonTemplate(text = "개인정보처리방침", onClick = onPrivacyClick)
                 ButtonTemplate(text = "로그아웃", onClick = onLogoutClick)
-                ButtonTemplate(text = "회원탈퇴", onClick = onDeleteAccountClick)
             }
         }
     }
@@ -250,8 +219,7 @@ private fun MyPageContentPreview() {
             onGuideClick = {},
             onTermsClick = {},
             onPrivacyClick = {},
-            onLogoutClick = {},
-            onDeleteAccountClick = {}
+            onLogoutClick = {}
         )
     }
 }

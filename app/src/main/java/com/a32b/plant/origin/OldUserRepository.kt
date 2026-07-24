@@ -1,6 +1,8 @@
 package com.a32b.plant.origin
 
 import android.util.Log
+import com.a32b.plant.data.mapper.toDomain
+import com.a32b.plant.data.model.UserDto
 import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.di.UserModel
 import com.a32b.plant.domain.model.Pot
@@ -43,41 +45,19 @@ class OldUserRepository @Inject constructor(private val db: FirebaseFirestore, p
     }
 
     // 특정 유저의 데이터를 실시간 Flow로 반환
-    // 특정 유저의 데이터 + 하위 pots 목록까지 "모두" 실시간으로 감지
     fun getUserProfile(uid: String): Flow<User?> = callbackFlow {
         if (uid.isEmpty()) {
             trySend(null)
             return@callbackFlow
         }
         val userDocRef = db.collection("users").document(uid)
-        val potsCollectionRef = userDocRef.collection("pots")
 
-        var userProfile: User? = null
-        var currentOngoingPots: List<Pot> = emptyList()
-
-        //공통 전송 로직
-        fun sendUpdate() {
-            trySend(userProfile?.copy(potList = currentOngoingPots))
-        }
-
-        // 1. 유저 정보 실시간 리스너
         val userListener = userDocRef.addSnapshotListener { userSnapshot, _ ->
-            userProfile = userSnapshot?.toObject(User::class.java)
-            sendUpdate()
+            trySend(userSnapshot?.toObject(UserDto::class.java)?.toDomain())
         }
-
-        // 2. 화분 목록 실시간 리스너 (화분 추가/삭제 시에도 UI 즉시 반영)
-        val potsListener = potsCollectionRef.whereEqualTo("isCompleted", false)
-            .addSnapshotListener { potsSnapshot, _ ->
-                currentOngoingPots = potsSnapshot?.documents?.mapNotNull { doc ->
-                    doc.toObject(Pot::class.java)?.copy(id = doc.id)
-                } ?: emptyList()
-                sendUpdate()
-            }
 
         awaitClose {
             userListener.remove()
-            potsListener.remove()
         }
     }
 
@@ -254,28 +234,4 @@ class OldUserRepository @Inject constructor(private val db: FirebaseFirestore, p
         }
     }
 
-    // 다크모드 관리용
-    // 테마 다크모드용 Flow
-    fun getUserFlow(uid: String): Flow<User?> = callbackFlow {
-        if (uid.isEmpty()) {
-            trySend(null)
-            return@callbackFlow
-        }
-        val userDocRef = db.collection("users").document(uid)
-        // 실시간 리스너 등록, 변경 사항 생길 때마다 알림 (내 앱한테)보내는  구독 상태로 만든 것
-        val userListener = userDocRef.addSnapshotListener { userSnapshot, error ->
-            // users 데이터 바뀔때마다 여기 실행
-            if (error != null) {
-                close(error)
-                return@addSnapshotListener
-            }
-            // 받아온 데이터 UserProfile 객체로 변환
-            val userProfile = userSnapshot?.toObject(User::class.java)
-            trySend(userProfile)
-        }
-        // 이 Flow 사용하는 화면 닫힐 때 리스너 제거
-        awaitClose {
-            userListener.remove()
-        }
-    }
 }

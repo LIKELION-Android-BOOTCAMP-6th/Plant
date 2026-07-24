@@ -1,6 +1,10 @@
 package com.a32b.plant.domain.error
 
 sealed class AppError : Throwable() {
+    // Throwable.message는 String? 이므로, AppError 타입으로 받았을 때도
+    // error.message를 그대로 쓸 수 있도록 non-null로 좁혀서 재정의한다.
+    abstract override val message: String
+
     data class Network(override val message: String = "네트워크 연결이 원활하지 않습니다.") : AppError()
     data class Auth(override val message: String = "인증에 실패했습니다. 다시 로그인해주세요.") : AppError()
     data class Email(override val message: String = "이메일 형식이 올바르지 않습니다.") : AppError()

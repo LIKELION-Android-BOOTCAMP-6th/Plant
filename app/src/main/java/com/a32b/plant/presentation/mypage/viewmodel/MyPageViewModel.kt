@@ -7,9 +7,8 @@ import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
-import com.a32b.plant.domain.usecase.mypage.DeleteAccountUseCase
+import com.a32b.plant.domain.usecase.auth.SignOutUseCase
 import com.a32b.plant.domain.usecase.mypage.GetProfileImageLevelListUseCase
-import com.a32b.plant.domain.usecase.mypage.LogoutUseCase
 import com.a32b.plant.domain.usecase.mypage.UpdateDarkModeUseCase
 import com.a32b.plant.domain.usecase.mypage.UpdateProfileUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -48,9 +47,8 @@ sealed class MyPageEvent {
 @HiltViewModel
 class MyPageViewModel @Inject constructor(
     private val userRepository: UserRepository,
-    private val deleteAccountUseCase: DeleteAccountUseCase,
     private val getProfileImageLevelListUseCase: GetProfileImageLevelListUseCase,
-    private val logoutUseCase: LogoutUseCase,
+    private val signOutUseCase: SignOutUseCase,
     private val updateDarkModeUseCase: UpdateDarkModeUseCase,
     private val updateProfileUseCase: UpdateProfileUseCase
 ) : BaseViewModel() {
@@ -167,7 +165,7 @@ class MyPageViewModel @Inject constructor(
 
     fun logout() {
         viewModelScope.launch {
-            logoutUseCase()
+            signOutUseCase()
             _eventChannel.send(MyPageEvent.NavigateToSignIn)
         }
     }
@@ -175,26 +173,6 @@ class MyPageViewModel @Inject constructor(
     fun moveToMyCommunityFeed() {
         viewModelScope.launch {
             _eventChannel.send(MyPageEvent.NavigateToMyCommunityFeed)
-        }
-    }
-
-    fun deleteAccount() {
-        viewModelScope.launch {
-            deleteAccountUseCase()
-                .onSuccess {
-                    _eventChannel.send(MyPageEvent.ShowToast("회원탈퇴가 완료되었습니다."))
-                    _eventChannel.send(MyPageEvent.NavigateToSignIn)
-                }
-                .onFailure { e ->
-                    Log.e("MyPage", "회원탈퇴 실패: ${e.message}", e)
-                    val message = if (e.message?.contains("RECENT_LOGIN_REQUIRED") == true) {
-                        "보안을 위해 재로그인 후 다시 시도해주세요"
-                    } else {
-                        e.message ?: "회원탈퇴에 실패했습니다. 다시 시도해주세요."
-                    }
-
-                    _eventChannel.send(MyPageEvent.ShowToast(message))
-                }
         }
     }
 
