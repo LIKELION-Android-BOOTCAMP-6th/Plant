@@ -8,6 +8,8 @@ import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 class DeleteAccountUseCase @Inject constructor(
+    // TODO: UserRepository의 사용자 삭제 API와 닉네임 삭제 책임이 확정되면
+    // OldUserRepository, OldNicknameRepository, CurrentUser 의존성을 제거한다.
     private val userRepository: OldUserRepository,
     private val nicknameRepository: OldNicknameRepository,
     private val firebaseAuth: FirebaseAuth

@@ -4,8 +4,10 @@ import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
+import com.a32b.plant.domain.repository.UserRepository
+import com.a32b.plant.domain.result.onFailure
+import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.mypage.DeleteAccountUseCase
-import com.a32b.plant.domain.usecase.mypage.GetMyPageProfileUseCase
 import com.a32b.plant.domain.usecase.mypage.GetProfileImageLevelListUseCase
 import com.a32b.plant.domain.usecase.mypage.LogoutUseCase
 import com.a32b.plant.domain.usecase.mypage.UpdateDarkModeUseCase
@@ -45,8 +47,8 @@ sealed class MyPageEvent {
 
 @HiltViewModel
 class MyPageViewModel @Inject constructor(
+    private val userRepository: UserRepository,
     private val deleteAccountUseCase: DeleteAccountUseCase,
-    private val getMyPageProfileUseCase: GetMyPageProfileUseCase,
     private val getProfileImageLevelListUseCase: GetProfileImageLevelListUseCase,
     private val logoutUseCase: LogoutUseCase,
     private val updateDarkModeUseCase: UpdateDarkModeUseCase,
@@ -60,15 +62,14 @@ class MyPageViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-//            potRepository.createPot()
-            getMyPageProfileUseCase().collectLatest { profile ->
-                if (profile != null) {
+            userRepository.currentUser.collectLatest { user ->
+                if (user != null) {
                     _uiState.update {
                         it.copy(
-                            nickname = profile.nickname ?: "이름없음",
-                            profileImg = profile.profileImg ?: "",
-                            isDarkMode = profile.isDarkMode ?: true,
-                            totalStudyTime = formatToDigitalClock(profile.totalStudyTime ?: 0L)
+                            nickname = user.nickname,
+                            profileImg = user.profileImg,
+                            isDarkMode = user.isDarkMode,
+                            totalStudyTime = formatToDigitalClock(user.totalStudyTime)
                         )
                     }
                     // 빈화면 -> 홈화면
@@ -167,13 +168,7 @@ class MyPageViewModel @Inject constructor(
     fun logout() {
         viewModelScope.launch {
             logoutUseCase()
-                .onSuccess {
-                    _eventChannel.send(MyPageEvent.NavigateToSignIn)
-                }
-                .onFailure { e ->
-                    Log.e("MyPage", "로그아웃 실패: ${e.message}", e)
-                    _eventChannel.send(MyPageEvent.ShowToast("로그아웃에 실패했습니다. 다시 시도해주세요."))
-                }
+            _eventChannel.send(MyPageEvent.NavigateToSignIn)
         }
     }
 
