@@ -93,7 +93,7 @@ fun BottomBar(navController: NavController){
 
             val isReportSelected = currentDestination?.hasRoute<Routes.Report>() == true
             Image(
-                painter = painterResource(id = if(isReportSelected) R.drawable.ic_bottom_report_selected else R.drawable.ic_bottom_report_nomal),
+                painter = painterResource(id = if(isReportSelected) R.drawable.ic_bottom_report_selected else R.drawable.ic_bottom_report_normal),
                 contentDescription = "REPORT",
                 modifier = Modifier
                     .weight(1f)

@@ -70,8 +70,6 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
 
             composable<Routes.PotList> { PotListScreen(navController = navController) }
             composable<Routes.Report> { ReportScreen(navController) }
-
-
         }
     }
 }

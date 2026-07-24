@@ -12,7 +12,8 @@ import com.a32b.plant.presentation.pot.viewmodel.PotListViewModel
 
 @Composable
 fun PotListScreen(
-    viewModel: PotListViewModel = hiltViewModel(), navController: NavController
+    navController: NavController,
+    viewModel: PotListViewModel = hiltViewModel()
 ) {
     val pots by viewModel.pots.collectAsState()
 
