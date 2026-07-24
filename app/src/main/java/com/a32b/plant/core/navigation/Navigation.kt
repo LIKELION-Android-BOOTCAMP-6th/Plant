@@ -21,6 +21,8 @@ import com.a32b.plant.presentation.mypage.ui.MyCommunityFeedScreen
 import com.a32b.plant.presentation.mypage.ui.MyPageArchiveScreen
 import com.a32b.plant.presentation.mypage.ui.MyPageScreen
 import com.a32b.plant.presentation.mypage.ui.MyPageSettingScreen
+import com.a32b.plant.presentation.pot.ui.PotListScreen
+import com.a32b.plant.presentation.report.ReportScreen
 import com.a32b.plant.presentation.splash.SplashViewModel
 import com.a32b.plant.presentation.studyPlanDetail.ui.StudyPlanDetailScreen
 import com.a32b.plant.presentation.studying.ui.StudyResultScreen
@@ -65,6 +67,9 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
             composable<Routes.NewBornTree> { NewBornTreeScreen(navController) }
             composable<Routes.StudyPlanDetail> { StudyPlanDetailScreen(navController = navController) }
             composable<Routes.MyCommunityFeed> { MyCommunityFeedScreen(navController) }
+
+            composable<Routes.PotList> { PotListScreen(navController = navController) }
+            composable<Routes.Report> { ReportScreen(navController) }
         }
     }
 }
