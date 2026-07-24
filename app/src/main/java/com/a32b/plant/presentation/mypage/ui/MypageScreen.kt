@@ -19,17 +19,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -40,27 +45,26 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.a32b.plant.presentation.core.component.ProfileImage
-import com.a32b.plant.presentation.mypage.viewmodel.MyPageViewModel
-import com.a32b.plant.presentation.theme.Typography
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.core.component.LoadableScreen
+import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageEvent
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageUiState
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Surface
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.ui.draw.scale
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.mypage.viewmodel.MyPageViewModel
 import com.a32b.plant.presentation.theme.PlantTheme
+import com.a32b.plant.presentation.theme.Typography
 
 
 @Composable
@@ -68,6 +72,8 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
     val uiState by viewModel.uiState.collectAsState()
     // 로그아웃 확인 다이얼로그 상태
     var showLogoutDialog by remember { mutableStateOf(false) }
+    // 프로필 수정 다이얼로그 상태
+    var showProfileDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     PlantTheme(darkTheme = uiState.isDarkMode) {
@@ -103,44 +109,118 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                 }
             )
         }
-        Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.background) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                // 프로필, 닉네임, 총 공부시간
-                ProfileRow(uiState = uiState, viewModel = viewModel)
 
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    GrownTreesButton(completedPotCount = uiState.completedPotCount) {
-                        navController.navigate(Routes.MyPageArchive)
-                    }
-                    DividerImage()
-                    ButtonTemplate(text = "내 활동") {
-                        viewModel.moveToMyCommunityFeed()
-                    }
-                    ButtonTemplate(text = "앱 설정") {
-                        navController.navigate(Routes.MyPageSetting)
-                    }
-//            ButtonTemplate(text = "공지사항") { }
-//            ButtonTemplate(text = "비밀번호 재설정") { }
-                    DarkModeToggleButton(
-                        isDarkMode = uiState.isDarkMode,
-                        onToggle = {
-                            viewModel.toggleDarkMode()
-                        }
-                    )
-//------------------로그아웃
-
-                    ButtonTemplate(text = "로그아웃") {
-                        showLogoutDialog = true
-                    }
-//로그아웃------------------
+        if (showProfileDialog) {
+            ProfileDialog(
+                onDismiss = {
+                    viewModel.clearProfileState()
+                    showProfileDialog = false
+                },
+                uiState = uiState,
+                viewModel = viewModel
+            )
+        }
+        LoadableScreen(viewModel) {
+            MyPageContent(
+                uiState = uiState,
+                onProfileClick = {
+                    viewModel.getImageLevelList()
+                    showProfileDialog = true
+                },
+                onMyActivityClick = {
+                    viewModel.moveToMyCommunityFeed()
+                },
+                onSettingClick = {
+                    navController.navigate(Routes.MyPageSetting)
+                },
+                onDarkModeToggle = {
+                    viewModel.toggleDarkMode()
+                },
+                onGuideClick = {
+                    Toast.makeText(context, "준비 중입니다.", Toast.LENGTH_SHORT).show()
+                },
+                onTermsClick = {
+                    Toast.makeText(context, "준비 중입니다.", Toast.LENGTH_SHORT).show()
+                },
+                onPrivacyClick = {
+                    Toast.makeText(context, "준비 중입니다.", Toast.LENGTH_SHORT).show()
+                },
+                onLogoutClick = {
+                    showLogoutDialog = true
                 }
+            )
+        }
+
+    }
+}
+
+
+@Composable
+private fun MyPageContent(
+    uiState: MyPageUiState,
+    onProfileClick: () -> Unit,
+    onMyActivityClick: () -> Unit,
+    onSettingClick: () -> Unit,
+    onDarkModeToggle: () -> Unit,
+    onGuideClick: () -> Unit,
+    onTermsClick: () -> Unit,
+    onPrivacyClick: () -> Unit,
+    onLogoutClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            ProfileRow(
+                uiState = uiState,
+                onProfileClick = onProfileClick
+            )
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                DividerImage()
+                ButtonTemplate(text = "내 활동", onClick = onMyActivityClick)
+                ButtonTemplate(text = "앱 설정", onClick = onSettingClick)
+                DarkModeToggleButton(
+                    isDarkMode = uiState.isDarkMode,
+                    onToggle = onDarkModeToggle
+                )
+                ButtonTemplate(text = "사용 가이드", onClick = onGuideClick)
+                ButtonTemplate(text = "서비스 이용약관", onClick = onTermsClick)
+                ButtonTemplate(text = "개인정보처리방침", onClick = onPrivacyClick)
+                ButtonTemplate(text = "로그아웃", onClick = onLogoutClick)
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun MyPageContentPreview() {
+    PlantTheme {
+        MyPageContent(
+            uiState = MyPageUiState(
+                nickname = "USER",
+                profileImg = "1",
+                isDarkMode = false,
+                totalStudyTime = "4시간 10분"
+            ),
+            onProfileClick = {},
+            onMyActivityClick = {},
+            onSettingClick = {},
+            onDarkModeToggle = {},
+            onGuideClick = {},
+            onTermsClick = {},
+            onPrivacyClick = {},
+            onLogoutClick = {}
+        )
     }
 }
 
@@ -191,45 +271,6 @@ fun DarkModeToggleButton(
 }
 
 @Composable
-fun GrownTreesButton(
-    completedPotCount: Int, onClick: () -> Unit
-) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(50.dp),
-        shape = RoundedCornerShape(8.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-        ),
-        elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 2.dp,
-        )
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-
-        ) {
-            Text(
-                text = "기른 나무 수",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = "$completedPotCount 그루",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-    }
-}
-
-
-@Composable
 fun ButtonTemplate(text: String, onClick: () -> Unit) {
     Button(
         onClick = onClick, modifier = Modifier
@@ -258,9 +299,10 @@ fun ButtonTemplate(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun ProfileRow(uiState: MyPageUiState, viewModel: MyPageViewModel) {
-    var isOpenDialog by remember { mutableStateOf(false) }
-
+fun ProfileRow(
+    uiState: MyPageUiState,
+    onProfileClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -269,10 +311,7 @@ fun ProfileRow(uiState: MyPageUiState, viewModel: MyPageViewModel) {
     ) {
         Box(
             modifier = Modifier
-                .clickable {
-                    viewModel.getImageLevelList()
-                    isOpenDialog = true
-                }
+                .clickable { onProfileClick() }
         ) {
 
             ProfileImage(
@@ -323,17 +362,6 @@ fun ProfileRow(uiState: MyPageUiState, viewModel: MyPageViewModel) {
                 )
             }
         }
-    }
-
-    if (isOpenDialog) {
-        ProfileDialog(
-            onDismiss = {
-                viewModel.clearProfileState()
-                isOpenDialog = false
-            },
-            uiState = uiState,
-            viewModel = viewModel
-        )
     }
 }
 
@@ -394,7 +422,7 @@ fun ProfileDialog(
     // 다이얼로그 안에서만 임시로 쓸 상태들 (입력 중인 값)
     var newUserName by remember { mutableStateOf(uiState.nickname) }
     var selectedImageLevel by remember { mutableStateOf(uiState.profileImg) }
-    1
+
     val context = LocalContext.current
 
     // 업데이트 성공 시 창 닫기 로직
@@ -475,7 +503,13 @@ fun ProfileDialog(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
                             contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                         )
-                    ) { Text("취소", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondaryContainer) }
+                    ) {
+                        Text(
+                            "취소",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
 
                     Button(
                         onClick = {
