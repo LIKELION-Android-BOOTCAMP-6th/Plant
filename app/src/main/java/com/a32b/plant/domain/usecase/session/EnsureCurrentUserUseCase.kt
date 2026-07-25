@@ -20,4 +20,14 @@ class EnsureCurrentUserUseCase @Inject constructor(
             Result.Success(user)
         }
     }
+
+    inline operator fun <T> invoke(block: (User) -> T): T? {
+        val result = invoke()
+
+        val user = when (result) {
+            is Result.Success -> result.data
+            is Result.Failure -> return null
+        }
+        return block(user)
+    }
 }
