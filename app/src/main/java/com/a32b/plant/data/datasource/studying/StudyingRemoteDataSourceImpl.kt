@@ -61,13 +61,14 @@ class StudyingRemoteDataSourceImpl @Inject constructor(
             .await()
     }
 
-    override suspend fun saveStudyLog(potId: String, log: StudyLogDto){
+    override suspend fun saveStudyLog(uid: String, potId: String, logId: String,log: StudyLogDto){
         db.collection("users")
             .document(uid)
             .collection("pots")
             .document(potId)
             .collection("logs")
-            .add(log)
+            .document(logId)
+            .set(log)
             .await()
     }
 

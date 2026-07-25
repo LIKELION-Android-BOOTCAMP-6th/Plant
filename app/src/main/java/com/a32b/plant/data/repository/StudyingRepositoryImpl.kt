@@ -10,7 +10,9 @@ import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.domain.repository.StudyingRepository
+import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -21,7 +23,9 @@ import javax.inject.Singleton
 @Singleton
 class StudyingRepositoryImpl @Inject constructor(
     private val studyingRemoteDataSource: StudyingRemoteDataSource,
-    private val local: StudyingLocalDataSource
+    private val local: StudyingLocalDataSource,
+    private val db : FirebaseFirestore,
+    private val userRepository: UserRepository
 ): StudyingRepository {
     override fun observeStudyingUser(tag: String): Flow<List<StudyingUser>> {
         return studyingRemoteDataSource.observeStudyingUser(tag)
@@ -94,10 +98,17 @@ class StudyingRepositoryImpl @Inject constructor(
     )
 
     override suspend fun saveStudyLog(potId: String, log: StudyLog): Result<Unit> {
-        val result = runCatching { studyingRemoteDataSource.saveStudyLog(potId, log.toDto()) }
+        val uid = userRepository.currentUser.value?.uid ?: return Result.Failure(AppError.Auth())
+        val logId = db.collection("users")
+            .document(uid)
+            .collection("pots")
+            .document(potId)
+            .collection("logs")
+            .document().id
+        val result = runCatching { studyingRemoteDataSource.saveStudyLog(uid,potId, logId,log.toDto()) }
             .recoverCatching {
                 if (it is CancellationException) throw it
-                studyingRemoteDataSource.saveStudyLog(potId, log.toDto())
+                studyingRemoteDataSource.saveStudyLog(uid ,potId, logId,log.toDto())
             }
 
         return result.fold(
@@ -106,12 +117,7 @@ class StudyingRepositoryImpl @Inject constructor(
                 if (e is CancellationException) throw e
                 Log.e("Studying", "학습 기록 저장", e)
 
-                val error = when (e) {
-                    is IllegalArgumentException -> AppError.Unknown("유저 정보를 찾을 수 없습니다.")
-                    else -> AppError.Custom("학습 기록 저장에 실패했습니다.")
-                }
-
-                Result.Failure(error)
+                Result.Failure(AppError.Custom("학습 기록 저장에 실패했습니다."))
             }
         )
     }
