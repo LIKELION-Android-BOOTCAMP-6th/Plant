@@ -4,12 +4,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.util.TimeFormatter
-import com.a32b.plant.di.CurrentUser
-import com.a32b.plant.data.local.StudyingSession
+import com.a32b.plant.data.model.StudyingSession
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.StudyingUser
-import com.a32b.plant.domain.repository.PotRepository
-import com.a32b.plant.origin.OldStudyingRepository
+import com.a32b.plant.domain.repository.StudyingRepository
+import com.a32b.plant.domain.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -35,7 +34,8 @@ data class StudyingUiState(
     val isStudyFinish: Boolean = false, //true시 학습 완전 종료, 디비로 값 넘기기
     val isInterruptedSession: Boolean = false, //비정상 종료 여부 체크
     val interruptedStudyLog: StudyingSession? = null,
-    val startTime: String = ""
+    val startTime: String = "",
+    val isLoading: Boolean = false
 )
 
 sealed class StudyingEvent{
@@ -52,8 +52,8 @@ sealed class StudyingEvent{
 }
 @HiltViewModel
 class StudyingViewModel @Inject constructor(
-    private val repository: OldStudyingRepository,
-    private val potRepository: PotRepository,
+    private val repository: StudyingRepository,
+    private val userRepository: UserRepository,
     savedStateHandle: SavedStateHandle
 
 ) : ViewModel() {
@@ -68,13 +68,19 @@ class StudyingViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(StudyingUiState(tag = tag))
     val uiState = _uiState.asStateFlow()
 
+    private val currentUser = userRepository.currentUser
+
+
     /** 비정상 종료 대비 로컬 디비에 데이터 저장   */
 
     fun saveSession(){
         viewModelScope.launch(Dispatchers.IO) {
             while (_uiState.value.isStudying){
                 delay(5000L)
-                repository.saveSession(StudyingSession(CurrentUser.uid, tag, title, potId, _uiState.value.timer))
+
+                currentUser.value?.uid?.let {
+                    repository.saveLocalSession(StudyingSession(it, tag, title, potId, _uiState.value.timer))
+                }
             }
         }
     }
@@ -82,7 +88,10 @@ class StudyingViewModel @Inject constructor(
     /** db에서 같은 태그로 공부중인 사용자 데이터 가져오기 */
     fun onStudyingUsersChange(){
         viewModelScope.launch(Dispatchers.IO) {
-            _uiState.update { it.copy(studyingUsers = repository.getStudyingUser(tag)) }
+            repository.observeStudyingUser(tag)
+                .collect { users ->
+                    _uiState.update { it.copy(studyingUsers = users) }
+                }
         }
     }
 
@@ -103,10 +112,8 @@ class StudyingViewModel @Inject constructor(
             while (true){
                 delay(1000)
                 onTimerChange()
-//                if(_uiState.value.timer % 600000L == 0L){
-                if(_uiState.value.timer % 6000L == 0L){
+                if(_uiState.value.timer % 60_000L == 0L){
                     updateUser()
-                    onStudyingUsersChange()
                 }
             }
         }
@@ -114,9 +121,7 @@ class StudyingViewModel @Inject constructor(
 
     fun updateUser(){
         viewModelScope.launch(Dispatchers.IO) {
-            repository.updateStudyingUser(
-                StudyingUser(CurrentUser.uid, CurrentUser.nickname, CurrentUser.profileImg, tag, _uiState.value.timer)
-            )
+            repository.updateStudyingTime(tag, _uiState.value.timer)
         }
 
     }
@@ -128,7 +133,21 @@ class StudyingViewModel @Inject constructor(
     init {
         startStopwatch()
         saveSession()
-        updateUser()
+        viewModelScope.launch {
+            initStudyingUser()
+        }
+        onStudyingUsersChange()
+    }
+
+    suspend fun initStudyingUser(){
+        currentUser.value?.let {
+            withContext(Dispatchers.IO){
+                repository.initStudyingUser(StudyingUser(it.uid, it.nickname, it.profileImg, tag, _uiState.value.timer))
+
+            }
+        }
+
+
     }
 
     /**  학습 종료 버튼 클릭 시 학습 기록하는 다이얼로그 표출    */
@@ -152,15 +171,16 @@ class StudyingViewModel @Inject constructor(
         val timestamp = "${TimeFormatter.formatToKoreanDate(LocalDateTime.now())} ${_uiState.value.startTime} ~ ${getCurrentTime()}"
         val resultTimestamp = "${TimeFormatter.formatWithDayOfWeek(LocalDateTime.now())} ${_uiState.value.startTime} ~ ${getCurrentTime()}"
         fun setStudyLog(): StudyLog = StudyLog.write(timestamp, _uiState.value.studyLog, _uiState.value.timer)
-        potRepository.createStudyLog(potId, setStudyLog())
-        potRepository.updateTotalStudyTime(potId, _uiState.value.timer)
-        repository.updateUserTotalStudyTime(_uiState.value.timer)
-        repository.deleteStudyingUser()
 
         viewModelScope.launch{
             //종료 시 로컬디비에 저장된 데이터 삭제
+            //TODO 실패 시 오류 알림 다이얼로그 띄우기
             withContext(Dispatchers.IO) {
-                repository.clearSession()
+                repository.saveStudyLog(potId, setStudyLog())
+                repository.updateTotalStudyTime(potId, _uiState.value.timer)
+                repository.updateUserTotalStudyTime(_uiState.value.timer)
+                repository.deleteStudyingUserInfo()
+                repository.clearLocalSession()
             }
 
             _eventChannel.send(StudyingEvent.NavigateToStudyResult(
