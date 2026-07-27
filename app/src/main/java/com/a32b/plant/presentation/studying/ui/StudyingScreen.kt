@@ -49,6 +49,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -62,6 +63,9 @@ import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyingUser
+import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.core.component.LoadingBox
+import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.studying.viewmodel.StudyingEvent
 import com.a32b.plant.presentation.studying.viewmodel.StudyingViewModel
 import com.a32b.plant.presentation.theme.Typography
@@ -71,6 +75,7 @@ import java.time.LocalDateTime
 @Composable
 fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = hiltViewModel()) {
 
+    val context = LocalContext.current
     //이전 스택에서 보낸 값을 args에 넣어서 뽑아낼 수 있음
     val args = navController.currentBackStackEntry?.toRoute<Routes.Studying>()
 
@@ -109,6 +114,13 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
                         popUpTo(Routes.HomeMain) { inclusive = false }
                     }
                 }
+                is StudyingEvent.NavigateToHome -> {
+                    navController.navigate(Routes.HomeMain) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+
+                is StudyingEvent.ShowToast -> context.showToast(event.message)
             }
         }
     }
@@ -156,6 +168,17 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
             viewModel.onFinishStudyingClick()
         }, tag, title)
     }
+
+    if (uiState.isLoading)
+        LoadingBox()
+
+    if (uiState.error != null)
+        ConfirmDialog(
+            text = "${uiState.error}",
+            semiText = "메인 화면으로 이동합니다.",
+            onDismiss = {},
+            onConfirm = { viewModel.onErrorConfirmClicked() }
+        )
 }
 
 @Composable

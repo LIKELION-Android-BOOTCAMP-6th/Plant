@@ -1,14 +1,20 @@
 package com.a32b.plant.presentation.studying.viewmodel
 
+import android.os.Message
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.data.model.StudyingSession
+import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.repository.UserRepository
+import com.a32b.plant.domain.result.onFailure
+import com.a32b.plant.domain.usecase.studying.StartStudyingSessionUseCase
+import com.a32b.plant.presentation.auth.viewmodel.SignInEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -35,7 +41,8 @@ data class StudyingUiState(
     val isInterruptedSession: Boolean = false, //비정상 종료 여부 체크
     val interruptedStudyLog: StudyingSession? = null,
     val startTime: String = "",
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val error: String? = null,
 )
 
 sealed class StudyingEvent{
@@ -49,11 +56,15 @@ sealed class StudyingEvent{
         val level: String
 
         ): StudyingEvent()
+
+    object NavigateToHome : StudyingEvent()
+    data class ShowToast(val message: String) : StudyingEvent()
 }
 @HiltViewModel
 class StudyingViewModel @Inject constructor(
     private val repository: StudyingRepository,
     private val userRepository: UserRepository,
+    private val startStudyingSessionUseCase: StartStudyingSessionUseCase,
     savedStateHandle: SavedStateHandle
 
 ) : ViewModel() {
@@ -72,7 +83,6 @@ class StudyingViewModel @Inject constructor(
 
 
     /** 비정상 종료 대비 로컬 디비에 데이터 저장   */
-
     fun saveSession(){
         viewModelScope.launch(Dispatchers.IO) {
             while (_uiState.value.isStudying){
@@ -139,15 +149,22 @@ class StudyingViewModel @Inject constructor(
         onStudyingUsersChange()
     }
 
+    /** 최초 시작 시 로컬 + 원격 db에 현재 사용자 정보 저장 */
     suspend fun initStudyingUser(){
-        currentUser.value?.let {
-            withContext(Dispatchers.IO){
-                repository.initStudyingUser(StudyingUser(it.uid, it.nickname, it.profileImg, tag, _uiState.value.timer))
+        withContext(Dispatchers.IO){
+            startStudyingSessionUseCase(tag, title,potId,_uiState.value.timer)
+                .onFailure { e ->
+                    when (e){
+                        //TODO 유저 정보 없을 떄 에러 처리하기
+                        AppError.UnknownUser() -> ""
+                        AppError.Local() -> Log.e("Studying", "로컬 저장 실패", e)
+                        AppError.Network() -> sendToast(e.message)
+                        else -> _uiState.update { it.copy(error = e.message) }
+                    }
 
-            }
+
+                }
         }
-
-
     }
 
     /**  학습 종료 버튼 클릭 시 학습 기록하는 다이얼로그 표출    */
@@ -196,5 +213,21 @@ class StudyingViewModel @Inject constructor(
     }
     fun onStartTimeChange(value : String) = _uiState.update { it.copy(startTime = value) }
 
+    private fun clearSession(){
+        //TODO 유저 정보 삭제 유즈케이스
+    }
+
+    /**  에러 다이얼로그 표출 시 세션 클리어 및 홈으로 이동 */
+    fun onErrorConfirmClicked(){
+        clearSession()
+        viewModelScope.launch {
+            _eventChannel.send(StudyingEvent.NavigateToHome)
+        }
+        _uiState.update { it.copy(error = null) }
+    }
+
+    private fun sendToast(message: String) {
+        viewModelScope.launch { _eventChannel.send(StudyingEvent.ShowToast(message)) }
+    }
 
 }

@@ -143,7 +143,7 @@ class StudyingRepositoryImpl @Inject constructor(
         onSuccess = { Result.Success(Unit)},
         onFailure = { e ->
             Log.e("studying", "학습 세션 로컬 저장", e)
-            Result.Failure(AppError.Custom("세션 저장 실패"))
+            Result.Failure(AppError.Local())
         }
     )
 
@@ -153,7 +153,7 @@ class StudyingRepositoryImpl @Inject constructor(
         onSuccess = { Result.Success(it)},
         onFailure = { e ->
             Log.e("studying", "학습중 세션 읽기", e)
-            Result.Failure(AppError.Custom("불러오기 실패"))
+            Result.Failure(AppError.Local("불러오기 실패"))
         }
     )
 
@@ -163,7 +163,7 @@ class StudyingRepositoryImpl @Inject constructor(
         onSuccess = { Result.Success(Unit)},
         onFailure = {e ->
             Log.e("studying", "세션 초기화", e)
-            Result.Failure(AppError.Custom("세션 초기화 실패"))
+            Result.Failure(AppError.Local("세션 초기화 실패"))
         }
     )
 
