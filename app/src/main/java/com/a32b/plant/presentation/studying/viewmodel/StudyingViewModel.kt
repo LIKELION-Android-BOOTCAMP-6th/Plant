@@ -1,22 +1,25 @@
 package com.a32b.plant.presentation.studying.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.error.AppError
-import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
+import com.a32b.plant.domain.usecase.studying.ClearStudyingSessionUseCase
+import com.a32b.plant.domain.usecase.studying.FinishStudyingUseCase
 import com.a32b.plant.domain.usecase.studying.StartStudyingSessionUseCase
 import com.a32b.plant.domain.usecase.studying.UpdateLocalStudyingSessionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -62,6 +65,8 @@ class StudyingViewModel @Inject constructor(
     private val repository: StudyingRepository,
     private val startStudyingSessionUseCase: StartStudyingSessionUseCase,
     private val updateLocalStudyingSessionUseCase: UpdateLocalStudyingSessionUseCase,
+    private val clearStudyingSessionUseCase: ClearStudyingSessionUseCase,
+    private val finishStudyingUseCase: FinishStudyingUseCase,
     savedStateHandle: SavedStateHandle
 
 ) : ViewModel() {
@@ -146,7 +151,7 @@ class StudyingViewModel @Inject constructor(
                     when (e){
                         //TODO 유저 정보 없을 떄 에러 처리하기
                         is AppError.UnknownUser -> ""
-                        is AppError.Local, is AppError.Custom -> Log.e("Studying", "로컬 저장 실패", e)
+                        is AppError.Local, is AppError.Custom -> Unit //에러 로그는 레포지토리에서 찍고 있음
                         is AppError.Network -> sendToast(e.message)
                         else -> _uiState.update { it.copy(error = e.message) }
                     }
@@ -167,52 +172,67 @@ class StudyingViewModel @Inject constructor(
 
     /** 학습 완전 종료 시 (= 다이얼로그에서도 기록 입력 후 종료 버튼 클릭했을 때)    */
     fun onIsStudyFinishChange() = _uiState.update { it.copy(isStudyFinish = true) }
-    fun getCurrentTime(): String{
+    private fun getCurrentTime(): String{
         val now = LocalDateTime.now()
         return TimeFormatter.formatToTimeOnly(now)
     }
-    fun onFinishStudyingClick() {
 
+    fun onFinishStudyingClick() {
+        var isLogSaved = true
+        _uiState.update { it.copy(isLoading = true) }
         //개별 학습 기록의 제목
         val timestamp = "${TimeFormatter.formatToKoreanDate(LocalDateTime.now())} ${_uiState.value.startTime} ~ ${getCurrentTime()}"
         val resultTimestamp = "${TimeFormatter.formatWithDayOfWeek(LocalDateTime.now())} ${_uiState.value.startTime} ~ ${getCurrentTime()}"
-        fun setStudyLog(): StudyLog = StudyLog.write(timestamp, _uiState.value.studyLog, _uiState.value.timer)
 
         viewModelScope.launch{
-            //종료 시 로컬디비에 저장된 데이터 삭제
-            //TODO 실패 시 오류 알림 다이얼로그 띄우기
-            withContext(Dispatchers.IO) {
-                repository.saveStudyLog(potId, setStudyLog())
-                repository.updateTotalStudyTime(potId, _uiState.value.timer)
-                repository.updateUserTotalStudyTime(_uiState.value.timer)
-                repository.deleteStudyingUserInfo()
-                repository.clearLocalSession()
+
+            val (finishResult) = coroutineScope {
+                awaitAll(
+                    async(Dispatchers.IO) {
+                        finishStudyingUseCase(potId, timestamp, _uiState.value.studyLog, _uiState.value.timer)
+                    },
+                    async(Dispatchers.IO) {
+                        clearStudyingSessionUseCase()
+                    }
+                )
             }
 
-            _eventChannel.send(StudyingEvent.NavigateToStudyResult(
-                timestamp = resultTimestamp,
-                tag = tag,
-                potId = potId,
-                title = title,
-                log = _uiState.value.studyLog,
-                time = _uiState.value.timer,
-                level = level
-            ))
+            finishResult.onFailure { e ->
+                when (e){
+                    is AppError.Network -> sendToast(e.message)
+                    else -> {
+                        isLogSaved = false
+                        _uiState.update { it.copy(error = e.message) }
+                    }
+                }
+            }
+
+            _uiState.update { it.copy(isLoading = false) }
+
+            if (isLogSaved){
+                _eventChannel.send(StudyingEvent.NavigateToStudyResult(
+                    timestamp = resultTimestamp,
+                    tag = tag,
+                    potId = potId,
+                    title = title,
+                    log = _uiState.value.studyLog,
+                    time = _uiState.value.timer,
+                    level = level
+                ))
+            }
+
         }
     }
     fun onStartTimeChange(value : String) = _uiState.update { it.copy(startTime = value) }
 
-    private fun clearSession(){
-        //TODO 유저 정보 삭제 유즈케이스
-    }
-
     /**  에러 다이얼로그 표출 시 세션 클리어 및 홈으로 이동 */
-    fun onErrorConfirmClicked(){
-        clearSession()
+    suspend fun onErrorConfirmClicked(){
+        _uiState.update { it.copy(isLoading = true) }
+        clearStudyingSessionUseCase()
         viewModelScope.launch {
             _eventChannel.send(StudyingEvent.NavigateToHome)
         }
-        _uiState.update { it.copy(error = null) }
+        _uiState.update { it.copy(error = null, isLoading = false) }
     }
 
     private fun sendToast(message: String) {

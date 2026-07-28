@@ -13,6 +13,7 @@ import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -44,7 +45,7 @@ class StudyingRepositoryImpl @Inject constructor(
 
             val error = when(e){
                 is IllegalArgumentException -> AppError.Unknown("유저 정보를 찾을 수 없습니다.")
-                else -> AppError.Update()
+                else -> AppError.Upload()
             }
             Result.Failure(error)
         }
@@ -61,7 +62,7 @@ class StudyingRepositoryImpl @Inject constructor(
 
             val error = when(e){
                 is IllegalArgumentException -> AppError.Unknown("유저 정보를 찾을 수 없습니다.")
-                else -> AppError.Update()
+                else -> AppError.Upload()
             }
 
             Result.Failure(error)
@@ -77,7 +78,7 @@ class StudyingRepositoryImpl @Inject constructor(
 
             val error = when(e){
                 is IllegalArgumentException -> AppError.Unknown("유저 정보를 찾을 수 없습니다.")
-                else -> AppError.Update()
+                else -> AppError.Upload()
             }
             Result.Failure(error)
         }
@@ -92,7 +93,7 @@ class StudyingRepositoryImpl @Inject constructor(
 
             val error = when(e){
                 is IllegalArgumentException -> AppError.Unknown("유저 정보를 찾을 수 없습니다.")
-                else -> AppError.Update()
+                else -> AppError.Upload()
             }
             Result.Failure(error)
         }
@@ -118,7 +119,22 @@ class StudyingRepositoryImpl @Inject constructor(
                 if (e is CancellationException) throw e
                 Log.e("Studying", "학습 기록 저장", e)
 
-                Result.Failure(AppError.Custom("학습 기록 저장에 실패했습니다."))
+                val error = when (e) {
+                    is FirebaseFirestoreException -> when (e.code) {
+                        FirebaseFirestoreException.Code.UNAVAILABLE,
+                        FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
+
+                        FirebaseFirestoreException.Code.PERMISSION_DENIED -> {
+                            Log.e("Studying", "⚠️ Firestore 규칙 위반 - 규칙 또는 요청 데이터 확인 필요", e)
+                            AppError.Permission()
+                        }
+
+                        else -> AppError.Upload()
+                    }
+                    else -> AppError.Upload()
+                }
+
+                Result.Failure(error)
             }
         )
     }
@@ -130,7 +146,7 @@ class StudyingRepositoryImpl @Inject constructor(
         onFailure = { e ->
             Log.e("Studying", "학습중 유저 정보 삭제", e)
             val error = when(e){
-                is IllegalArgumentException -> AppError.Unknown("유저 정보를 찾을 수 없습니다.")
+                is IllegalArgumentException -> AppError.UnknownUser()
                 else -> AppError.Custom("")
             }
 

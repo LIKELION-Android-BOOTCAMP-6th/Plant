@@ -13,7 +13,8 @@ import com.a32b.plant.domain.usecase.auth.SignInWithGoogleUseCase
 import com.a32b.plant.domain.usecase.auth.SignOutUseCase
 import com.a32b.plant.domain.usecase.auth.SignUpWithEmailUseCase
 import com.a32b.plant.domain.usecase.community.AddCommentUseCase
-import com.a32b.plant.domain.usecase.studying.ObserveStudyingUseCase
+import com.a32b.plant.domain.usecase.studying.ClearStudyingSessionUseCase
+import com.a32b.plant.domain.usecase.studying.FinishStudyingUseCase
 import com.a32b.plant.domain.usecase.studying.StartStudyingSessionUseCase
 import com.a32b.plant.domain.usecase.studying.UpdateLocalStudyingSessionUseCase
 import com.google.firebase.auth.FirebaseAuth
@@ -69,11 +70,6 @@ class UseCaseModule {
 
     @Provides
     @Singleton
-    fun provideObserveStudyingUseCase(auth: AuthRepository, study: StudyingRepository) =
-        ObserveStudyingUseCase(auth, study)
-
-    @Provides
-    @Singleton
     fun provideAddCommentUseCase(auth: AuthRepository, community : CommunityRepository, firebaseAuth: FirebaseAuth) =
         AddCommentUseCase(auth, community, firebaseAuth)
 
@@ -86,4 +82,14 @@ class UseCaseModule {
     @Singleton
     fun provideUpdateLocalStudyingSessionUseCase(studying : StudyingRepository, user : UserRepository) =
         UpdateLocalStudyingSessionUseCase(studying, user)
+
+    @Provides
+    @Singleton
+    fun provideClearStudyingSessionUseCase(studying : StudyingRepository) =
+        ClearStudyingSessionUseCase(studying)
+
+    @Provides
+    @Singleton
+    fun provideFinishStudyingUseCase(studying : StudyingRepository) =
+        FinishStudyingUseCase(studying)
 }
