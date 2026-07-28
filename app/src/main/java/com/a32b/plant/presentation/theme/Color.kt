@@ -3,15 +3,16 @@ package com.a32b.plant.presentation.theme
 import androidx.compose.ui.graphics.Color
 
 //배경 색상
-val background = Color(0xFFFFFFF4)
+val background = Color(0xFFF9FBF6)
 
 // 입력창 배경색
 val textFieldBackground = Color(0xFFEEEEEE)
 
 //메인 색상
-val primary = Color(0xFF97BC62)
+val primary = Color(0xFF529943)
+
 //그린 서브 색상1
-val sub_green1 = Color(0xFFA3D9A5)
+val sub_green1 = Color(0xFFebf7e4)
 
 //그린 서브 색상2
 val sub_green2 = Color(0xFF51A872)

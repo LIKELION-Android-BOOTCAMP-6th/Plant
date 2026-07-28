@@ -1,4 +1,4 @@
-package com.a32b.plant.presentation.home.viewmodel
+package com.a32b.plant.presentation.pot.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
