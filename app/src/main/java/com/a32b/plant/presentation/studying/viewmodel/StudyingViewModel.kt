@@ -1,20 +1,18 @@
 package com.a32b.plant.presentation.studying.viewmodel
 
-import android.os.Message
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.util.TimeFormatter
-import com.a32b.plant.data.model.StudyingSession
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.domain.repository.StudyingRepository
-import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.onFailure
+import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.studying.StartStudyingSessionUseCase
-import com.a32b.plant.presentation.auth.viewmodel.SignInEvent
+import com.a32b.plant.domain.usecase.studying.UpdateLocalStudyingSessionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -38,8 +36,7 @@ data class StudyingUiState(
     val isFinishDialogShown: Boolean = false, //학습 종료 다이얼로그 표출 여부 체크
     val studyLog: List<String> = emptyList(),
     val isStudyFinish: Boolean = false, //true시 학습 완전 종료, 디비로 값 넘기기
-    val isInterruptedSession: Boolean = false, //비정상 종료 여부 체크
-    val interruptedStudyLog: StudyingSession? = null,
+    val isLocalSaved: Boolean = true, // 로컬 저장 성공 여부 체크
     val startTime: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -63,8 +60,8 @@ sealed class StudyingEvent{
 @HiltViewModel
 class StudyingViewModel @Inject constructor(
     private val repository: StudyingRepository,
-    private val userRepository: UserRepository,
     private val startStudyingSessionUseCase: StartStudyingSessionUseCase,
+    private val updateLocalStudyingSessionUseCase: UpdateLocalStudyingSessionUseCase,
     savedStateHandle: SavedStateHandle
 
 ) : ViewModel() {
@@ -79,20 +76,15 @@ class StudyingViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(StudyingUiState(tag = tag))
     val uiState = _uiState.asStateFlow()
 
-    private val currentUser = userRepository.currentUser
 
 
     /** 비정상 종료 대비 로컬 디비에 데이터 저장   */
-    fun saveSession(){
-        viewModelScope.launch(Dispatchers.IO) {
-            while (_uiState.value.isStudying){
-                delay(5000L)
-
-                currentUser.value?.uid?.let {
-                    repository.saveLocalSession(StudyingSession(it, tag, title, potId, _uiState.value.timer))
-                }
+    private suspend fun saveSession(){
+        updateLocalStudyingSessionUseCase(tag, title, potId,_uiState.value.timer)
+            .onSuccess { _uiState.update { it.copy(isLocalSaved = true) } }
+            .onFailure { e ->
+                if (e is AppError.Custom) _uiState.update { it.copy(isLocalSaved = false) }
             }
-        }
     }
 
     /** db에서 같은 태그로 공부중인 사용자 데이터 가져오기 */
@@ -122,14 +114,12 @@ class StudyingViewModel @Inject constructor(
             while (true){
                 delay(1000)
                 onTimerChange()
-                if(_uiState.value.timer % 60_000L == 0L){
-                    updateUser()
-                }
+                if(_uiState.value.timer % 5_000L == 0L) saveSession() //5초마다 로컬 디비 저장
+                if(_uiState.value.timer % 60_000L == 0L) updateUser() //1분마다 원격 디비 저장
             }
         }
     }
-
-    fun updateUser(){
+    private fun updateUser(){
         viewModelScope.launch(Dispatchers.IO) {
             repository.updateStudyingTime(tag, _uiState.value.timer)
         }
@@ -142,7 +132,6 @@ class StudyingViewModel @Inject constructor(
 
     init {
         startStopwatch()
-        saveSession()
         viewModelScope.launch {
             initStudyingUser()
         }
@@ -156,9 +145,9 @@ class StudyingViewModel @Inject constructor(
                 .onFailure { e ->
                     when (e){
                         //TODO 유저 정보 없을 떄 에러 처리하기
-                        AppError.UnknownUser() -> ""
-                        AppError.Local() -> Log.e("Studying", "로컬 저장 실패", e)
-                        AppError.Network() -> sendToast(e.message)
+                        is AppError.UnknownUser -> ""
+                        is AppError.Local, is AppError.Custom -> Log.e("Studying", "로컬 저장 실패", e)
+                        is AppError.Network -> sendToast(e.message)
                         else -> _uiState.update { it.copy(error = e.message) }
                     }
 

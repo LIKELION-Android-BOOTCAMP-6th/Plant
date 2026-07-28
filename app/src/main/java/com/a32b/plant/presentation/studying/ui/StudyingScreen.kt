@@ -179,6 +179,10 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
             onDismiss = {},
             onConfirm = { viewModel.onErrorConfirmClicked() }
         )
+
+    if (!uiState.isLocalSaved){
+        //TODO 배너나 알림 창 같은 거 조그맣게 띄위기
+    }
 }
 
 @Composable

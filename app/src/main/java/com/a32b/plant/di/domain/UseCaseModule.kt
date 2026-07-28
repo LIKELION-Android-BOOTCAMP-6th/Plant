@@ -15,6 +15,7 @@ import com.a32b.plant.domain.usecase.auth.SignUpWithEmailUseCase
 import com.a32b.plant.domain.usecase.community.AddCommentUseCase
 import com.a32b.plant.domain.usecase.studying.ObserveStudyingUseCase
 import com.a32b.plant.domain.usecase.studying.StartStudyingSessionUseCase
+import com.a32b.plant.domain.usecase.studying.UpdateLocalStudyingSessionUseCase
 import com.google.firebase.auth.FirebaseAuth
 import dagger.Module
 import dagger.Provides
@@ -80,4 +81,9 @@ class UseCaseModule {
     @Singleton
     fun provideStartStudyingSessionUseCase(user : UserRepository, studying : StudyingRepository) =
         StartStudyingSessionUseCase(user, studying)
+
+    @Provides
+    @Singleton
+    fun provideUpdateLocalStudyingSessionUseCase(studying : StudyingRepository, user : UserRepository) =
+        UpdateLocalStudyingSessionUseCase(studying, user)
 }
