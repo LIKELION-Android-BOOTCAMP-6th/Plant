@@ -1,4 +1,4 @@
-package com.a32b.plant.presentation.home.ui
+package com.a32b.plant.presentation.pot.ui
 
 import android.widget.Toast
 import androidx.compose.foundation.Image
@@ -34,7 +34,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.a32b.plant.R
-import com.a32b.plant.presentation.home.viewmodel.NewBornTreeViewModel
+import com.a32b.plant.presentation.pot.viewmodel.NewBornTreeViewModel
 import com.a32b.plant.presentation.theme.primary
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
