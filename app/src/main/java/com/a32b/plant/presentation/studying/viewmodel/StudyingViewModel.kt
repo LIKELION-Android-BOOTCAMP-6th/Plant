@@ -226,10 +226,11 @@ class StudyingViewModel @Inject constructor(
     fun onStartTimeChange(value : String) = _uiState.update { it.copy(startTime = value) }
 
     /**  에러 다이얼로그 표출 시 세션 클리어 및 홈으로 이동 */
-    suspend fun onErrorConfirmClicked(){
+    fun onErrorConfirmClicked(){
         _uiState.update { it.copy(isLoading = true) }
-        clearStudyingSessionUseCase()
         viewModelScope.launch {
+            clearStudyingSessionUseCase()
+
             _eventChannel.send(StudyingEvent.NavigateToHome)
         }
         _uiState.update { it.copy(error = null, isLoading = false) }
