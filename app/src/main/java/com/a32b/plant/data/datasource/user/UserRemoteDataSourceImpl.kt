@@ -49,6 +49,12 @@ class UserRemoteDataSourceImpl @Inject constructor(
             .await()
     }
 
+    override suspend fun updateDarkMode(uid: String, isDarkMode: Boolean) {
+        db.collection("users").document(uid)
+            .update("isDarkMode", isDarkMode)
+            .await()
+    }
+
     override suspend fun isNicknameTaken(nickname: String): Boolean {
         val doc = db.collection("nicknames").document(nickname).get().await()
         return doc.exists()
