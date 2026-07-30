@@ -230,10 +230,9 @@ class StudyingViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
             clearStudyingSessionUseCase()
-
+            _uiState.update { it.copy(error = null, isLoading = false) }
             _eventChannel.send(StudyingEvent.NavigateToHome)
         }
-        _uiState.update { it.copy(error = null, isLoading = false) }
     }
 
     private fun sendToast(message: String) {
