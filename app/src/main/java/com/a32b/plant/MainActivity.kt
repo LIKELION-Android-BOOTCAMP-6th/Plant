@@ -17,17 +17,21 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.a32b.plant.presentation.core.component.BottomBar
 import com.a32b.plant.core.navigation.PlantAppNavigation
 import com.a32b.plant.core.navigation.Routes
-import com.a32b.plant.data.session.SessionExpiredEvent
 import com.a32b.plant.domain.repository.AuthRepository
+import com.a32b.plant.domain.session.SessionExpiredObserver
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.splash.SplashViewModel
 import com.a32b.plant.presentation.theme.PlantTheme
@@ -39,7 +43,7 @@ class MainActivity : ComponentActivity() {
     private val viewModel: SplashViewModel by viewModels()
 
     @Inject
-    lateinit var sessionExpiredEvent: SessionExpiredEvent
+    lateinit var sessionExpiredObserver: SessionExpiredObserver
 
     @Inject
     lateinit var authRepository: AuthRepository
@@ -71,17 +75,21 @@ class MainActivity : ComponentActivity() {
                      2. 로그인 화면으로 이동
                      3. 유저 정보 조회 실패 다이얼로그 표출
                     */
-                    var isSessionDialogShown by remember { mutableStateOf(false) }
+                    var isSessionDialogShown by rememberSaveable { mutableStateOf(false) }
+                    val lifecycleOwner = LocalLifecycleOwner.current
                     LaunchedEffect(Unit) {
-                        sessionExpiredEvent.event.collect {
-                            authRepository.signOut()
+                        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED){
+                            sessionExpiredObserver.event.collect {
+                                authRepository.signOut()
 
-                            navController.navigate(Routes.SignIn){
-                                popUpTo(0) { inclusive = true }
+                                navController.navigate(Routes.SignIn){
+                                    popUpTo(0) { inclusive = true }
+                                }
+
+                                isSessionDialogShown = true
                             }
-
-                            isSessionDialogShown = true
                         }
+
 
                     }
 

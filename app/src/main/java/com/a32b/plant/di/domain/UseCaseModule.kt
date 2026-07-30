@@ -77,8 +77,4 @@ class UseCaseModule {
     fun provideAddCommentUseCase(auth: AuthRepository, community : CommunityRepository, firebaseAuth: FirebaseAuth) =
         AddCommentUseCase(auth, community, firebaseAuth)
 
-    @Provides
-    @Singleton
-    fun provideEnsureCurrentUserUseCase(user: UserRepository, notifier : SessionExpiredNotifier) =
-        EnsureCurrentUserUseCase(user, notifier)
 }
