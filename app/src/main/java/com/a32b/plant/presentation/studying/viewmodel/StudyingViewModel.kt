@@ -164,7 +164,15 @@ class StudyingViewModel @Inject constructor(
     /**  학습 종료 버튼 클릭 시 학습 기록하는 다이얼로그 표출    */
     fun onFinishDialogShownChange() = _uiState.update { it.copy(isFinishDialogShown = !it.isFinishDialogShown) }
 
-    fun setStudyLog(studyLog: List<String>) = _uiState.update { it.copy(studyLog = studyLog.filter { log -> log.isNotBlank()  }) }
+    /** ⭐️ 학습 중 기록 수정 했을 시
+     근데 수정할 수 있게 할건지, 아니면 보여만 줄건지 논의 필요
+     */
+    fun setStudyLog(studyLog: List<String>) {
+        _uiState.update { it.copy(studyLog = studyLog.filter { log -> log.isNotBlank()  }) }
+        viewModelScope.launch {
+            updateLocalStudyingSessionUseCase(tag, title, potId, _uiState.value.timer, _uiState.value.studyLog)
+        }
+    }
     fun onDialogDismissClick(){
         _uiState.update { it.copy(isFinishDialogShown = false, isStudying = true) }
         startStopwatch()
