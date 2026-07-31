@@ -34,6 +34,7 @@ data class MyPageUiState(
     val isUpdateSuccess: Boolean = false,
     val levelList: List<String> = emptyList(), // 프로필 편집 - 화분 이미지 띄우기 위해 쓰이는 레벨 리스트
     val isDarkMode: Boolean = false,
+    val isDarkModeUpdating: Boolean = false,
     val isLoading: Boolean = false,
     val nicknameError: String? = null,
     val totalStudyTime: String = "0시간 0분",
@@ -146,15 +147,26 @@ class MyPageViewModel @Inject constructor(
     }
 
 
-    fun toggleDarkMode() {
-        val state = !uiState.value.isDarkMode
+    fun updateDarkMode(isDarkMode: Boolean) {
+        if (uiState.value.isDarkModeUpdating || uiState.value.isDarkMode == isDarkMode) {
+            return
+        }
+        _uiState.update { it.copy(isDarkModeUpdating = true) }
+
         viewModelScope.launch {
-            updateDarkModeUseCase(state)
+            updateDarkModeUseCase(isDarkMode)
                 .onSuccess {
-                    _uiState.update { it.copy(isDarkMode = state) }
+                    _uiState.update {
+                        it.copy(
+                            isDarkMode = isDarkMode,
+                            isDarkModeUpdating = false
+                        )
+                    }
                 }
                 .onFailure { e ->
+                    _uiState.update { it.copy(isDarkModeUpdating = false) }
                     Log.e("MyPage", "다크모드 변경 실패: ${e.message}", e)
+                    _eventChannel.send(MyPageEvent.ShowToast(e.message))
                 }
         }
     }

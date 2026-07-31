@@ -1,6 +1,7 @@
 package com.a32b.plant.data.repository
 
 import android.util.Log
+import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.data.datasource.user.UserRemoteDataSource
 import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.mapper.toDto
@@ -28,7 +29,7 @@ class UserRepositoryImpl @Inject constructor(
     private val userRemoteDataSource: UserRemoteDataSource,
     private val db: FirebaseFirestore,
     @param:ApplicationScope private val scope: CoroutineScope
-): UserRepository {
+) : UserRepository {
     private val _currentUser = MutableStateFlow<User?>(null)
     private var sessionJob: Job? = null
 
@@ -80,11 +81,24 @@ class UserRepositoryImpl @Inject constructor(
         onFailure = { e -> Result.Failure(handleError(e, "유저 생성 실패")) }
     )
 
-    override suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit> = runCatching {
-        userRemoteDataSource.completeFirstLogin(uid, nickname)
+    override suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit> =
+        runCatching {
+            userRemoteDataSource.completeFirstLogin(uid, nickname)
+        }.fold(
+            onSuccess = { Result.Success(Unit) },
+            onFailure = { e -> Result.Failure(handleError(e, "첫 로그인 완료 처리 실패")) }
+        )
+
+    override suspend fun updateDarkMode(user: User): Result<Unit> = safeRunCatching {
+        userRemoteDataSource.updateDarkMode(
+            uid = user.uid,
+            isDarkMode = user.isDarkMode
+        )
     }.fold(
         onSuccess = { Result.Success(Unit) },
-        onFailure = { e -> Result.Failure(handleError(e, "첫 로그인 완료 처리 실패")) }
+        onFailure = { e ->
+            Result.Failure(handleError(e, "다크모드 설정 변경 실패"))
+        }
     )
 
     override suspend fun isNicknameTaken(nickname: String): Result<Boolean> = runCatching {

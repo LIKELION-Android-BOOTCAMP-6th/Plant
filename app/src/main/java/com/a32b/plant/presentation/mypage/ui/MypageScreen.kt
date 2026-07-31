@@ -133,8 +133,8 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                 onSettingClick = {
                     navController.navigate(Routes.MyPageSetting)
                 },
-                onDarkModeToggle = {
-                    viewModel.toggleDarkMode()
+                onDarkModeToggle = { isDarkMode ->
+                    viewModel.updateDarkMode(isDarkMode)
                 },
                 onGuideClick = {
                     Toast.makeText(context, "준비 중입니다.", Toast.LENGTH_SHORT).show()
@@ -161,7 +161,7 @@ private fun MyPageContent(
     onProfileClick: () -> Unit,
     onMyActivityClick: () -> Unit,
     onSettingClick: () -> Unit,
-    onDarkModeToggle: () -> Unit,
+    onDarkModeToggle: (Boolean) -> Unit,
     onGuideClick: () -> Unit,
     onTermsClick: () -> Unit,
     onPrivacyClick: () -> Unit,
@@ -190,6 +190,7 @@ private fun MyPageContent(
                 ButtonTemplate(text = "앱 설정", onClick = onSettingClick)
                 DarkModeToggleButton(
                     isDarkMode = uiState.isDarkMode,
+                    isEnabled = !uiState.isDarkModeUpdating,
                     onToggle = onDarkModeToggle
                 )
                 ButtonTemplate(text = "사용 가이드", onClick = onGuideClick)
@@ -227,7 +228,8 @@ private fun MyPageContentPreview() {
 @Composable
 fun DarkModeToggleButton(
     isDarkMode: Boolean,
-    onToggle: () -> Unit
+    isEnabled: Boolean,
+    onToggle: (Boolean) -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -258,7 +260,8 @@ fun DarkModeToggleButton(
             Switch(
                 checked = isDarkMode,
                 modifier = Modifier.scale(0.9f),
-                onCheckedChange = { onToggle() },
+                enabled = isEnabled,
+                onCheckedChange = onToggle,
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = Color.White,
                     checkedTrackColor = MaterialTheme.colorScheme.primary,
