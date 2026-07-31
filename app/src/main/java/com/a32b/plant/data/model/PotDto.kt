@@ -1,9 +1,11 @@
 package com.a32b.plant.data.model
 
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 
 data class PotDto(
+    @DocumentId
     var id: String = "",
     @get:PropertyName("tag_id") @set:PropertyName("tag_id")
     var tagId: String = "",

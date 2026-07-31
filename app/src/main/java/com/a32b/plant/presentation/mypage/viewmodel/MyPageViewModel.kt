@@ -16,6 +16,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -60,22 +61,17 @@ class MyPageViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            userRepository.currentUser.collectLatest { user ->
-                if (user != null) {
-                    _uiState.update {
-                        it.copy(
-                            nickname = user.nickname,
-                            profileImg = user.profileImg,
-                            isDarkMode = user.isDarkMode,
-                            totalStudyTime = formatToDigitalClock(user.totalStudyTime)
-                        )
-                    }
-                    // 빈화면 -> 홈화면
-                    loaded()
-                } else {
-                    Log.e("error", "-----사용자 정보 없음")
-                    loaded()
+            userRepository.currentUser.filterNotNull().collectLatest { user ->
+                _uiState.update {
+                    it.copy(
+                        nickname = user.nickname,
+                        profileImg = user.profileImg,
+                        isDarkMode = user.isDarkMode,
+                        totalStudyTime = formatToDigitalClock(user.totalStudyTime)
+                    )
                 }
+                // 빈화면 -> 홈화면
+                loaded()
             }
         }
     }
