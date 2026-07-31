@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.map
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.code
 
 
 @Singleton
@@ -36,7 +35,7 @@ class StudyingRepositoryImpl @Inject constructor(
             .map { dtoList -> dtoList.map { it.toDomain() } }
     }
 
-    override suspend fun initStudyingUser(user: StudyingUser): Result<Unit> = runCatching {
+    override suspend fun initStudyingUser(user: StudyingUser): Result<Unit> = safeRunCatching {
         studyingRemoteDataSource.initStudyingUser(user.toDto())
     }.fold(
         onSuccess = { Result.Success(Unit)},
@@ -53,7 +52,7 @@ class StudyingRepositoryImpl @Inject constructor(
         }
     )
 
-    override suspend fun updateStudyingTime(tag: String, time: Long): Result<Unit> = runCatching {
+    override suspend fun updateStudyingTime(tag: String, time: Long): Result<Unit> = safeRunCatching {
         studyingRemoteDataSource.updateStudyingTime(tag, time)
     }.fold(
         onSuccess = { Result.Success(Unit)},
@@ -71,7 +70,7 @@ class StudyingRepositoryImpl @Inject constructor(
         }
     )
 
-    override suspend fun updateTotalStudyTime(potId: String, studyTime: Long) = runCatching {
+    override suspend fun updateTotalStudyTime(potId: String, studyTime: Long) = safeRunCatching {
         studyingRemoteDataSource.updateTotalStudyTime(potId, studyTime)
     }.fold(
         onSuccess = { Result.Success(Unit)},
@@ -86,7 +85,7 @@ class StudyingRepositoryImpl @Inject constructor(
         }
     )
 
-    override suspend fun updateUserTotalStudyTime(time: Long): Result<Unit> = runCatching {
+    override suspend fun updateUserTotalStudyTime(time: Long): Result<Unit> = safeRunCatching {
         studyingRemoteDataSource.updateUserTotalStudyTime(time)
     }.fold(
         onSuccess = { Result.Success(Unit)},
@@ -131,7 +130,7 @@ class StudyingRepositoryImpl @Inject constructor(
             Result.Failure(error)
         }
     )
-    override suspend fun deleteStudyingUserInfo(): Result<Unit> = runCatching {
+    override suspend fun deleteStudyingUserInfo(): Result<Unit> = safeRunCatching {
         studyingRemoteDataSource.deleteStudyingUserInfo()
     }.fold(
         onSuccess = { Result.Success(Unit)},
@@ -146,7 +145,7 @@ class StudyingRepositoryImpl @Inject constructor(
         }
     )
 
-    override suspend fun saveLocalSession(studying: StudyingSession) = runCatching {
+    override suspend fun saveLocalSession(studying: StudyingSession) = safeRunCatching {
         local.save(studying)
     }.fold(
         onSuccess = { Result.Success(Unit)},
@@ -160,7 +159,7 @@ class StudyingRepositoryImpl @Inject constructor(
         }
     )
 
-    override suspend fun readLocalSession(): Result<StudyingSession?> = runCatching {
+    override suspend fun readLocalSession(): Result<StudyingSession?> = safeRunCatching {
         local.read()
     }.fold(
         onSuccess = { Result.Success(it)},

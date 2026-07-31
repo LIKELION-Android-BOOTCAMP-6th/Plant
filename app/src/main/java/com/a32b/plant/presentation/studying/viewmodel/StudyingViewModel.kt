@@ -16,10 +16,7 @@ import com.a32b.plant.domain.usecase.studying.UpdateLocalStudyingSessionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,7 +24,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDateTime
 import javax.inject.Inject
@@ -201,8 +197,13 @@ class StudyingViewModel @Inject constructor(
                 finishStudyingUseCase(potId, timestamp, _uiState.value.studyLog ?: emptyList(), _uiState.value.timer)
                     .onSuccess { clearSession() }
                     .onFailure { e ->
-                        isLogSaved = false
-                        _uiState.update { it.copy(error = e.message) }
+                        when (e){
+                            is AppError.Network -> sendToast(e.message)
+                            else -> {
+                                isLogSaved = false
+                                _uiState.update { it.copy(error = e.message) }
+                            }
+                        }
                     }
             }
             if (result == null) sendToast("네트워크 연결 상태를 확인해주세요.")
