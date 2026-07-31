@@ -1,13 +1,11 @@
-package com.a32b.plant.data.datasource.studying
+package com.a32b.plant.data.source.remote.studying
 
-import android.content.Context
 import com.a32b.plant.data.model.StudyLogDto
 import com.a32b.plant.data.model.StudyingUserDto
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow

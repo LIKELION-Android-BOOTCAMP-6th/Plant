@@ -1,7 +1,7 @@
 package com.a32b.plant.data.repository
 
 import android.util.Log
-import com.a32b.plant.data.datasource.community.CommunityRemoteDataSource
+import com.a32b.plant.data.source.remote.community.CommunityRemoteDataSource
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.CommunityActivity

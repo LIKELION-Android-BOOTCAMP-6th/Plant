@@ -1,7 +1,7 @@
 package com.a32b.plant.data.repository
 
 import android.util.Log
-import com.a32b.plant.data.datasource.auth.AuthRemoteDataSource
+import com.a32b.plant.data.source.remote.auth.AuthRemoteDataSource
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.repository.AuthRepository
 import com.a32b.plant.domain.result.Result

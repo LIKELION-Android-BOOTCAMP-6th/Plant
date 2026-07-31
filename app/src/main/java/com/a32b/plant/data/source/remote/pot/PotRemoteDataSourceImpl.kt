@@ -1,4 +1,4 @@
-package com.a32b.plant.data.datasource.pot
+package com.a32b.plant.data.source.remote.pot
 
 import android.util.Log
 import com.a32b.plant.data.model.PotDto
