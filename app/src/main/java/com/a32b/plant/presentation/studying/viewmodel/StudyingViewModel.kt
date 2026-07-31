@@ -9,6 +9,7 @@ import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
+import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import com.a32b.plant.domain.usecase.studying.ClearStudyingSessionUseCase
 import com.a32b.plant.domain.usecase.studying.FinishStudyingUseCase
 import com.a32b.plant.domain.usecase.studying.StartStudyingSessionUseCase
@@ -66,6 +67,7 @@ class StudyingViewModel @Inject constructor(
     private val updateLocalStudyingSessionUseCase: UpdateLocalStudyingSessionUseCase,
     private val clearStudyingSessionUseCase: ClearStudyingSessionUseCase,
     private val finishStudyingUseCase: FinishStudyingUseCase,
+    private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     savedStateHandle: SavedStateHandle
 
 ) : ViewModel() {
@@ -126,6 +128,7 @@ class StudyingViewModel @Inject constructor(
     private fun updateUser(){
         viewModelScope.launch(Dispatchers.IO) {
             repository.updateStudyingTime(tag, _uiState.value.timer)
+                .onFailure { if (it is AppError.UnknownUser) ensureCurrentUserUseCase () } //유저 정보 없을 시 로그아웃 처리
         }
 
     }
@@ -148,8 +151,7 @@ class StudyingViewModel @Inject constructor(
             startStudyingSessionUseCase(tag, title,potId,_uiState.value.timer, _uiState.value.studyLog)
                 .onFailure { e ->
                     when (e){
-                        //TODO 유저 정보 없을 떄 에러 처리하기
-                        is AppError.UnknownUser -> ""
+                        is AppError.UnknownUser -> Unit //유즈케이스에서 호출했음으로 따로 호춣 x
                         is AppError.Local, is AppError.Custom -> Unit //에러 로그는 레포지토리에서 찍고 있음
                         is AppError.Network -> sendToast(e.message)
                         else -> _uiState.update { it.copy(error = e.message) }
@@ -198,6 +200,7 @@ class StudyingViewModel @Inject constructor(
                     .onSuccess { clearSession() }
                     .onFailure { e ->
                         when (e){
+                            is AppError.UnknownUser -> ensureCurrentUserUseCase()
                             is AppError.Network -> sendToast(e.message)
                             else -> {
                                 isLogSaved = false
@@ -228,7 +231,7 @@ class StudyingViewModel @Inject constructor(
         clearStudyingSessionUseCase()
             .onFailure { e ->
                 when (e){
-                    is AppError.UnknownUser -> "" //todo 유저 정보 확인 유즈케이스 실행
+                    is AppError.UnknownUser -> ensureCurrentUserUseCase()
                     is AppError.Local -> sendToast("자동 저장된 학습 기록이 지워지지 않았습니다.")
                     else -> sendToast(e.message)
                 }

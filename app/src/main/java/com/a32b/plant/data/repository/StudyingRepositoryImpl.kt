@@ -45,7 +45,7 @@ class StudyingRepositoryImpl @Inject constructor(
             Log.e("Studying", "스터딩 유저 초기 저장 실패", e)
 
             val error = when(e){
-                is IllegalArgumentException -> AppError.Unknown("유저 정보를 찾을 수 없습니다.")
+                is IllegalArgumentException -> AppError.UnknownUser()
                 else -> AppError.Upload()
             }
             Result.Failure(error)
@@ -62,7 +62,7 @@ class StudyingRepositoryImpl @Inject constructor(
             Log.e("Studying", "학습 시간 업데이트", e)
 
             val error = when(e){
-                is IllegalArgumentException -> AppError.Unknown("유저 정보를 찾을 수 없습니다.")
+                is IllegalArgumentException -> AppError.UnknownUser()
                 else -> AppError.Upload()
             }
 
@@ -78,7 +78,7 @@ class StudyingRepositoryImpl @Inject constructor(
             Log.e("Studying", "화분 총 학습 시간 업데이트", e)
 
             val error = when(e){
-                is IllegalArgumentException -> AppError.Unknown("유저 정보를 찾을 수 없습니다.")
+                is IllegalArgumentException -> AppError.UnknownUser()
                 else -> AppError.Upload()
             }
             Result.Failure(error)
@@ -93,7 +93,7 @@ class StudyingRepositoryImpl @Inject constructor(
             Log.e("Studying", "유저 총 학습 시간 업데이트", e)
 
             val error = when(e){
-                is IllegalArgumentException -> AppError.Unknown("유저 정보를 찾을 수 없습니다.")
+                is IllegalArgumentException -> AppError.UnknownUser()
                 else -> AppError.Upload()
             }
             Result.Failure(error)
@@ -101,7 +101,7 @@ class StudyingRepositoryImpl @Inject constructor(
     )
 
     override suspend fun saveStudyLog(potId: String, log: StudyLog): Result<Unit> = safeRunCatching {
-        val uid = userRepository.currentUser.value?.uid ?: return Result.Failure(AppError.Auth())
+        val uid = userRepository.currentUser.value?.uid ?: return Result.Failure(AppError.UnknownUser())
         val logId = db.collection("users")
             .document(uid)
             .collection("pots")
