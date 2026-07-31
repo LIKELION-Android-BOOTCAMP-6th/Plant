@@ -5,5 +5,6 @@ data class StudyingSession(
     val tag: String,
     val title: String,
     val potId: String,
-    val time: Long
+    val time: Long,
+    val log: List<String>? = null
 )

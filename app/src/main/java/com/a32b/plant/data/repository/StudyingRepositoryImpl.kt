@@ -1,6 +1,7 @@
 package com.a32b.plant.data.repository
 
 import android.util.Log
+import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.data.datasource.studying.StudyingRemoteDataSource
 import com.a32b.plant.data.local.StudyingLocalDataSource
 import com.a32b.plant.data.mapper.toDomain
@@ -13,9 +14,11 @@ import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -32,7 +35,7 @@ class StudyingRepositoryImpl @Inject constructor(
             .map { dtoList -> dtoList.map { it.toDomain() } }
     }
 
-    override suspend fun initStudyingUser(user: StudyingUser): Result<Unit> = runCatching {
+    override suspend fun initStudyingUser(user: StudyingUser): Result<Unit> = safeRunCatching {
         studyingRemoteDataSource.initStudyingUser(user.toDto())
     }.fold(
         onSuccess = { Result.Success(Unit)},
@@ -43,13 +46,13 @@ class StudyingRepositoryImpl @Inject constructor(
 
             val error = when(e){
                 is IllegalArgumentException -> AppError.Unknown("유저 정보를 찾을 수 없습니다.")
-                else -> AppError.Update()
+                else -> AppError.Upload()
             }
             Result.Failure(error)
         }
     )
 
-    override suspend fun updateStudyingTime(tag: String, time: Long): Result<Unit> = runCatching {
+    override suspend fun updateStudyingTime(tag: String, time: Long): Result<Unit> = safeRunCatching {
         studyingRemoteDataSource.updateStudyingTime(tag, time)
     }.fold(
         onSuccess = { Result.Success(Unit)},
@@ -60,14 +63,14 @@ class StudyingRepositoryImpl @Inject constructor(
 
             val error = when(e){
                 is IllegalArgumentException -> AppError.Unknown("유저 정보를 찾을 수 없습니다.")
-                else -> AppError.Update()
+                else -> AppError.Upload()
             }
 
             Result.Failure(error)
         }
     )
 
-    override suspend fun updateTotalStudyTime(potId: String, studyTime: Long) = runCatching {
+    override suspend fun updateTotalStudyTime(potId: String, studyTime: Long) = safeRunCatching {
         studyingRemoteDataSource.updateTotalStudyTime(potId, studyTime)
     }.fold(
         onSuccess = { Result.Success(Unit)},
@@ -76,13 +79,13 @@ class StudyingRepositoryImpl @Inject constructor(
 
             val error = when(e){
                 is IllegalArgumentException -> AppError.Unknown("유저 정보를 찾을 수 없습니다.")
-                else -> AppError.Update()
+                else -> AppError.Upload()
             }
             Result.Failure(error)
         }
     )
 
-    override suspend fun updateUserTotalStudyTime(time: Long): Result<Unit> = runCatching {
+    override suspend fun updateUserTotalStudyTime(time: Long): Result<Unit> = safeRunCatching {
         studyingRemoteDataSource.updateUserTotalStudyTime(time)
     }.fold(
         onSuccess = { Result.Success(Unit)},
@@ -91,13 +94,13 @@ class StudyingRepositoryImpl @Inject constructor(
 
             val error = when(e){
                 is IllegalArgumentException -> AppError.Unknown("유저 정보를 찾을 수 없습니다.")
-                else -> AppError.Update()
+                else -> AppError.Upload()
             }
             Result.Failure(error)
         }
     )
 
-    override suspend fun saveStudyLog(potId: String, log: StudyLog): Result<Unit> {
+    override suspend fun saveStudyLog(potId: String, log: StudyLog): Result<Unit> = safeRunCatching {
         val uid = userRepository.currentUser.value?.uid ?: return Result.Failure(AppError.Auth())
         val logId = db.collection("users")
             .document(uid)
@@ -105,31 +108,36 @@ class StudyingRepositoryImpl @Inject constructor(
             .document(potId)
             .collection("logs")
             .document().id
-        val result = runCatching { studyingRemoteDataSource.saveStudyLog(uid,potId, logId,log.toDto()) }
-            .recoverCatching {
-                if (it is CancellationException) throw it
-                studyingRemoteDataSource.saveStudyLog(uid ,potId, logId,log.toDto())
+        studyingRemoteDataSource.saveStudyLog(uid,potId, logId,log.toDto())
+    }.fold(
+        onSuccess = { Result.Success(Unit) },
+        onFailure = { e ->
+            Log.e("Studying", "학습 기록 저장", e)
+
+            val error = when (e) {
+                is FirebaseFirestoreException -> when (e.code) {
+                    FirebaseFirestoreException.Code.UNAVAILABLE,
+                    FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
+
+                    FirebaseFirestoreException.Code.PERMISSION_DENIED -> {
+                        Log.e("Studying", "⚠️ Firestore 규칙 위반 - 규칙 또는 요청 데이터 확인 필요", e)
+                        AppError.Permission()
+                    }
+                    else -> AppError.Upload()
+                }
+                else -> AppError.Upload()
             }
-
-        return result.fold(
-            onSuccess = { Result.Success(Unit) },
-            onFailure = { e ->
-                if (e is CancellationException) throw e
-                Log.e("Studying", "학습 기록 저장", e)
-
-                Result.Failure(AppError.Custom("학습 기록 저장에 실패했습니다."))
-            }
-        )
-    }
-
-    override suspend fun deleteStudyingUserInfo(): Result<Unit> = runCatching {
+            Result.Failure(error)
+        }
+    )
+    override suspend fun deleteStudyingUserInfo(): Result<Unit> = safeRunCatching {
         studyingRemoteDataSource.deleteStudyingUserInfo()
     }.fold(
         onSuccess = { Result.Success(Unit)},
         onFailure = { e ->
             Log.e("Studying", "학습중 유저 정보 삭제", e)
             val error = when(e){
-                is IllegalArgumentException -> AppError.Unknown("유저 정보를 찾을 수 없습니다.")
+                is IllegalArgumentException -> AppError.UnknownUser()
                 else -> AppError.Custom("")
             }
 
@@ -137,23 +145,27 @@ class StudyingRepositoryImpl @Inject constructor(
         }
     )
 
-    override suspend fun saveLocalSession(studying: StudyingSession) = runCatching {
+    override suspend fun saveLocalSession(studying: StudyingSession) = safeRunCatching {
         local.save(studying)
     }.fold(
         onSuccess = { Result.Success(Unit)},
         onFailure = { e ->
             Log.e("studying", "학습 세션 로컬 저장", e)
-            Result.Failure(AppError.Custom("세션 저장 실패"))
+            val error = when(e){
+                is IOException -> AppError.Custom("저장 공간이 부족하여 비정상 종료 시 데이터를 소실할 수 있습니다.")
+                else -> AppError.Local()
+            }
+            Result.Failure(error)
         }
     )
 
-    override suspend fun readLocalSession(): Result<StudyingSession?> = runCatching {
+    override suspend fun readLocalSession(): Result<StudyingSession?> = safeRunCatching {
         local.read()
     }.fold(
         onSuccess = { Result.Success(it)},
         onFailure = { e ->
             Log.e("studying", "학습중 세션 읽기", e)
-            Result.Failure(AppError.Custom("불러오기 실패"))
+            Result.Failure(AppError.Local("불러오기 실패"))
         }
     )
 
@@ -163,7 +175,7 @@ class StudyingRepositoryImpl @Inject constructor(
         onSuccess = { Result.Success(Unit)},
         onFailure = {e ->
             Log.e("studying", "세션 초기화", e)
-            Result.Failure(AppError.Custom("세션 초기화 실패"))
+            Result.Failure(AppError.Local("세션 초기화 실패"))
         }
     )
 

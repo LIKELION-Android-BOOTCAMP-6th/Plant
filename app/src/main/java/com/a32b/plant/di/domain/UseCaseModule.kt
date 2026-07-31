@@ -4,7 +4,6 @@ import com.a32b.plant.domain.repository.AuthRepository
 import com.a32b.plant.domain.repository.CommunityRepository
 import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.repository.UserRepository
-import com.a32b.plant.domain.session.SessionExpiredNotifier
 import com.a32b.plant.domain.usecase.auth.CheckAutoLoginUseCase
 import com.a32b.plant.domain.usecase.auth.DeleteAccountUseCase
 import com.a32b.plant.domain.usecase.auth.ResolveUserSessionUseCase
@@ -14,8 +13,10 @@ import com.a32b.plant.domain.usecase.auth.SignInWithGoogleUseCase
 import com.a32b.plant.domain.usecase.auth.SignOutUseCase
 import com.a32b.plant.domain.usecase.auth.SignUpWithEmailUseCase
 import com.a32b.plant.domain.usecase.community.AddCommentUseCase
-import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
-import com.a32b.plant.domain.usecase.studying.ObserveStudyingUseCase
+import com.a32b.plant.domain.usecase.studying.ClearStudyingSessionUseCase
+import com.a32b.plant.domain.usecase.studying.FinishStudyingUseCase
+import com.a32b.plant.domain.usecase.studying.StartStudyingSessionUseCase
+import com.a32b.plant.domain.usecase.studying.UpdateLocalStudyingSessionUseCase
 import com.google.firebase.auth.FirebaseAuth
 import dagger.Module
 import dagger.Provides
@@ -69,11 +70,23 @@ class UseCaseModule {
 
     @Provides
     @Singleton
-    fun provideObserveStudyingUseCase(auth: AuthRepository, study: StudyingRepository) =
-        ObserveStudyingUseCase(auth, study)
+    fun provideStartStudyingSessionUseCase(user : UserRepository, studying : StudyingRepository) =
+        StartStudyingSessionUseCase(user, studying)
 
     @Provides
     @Singleton
+    fun provideUpdateLocalStudyingSessionUseCase(studying : StudyingRepository, user : UserRepository) =
+        UpdateLocalStudyingSessionUseCase(studying, user)
+
+    @Provides
+    @Singleton
+    fun provideClearStudyingSessionUseCase(studying : StudyingRepository) =
+        ClearStudyingSessionUseCase(studying)
+
+    @Provides
+    @Singleton
+    fun provideFinishStudyingUseCase(studying : StudyingRepository) =
+        FinishStudyingUseCase(studying)
     fun provideAddCommentUseCase(auth: AuthRepository, community : CommunityRepository, firebaseAuth: FirebaseAuth) =
         AddCommentUseCase(auth, community, firebaseAuth)
 
