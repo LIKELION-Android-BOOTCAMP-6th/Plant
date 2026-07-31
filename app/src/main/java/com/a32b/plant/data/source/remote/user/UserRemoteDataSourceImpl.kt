@@ -1,4 +1,4 @@
-package com.a32b.plant.data.datasource.user
+package com.a32b.plant.data.source.remote.user
 
 import com.a32b.plant.data.model.UserDto
 import com.google.firebase.firestore.FirebaseFirestore

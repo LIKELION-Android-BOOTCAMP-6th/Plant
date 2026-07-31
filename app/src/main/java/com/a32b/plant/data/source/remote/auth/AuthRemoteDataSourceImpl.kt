@@ -1,4 +1,4 @@
-package com.a32b.plant.data.datasource.auth
+package com.a32b.plant.data.source.remote.auth
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider

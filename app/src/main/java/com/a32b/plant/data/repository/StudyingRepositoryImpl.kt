@@ -2,8 +2,8 @@ package com.a32b.plant.data.repository
 
 import android.util.Log
 import com.a32b.plant.core.util.safeRunCatching
-import com.a32b.plant.data.datasource.studying.StudyingRemoteDataSource
-import com.a32b.plant.data.local.StudyingLocalDataSource
+import com.a32b.plant.data.source.remote.studying.StudyingRemoteDataSource
+import com.a32b.plant.data.source.local.StudyingLocalDataSource
 import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.mapper.toDto
 import com.a32b.plant.data.model.StudyingSession

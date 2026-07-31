@@ -1,9 +1,7 @@
-package com.a32b.plant.data.datasource.studying
+package com.a32b.plant.data.source.remote.studying
 
 import com.a32b.plant.data.model.StudyLogDto
 import com.a32b.plant.data.model.StudyingUserDto
-import com.a32b.plant.domain.model.StudyingUser
-import com.a32b.plant.domain.result.Result
 import kotlinx.coroutines.flow.Flow
 
 interface StudyingRemoteDataSource {

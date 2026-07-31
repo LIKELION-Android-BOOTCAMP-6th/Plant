@@ -1,4 +1,4 @@
-package com.a32b.plant.data.datasource.community
+package com.a32b.plant.data.source.remote.community
 
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.CommunityActivity
