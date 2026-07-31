@@ -1,31 +1,23 @@
 package com.a32b.plant.domain.usecase.mypage
 
-import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.domain.error.AppError
+import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
-import com.a32b.plant.origin.OldUserRepository
-import com.google.firebase.FirebaseNetworkException
-import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 
 class UpdateDarkModeUseCase @Inject constructor(
-    // TODO: UserRepository의 다크모드 갱신 API가 확정되면
-    // OldUserRepository, CurrentUser 의존성을 제거한다.
-    private val userRepository: OldUserRepository
+    private val userRepository: UserRepository
 ) {
     suspend operator fun invoke(isDarkMode: Boolean): Result<Unit> {
-        return try {
-            userRepository.updateIsDarkMode(
-                uid = CurrentUser.uid,
-                state = isDarkMode
-            )
-            Result.Success(Unit)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (_: FirebaseNetworkException) {
-            Result.Failure(AppError.Network())
-        } catch (_: Exception) {
-            Result.Failure(AppError.Custom("다크모드 설정 변경에 실패했습니다."))
+        val user = userRepository.currentUser.value
+            ?: return Result.Failure(AppError.Auth("로그인 정보가 없습니다."))
+
+        if (user.uid.isBlank()) {
+            return Result.Failure(AppError.Auth("로그인 정보가 없습니다."))
         }
+
+        return userRepository.updateDarkMode(
+            user.copy(isDarkMode = isDarkMode)
+        )
     }
 }

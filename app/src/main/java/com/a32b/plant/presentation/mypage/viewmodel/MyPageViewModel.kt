@@ -16,6 +16,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -33,6 +34,7 @@ data class MyPageUiState(
     val isUpdateSuccess: Boolean = false,
     val levelList: List<String> = emptyList(), // 프로필 편집 - 화분 이미지 띄우기 위해 쓰이는 레벨 리스트
     val isDarkMode: Boolean = false,
+    val isDarkModeUpdating: Boolean = false,
     val isLoading: Boolean = false,
     val nicknameError: String? = null,
     val totalStudyTime: String = "0시간 0분",
@@ -60,22 +62,17 @@ class MyPageViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            userRepository.currentUser.collectLatest { user ->
-                if (user != null) {
-                    _uiState.update {
-                        it.copy(
-                            nickname = user.nickname,
-                            profileImg = user.profileImg,
-                            isDarkMode = user.isDarkMode,
-                            totalStudyTime = formatToDigitalClock(user.totalStudyTime)
-                        )
-                    }
-                    // 빈화면 -> 홈화면
-                    loaded()
-                } else {
-                    Log.e("error", "-----사용자 정보 없음")
-                    loaded()
+            userRepository.currentUser.filterNotNull().collectLatest { user ->
+                _uiState.update {
+                    it.copy(
+                        nickname = user.nickname,
+                        profileImg = user.profileImg,
+                        isDarkMode = user.isDarkMode,
+                        totalStudyTime = formatToDigitalClock(user.totalStudyTime)
+                    )
                 }
+                // 빈화면 -> 홈화면
+                loaded()
             }
         }
     }
@@ -150,15 +147,26 @@ class MyPageViewModel @Inject constructor(
     }
 
 
-    fun toggleDarkMode() {
-        val state = !uiState.value.isDarkMode
+    fun updateDarkMode(isDarkMode: Boolean) {
+        if (uiState.value.isDarkModeUpdating || uiState.value.isDarkMode == isDarkMode) {
+            return
+        }
+        _uiState.update { it.copy(isDarkModeUpdating = true) }
+
         viewModelScope.launch {
-            updateDarkModeUseCase(state)
+            updateDarkModeUseCase(isDarkMode)
                 .onSuccess {
-                    _uiState.update { it.copy(isDarkMode = state) }
+                    _uiState.update {
+                        it.copy(
+                            isDarkMode = isDarkMode,
+                            isDarkModeUpdating = false
+                        )
+                    }
                 }
                 .onFailure { e ->
+                    _uiState.update { it.copy(isDarkModeUpdating = false) }
                     Log.e("MyPage", "다크모드 변경 실패: ${e.message}", e)
+                    _eventChannel.send(MyPageEvent.ShowToast(e.message))
                 }
         }
     }

@@ -192,7 +192,6 @@ class OldUserRepository @Inject constructor(private val db: FirebaseFirestore, p
 
     }
 
-
     suspend fun getPotId() = "현재 팟 아이디"
 
     // 마지막으로 선택한 화분의 ID를 Firestore에 업데이트합니다.
@@ -210,18 +209,6 @@ class OldUserRepository @Inject constructor(private val db: FirebaseFirestore, p
                 }
 
         }
-
-    // 다크 모드 토글 버튼 클릭 시 사용자 isDarkMode 업데이트
-    suspend fun updateIsDarkMode(uid: String, state: Boolean) {
-        try {
-            Log.d("plantLog", "----------4 $uid , $state")
-            db.collection("users")
-                .document(uid)
-                .update("isDarkMode", state).await()
-        } catch (e: Exception) {
-            Log.e("error", e.message.toString())
-        }
-    }
 
     // uid 로 users/pots 데이터 가져오기
     suspend fun getUsersPots(uid: String): List<Pot> {
