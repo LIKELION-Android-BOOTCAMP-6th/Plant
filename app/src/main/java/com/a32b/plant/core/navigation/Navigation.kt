@@ -9,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.toRoute
 import com.a32b.plant.presentation.community.ui.CommunityDetailScreen
 import com.a32b.plant.presentation.community.ui.CommunityListScreen
 import com.a32b.plant.presentation.community.ui.CommunityPostScreen

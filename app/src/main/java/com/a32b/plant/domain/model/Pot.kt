@@ -6,15 +6,15 @@ package com.a32b.plant.domain.model
  */
 //화분 정보 모음
 data class Pot(
-    val id: String,
-    val tagId: String,
-    val tagName: String,
-    val name: String,
-    val imageUrl: String,
-    val potTotalStudyingTime: Long,
-    val createdAt: Long?,
-    val completedAt: Long?,
-    val isCompleted: Boolean
+    val id: String = "",
+    val tagId: String = "",
+    val tagName: String = "",
+    val name: String = "",
+    val imageUrl: String = "",
+    val potTotalStudyingTime: Long = 0L,
+    val createdAt: Long? = null,
+    val completedAt: Long? = null,
+    val isCompleted: Boolean = false
 ){
     //레벨 업 계산 -> 시간만 변경, 아이템 획득 여부는 별도 필요
     val level: String get(){
@@ -39,7 +39,7 @@ data class Pot(
             id = "",
             tagId = "",
             tagName = "",
-            name = "화분을 추가해주세요.",
+            name = "화분을 추가해주세요",
             imageUrl = "",
             potTotalStudyingTime = 0L,
             createdAt = null,

@@ -16,6 +16,7 @@ import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.ProfileImage
+import com.a32b.plant.presentation.core.component.getLogoImage
 import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
 
 @Composable
@@ -23,7 +24,8 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
     val displayPot by viewModel.displayPot.collectAsState()
     val userName by viewModel.userName.collectAsState()
 
-    // 유저 아이디 표출 확인하기
+    val hasNoPot = displayPot.id.isEmpty() || displayPot == Pot.EMPTY
+
     LoadableScreen(viewModel) {
         Scaffold(
             topBar = { HomeTopBar(userName) }
@@ -37,17 +39,32 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
             ) {
                 MainPlantCard(
                     displayPot = displayPot,
+                    hasNoPot = hasNoPot,
                     onStartClick = {
-                        navController.navigate(Routes.Studying(
-                            potId = displayPot.id.ifEmpty { "default_pot" },
-                            tagId = displayPot.tagId,
-                            tagName = displayPot.tagName,
-                            title = displayPot.name.ifEmpty { "공부 목표" },
-                            level = displayPot.level.ifEmpty { "Lv.1" }
-                        ))
+                        if (!hasNoPot) {
+                            navController.navigate(Routes.Studying(
+                                potId = displayPot.id,
+                                tagId = displayPot.tagId,
+                                tagName = displayPot.tagName,
+                                title = displayPot.name,
+                                level = displayPot.level
+                            ))
+                        }
                     },
-                    onChangeClick = { viewModel.setShowPotChangeDialog(true) }, // 화분 변경 다이얼로그 오픈
-                    onRecordClick = { navController.navigate(Routes.PotDetail(displayPot.id.ifEmpty { "default_pot" })) } // 상세 기록 이동
+                    onChangeOrMakeClick = {
+                        if (hasNoPot) {
+                            // 화분 없을 때 -> 화분 생성으로 이동
+                            navController.navigate(Routes.NewBornTree)
+                        } else {
+                            // 화분 변경 다이얼로그
+                            viewModel.setShowPotChangeDialog(true)
+                        }
+                    },
+                    onRecordClick = {
+                        if (!hasNoPot) {
+                            navController.navigate(Routes.StudyPlanDetail(displayPot.id))
+                        } // 상세 기록 이동
+                    }
                 )
             }
         }
@@ -81,8 +98,9 @@ fun HomeTopBar(userName: String) {
 @Composable
 fun MainPlantCard(
     displayPot: Pot,
+    hasNoPot: Boolean,
     onStartClick: () -> Unit,
-    onChangeClick: () -> Unit,
+    onChangeOrMakeClick: () -> Unit,
     onRecordClick: () -> Unit
 ) {
     Card(
@@ -96,18 +114,29 @@ fun MainPlantCard(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = displayPot.name.ifEmpty { "실험용" },
+                text = if(hasNoPot) "화분이 없습니다" else displayPot.name.ifEmpty { "실험용" },
                 style = MaterialTheme.typography.headlineMedium
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-            ProfileImage(level = displayPot.level.ifEmpty { "Lv.1" }, size = 150)
+
+            if(hasNoPot){
+                Box(
+                    modifier = Modifier.size(150.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    getLogoImage()
+                }
+            } else {
+                ProfileImage(level = displayPot.level.ifEmpty { "Lv.1" }, size = 150)
+            }
             Spacer(modifier = Modifier.height(24.dp))
 
             //공부 시작 버튼
             Button(
                 onClick = onStartClick,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !hasNoPot
             ) {
                 Text("공부 시작")
             }
@@ -120,14 +149,15 @@ fun MainPlantCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(
-                    onClick = onChangeClick,
+                    onClick = onChangeOrMakeClick,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("화분 변경")
+                    Text(if(hasNoPot) "화분 생성" else "화분 변경")
                 }
                 OutlinedButton(
                     onClick = onRecordClick,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    enabled = !hasNoPot
                 ) {
                     Text("공부 기록")
                 }
