@@ -4,7 +4,6 @@ import com.a32b.plant.domain.repository.AuthRepository
 import com.a32b.plant.domain.repository.CommunityRepository
 import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.repository.UserRepository
-import com.a32b.plant.domain.session.SessionExpiredNotifier
 import com.a32b.plant.domain.usecase.auth.CheckAutoLoginUseCase
 import com.a32b.plant.domain.usecase.auth.DeleteAccountUseCase
 import com.a32b.plant.domain.usecase.auth.ResolveUserSessionUseCase
@@ -18,8 +17,6 @@ import com.a32b.plant.domain.usecase.studying.ClearStudyingSessionUseCase
 import com.a32b.plant.domain.usecase.studying.FinishStudyingUseCase
 import com.a32b.plant.domain.usecase.studying.StartStudyingSessionUseCase
 import com.a32b.plant.domain.usecase.studying.UpdateLocalStudyingSessionUseCase
-import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
-import com.a32b.plant.domain.usecase.studying.ObserveStudyingUseCase
 import com.google.firebase.auth.FirebaseAuth
 import dagger.Module
 import dagger.Provides
@@ -70,11 +67,6 @@ class UseCaseModule {
     @Singleton
     fun provideDeleteAccountUseCase(auth: AuthRepository, user: UserRepository) =
         DeleteAccountUseCase(auth, user)
-
-    @Provides
-    @Singleton
-    fun provideAddCommentUseCase(auth: AuthRepository, community : CommunityRepository, firebaseAuth: FirebaseAuth) =
-        AddCommentUseCase(auth, community, firebaseAuth)
 
     @Provides
     @Singleton
