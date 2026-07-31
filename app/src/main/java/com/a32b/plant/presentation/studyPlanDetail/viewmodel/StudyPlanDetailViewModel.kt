@@ -9,11 +9,13 @@ import androidx.navigation.toRoute
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.model.StudyLog
+import com.a32b.plant.domain.repository.StudyingRepository
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.firestore
+import com.a32b.plant.domain.result.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +24,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class StudyPlanDetailViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
+    private val studyingRepository: StudyingRepository
 ) : ViewModel() {
     private val db = Firebase.firestore
     private val auth = Firebase.auth
@@ -154,17 +157,16 @@ class StudyPlanDetailViewModel @Inject constructor(
     }
     private fun fetchStudyLogs(){
         if(isInvalidIds(userId, potId)) return
-        db.collection("users").document(userId)
-            .collection("pots").document(potId)
-            .collection("logs")
-            .orderBy("createAt", Query.Direction.DESCENDING)
-            .get()
-            .addOnSuccessListener { querySnapshots ->
-                val logs = querySnapshots.documents.mapNotNull { doc ->
-                    doc.toObject(StudyLog::class.java)?.copy(id = doc.id)
+        viewModelScope.launch {
+            when (val result = studyingRepository.getStudyLogs(potId)) {
+                is Result.Success -> {
+                    _studyLogs.value = result.data
                 }
-                _studyLogs.value = logs
+                is Result.Failure -> {
+                    Log.e("Firestore", "학습 기록 로드 실패")
+                }
             }
+        }
     }
     fun deleteStudyLog(logId: String){
         if(isInvalidIds(userId, potId, logId)) return

@@ -5,6 +5,7 @@ import com.a32b.plant.data.datasource.studying.StudyingRemoteDataSource
 import com.a32b.plant.data.local.StudyingLocalDataSource
 import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.mapper.toDto
+import com.a32b.plant.data.model.StudyLogDto
 import com.a32b.plant.data.model.StudyingSession
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.StudyLog
@@ -13,9 +14,11 @@ import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -166,5 +169,28 @@ class StudyingRepositoryImpl @Inject constructor(
             Result.Failure(AppError.Custom("세션 초기화 실패"))
         }
     )
+    override suspend fun getStudyLogs(potId: String): Result<List<StudyLog>> {
+        val uid = userRepository.currentUser.value?.uid ?: return Result.Failure(AppError.Auth())
+        return runCatching {
+            val snapshot = db.collection("users")
+                .document(uid)
+                .collection("pots")
+                .document(potId)
+                .collection("logs")
+                .orderBy("createAt", Query.Direction.DESCENDING)
+                .get()
+                .await()
 
+            snapshot.documents.mapNotNull { doc ->
+                doc.toObject(StudyLogDto::class.java)?.copy(id = doc.id)?.toDomain()
+            }
+        }.fold(
+            onSuccess = { Result.Success(it) },
+            onFailure = { e ->
+                if (e is CancellationException) throw e
+                Log.e("Studying", "학습 기록 조회 실패", e)
+                Result.Failure(AppError.Custom("학습 기록을 불러오지 못했습니다."))
+            }
+        )
+    }
 }

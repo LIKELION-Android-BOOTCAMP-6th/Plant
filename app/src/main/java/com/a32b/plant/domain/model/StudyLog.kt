@@ -2,12 +2,12 @@ package com.a32b.plant.domain.model
 
 
 data class StudyLog(
-    val title: String,
-    val contents: List<String>,
-    val studyingTime: Long,
-    val createAt: Long?,
-    val id: String,
-    val isSelected: Boolean
+    val title: String = "",
+    val contents: List<String> = emptyList(),
+    val studyingTime: Long = 0L,
+    val createAt: Long? = null,
+    val id: String = "",
+    val isSelected: Boolean = false
 ){
     companion object{
         fun write(title: String, contents: List<String>, time: Long) = StudyLog(

@@ -26,6 +26,9 @@ interface StudyingRepository {
     /** 학습 기록 저장 */
     suspend fun saveStudyLog(potId: String, log: StudyLog): Result<Unit>
 
+    /** 특정 화분의 학습기록 목록 조회*/
+    suspend fun getStudyLogs(potId: String): Result<List<StudyLog>>
+
     /** 학습 종료 시 유저 정보 삭제 */
     suspend fun deleteStudyingUserInfo(): Result<Unit>
 

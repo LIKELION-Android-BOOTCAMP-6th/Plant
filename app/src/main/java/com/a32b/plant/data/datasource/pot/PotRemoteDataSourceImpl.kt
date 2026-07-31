@@ -71,4 +71,8 @@ class PotRemoteDataSourceImpl @Inject constructor(
             .await()
     }
 
+    //화분 삭제
+
+    //화분 공부 종료
+
 }
