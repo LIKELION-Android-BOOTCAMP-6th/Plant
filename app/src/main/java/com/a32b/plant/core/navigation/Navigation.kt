@@ -15,7 +15,7 @@ import com.a32b.plant.presentation.community.ui.CommunityPostScreen
 import com.a32b.plant.presentation.auth.ui.SignInScreen
 import com.a32b.plant.presentation.auth.ui.SignUpScreen
 import com.a32b.plant.presentation.home.ui.HomeScreen
-import com.a32b.plant.presentation.home.ui.NewBornTreeScreen
+import com.a32b.plant.presentation.pot.ui.NewBornTreeScreen
 import com.a32b.plant.presentation.mypage.ui.MyPageArchiveDetailScreen
 import com.a32b.plant.presentation.mypage.ui.MyCommunityFeedScreen
 import com.a32b.plant.presentation.mypage.ui.MyPageArchiveScreen

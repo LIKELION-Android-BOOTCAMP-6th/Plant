@@ -29,6 +29,7 @@ fun BottomBar(navController: NavController){
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
+    val size = 23
     Surface(modifier = Modifier
         .fillMaxWidth()
         .navigationBarsPadding(),
@@ -45,7 +46,7 @@ fun BottomBar(navController: NavController){
                 contentDescription = "COMMUNITY",
                 modifier = Modifier
                     .weight(1f)
-                    .size(32.dp)
+                    .size(size.dp)
                     .clickable{
                         if (!isCommunitySelected) {  // ★
                             navController.navigate(Routes.CommunityList) {
@@ -62,7 +63,7 @@ fun BottomBar(navController: NavController){
                 contentDescription = "POTLIST",
                 modifier = Modifier
                     .weight(1f)
-                    .size(32.dp)
+                    .size(size.dp)
                     .clickable{
                         if (!isPotSelected) {  // ★
                             navController.navigate(Routes.PotList) {
@@ -79,8 +80,7 @@ fun BottomBar(navController: NavController){
                 contentDescription = "HOME",
                 modifier = Modifier
                     .weight(1f)
-                    .width(24.dp)
-                    .height(32.dp)
+                    .size(size.dp)
                     .clickable{
                         if (!isHomeSelected) {  // ★
                             navController.navigate(Routes.HomeMain) {
@@ -97,7 +97,7 @@ fun BottomBar(navController: NavController){
                 contentDescription = "REPORT",
                 modifier = Modifier
                     .weight(1f)
-                    .size(32.dp)
+                    .size(size.dp)
                     .clickable{
                         if (!isReportSelected) {  // ★
                             navController.navigate(Routes.Report) {
@@ -115,8 +115,7 @@ fun BottomBar(navController: NavController){
                 contentDescription = "MYPAGE",
                 modifier = Modifier
                     .weight(1f)
-                    .width(24.dp)
-                    .height(32.dp)
+                    .size(size.dp)
                     .clickable{
                         if (!isMyPageSelected) {  // ★
                             navController.navigate(Routes.Mypage) {
