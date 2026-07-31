@@ -1,6 +1,7 @@
 package com.a32b.plant.data.repository
 
 import android.util.Log
+import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.data.datasource.studying.StudyingRemoteDataSource
 import com.a32b.plant.data.local.StudyingLocalDataSource
 import com.a32b.plant.data.mapper.toDomain
@@ -20,6 +21,7 @@ import kotlinx.coroutines.flow.map
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.code
 
 
 @Singleton
@@ -99,7 +101,7 @@ class StudyingRepositoryImpl @Inject constructor(
         }
     )
 
-    override suspend fun saveStudyLog(potId: String, log: StudyLog): Result<Unit> {
+    override suspend fun saveStudyLog(potId: String, log: StudyLog): Result<Unit> = safeRunCatching {
         val uid = userRepository.currentUser.value?.uid ?: return Result.Failure(AppError.Auth())
         val logId = db.collection("users")
             .document(uid)
@@ -107,38 +109,28 @@ class StudyingRepositoryImpl @Inject constructor(
             .document(potId)
             .collection("logs")
             .document().id
-        val result = runCatching { studyingRemoteDataSource.saveStudyLog(uid,potId, logId,log.toDto()) }
-            .recoverCatching {
-                if (it is CancellationException) throw it
-                studyingRemoteDataSource.saveStudyLog(uid ,potId, logId,log.toDto())
-            }
+        studyingRemoteDataSource.saveStudyLog(uid,potId, logId,log.toDto())
+    }.fold(
+        onSuccess = { Result.Success(Unit) },
+        onFailure = { e ->
+            Log.e("Studying", "학습 기록 저장", e)
 
-        return result.fold(
-            onSuccess = { Result.Success(Unit) },
-            onFailure = { e ->
-                if (e is CancellationException) throw e
-                Log.e("Studying", "학습 기록 저장", e)
+            val error = when (e) {
+                is FirebaseFirestoreException -> when (e.code) {
+                    FirebaseFirestoreException.Code.UNAVAILABLE,
+                    FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
 
-                val error = when (e) {
-                    is FirebaseFirestoreException -> when (e.code) {
-                        FirebaseFirestoreException.Code.UNAVAILABLE,
-                        FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
-
-                        FirebaseFirestoreException.Code.PERMISSION_DENIED -> {
-                            Log.e("Studying", "⚠️ Firestore 규칙 위반 - 규칙 또는 요청 데이터 확인 필요", e)
-                            AppError.Permission()
-                        }
-
-                        else -> AppError.Upload()
+                    FirebaseFirestoreException.Code.PERMISSION_DENIED -> {
+                        Log.e("Studying", "⚠️ Firestore 규칙 위반 - 규칙 또는 요청 데이터 확인 필요", e)
+                        AppError.Permission()
                     }
                     else -> AppError.Upload()
                 }
-
-                Result.Failure(error)
+                else -> AppError.Upload()
             }
-        )
-    }
-
+            Result.Failure(error)
+        }
+    )
     override suspend fun deleteStudyingUserInfo(): Result<Unit> = runCatching {
         studyingRemoteDataSource.deleteStudyingUserInfo()
     }.fold(
