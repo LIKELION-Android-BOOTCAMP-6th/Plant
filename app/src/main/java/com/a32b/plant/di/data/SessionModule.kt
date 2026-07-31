@@ -2,6 +2,7 @@ package com.a32b.plant.di.data
 
 import com.a32b.plant.data.session.SessionExpiredEvent
 import com.a32b.plant.domain.session.SessionExpiredNotifier
+import com.a32b.plant.domain.session.SessionExpiredObserver
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -15,4 +16,8 @@ abstract class SessionModule {
     @Binds
     @Singleton
     abstract fun bindSessionExpiredNotifier(impl: SessionExpiredEvent) : SessionExpiredNotifier
+
+    @Binds
+    @Singleton
+    abstract fun bindSessionExpiredObserver(impl: SessionExpiredEvent): SessionExpiredObserver
 }
