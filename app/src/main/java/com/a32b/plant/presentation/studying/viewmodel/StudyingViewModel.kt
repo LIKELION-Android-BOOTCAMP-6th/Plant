@@ -27,8 +27,11 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDateTime
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.seconds
 
 data class StudyingUiState(
     val tag: String,
@@ -194,22 +197,15 @@ class StudyingViewModel @Inject constructor(
 
         viewModelScope.launch(Dispatchers.IO){
 
-            finishStudyingUseCase(potId, timestamp, _uiState.value.studyLog ?: emptyList(), _uiState.value.timer)
-                .onSuccess {
-                    clearSession()
-                }
-                .onFailure { e ->
-                    when(e){
-                        is AppError.Network -> {
-                            sendToast(e.message)
-                            clearSession()
-                        }
-                        else -> {
-                            isLogSaved = false
-                            _uiState.update { it.copy(error = e.message) }
-                        }
+            val result = withTimeoutOrNull(5.seconds){
+                finishStudyingUseCase(potId, timestamp, _uiState.value.studyLog ?: emptyList(), _uiState.value.timer)
+                    .onSuccess { clearSession() }
+                    .onFailure { e ->
+                        isLogSaved = false
+                        _uiState.update { it.copy(error = e.message) }
                     }
-                }
+            }
+            if (result == null) sendToast("네트워크 연결 상태를 확인해주세요.")
 
             _uiState.update { it.copy(isLoading = false) }
 
