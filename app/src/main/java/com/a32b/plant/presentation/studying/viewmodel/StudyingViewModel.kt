@@ -196,18 +196,14 @@ class StudyingViewModel @Inject constructor(
 
             finishStudyingUseCase(potId, timestamp, _uiState.value.studyLog ?: emptyList(), _uiState.value.timer)
                 .onSuccess {
-                    clearStudyingSessionUseCase()
-                        .onFailure { e ->
-                            when (e){
-                                is AppError.UnknownUser -> "" //todo 유저 정보 확인 유즈케이스 실행
-                                is AppError.Local -> sendToast("자동 저장된 학습 기록이 지워지지 않았습니다.")
-                                else -> sendToast(e.message)
-                            }
-                        }
+                    clearSession()
                 }
                 .onFailure { e ->
                     when(e){
-                        is AppError.Network -> sendToast(e.message)
+                        is AppError.Network -> {
+                            sendToast(e.message)
+                            clearSession()
+                        }
                         else -> {
                             isLogSaved = false
                             _uiState.update { it.copy(error = e.message) }
@@ -230,6 +226,16 @@ class StudyingViewModel @Inject constructor(
             }
 
         }
+    }
+    private suspend fun clearSession(){
+        clearStudyingSessionUseCase()
+            .onFailure { e ->
+                when (e){
+                    is AppError.UnknownUser -> "" //todo 유저 정보 확인 유즈케이스 실행
+                    is AppError.Local -> sendToast("자동 저장된 학습 기록이 지워지지 않았습니다.")
+                    else -> sendToast(e.message)
+                }
+            }
     }
     fun onStartTimeChange(value : String) = _uiState.update { it.copy(startTime = value) }
 
