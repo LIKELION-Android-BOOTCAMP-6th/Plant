@@ -21,11 +21,12 @@ import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
 @Composable
 fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltViewModel()) {
     val displayPot by viewModel.displayPot.collectAsState()
+    val userName by viewModel.userName.collectAsState()
 
     // 유저 아이디 표출 확인하기
     LoadableScreen(viewModel) {
         Scaffold(
-            topBar = { HomeTopBar("의 Garden") }
+            topBar = { HomeTopBar(userName) }
         ) { paddingValues ->
             Column(
                 modifier = Modifier
@@ -53,6 +54,9 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
     }
 }
 
+// 중복 코드 방지 헬퍼 함수
+private fun displaypotIdOrDefault(id: String): String = id.ifEmpty { "default_pot" }
+
 @Composable
 fun HomeTopBar(userName: String) {
     Column(
@@ -61,7 +65,7 @@ fun HomeTopBar(userName: String) {
             .padding(24.dp)
     ) {
         Text(
-            text = "${userName}의 Garden",
+            text = "${userName.ifEmpty{"사용자"}}의 Garden",
             style = MaterialTheme.typography.displayLarge,
             color = MaterialTheme.colorScheme.primary
         )
