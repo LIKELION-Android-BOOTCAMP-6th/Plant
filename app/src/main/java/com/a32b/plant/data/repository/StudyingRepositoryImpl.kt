@@ -40,8 +40,6 @@ class StudyingRepositoryImpl @Inject constructor(
     }.fold(
         onSuccess = { Result.Success(Unit)},
         onFailure = { e ->
-            if (e is CancellationException) throw e
-
             Log.e("Studying", "스터딩 유저 초기 저장 실패", e)
 
             val error = when(e){
@@ -57,8 +55,6 @@ class StudyingRepositoryImpl @Inject constructor(
     }.fold(
         onSuccess = { Result.Success(Unit)},
         onFailure = { e ->
-            if (e is CancellationException) throw e
-
             Log.e("Studying", "학습 시간 업데이트", e)
 
             val error = when(e){
