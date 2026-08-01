@@ -42,7 +42,7 @@ class StudyingRepositoryImpl @Inject constructor(
             Log.e("Studying", "스터딩 유저 초기 저장 실패", e)
 
             val error = when(e){
-                is IllegalArgumentException -> AppError.UnknownUser()
+                is AppError.UnknownUser -> AppError.UnknownUser()
                 else -> AppError.Upload()
             }
             Result.Failure(error)
@@ -57,7 +57,7 @@ class StudyingRepositoryImpl @Inject constructor(
             Log.e("Studying", "학습 시간 업데이트", e)
 
             val error = when(e){
-                is IllegalArgumentException -> AppError.UnknownUser()
+                is AppError.UnknownUser -> AppError.UnknownUser()
                 else -> AppError.Upload()
             }
 
@@ -73,7 +73,7 @@ class StudyingRepositoryImpl @Inject constructor(
             Log.e("Studying", "화분 총 학습 시간 업데이트", e)
 
             val error = when(e){
-                is IllegalArgumentException -> AppError.UnknownUser()
+                is AppError.UnknownUser -> AppError.UnknownUser()
                 else -> AppError.Upload()
             }
             Result.Failure(error)
@@ -88,7 +88,7 @@ class StudyingRepositoryImpl @Inject constructor(
             Log.e("Studying", "유저 총 학습 시간 업데이트", e)
 
             val error = when(e){
-                is IllegalArgumentException -> AppError.UnknownUser()
+                is AppError.UnknownUser -> AppError.UnknownUser()
                 else -> AppError.Upload()
             }
             Result.Failure(error)
@@ -132,8 +132,8 @@ class StudyingRepositoryImpl @Inject constructor(
         onFailure = { e ->
             Log.e("Studying", "학습중 유저 정보 삭제", e)
             val error = when(e){
-                is IllegalArgumentException -> AppError.UnknownUser()
-                else -> AppError.Custom("")
+                is AppError.UnknownUser -> AppError.UnknownUser()
+                else -> AppError.Custom("유저 정보 삭제 실패")
             }
 
             Result.Failure(error)

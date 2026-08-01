@@ -233,7 +233,7 @@ class StudyingViewModel @Inject constructor(
                 when (e){
                     is AppError.UnknownUser -> ensureCurrentUserUseCase()
                     is AppError.Local -> sendToast("자동 저장된 학습 기록이 지워지지 않았습니다.")
-                    else -> sendToast(e.message)
+                    else -> Unit //디비에서 유저 정보 삭제 실패 시 유저에게 안내할 필요 x
                 }
             }
     }
