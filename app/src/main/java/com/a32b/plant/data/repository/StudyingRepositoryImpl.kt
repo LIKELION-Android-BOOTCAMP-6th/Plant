@@ -15,7 +15,6 @@ import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.io.IOException
@@ -40,12 +39,10 @@ class StudyingRepositoryImpl @Inject constructor(
     }.fold(
         onSuccess = { Result.Success(Unit)},
         onFailure = { e ->
-            if (e is CancellationException) throw e
-
             Log.e("Studying", "스터딩 유저 초기 저장 실패", e)
 
             val error = when(e){
-                is IllegalArgumentException -> AppError.Unknown("유저 정보를 찾을 수 없습니다.")
+                is AppError.UnknownUser -> AppError.UnknownUser()
                 else -> AppError.Upload()
             }
             Result.Failure(error)
@@ -57,12 +54,10 @@ class StudyingRepositoryImpl @Inject constructor(
     }.fold(
         onSuccess = { Result.Success(Unit)},
         onFailure = { e ->
-            if (e is CancellationException) throw e
-
             Log.e("Studying", "학습 시간 업데이트", e)
 
             val error = when(e){
-                is IllegalArgumentException -> AppError.Unknown("유저 정보를 찾을 수 없습니다.")
+                is AppError.UnknownUser -> AppError.UnknownUser()
                 else -> AppError.Upload()
             }
 
@@ -78,7 +73,7 @@ class StudyingRepositoryImpl @Inject constructor(
             Log.e("Studying", "화분 총 학습 시간 업데이트", e)
 
             val error = when(e){
-                is IllegalArgumentException -> AppError.Unknown("유저 정보를 찾을 수 없습니다.")
+                is AppError.UnknownUser -> AppError.UnknownUser()
                 else -> AppError.Upload()
             }
             Result.Failure(error)
@@ -93,7 +88,7 @@ class StudyingRepositoryImpl @Inject constructor(
             Log.e("Studying", "유저 총 학습 시간 업데이트", e)
 
             val error = when(e){
-                is IllegalArgumentException -> AppError.Unknown("유저 정보를 찾을 수 없습니다.")
+                is AppError.UnknownUser -> AppError.UnknownUser()
                 else -> AppError.Upload()
             }
             Result.Failure(error)
@@ -101,7 +96,7 @@ class StudyingRepositoryImpl @Inject constructor(
     )
 
     override suspend fun saveStudyLog(potId: String, log: StudyLog): Result<Unit> = safeRunCatching {
-        val uid = userRepository.currentUser.value?.uid ?: return Result.Failure(AppError.Auth())
+        val uid = userRepository.currentUser.value?.uid ?: return Result.Failure(AppError.UnknownUser())
         val logId = db.collection("users")
             .document(uid)
             .collection("pots")
@@ -137,8 +132,8 @@ class StudyingRepositoryImpl @Inject constructor(
         onFailure = { e ->
             Log.e("Studying", "학습중 유저 정보 삭제", e)
             val error = when(e){
-                is IllegalArgumentException -> AppError.UnknownUser()
-                else -> AppError.Custom("")
+                is AppError.UnknownUser -> AppError.UnknownUser()
+                else -> AppError.Custom("유저 정보 삭제 실패")
             }
 
             Result.Failure(error)
