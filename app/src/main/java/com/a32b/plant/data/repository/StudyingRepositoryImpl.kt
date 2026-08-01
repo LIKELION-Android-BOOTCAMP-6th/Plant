@@ -15,7 +15,6 @@ import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.io.IOException

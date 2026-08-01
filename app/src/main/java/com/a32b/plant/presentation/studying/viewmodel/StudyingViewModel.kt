@@ -128,7 +128,7 @@ class StudyingViewModel @Inject constructor(
     private fun updateUser(){
         viewModelScope.launch(Dispatchers.IO) {
             repository.updateStudyingTime(tag, _uiState.value.timer)
-                .onFailure { if (it is AppError.UnknownUser) ensureCurrentUserUseCase () } //유저 정보 없을 시 로그아웃 처리
+                .onFailure { if (it is AppError.UnknownUser) ensureCurrentUserUseCase() } //유저 정보 없을 시 로그아웃 처리
         }
 
     }
@@ -151,7 +151,7 @@ class StudyingViewModel @Inject constructor(
             startStudyingSessionUseCase(tag, title,potId,_uiState.value.timer, _uiState.value.studyLog)
                 .onFailure { e ->
                     when (e){
-                        is AppError.UnknownUser -> Unit //유즈케이스에서 호출했음으로 따로 호춣 x
+                        is AppError.UnknownUser -> Unit //유즈케이스에서 호출했으므로 따로 호출 x
                         is AppError.Local, is AppError.Custom -> Unit //에러 로그는 레포지토리에서 찍고 있음
                         is AppError.Network -> sendToast(e.message)
                         else -> _uiState.update { it.copy(error = e.message) }
