@@ -101,6 +101,21 @@ class UserRepositoryImpl @Inject constructor(
         }
     )
 
+    override suspend fun updateProfile(user: User): Result<Unit> = safeRunCatching {
+        userRemoteDataSource.updateProfile(
+            uid = user.uid,
+            nickname = user.nickname,
+            profileImg = user.profileImg
+        )
+    }.fold(
+        onSuccess = { Result.Success(Unit) },
+        onFailure = { e ->
+            Result.Failure(
+                handleError(e, "프로필 수정에 실패했습니다.")
+            )
+        }
+    )
+
     override suspend fun isNicknameTaken(nickname: String): Result<Boolean> = runCatching {
         userRemoteDataSource.isNicknameTaken(nickname)
     }.fold(

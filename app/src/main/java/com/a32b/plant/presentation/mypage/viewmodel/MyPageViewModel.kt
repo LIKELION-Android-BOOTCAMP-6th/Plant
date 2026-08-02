@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
+import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
@@ -86,13 +87,8 @@ class MyPageViewModel @Inject constructor(
     }
 
     fun updateProfile(nickname: String, imageLevel: String) {
-        val currentNickname = uiState.value.nickname
-        val currentImage = uiState.value.profileImg
-
         viewModelScope.launch {
             updateProfileUseCase(
-                currentNickname = currentNickname,
-                currentImageLevel = currentImage,
                 newNickname = nickname,
                 newImageLevel = imageLevel
             ).onSuccess {
@@ -105,8 +101,10 @@ class MyPageViewModel @Inject constructor(
                     )
                 }
             }.onFailure { e ->
-                Log.e("MyPage", "프로필 수정 실패: ${e.message}", e)
-                notifyUpdateFailure(e.message ?: "업데이트 중 오류가 발생했습니다")
+                if (e !is AppError.UnknownUser) {
+                    Log.e("MyPage", "프로필 수정 실패: ${e.message}", e)
+                    notifyUpdateFailure(e.message ?: "업데이트 중 오류가 발생했습니다")
+                }
             }
         }
     }
