@@ -13,7 +13,6 @@ sealed interface Routes {
     @Serializable data object ProfileEdit: Routes
     @Serializable data object MyCommunityFeed: Routes
     @Serializable data object MyPageSetting: Routes
-    @Serializable data object MyPageArchive: Routes
     @Serializable data object StudyCompleted: Routes
 
     @Serializable data class StudyPlanDetail(val potId: String) : Routes
@@ -23,7 +22,6 @@ sealed interface Routes {
     @Serializable data class CommunityPost(val postId: String? = null, val potId: String? = null, val tagId: String? = null, val tagName: String? = null, val title: String? = null, val studyLogIds: List<String>? = emptyList()) : Routes
     @Serializable data class CommunityDetail(val postId: String) : Routes
     @Serializable data class StudyCompletedDetail(val potId: String): Routes
-    @Serializable data class MyPageArchiveDetail(val potId: String): Routes
     @Serializable data object PotList : Routes
     @Serializable data class PotDetail(val potId: String) : Routes
 

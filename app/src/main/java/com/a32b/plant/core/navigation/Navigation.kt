@@ -16,9 +16,7 @@ import com.a32b.plant.presentation.auth.ui.SignInScreen
 import com.a32b.plant.presentation.auth.ui.SignUpScreen
 import com.a32b.plant.presentation.home.ui.HomeScreen
 import com.a32b.plant.presentation.pot.ui.NewBornTreeScreen
-import com.a32b.plant.presentation.mypage.ui.MyPageArchiveDetailScreen
 import com.a32b.plant.presentation.mypage.ui.MyCommunityFeedScreen
-import com.a32b.plant.presentation.mypage.ui.MyPageArchiveScreen
 import com.a32b.plant.presentation.mypage.ui.MyPageScreen
 import com.a32b.plant.presentation.mypage.ui.MyPageSettingScreen
 import com.a32b.plant.presentation.pot.ui.PotListScreen
@@ -44,11 +42,6 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
             composable<Routes.HomeMain> { HomeScreen(navController) }
             composable<Routes.Mypage> { MyPageScreen(navController) }
             composable<Routes.MyPageSetting> { MyPageSettingScreen(navController) }
-            composable<Routes.MyPageArchive> { MyPageArchiveScreen(navController) }
-
-            composable<Routes.MyPageArchiveDetail> {
-                MyPageArchiveDetailScreen(navController = navController)
-            }
 
             composable<Routes.CommunityList> {
                 CommunityListScreen(navController)
