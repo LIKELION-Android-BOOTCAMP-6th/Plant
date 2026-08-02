@@ -22,6 +22,7 @@ import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.component.getLogoImage
 import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
+import com.a32b.plant.presentation.theme.*
 
 @Composable
 fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltViewModel()) {
@@ -41,7 +42,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .background(MaterialTheme.colorScheme.background),
+                    .background(background),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 MainPlantCard(
@@ -102,10 +103,12 @@ fun PotChangeDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = background,
         title = {
             Text(
                 text = "화분 변경",
-                style = MaterialTheme.typography.headlineMedium
+                style = MaterialTheme.typography.headlineMedium,
+                color = fontColor
             )
         },
         text = {
@@ -117,7 +120,7 @@ fun PotChangeDialog(
                 Text(
                     text = "정원에 있는 다른 공부 화분으로\n변경할 수 있습니다.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = fontColorSub
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -128,7 +131,11 @@ fun PotChangeDialog(
                             .padding(vertical = 24.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("생성된 다른 화분이 없습니다.", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "생성된 다른 화분이 없습니다.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = fontColorSub
+                        )
                     }
                 } else {
                     LazyColumn(
@@ -141,7 +148,7 @@ fun PotChangeDialog(
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
                                     .clickable { onPotSelected(pot) },
-                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                color = if (isSelected) sub_green1 else sub2,
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Row(
@@ -152,18 +159,20 @@ fun PotChangeDialog(
                                     Column {
                                         Text(
                                             text = pot.name.ifEmpty { "이름 없는 화분" },
-                                            style = MaterialTheme.typography.bodyLarge
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = fontColor
                                         )
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
                                             text = "태그: ${pot.tagName.ifEmpty { "없음" }}",
-                                            style = MaterialTheme.typography.bodySmall
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = fontColorSub
                                         )
                                     }
                                     Text(
-                                        text = pot.level.ifEmpty { "Lv.1" },
+                                        text = pot.level.ifEmpty { "Lv.0" },
                                         style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.primary
+                                        color = if(isSelected) primary else fontColorSub
                                     )
                                 }
                             }
@@ -178,20 +187,31 @@ fun PotChangeDialog(
                     onClick = onCreateNewClick,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("+ 새로운 화분 만들기")
+                    Text(
+                        text = "+ 새로운 화분 만들기",
+                        color = primary
+                    )
                 }
             }
         },
         confirmButton = {
             Button(
                 onClick = onConfirm,
-                enabled = selectedPot != null && selectedPot != Pot.EMPTY
+                enabled = selectedPot != null && selectedPot != Pot.EMPTY,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = primary
+                )
             ) {
                 Text("선택 완료")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = fontColorSub
+                )
+            ) {
                 Text("취소")
             }
         },
@@ -200,7 +220,7 @@ fun PotChangeDialog(
 }
 
 // 중복 코드 방지 헬퍼 함수
-private fun displaypotIdOrDefault(id: String): String = id.ifEmpty { "default_pot" }
+//private fun displaypotIdOrDefault(id: String): String = id.ifEmpty { "default_pot" }
 
 @Composable
 fun HomeTopBar(userName: String) {
@@ -212,7 +232,7 @@ fun HomeTopBar(userName: String) {
         Text(
             text = "${userName.ifEmpty{"사용자"}}의 Garden",
             style = MaterialTheme.typography.displayLarge,
-            color = MaterialTheme.colorScheme.primary
+            color = primary
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
@@ -256,7 +276,7 @@ fun MainPlantCard(
                     getLogoImage()
                 }
             } else {
-                ProfileImage(level = displayPot.level.ifEmpty { "Lv.1" }, size = 150)
+                ProfileImage(level = displayPot.level.ifEmpty { "Lv.0" }, size = 150)
             }
             Spacer(modifier = Modifier.height(24.dp))
 

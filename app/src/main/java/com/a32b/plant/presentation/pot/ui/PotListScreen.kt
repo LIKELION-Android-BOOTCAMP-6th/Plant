@@ -44,7 +44,7 @@ fun PotListScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Plant 나의 화분 이런식",
+                    text = "나의 화분",
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.primary
                 )
