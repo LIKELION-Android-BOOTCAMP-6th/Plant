@@ -163,8 +163,10 @@ class MyPageViewModel @Inject constructor(
                 }
                 .onFailure { e ->
                     _uiState.update { it.copy(isDarkModeUpdating = false) }
-                    Log.e("MyPage", "다크모드 변경 실패: ${e.message}", e)
-                    _eventChannel.send(MyPageEvent.ShowToast(e.message))
+                    if (e !is AppError.UnknownUser) {
+                        Log.e("MyPage", "다크모드 변경 실패: ${e.message}", e)
+                        _eventChannel.send(MyPageEvent.ShowToast(e.message))
+                    }
                 }
         }
     }
