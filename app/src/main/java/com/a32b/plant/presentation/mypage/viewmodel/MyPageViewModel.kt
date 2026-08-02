@@ -87,6 +87,9 @@ class MyPageViewModel @Inject constructor(
     }
 
     fun updateProfile(nickname: String, imageLevel: String) {
+        if (uiState.value.isLoading) return
+
+        _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
             updateProfileUseCase(
                 newNickname = nickname,
@@ -97,13 +100,15 @@ class MyPageViewModel @Inject constructor(
                         nickname = nickname,
                         profileImg = imageLevel,
                         isUpdateSuccess = true,
+                        isLoading = false,
                         nicknameError = null
                     )
                 }
             }.onFailure { e ->
+                _uiState.update { it.copy(isLoading = false) }
                 if (e !is AppError.UnknownUser) {
                     Log.e("MyPage", "프로필 수정 실패: ${e.message}", e)
-                    notifyUpdateFailure(e.message ?: "업데이트 중 오류가 발생했습니다")
+                    notifyUpdateFailure(e.message)
                 }
             }
         }
@@ -139,11 +144,6 @@ class MyPageViewModel @Inject constructor(
             )
         }
     }
-
-    fun resetIsUpdateSuccess() {
-        _uiState.update { it.copy(isUpdateSuccess = false) }
-    }
-
 
     fun updateDarkMode(isDarkMode: Boolean) {
         if (uiState.value.isDarkModeUpdating || uiState.value.isDarkMode == isDarkMode) {

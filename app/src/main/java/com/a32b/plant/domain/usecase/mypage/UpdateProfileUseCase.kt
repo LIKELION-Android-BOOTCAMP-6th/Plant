@@ -52,7 +52,10 @@ class UpdateProfileUseCase @Inject constructor(
 
             val deleteResult = userRepository.deleteNickname(currentUser.nickname)
             if (deleteResult is Result.Failure) {
-                return deleteResult
+                return rollbackRegisteredNickname(
+                    newNickname = newNickname,
+                    originalFailure = deleteResult
+                )
             }
         }
         val updatedUser = currentUser.copy(
@@ -60,6 +63,16 @@ class UpdateProfileUseCase @Inject constructor(
             profileImg = newImageLevel
         )
         val updateResult = userRepository.updateProfile(updatedUser)
+
+        if (updateResult is Result.Failure &&
+            newNickname != currentUser.nickname
+        ) {
+            return rollbackNicknameChange(
+                previousNickname = currentUser.nickname,
+                newNickname = newNickname,
+                originalFailure = updateResult
+            )
+        }
 
         if (updateResult is Result.Success) {
             // TODO: 아직 CurrentUser를 읽는 화면이 남아 있어 과도기 동안 함께 갱신한다.
@@ -74,6 +87,36 @@ class UpdateProfileUseCase @Inject constructor(
         }
 
         return updateResult
+    }
+
+    private suspend fun rollbackNicknameChange(
+        previousNickname: String,
+        newNickname: String,
+        originalFailure: Result.Failure
+    ): Result.Failure {
+        val restoreResult = userRepository.registerNickname(previousNickname)
+        if (restoreResult is Result.Failure) {
+            originalFailure.error.addSuppressed(restoreResult.error)
+        }
+        val cleanupResult = userRepository.deleteNickname(newNickname)
+        if (cleanupResult is Result.Failure) {
+            originalFailure.error.addSuppressed(cleanupResult.error)
+        }
+
+        return originalFailure
+    }
+
+    private suspend fun rollbackRegisteredNickname(
+        newNickname: String,
+        originalFailure: Result.Failure
+    ): Result.Failure {
+        val rollbackResult = userRepository.deleteNickname(newNickname)
+
+        if (rollbackResult is Result.Failure) {
+            originalFailure.error.addSuppressed(rollbackResult.error)
+        }
+
+        return originalFailure
     }
 
     private fun validateNickname(nickname: String): String? {

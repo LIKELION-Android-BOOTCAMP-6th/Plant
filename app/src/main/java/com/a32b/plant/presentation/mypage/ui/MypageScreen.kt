@@ -76,6 +76,14 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
     var showProfileDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
+    LaunchedEffect(uiState.isUpdateSuccess) {
+        if (uiState.isUpdateSuccess) {
+            Toast.makeText(context, "업데이트 완료", Toast.LENGTH_SHORT).show()
+            showProfileDialog = false
+            viewModel.clearProfileState()
+        }
+    }
+
     PlantTheme(darkTheme = uiState.isDarkMode) {
         // 로그아웃
         LaunchedEffect(Unit) {
@@ -425,18 +433,6 @@ fun ProfileDialog(
     // 다이얼로그 안에서만 임시로 쓸 상태들 (입력 중인 값)
     var newUserName by remember { mutableStateOf(uiState.nickname) }
     var selectedImageLevel by remember { mutableStateOf(uiState.profileImg) }
-
-    val context = LocalContext.current
-
-    // 업데이트 성공 시 창 닫기 로직
-    LaunchedEffect(uiState.isUpdateSuccess) {
-        if (uiState.isUpdateSuccess) {
-            Toast.makeText(context, "업데이트 완료", Toast.LENGTH_SHORT).show()
-            viewModel.clearProfileState()
-            onDismiss()
-            viewModel.resetIsUpdateSuccess()
-        }
-    }
 
     Dialog(onDismissRequest = {
         viewModel.clearProfileState()
