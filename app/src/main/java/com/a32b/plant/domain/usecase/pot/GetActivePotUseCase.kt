@@ -12,6 +12,13 @@ class GetActivePotUseCase @Inject constructor(
     // 현재 메인 표출 화분을 반환
     operator fun invoke(uid: String, lastSelectedPotId: String): Flow<Pot> =
         repository.getPots(uid).map { pots ->
-            pots.find { it.id == lastSelectedPotId } ?: pots.firstOrNull() ?: Pot.EMPTY
+
+            val activePots = pots.filter { !it.isCompleted }
+
+            if (activePots.isEmpty()) {
+                return@map Pot.EMPTY
+            }
+
+            pots.find { it.id == lastSelectedPotId } ?: activePots.first()
         }
 }

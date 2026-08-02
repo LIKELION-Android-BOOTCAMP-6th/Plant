@@ -1,7 +1,10 @@
 package com.a32b.plant.presentation.home.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -9,6 +12,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -23,6 +27,9 @@ import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
 fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltViewModel()) {
     val displayPot by viewModel.displayPot.collectAsState()
     val userName by viewModel.userName.collectAsState()
+    val showPotChangeDialog by viewModel.showPotChangeDialog.collectAsState()
+    val allPots by viewModel.allPots.collectAsState()
+    val tempSelectedPot by viewModel.tempSelectedPot.collectAsState()
 
     val hasNoPot = displayPot.id.isEmpty() || displayPot == Pot.EMPTY
 
@@ -53,22 +60,143 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                     },
                     onChangeOrMakeClick = {
                         if (hasNoPot) {
-                            // 화분 없을 때 -> 화분 생성으로 이동
                             navController.navigate(Routes.NewBornTree)
                         } else {
-                            // 화분 변경 다이얼로그
                             viewModel.setShowPotChangeDialog(true)
                         }
                     },
                     onRecordClick = {
                         if (!hasNoPot) {
                             navController.navigate(Routes.StudyPlanDetail(displayPot.id))
-                        } // 상세 기록 이동
+                        }
+                    }
+                )
+            }
+
+            // 화분 변경 다이얼로그
+            if (showPotChangeDialog) {
+                PotChangeDialog(
+                    pots = allPots,
+                    selectedPot = tempSelectedPot,
+                    onPotSelected = { viewModel.setTempSelectedPot(it) },
+                    onDismiss = { viewModel.setShowPotChangeDialog(false) },
+                    onConfirm = { viewModel.confirmPotChange() },
+                    onCreateNewClick = {
+                        viewModel.setShowPotChangeDialog(false)
+                        navController.navigate(Routes.NewBornTree)
                     }
                 )
             }
         }
     }
+}
+
+@Composable
+fun PotChangeDialog(
+    pots: List<Pot>,
+    selectedPot: Pot?,
+    onPotSelected: (Pot) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+    onCreateNewClick: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "화분 변경",
+                style = MaterialTheme.typography.headlineMedium
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 300.dp)
+            ) {
+                Text(
+                    text = "정원에 있는 다른 공부 화분으로\n변경할 수 있습니다.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (pots.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("생성된 다른 화분이 없습니다.", style = MaterialTheme.typography.bodyMedium)
+                    }
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(pots) { pot ->
+                            val isSelected = pot.id == selectedPot?.id
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable { onPotSelected(pot) },
+                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = pot.name.ifEmpty { "이름 없는 화분" },
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = "태그: ${pot.tagName.ifEmpty { "없음" }}",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                    Text(
+                                        text = pot.level.ifEmpty { "Lv.1" },
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // 새 화분 생성 버튼 (다이얼로그 내부 추가 옵션)
+                TextButton(
+                    onClick = onCreateNewClick,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("+ 새로운 화분 만들기")
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                enabled = selectedPot != null && selectedPot != Pot.EMPTY
+            ) {
+                Text("선택 완료")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("취소")
+            }
+        },
+        shape = RoundedCornerShape(24.dp)
+    )
 }
 
 // 중복 코드 방지 헬퍼 함수
@@ -114,7 +242,7 @@ fun MainPlantCard(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = if(hasNoPot) "화분이 없습니다" else displayPot.name.ifEmpty { "실험용" },
+                text = if(hasNoPot) "공부 화분이 없습니다" else displayPot.name.ifEmpty { "실험용" },
                 style = MaterialTheme.typography.headlineMedium
             )
 

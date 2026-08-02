@@ -2,9 +2,9 @@ package com.a32b.plant.presentation.home.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
-import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.usecase.pot.GetActivePotUseCase
+import com.a32b.plant.domain.usecase.pot.GetActivePotsUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import com.a32b.plant.domain.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,6 +15,7 @@ import javax.inject.Inject
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val getActivePotUseCase: GetActivePotUseCase,
+    private val getActivePotsUseCase: GetActivePotsUseCase,
     private val userRepository: UserRepository,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase
 ) : BaseViewModel() {
@@ -51,6 +52,7 @@ class HomeViewModel @Inject constructor(
                 _userName.value = user.nickname
 
                 loadActivePot(uid = user.uid, lastSelectedPotId = user.lastSelectedPotId)
+                loadActivePots(uid = user.uid)
                 loaded()
             } ?: run {
                 _isLoginError.value = true
@@ -61,11 +63,18 @@ class HomeViewModel @Inject constructor(
     private fun loadActivePot(uid: String, lastSelectedPotId: String){
         viewModelScope.launch {
             getActivePotUseCase(uid = uid, lastSelectedPotId = lastSelectedPotId)
-                .catch { throwable ->
-
-                }
+                .catch { throwable -> }
                 .collect { pot ->
                     _displayPot.value = pot
+                }
+        }
+    }
+    private fun loadActivePots(uid: String) {
+        viewModelScope.launch {
+            getActivePotsUseCase(uid = uid)
+                .catch { throwable -> }
+                .collect { pots ->
+                    _allPots.value = pots
                 }
         }
     }
@@ -75,23 +84,25 @@ class HomeViewModel @Inject constructor(
     }
 
     fun confirmPotChange() {
+        _tempSelectedPot.value?.let { selected ->
+            _displayPot.value = selected
+
+            viewModelScope.launch {
+                ensureCurrentUserUseCase { user->
+                    userRepository.updateLastSelectedPot(user.uid, selected.id)
+                }
+            }
+        }
         setShowPotChangeDialog(false)
-        _tempSelectedPot.value = null
     }
 
     fun setShowPotChangeDialog(show: Boolean) {
-        if (!show) _tempSelectedPot.value = null // 닫을 때 초기화
-        _showPotChangeDialog.value = show
-    }
-    fun selectPot(pot: Pot) {
-        // 메인 화분 업데이트
-        _displayPot.value = pot
-
-        // 선택 화분으로 DB 업데이트
-        viewModelScope.launch {
-            ensureCurrentUserUseCase { user ->
-                userRepository.updateLastSelectedPot(user.uid, pot.id)
-            }
+        if (!show){
+            // 닫을 때 초기화
+            _tempSelectedPot.value = null
+        } else {
+            _tempSelectedPot.value = _displayPot.value
         }
+        _showPotChangeDialog.value = show
     }
 }
