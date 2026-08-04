@@ -1,7 +1,7 @@
 package com.a32b.plant.data.repository
 
 import android.util.Log
-import com.a32b.plant.data.datasource.pot.PotRemoteDataSource
+import com.a32b.plant.data.source.remote.pot.PotRemoteDataSource
 import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.domain.model.Pot

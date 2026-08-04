@@ -1,4 +1,4 @@
-package com.a32b.plant.data.local
+package com.a32b.plant.data.source.local
 
 import com.a32b.plant.data.model.StudyingSession
 

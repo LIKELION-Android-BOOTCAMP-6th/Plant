@@ -1,4 +1,4 @@
-package com.a32b.plant.data.local
+package com.a32b.plant.data.source.local
 
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -12,6 +12,7 @@ import com.a32b.plant.data.model.StudyingSession
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
+import kotlinx.serialization.json.Json
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -29,6 +30,7 @@ class StudyingLocalDataSourceImpl @Inject constructor(
     private val TAG = stringPreferencesKey("tag")
     private val TITLE = stringPreferencesKey("title")
     private val TIME = longPreferencesKey("time")
+    private val LOG = stringPreferencesKey("log")
 
     override suspend fun save(studying: StudyingSession) {
         context.dataStore.edit { preferences ->
@@ -37,6 +39,9 @@ class StudyingLocalDataSourceImpl @Inject constructor(
             preferences[TAG] = studying.tag
             preferences[TITLE] = studying.title
             preferences[TIME] = studying.time
+            studying.log?.let {
+                preferences[LOG] = Json.encodeToString(it)
+            }
         }
     }
 
@@ -50,13 +55,17 @@ class StudyingLocalDataSourceImpl @Inject constructor(
         val tag = preferences[TAG] ?: return null
         val title = preferences[TITLE] ?: return null
         val time = preferences[TIME] ?: return null
+        val log = preferences[LOG]?.let {
+            runCatching { Json.decodeFromString<List<String>>(it) }.getOrNull()
+        } //log를 나중에 작성한 경우일 수 있으니 nullable
 
         return StudyingSession(
             userId = userId,
             potId = potId,
             tag = tag,
             title = title,
-            time = time
+            time = time,
+            log = log
         )
     }
 

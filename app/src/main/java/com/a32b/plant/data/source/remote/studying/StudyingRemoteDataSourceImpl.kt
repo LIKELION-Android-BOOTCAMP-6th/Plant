@@ -1,13 +1,12 @@
-package com.a32b.plant.data.datasource.studying
+package com.a32b.plant.data.source.remote.studying
 
-import android.content.Context
 import com.a32b.plant.data.model.StudyLogDto
 import com.a32b.plant.data.model.StudyingUserDto
+import com.a32b.plant.domain.error.AppError
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -21,7 +20,7 @@ class StudyingRemoteDataSourceImpl @Inject constructor(
     private val db: FirebaseFirestore,
 ): StudyingRemoteDataSource {
     private val uid: String
-        get() = auth.currentUser?.uid ?: ""
+        get() = auth.currentUser?.uid ?: throw AppError.UnknownUser()
     override fun observeStudyingUser(tag: String): Flow<List<StudyingUserDto>> = callbackFlow {
         val listener = db.collection("studying")
             .whereEqualTo("tag", tag)

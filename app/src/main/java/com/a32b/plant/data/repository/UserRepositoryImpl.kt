@@ -2,7 +2,7 @@ package com.a32b.plant.data.repository
 
 import android.util.Log
 import com.a32b.plant.core.util.safeRunCatching
-import com.a32b.plant.data.datasource.user.UserRemoteDataSource
+import com.a32b.plant.data.source.remote.user.UserRemoteDataSource
 import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.mapper.toDto
 import com.a32b.plant.di.qualifier.ApplicationScope
