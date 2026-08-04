@@ -42,7 +42,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .background(background),
+                    .background(MaterialTheme.colorScheme.background),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 MainPlantCard(
