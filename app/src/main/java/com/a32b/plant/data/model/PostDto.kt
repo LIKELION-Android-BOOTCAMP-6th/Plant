@@ -1,8 +1,6 @@
 package com.a32b.plant.data.model
 
-import com.a32b.plant.domain.model.CommentUser
 import com.a32b.plant.domain.model.StudyLog
-import com.a32b.plant.domain.model.Tag
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
@@ -35,7 +33,9 @@ data class CommentDto(
     @get:PropertyName("activityId") @set:PropertyName("activityId")
     var activityId: String = "",
     @get:PropertyName("createdAt") @set:PropertyName("createdAt")
-    var createdAt: Timestamp? = Timestamp.now()
+    var createdAt: Timestamp? = Timestamp.now(),
+    // Firestore 문서 필드가 아닌, 로컬 캐시에서 읽을 때 SnapshotMetadata로 채워지는 값(서버 미반영 여부)
+    var isPending: Boolean = false
 )
 data class PostDto(
     @DocumentId

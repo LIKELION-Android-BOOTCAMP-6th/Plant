@@ -71,6 +71,8 @@ data class Comment(
     val user: CommentUser,      // ERD: user { id, nickname, profileImg }
     val content: String,
     val activityId: String,
-    val createdAt: Long?
+    val createdAt: Long?,
+    // 아직 서버에 반영되지 않고 로컬에만 있는(오프라인 등) 상태인지
+    val isPending: Boolean = false
 )
 

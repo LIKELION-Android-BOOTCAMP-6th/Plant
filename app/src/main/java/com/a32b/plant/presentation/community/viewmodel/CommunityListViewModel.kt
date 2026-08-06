@@ -1,10 +1,14 @@
 package com.a32b.plant.presentation.community.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.domain.model.Post
 import com.a32b.plant.domain.model.Tag
-import com.a32b.plant.origin.OldPostRepository
+import com.a32b.plant.domain.result.onFailure
+import com.a32b.plant.domain.result.onSuccess
+import com.a32b.plant.domain.usecase.community.GetCommunityTagsUseCase
+import com.a32b.plant.domain.usecase.community.ObservePostListUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -18,18 +22,13 @@ data class CommunityListUiState(
     val isSharedShown: Boolean = false
 )
 @HiltViewModel
-class CommunityListViewModel @Inject constructor(private val repository: OldPostRepository) : BaseViewModel() {
+class CommunityListViewModel @Inject constructor(
+    private val observePostListUseCase: ObservePostListUseCase,
+    private val getCommunityTagsUseCase: GetCommunityTagsUseCase
+) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(CommunityListUiState())
     val uiState = _uiState.asStateFlow()
-    private val _navigateToDetail = MutableSharedFlow<String>()
-    val navigateToDetail = _navigateToDetail.asSharedFlow()
-
-    fun onPostClick(postId: String) {
-        viewModelScope.launch {
-            _navigateToDetail.emit(postId)
-        }
-    }
 
     init {
         fetchTags()
@@ -39,7 +38,9 @@ class CommunityListViewModel @Inject constructor(private val repository: OldPost
     fun onSharedShownChange() = _uiState.update { it.copy(isSharedShown = !_uiState.value.isSharedShown) }
     private fun fetchTags(){
         viewModelScope.launch(Dispatchers.IO) {
-            getTags(repository.getTag())
+            getCommunityTagsUseCase()
+                .onSuccess { tags -> getTags(tags) }
+                .onFailure { e -> Log.e("CommunityListVM", "태그 목록 조회 실패: ${e.message}") }
             // 빈화면 -> 홈화면
             loaded()
         }
@@ -54,7 +55,7 @@ class CommunityListViewModel @Inject constructor(private val repository: OldPost
     val selectedTags = _selectedTags.asStateFlow()
 
     val searchUiState: StateFlow<List<Post>> = combine(
-        repository.getPostList(),
+        observePostListUseCase(),
         _searchQuery,
         _uiState
     ) { posts, query, uiState ->
@@ -67,7 +68,7 @@ class CommunityListViewModel @Inject constructor(private val repository: OldPost
 
             val matchesShared = if(!uiState.isSharedShown) true
                                 else post.isShared == true
-            
+
             matchesQuery && matchesTags && matchesShared
         }
     }.stateIn(

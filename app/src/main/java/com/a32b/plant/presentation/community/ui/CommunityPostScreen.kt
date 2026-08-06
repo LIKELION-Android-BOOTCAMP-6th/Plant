@@ -30,6 +30,7 @@ import com.a32b.plant.presentation.core.component.TagSheet
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.community.viewmodel.CommunityPostEvent
 import com.a32b.plant.presentation.community.viewmodel.CommunityPostViewModel
+import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.theme.Typography
 import com.a32b.plant.presentation.theme.background
 
@@ -59,6 +60,7 @@ fun CommunityPostScreen(
                         popUpTo<Routes.CommunityPost> { inclusive = true }
                     }
                 }
+                is CommunityPostEvent.ShowToast -> context.showToast(event.message)
             }
         }
     }
@@ -69,6 +71,7 @@ fun CommunityPostScreen(
         topBar = {
             PostTopBar(
                 isEditMode = postId != null,
+                isSubmitting = uiState.isSubmitting,
                 onBackClick = {
                     viewModel.onIsDismissDialogShowChange()
                 },
@@ -138,7 +141,7 @@ fun CommunityPostScreen(
                     Spacer(modifier = Modifier.width(8.dp))
 
                     Text(
-                        text = "${uiState.selected!!.name}${(if (uiState.isShared) ", 공유" else "")}",
+                        text = "${uiState.selected?.name ?: "태그를 선택하세요"}${(if (uiState.isShared) ", 공유" else "")}",
                         style = Typography.bodyMedium,
                         fontSize = 13.sp,
                         modifier = Modifier.padding(top = 4.dp),
@@ -203,7 +206,7 @@ fun CommunityPostScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PostTopBar(isEditMode: Boolean, onBackClick: () -> Unit, onRegisterClick: () -> Unit) {
+fun PostTopBar(isEditMode: Boolean, isSubmitting: Boolean = false, onBackClick: () -> Unit, onRegisterClick: () -> Unit) {
     CenterAlignedTopAppBar(
         title = { Text(if (isEditMode) "글 수정" else "글쓰기", style = Typography.titleLarge,
             color = MaterialTheme.colorScheme.onSurface) },
@@ -216,12 +219,12 @@ fun PostTopBar(isEditMode: Boolean, onBackClick: () -> Unit, onRegisterClick: ()
             Surface(
                 modifier = Modifier
                     .padding(end = 12.dp)
-                    .clickable { onRegisterClick() },
+                    .clickable(enabled = !isSubmitting) { onRegisterClick() },
                 shape = RoundedCornerShape(4.dp),
-                color = MaterialTheme.colorScheme.primary
+                color = if (isSubmitting) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.primary
             ) {
                 Text(
-                    text = if (isEditMode) "수정" else "등록",
+                    text = if (isSubmitting) "처리 중" else if (isEditMode) "수정" else "등록",
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,

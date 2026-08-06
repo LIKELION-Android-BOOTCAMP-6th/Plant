@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -29,12 +30,12 @@ import com.a32b.plant.R
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
-import com.a32b.plant.di.CurrentUser
+import com.a32b.plant.presentation.community.viewmodel.CommunityDetailEvent
 import com.a32b.plant.presentation.community.viewmodel.CommunityDetailViewModel
 import com.a32b.plant.presentation.theme.*
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.TagChip
-import com.a32b.plant.core.extension.toTimestamp
+import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.domain.model.Comment
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,6 +44,7 @@ fun CommunityDetailScreen(
     navController: NavController, viewModel: CommunityDetailViewModel = hiltViewModel()
 ) {
 
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
 
     val postState by viewModel.post.collectAsStateWithLifecycle()
@@ -51,16 +53,21 @@ fun CommunityDetailScreen(
 
     val isLikedByMe = postState?.isLiked == true
 
+    LaunchedEffect(Unit) {
+        viewModel.event.collect { event ->
+            when (event) {
+                is CommunityDetailEvent.ShowToast -> context.showToast(event.message)
+                is CommunityDetailEvent.NavigateBack -> navController.popBackStack()
+            }
+        }
+    }
 
     // 게시글 삭제 다이얼로그 (core/component/ConfirmDialog.kt - 다이얼로그 공통소스 ConfirmDialog로 변경)
     if (showDeleteDialog) {
         ConfirmDialog(
             text = "게시글을 삭제하시겠습니까?",
             onDismiss = { viewModel.closeDeleteDialog() },
-            onConfirm = {
-                viewModel.deletePost { navController.popBackStack() }
-                viewModel.closeDeleteDialog()
-            }
+            onConfirm = { viewModel.deletePost() }
         )
     }
 
@@ -181,7 +188,7 @@ fun CommunityDetailScreen(
                             Spacer(modifier = Modifier.weight(1f))
 
 
-                            if (currentPost.author.id == CurrentUser.uid) {
+                            if (currentPost.author.id == uiState.currentUid) {
                                 IconButton(onClick = {
                                     navController.navigate(Routes.CommunityPost(postId = currentPost.postId))
                                 }) {
@@ -203,8 +210,9 @@ fun CommunityDetailScreen(
 
                     item {
                         CommentInputSection(
-                            nickname = CurrentUser.nickname,
+                            nickname = uiState.currentNickname,
                             text = uiState.comment,
+                            isSubmitting = uiState.isCommentSubmitting,
                             onTextChange = { viewModel.onCommentChange(it) },
                             onSend = { viewModel.addComment() }
                         )
@@ -215,7 +223,7 @@ fun CommunityDetailScreen(
                     items(uiState.commentList) { commentData ->
                         CommentRow(
                             comment = commentData,
-                            isOwner = commentData.user.uid == CurrentUser.uid,
+                            isOwner = commentData.user.uid == uiState.currentUid,
                             isEditing = uiState.editingCommentId == commentData.commentId,
                             editingText = uiState.editingCommentText,
                             onEditTextChange = { viewModel.onEditCommentTextChange(it) },
@@ -248,7 +256,8 @@ fun CommentRow(
     val context = LocalContext.current
     val maxLength = 100
 
-    Row(verticalAlignment = Alignment.Top) {
+    // 아직 서버에 반영되지 않은(오프라인 등으로 로컬에만 있는) 댓글은 흐리게 표시해 구분
+    Row(verticalAlignment = Alignment.Top, modifier = Modifier.alpha(if (comment.isPending) 0.5f else 1f)) {
         ProfileImage(comment.user.profileImg, 24)
         Spacer(Modifier.width(8.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -258,7 +267,7 @@ fun CommentRow(
                     color = MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    text = comment.createdAt?.let { TimeFormatter.formatTimeWithClock(it) } ?: "",
+                    text = if (comment.isPending) "전송 중..." else comment.createdAt?.let { TimeFormatter.formatTimeWithClock(it) } ?: "",
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = Typography.bodyMedium
@@ -338,7 +347,7 @@ fun CommentRow(
 }
 
 @Composable
-fun CommentInputSection(nickname: String, text: String, onTextChange: (String) -> Unit, onSend: () -> Unit) {
+fun CommentInputSection(nickname: String, text: String, isSubmitting: Boolean = false, onTextChange: (String) -> Unit, onSend: () -> Unit) {
     val context = LocalContext.current
     val maxLength = 100
     val focus = LocalFocusManager.current
@@ -390,6 +399,7 @@ fun CommentInputSection(nickname: String, text: String, onTextChange: (String) -
                 Button(
                     onClick = {onSend()
                         focus.clearFocus()},
+                    enabled = !isSubmitting,
                     modifier = Modifier
                         .height(32.dp)
                         .padding(top = 4.dp),
@@ -397,7 +407,7 @@ fun CommentInputSection(nickname: String, text: String, onTextChange: (String) -
                     shape = RoundedCornerShape(4.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
                 ) {
-                    Text("등록", fontSize = 12.sp, color = Color.White,style = Typography.bodyMedium)
+                    Text(if (isSubmitting) "등록 중" else "등록", fontSize = 12.sp, color = Color.White,style = Typography.bodyMedium)
                 }
             }
         }

@@ -26,7 +26,8 @@ fun CommentDto.toDomain() : Comment = Comment(
     user = user.toDomain(),
     content = content,
     activityId = activityId,
-    createdAt = createdAt.toLong()
+    createdAt = createdAt.toLong(),
+    isPending = isPending
 )
 fun PostDto.toDomain(uid: String, comments: List<Comment>) : Post = Post(
     postId = postId,
