@@ -17,7 +17,6 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.tasks.await
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -172,39 +171,6 @@ class StudyingRepositoryImpl @Inject constructor(
         onFailure = {e ->
             Log.e("studying", "세션 초기화", e)
             Result.Failure(AppError.Local("세션 초기화 실패"))
-        }
-    )
-
-    // 앱 실행 불가로 우선 ㄴ
-    override suspend fun getStudyLogs(potId: String): Result<List<StudyLog>> = safeRunCatching {
-        val uid = userRepository.currentUser.value?.uid ?: return Result.Failure(AppError.UnknownUser())
-
-        // 만약 studyingRemoteDataSource에 관련 메서드가 있다면 호출하고,
-        // 없다면 아래와 같이 직접 Firestore에서 가져오거나 리모트 소스를 통해 가져옵니다.
-        val snapshot = db.collection("users")
-            .document(uid)
-            .collection("pots")
-            .document(potId)
-            .collection("logs")
-            .get()
-            .await()
-
-        snapshot.documents.mapNotNull { doc ->
-            doc.toObject(com.a32b.plant.data.model.StudyLogDto::class.java)?.toDomain()?.copy(id = doc.id)
-        }
-    }.fold(
-        onSuccess = { Result.Success(it) },
-        onFailure = { e ->
-            Log.e("Studying", "학습 기록 조회 실패", e)
-            val error = when (e) {
-                is FirebaseFirestoreException -> when (e.code) {
-                    FirebaseFirestoreException.Code.UNAVAILABLE,
-                    FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
-                    else -> AppError.Custom("학습 기록을 불러오지 못했습니다.")
-                }
-                else -> AppError.Custom("학습 기록을 불러오지 못했습니다.")
-            }
-            Result.Failure(error)
         }
     )
 

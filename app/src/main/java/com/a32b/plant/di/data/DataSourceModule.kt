@@ -1,5 +1,7 @@
 package com.a32b.plant.di.data
 
+import com.a32b.plant.data.datasource.StudyLogRemoteDataSource
+import com.a32b.plant.data.datasource.StudyLogRemoteDataSourceImpl
 import com.a32b.plant.data.source.remote.auth.AuthRemoteDataSource
 import com.a32b.plant.data.source.remote.auth.AuthRemoteDataSourceImpl
 import com.a32b.plant.data.source.remote.community.CommunityRemoteDataSource
@@ -44,4 +46,11 @@ abstract class DataSourceModule {
     @Binds
     @Singleton
     abstract fun bindStudyingLocalDataSource(impl: StudyingLocalDataSourceImpl) : StudyingLocalDataSource
+
+    @Binds
+    @Singleton
+    abstract fun bindStudyLogRemoteDataSource(
+        impl: StudyLogRemoteDataSourceImpl
+    ): StudyLogRemoteDataSource
+
 }
