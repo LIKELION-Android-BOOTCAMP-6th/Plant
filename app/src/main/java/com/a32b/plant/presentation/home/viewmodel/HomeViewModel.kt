@@ -52,7 +52,6 @@ class HomeViewModel @Inject constructor(
                 _userName.value = user.nickname
 
                 loadActivePot(uid = user.uid, lastSelectedPotId = user.lastSelectedPotId)
-                loadStudyingPots(uid = user.uid)
                 loaded()
             } ?: run {
                 _isLoginError.value = true
@@ -73,18 +72,6 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun loadStudyingPots(uid: String){
-        viewModelScope.launch {
-            safeRunCatching {
-                getPotListUseCase.getStudyingPots(uid = uid)
-                    .collect { pots ->
-                        _allPots.value = pots
-                    }
-            }.onFailure { throwable ->
-                // 필요시 에러 핸들링
-            }
-        }
-    }
     fun setTempSelectedPot(pot: Pot) {
         _tempSelectedPot.value = pot
     }
@@ -108,9 +95,24 @@ class HomeViewModel @Inject constructor(
 
     fun setShowPotChangeDialog(show: Boolean) {
         if (!show) _tempSelectedPot.value = null // 닫을 때 초기화
-        else _tempSelectedPot.value = _displayPot.value
+        else {
+            _tempSelectedPot.value = _displayPot.value
+            fetchStudyingPotsForDialog()
+        }
 
         _showPotChangeDialog.value = show
     }
 
+    private fun fetchStudyingPotsForDialog() {
+        viewModelScope.launch {
+            safeRunCatching {
+                ensureCurrentUserUseCase { user ->
+                    val studyingPots = getPotListUseCase.getStudyingPots(uid = user.uid).first()
+                    _allPots.value = studyingPots
+                }
+            }.onFailure { throwable ->
+
+            }
+        }
+    }
 }
