@@ -42,7 +42,7 @@ fun ConfirmDialog(text: String, semiText:String? = null,isSingleBtn : Boolean = 
                 Spacer(modifier = Modifier.height(22.dp))
 
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    if (isSingleBtn){
+                    if (!isSingleBtn){
                         Button(onClick = onDismiss,
                             modifier = Modifier.height(30.dp).weight(1f),
                             shape = RoundedCornerShape(8.dp),
