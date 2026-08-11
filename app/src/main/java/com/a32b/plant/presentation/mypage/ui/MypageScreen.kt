@@ -1,7 +1,6 @@
 package com.a32b.plant.presentation.mypage.ui
 
 import android.util.Log
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -60,6 +59,7 @@ import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.ProfileImage
+import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageEvent
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageUiState
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageViewModel
@@ -78,7 +78,7 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
 
     LaunchedEffect(uiState.isUpdateSuccess) {
         if (uiState.isUpdateSuccess) {
-            Toast.makeText(context, "업데이트 완료", Toast.LENGTH_SHORT).show()
+            context.showToast("업데이트 완료")
             showProfileDialog = false
             viewModel.clearProfileState()
         }
@@ -90,7 +90,7 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
             viewModel.events.collect { event ->
                 when (event) {
                     is MyPageEvent.ShowToast ->
-                        Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                        context.showToast(event.message)
 
                     is MyPageEvent.NavigateToSignIn ->
                         navController.navigate(Routes.SignIn) {
@@ -145,13 +145,13 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                     viewModel.updateDarkMode(isDarkMode)
                 },
                 onGuideClick = {
-                    Toast.makeText(context, "준비 중입니다.", Toast.LENGTH_SHORT).show()
+                    context.showToast("준비 중입니다.")
                 },
                 onTermsClick = {
-                    Toast.makeText(context, "준비 중입니다.", Toast.LENGTH_SHORT).show()
+                    context.showToast("준비 중입니다.")
                 },
                 onPrivacyClick = {
-                    Toast.makeText(context, "준비 중입니다.", Toast.LENGTH_SHORT).show()
+                    context.showToast("준비 중입니다.")
                 },
                 onLogoutClick = {
                     showLogoutDialog = true

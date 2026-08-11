@@ -1,6 +1,5 @@
 package com.a32b.plant.presentation.mypage.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
@@ -107,7 +106,6 @@ class MyPageViewModel @Inject constructor(
             }.onFailure { e ->
                 _uiState.update { it.copy(isLoading = false) }
                 if (e !is AppError.UnknownUser) {
-                    Log.e("MyPage", "프로필 수정 실패: ${e.message}", e)
                     notifyUpdateFailure(e.message)
                 }
             }
@@ -164,7 +162,6 @@ class MyPageViewModel @Inject constructor(
                 .onFailure { e ->
                     _uiState.update { it.copy(isDarkModeUpdating = false) }
                     if (e !is AppError.UnknownUser) {
-                        Log.e("MyPage", "다크모드 변경 실패: ${e.message}", e)
                         _eventChannel.send(MyPageEvent.ShowToast(e.message))
                     }
                 }
