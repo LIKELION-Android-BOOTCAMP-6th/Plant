@@ -1,9 +1,9 @@
 package com.a32b.plant.presentation.mypage.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
+import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
@@ -86,13 +86,11 @@ class MyPageViewModel @Inject constructor(
     }
 
     fun updateProfile(nickname: String, imageLevel: String) {
-        val currentNickname = uiState.value.nickname
-        val currentImage = uiState.value.profileImg
+        if (uiState.value.isLoading) return
 
+        _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
             updateProfileUseCase(
-                currentNickname = currentNickname,
-                currentImageLevel = currentImage,
                 newNickname = nickname,
                 newImageLevel = imageLevel
             ).onSuccess {
@@ -101,12 +99,15 @@ class MyPageViewModel @Inject constructor(
                         nickname = nickname,
                         profileImg = imageLevel,
                         isUpdateSuccess = true,
+                        isLoading = false,
                         nicknameError = null
                     )
                 }
             }.onFailure { e ->
-                Log.e("MyPage", "프로필 수정 실패: ${e.message}", e)
-                notifyUpdateFailure(e.message ?: "업데이트 중 오류가 발생했습니다")
+                _uiState.update { it.copy(isLoading = false) }
+                if (e !is AppError.UnknownUser) {
+                    notifyUpdateFailure(e.message)
+                }
             }
         }
     }
@@ -142,11 +143,6 @@ class MyPageViewModel @Inject constructor(
         }
     }
 
-    fun resetIsUpdateSuccess() {
-        _uiState.update { it.copy(isUpdateSuccess = false) }
-    }
-
-
     fun updateDarkMode(isDarkMode: Boolean) {
         if (uiState.value.isDarkModeUpdating || uiState.value.isDarkMode == isDarkMode) {
             return
@@ -165,8 +161,9 @@ class MyPageViewModel @Inject constructor(
                 }
                 .onFailure { e ->
                     _uiState.update { it.copy(isDarkModeUpdating = false) }
-                    Log.e("MyPage", "다크모드 변경 실패: ${e.message}", e)
-                    _eventChannel.send(MyPageEvent.ShowToast(e.message))
+                    if (e !is AppError.UnknownUser) {
+                        _eventChannel.send(MyPageEvent.ShowToast(e.message))
+                    }
                 }
         }
     }
