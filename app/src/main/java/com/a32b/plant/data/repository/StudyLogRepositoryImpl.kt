@@ -1,5 +1,6 @@
 package com.a32b.plant.data.repository
 
+import android.util.Log
 import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.data.datasource.StudyLogRemoteDataSource
 import com.a32b.plant.data.mapper.toDomain
@@ -57,17 +58,17 @@ class StudyLogRepositoryImpl @Inject constructor(
 
     private fun mapToAppError(throwable: Throwable): AppError {
         if (throwable is AppError) return throwable
-
+        Log.e("StudyLogRepositoryImpl", "Original error: ${throwable.stackTraceToString()}")
         return when (throwable) {
             is FirebaseNetworkException -> AppError.Network()
             is FirebaseFirestoreException -> {
                 when (throwable.code) {
                     FirebaseFirestoreException.Code.PERMISSION_DENIED -> AppError.Permission()
                     FirebaseFirestoreException.Code.UNAVAILABLE -> AppError.Network()
-                    else -> AppError.Server(throwable.localizedMessage ?: "서버에 오류가 발생했습니다.")
+                    else -> AppError.Server()
                 }
             }
-            else -> AppError.Unknown(throwable.localizedMessage ?: "알 수 없는 오류가 발생했습니다.")
+            else -> AppError.Unknown()
         }
     }
 }
