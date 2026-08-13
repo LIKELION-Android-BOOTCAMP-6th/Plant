@@ -10,6 +10,8 @@ import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.model.StudyLog
+import com.a32b.plant.domain.result.onFailure
+import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.pot.*
 import com.a32b.plant.domain.usecase.studyLog.*
 import com.google.firebase.Firebase
@@ -18,7 +20,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import okhttp3.Route
 import javax.inject.Inject
 
 @HiltViewModel
@@ -84,9 +85,18 @@ class StudyPlanDetailViewModel @Inject constructor(
         if (userId.isEmpty() || potId.isEmpty()) return
         viewModelScope.launch {
             safeRunCatching {
-                getStudyLogsUseCase(userId, potId).collect { logs ->
-                    _studyLogs.value = logs
+                getStudyLogsUseCase(userId, potId)
+            }.onSuccess { flow ->
+                // flow를 collect하여 실제 List<StudyLog>를 대입
+                flow.collect { result ->
+                    result.onSuccess { logs ->
+                        _studyLogs.value = logs
+                    }.onFailure { error ->
+                        Log.e("StudyPlanDetailVM", "Failed to load study logs: ${error.message}")
+                    }
                 }
+            }.onFailure { error ->
+                Log.e("StudyPlanDetailVM", "Failed to collect study logs flow: ${error.message}")
             }
         }
     }
