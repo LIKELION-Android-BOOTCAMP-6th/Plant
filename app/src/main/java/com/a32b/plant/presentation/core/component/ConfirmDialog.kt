@@ -24,7 +24,14 @@ import com.a32b.plant.presentation.theme.primary
 import com.a32b.plant.presentation.theme.sub2
 
 @Composable
-fun ConfirmDialog(text: String, semiText:String? = null,isSingleBtn : Boolean = false, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+fun ConfirmDialog(
+    text: String,
+    semiText: String? = null,
+    isSingleBtn: Boolean = false,
+    isCancelable: Boolean = true,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
     Dialog(onDismissRequest = {}) {
         Card(shape = RoundedCornerShape(30.dp),
             colors = CardDefaults.cardColors(MaterialTheme.colorScheme.secondaryContainer),
