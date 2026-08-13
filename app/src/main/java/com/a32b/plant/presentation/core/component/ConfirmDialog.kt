@@ -32,7 +32,7 @@ fun ConfirmDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    Dialog(onDismissRequest = {}) {
+    Dialog(onDismissRequest = {if (isCancelable) onDismiss() }) {
         Card(shape = RoundedCornerShape(30.dp),
             colors = CardDefaults.cardColors(MaterialTheme.colorScheme.secondaryContainer),
             elevation = CardDefaults.cardElevation(3.dp)) {
