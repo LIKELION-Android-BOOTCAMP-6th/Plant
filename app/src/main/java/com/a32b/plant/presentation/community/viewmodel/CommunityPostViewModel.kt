@@ -11,7 +11,7 @@ import com.a32b.plant.domain.model.Post
 import com.a32b.plant.domain.model.PostAuthor
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.Tag
-import com.a32b.plant.domain.repository.PotRepository
+import com.a32b.plant.domain.usecase.studyLog.GetSelectedStudyLogUseCase
 import com.a32b.plant.origin.OldPostRepository
 import com.google.firebase.Timestamp
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -43,7 +43,7 @@ sealed class CommunityPostEvent{
 @HiltViewModel
 class CommunityPostViewModel @Inject constructor(
     private val repository: OldPostRepository,
-    private val potRepository: PotRepository,
+    private val getSelectedStudyLogUseCase: GetSelectedStudyLogUseCase,
     savedStateHandle: SavedStateHandle,
 
     ) : ViewModel() {
@@ -108,12 +108,13 @@ class CommunityPostViewModel @Inject constructor(
     fun getStudyLog(){
         val currentPotId = potId ?: return
         val currentStudyLogIds = studyLogIds ?: return
+        val uid = CurrentUser.uid
         //개별 학습 기록 공유 시
         viewModelScope.launch(Dispatchers.IO) {
-            val logs = studyLogIds.mapNotNull { id->
-                potRepository.getSelectedStudyLog(potId, id)
+            val logs = currentStudyLogIds.mapNotNull { id ->
+                getSelectedStudyLogUseCase(uid, currentPotId, id)
             }
-            _uiState.update { it.copy(studyLogs = (it.studyLogs?:emptyList()) + logs) }
+            _uiState.update { it.copy(studyLogs = (it.studyLogs ?: emptyList()) + logs) }
         }
     }
     fun getTags(list: List<Tag>) = _uiState.update { it.copy(tags = list) }

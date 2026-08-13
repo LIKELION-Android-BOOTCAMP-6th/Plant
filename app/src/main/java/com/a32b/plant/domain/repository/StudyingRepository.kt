@@ -29,7 +29,6 @@ interface StudyingRepository {
     /** 학습 종료 시 유저 정보 삭제 */
     suspend fun deleteStudyingUserInfo(): Result<Unit>
 
-
     /** 로컬 DB 저장/읽기/삭제 */
     suspend fun saveLocalSession(studying : StudyingSession): Result<Unit>
 
