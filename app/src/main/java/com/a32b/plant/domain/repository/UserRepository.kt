@@ -20,6 +20,7 @@ interface UserRepository {
     suspend fun createUser(uid: String): Result<User>
     suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit>
     suspend fun updateDarkMode(user: User): Result<Unit>
+    suspend fun updateProfile(user: User): Result<Unit>
     suspend fun isNicknameTaken(nickname: String): Result<Boolean>
     suspend fun registerNickname(nickname: String): Result<Unit>
     suspend fun deleteNickname(nickname: String): Result<Unit>

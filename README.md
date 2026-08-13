@@ -74,7 +74,7 @@ Plant는 학습 시간을 바탕으로 나만의 식물을 가꾸는 재미를 �
 |------|--------|
 | 장지은 | [zzingenius](https://github.com/zzingenius) |
 | 손지희 | [starlightfjh](https://github.com/starlightfjh) |
-| 김태환 | [taehwan-dev](https://github.com/taehwan-dev) |
+| 김태환 | [zickk-kth](https://github.com/zickk-kth) |
 | 김명준 | [jssmt247-crypto](https://github.com/jssmt247-crypto) |
 | 송성호 | [sdfg7979-glitch](https://github.com/sdfg7979-glitch) |
 

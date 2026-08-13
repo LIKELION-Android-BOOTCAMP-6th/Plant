@@ -2,9 +2,9 @@ package com.a32b.plant.data.repository
 
 import android.util.Log
 import com.a32b.plant.core.util.safeRunCatching
-import com.a32b.plant.data.source.remote.user.UserRemoteDataSource
 import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.mapper.toDto
+import com.a32b.plant.data.source.remote.user.UserRemoteDataSource
 import com.a32b.plant.di.qualifier.ApplicationScope
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.User
@@ -101,21 +101,36 @@ class UserRepositoryImpl @Inject constructor(
         }
     )
 
-    override suspend fun isNicknameTaken(nickname: String): Result<Boolean> = runCatching {
+    override suspend fun updateProfile(user: User): Result<Unit> = safeRunCatching {
+        userRemoteDataSource.updateProfile(
+            uid = user.uid,
+            nickname = user.nickname,
+            profileImg = user.profileImg
+        )
+    }.fold(
+        onSuccess = { Result.Success(Unit) },
+        onFailure = { e ->
+            Result.Failure(
+                handleError(e, "프로필 수정에 실패했습니다.")
+            )
+        }
+    )
+
+    override suspend fun isNicknameTaken(nickname: String): Result<Boolean> = safeRunCatching {
         userRemoteDataSource.isNicknameTaken(nickname)
     }.fold(
         onSuccess = { Result.Success(it) },
         onFailure = { e -> Result.Failure(handleError(e, "닉네임 중복 검사 실패")) }
     )
 
-    override suspend fun registerNickname(nickname: String): Result<Unit> = runCatching {
+    override suspend fun registerNickname(nickname: String): Result<Unit> = safeRunCatching {
         userRemoteDataSource.registerNickname(nickname)
     }.fold(
         onSuccess = { Result.Success(Unit) },
         onFailure = { e -> Result.Failure(handleError(e, "닉네임 등록 실패")) }
     )
 
-    override suspend fun deleteNickname(nickname: String): Result<Unit> = runCatching {
+    override suspend fun deleteNickname(nickname: String): Result<Unit> = safeRunCatching {
         userRemoteDataSource.deleteNickname(nickname)
     }.fold(
         onSuccess = { Result.Success(Unit) },

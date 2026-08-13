@@ -39,7 +39,7 @@ data class Pot(
             id = "",
             tagId = "",
             tagName = "",
-            name = "화분을 추가해주세요.",
+            name = "화분을 추가해주세요",
             imageUrl = "",
             potTotalStudyingTime = 0L,
             createdAt = null,

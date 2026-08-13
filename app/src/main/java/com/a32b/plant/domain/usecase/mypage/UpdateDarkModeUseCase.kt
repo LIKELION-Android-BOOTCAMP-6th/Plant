@@ -1,23 +1,23 @@
 package com.a32b.plant.domain.usecase.mypage
 
-import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
+import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import javax.inject.Inject
 
 class UpdateDarkModeUseCase @Inject constructor(
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase
 ) {
     suspend operator fun invoke(isDarkMode: Boolean): Result<Unit> {
-        val user = userRepository.currentUser.value
-            ?: return Result.Failure(AppError.Auth("로그인 정보가 없습니다."))
+        return when (val result = ensureCurrentUserUseCase()) {
+            is Result.Success -> {
+                userRepository.updateDarkMode(
+                    result.data.copy(isDarkMode = isDarkMode)
+                )
+            }
 
-        if (user.uid.isBlank()) {
-            return Result.Failure(AppError.Auth("로그인 정보가 없습니다."))
+            is Result.Failure -> result
         }
-
-        return userRepository.updateDarkMode(
-            user.copy(isDarkMode = isDarkMode)
-        )
     }
 }

@@ -1,6 +1,5 @@
 package com.a32b.plant.presentation.mypage.ui
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +28,7 @@ import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageEvent
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageSettingViewModel
 
@@ -46,7 +46,7 @@ fun MyPageSettingScreen(
         viewModel.events.collect { event ->
             when (event) {
                 is MyPageEvent.ShowToast ->
-                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                    context.showToast(event.message)
 
                 is MyPageEvent.NavigateToSignIn ->
                     navController.navigate(Routes.SignIn) {

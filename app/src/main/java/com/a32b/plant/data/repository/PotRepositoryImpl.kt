@@ -3,9 +3,7 @@ package com.a32b.plant.data.repository
 import android.util.Log
 import com.a32b.plant.data.source.remote.pot.PotRemoteDataSource
 import com.a32b.plant.data.mapper.toDomain
-import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.domain.model.Pot
-import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.PotRepository
 import com.google.firebase.firestore.FieldValue
@@ -32,65 +30,17 @@ class PotRepositoryImpl @Inject constructor(
             // 이때 서버가 PERMISSION_DENIED를 반환하는데, 처리하지 않으면 앱 전체가 죽는다.
             .catch { e -> Log.e("PotRepository", "화분 목록 구독 실패: ${e.message}", e) }
 
-    // user uid 없음 -> 합친 후에 변경 예정
-//    override fun getPots(uid: String): Flow<List<PotDto>> = callbackFlow {
-//        // 1. uid가 비어있는지 체크 (중요!)
-//        if (uid.isEmpty()) {
-//            close(Exception("UID is empty"))
-//            return@callbackFlow
-//        }
-//
-//        // 2. 정확한 경로 설정: users 컬렉션 -> 특정 uid 문서 -> pots 컬렉션
-//        val collectionRef = db.collection("users")
-//            .document(uid)
-//            .collection("pots")
-//
-//        val listener = collectionRef.addSnapshotListener { snapshot, error ->
-//            if (error != null) {
-//                close(error)
-//                return@addSnapshotListener
-//            }
-//
-//            val pots = snapshot?.toObjects(PotDto::class.java) ?: emptyList()
-//            trySend(pots)
-//        }
-//
-//        awaitClose { listener.remove() }
-//    }
     override suspend fun addPot(uid: String, tag: Tag, name: String) =
         potRemoteDataSource.addPot(uid, tag, name)
 
     override suspend fun updatePotLevel(uid: String, potId: String, newLevel: String) =
         potRemoteDataSource.updatePotLevel(uid, potId, newLevel)
 
-    override fun createStudyLog(potId: String, studyLog: StudyLog) {
-        val docRef = db.collection("users").document(CurrentUser.uid)
-            .collection("pots").document(potId)
-            .collection("logs").document()
-        docRef.set(studyLog.copy(id = docRef.id))
-    }
-
-    override fun updateTotalStudyTime(potId: String, studyTime: Long) {
-        db.collection("users").document(CurrentUser.uid)
-            .collection("pots").document(potId)
-            .update("potTotalStudyingTime", FieldValue.increment(studyTime))
-    }
-
     //특정 화분 정보 조회
     override suspend fun getUserPotById(uid: String, potId: String): Pot? {
         return db.collection("users").document(uid)
             .collection("pots").document(potId)
             .get().await()?.toObject(Pot::class.java)
-    }
-
-    //학습 기록 목록 조회
-    override suspend fun getPotLogs(uid: String, potId: String): List<StudyLog> {
-        val snapshot = db.collection("users").document(uid)
-            .collection("pots").document(potId)
-            .collection("logs")
-            .orderBy("createAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
-            .get().await()
-        return snapshot.toObjects(StudyLog::class.java)
     }
 
     //중복 제거된 레벨 리스트 조회
@@ -125,10 +75,35 @@ class PotRepositoryImpl @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-    override suspend fun getSelectedStudyLog(potId: String, logId: String): StudyLog? {
-        return db.collection("users").document(CurrentUser.uid)
+    override suspend fun updatePotName(uid: String, potId: String, newName: String) {
+        db.collection("users").document(uid)
             .collection("pots").document(potId)
-            .collection("logs").document(logId)
-            .get().await().toObject(StudyLog::class.java)
+            .update("name", newName)
+            .await()
+    }
+
+    override suspend fun deleteEntirePot(uid: String, potId: String, totalStudyingTime: Long) {
+        val userRef = db.collection("users").document(uid)
+        val potRef = userRef.collection("pots").document(potId)
+
+        db.runBatch { batch ->
+            batch.update(userRef, "totalStudyTime", FieldValue.increment(totalStudyingTime * -1))
+            batch.delete(potRef)
+        }.await()
+    }
+
+    override suspend fun completeStudyPlan(uid: String, potId: String) {
+        val userRef = db.collection("users").document(uid)
+        val potRef = userRef.collection("pots").document(potId)
+
+        db.runBatch { batch ->
+            batch.update(userRef, "completedPotsCount", FieldValue.increment(1))
+            batch.update(
+                potRef, mapOf(
+                    "isCompleted" to true,
+                    "completedAt" to FieldValue.serverTimestamp()
+                )
+            )
+        }.await()
     }
 }
