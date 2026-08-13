@@ -5,10 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.domain.model.Post
 import com.a32b.plant.domain.model.Tag
+import com.a32b.plant.domain.repository.CommunityRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
-import com.a32b.plant.domain.usecase.community.GetCommunityTagsUseCase
-import com.a32b.plant.domain.usecase.community.ObservePostListUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -23,8 +22,7 @@ data class CommunityListUiState(
 )
 @HiltViewModel
 class CommunityListViewModel @Inject constructor(
-    private val observePostListUseCase: ObservePostListUseCase,
-    private val getCommunityTagsUseCase: GetCommunityTagsUseCase
+    private val repository: CommunityRepository
 ) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(CommunityListUiState())
@@ -38,7 +36,7 @@ class CommunityListViewModel @Inject constructor(
     fun onSharedShownChange() = _uiState.update { it.copy(isSharedShown = !_uiState.value.isSharedShown) }
     private fun fetchTags(){
         viewModelScope.launch(Dispatchers.IO) {
-            getCommunityTagsUseCase()
+            repository.getTags()
                 .onSuccess { tags -> getTags(tags) }
                 .onFailure { e -> Log.e("CommunityListVM", "태그 목록 조회 실패: ${e.message}") }
             // 빈화면 -> 홈화면
@@ -55,7 +53,7 @@ class CommunityListViewModel @Inject constructor(
     val selectedTags = _selectedTags.asStateFlow()
 
     val searchUiState: StateFlow<List<Post>> = combine(
-        observePostListUseCase(),
+        repository.getPostList(),
         _searchQuery,
         _uiState
     ) { posts, query, uiState ->

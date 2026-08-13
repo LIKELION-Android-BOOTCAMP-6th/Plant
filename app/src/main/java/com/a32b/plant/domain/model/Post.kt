@@ -29,7 +29,8 @@ data class Post(
     val isLiked: Boolean, // likes 서브컬렉션에서 조회 후 설정
     val studyLogs: List<StudyLog>?,
     var isShared: Boolean?,
-    val comments: List<Comment> = emptyList()   // comments 서브컬렉션에서 조회 후 설정
+    val comments: List<Comment> = emptyList(),   // comments 서브컬렉션에서 조회 후 설정
+    val updatedAt: Long? = null // 수정된 적 있으면 그 시각, 없으면 null (createdAt은 최초 작성 시점 그대로 유지)
 ){
     companion object{
         fun createOriginal(author: PostAuthor, title: String, content: String, tag: Tag) = Post(
@@ -71,8 +72,6 @@ data class Comment(
     val user: CommentUser,      // ERD: user { id, nickname, profileImg }
     val content: String,
     val activityId: String,
-    val createdAt: Long?,
-    // 아직 서버에 반영되지 않고 로컬에만 있는(오프라인 등) 상태인지
-    val isPending: Boolean = false
+    val createdAt: Long?
 )
 

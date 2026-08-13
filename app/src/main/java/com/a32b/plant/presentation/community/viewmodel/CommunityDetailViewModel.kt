@@ -5,29 +5,31 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.util.NETWORK_SLOW_MESSAGE
+import com.a32b.plant.core.util.withSlowNotice
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.Post
 import com.a32b.plant.domain.model.StudyLog
+import com.a32b.plant.domain.repository.CommunityRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.community.AddCommentUseCase
-import com.a32b.plant.domain.usecase.community.DeleteCommentUseCase
-import com.a32b.plant.domain.usecase.community.DeletePostUseCase
-import com.a32b.plant.domain.usecase.community.ObserveCommentsUseCase
-import com.a32b.plant.domain.usecase.community.ObservePostDetailUseCase
 import com.a32b.plant.domain.usecase.community.ToggleLikeUseCase
-import com.a32b.plant.domain.usecase.community.UpdateCommentUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
-import com.a32b.plant.domain.result.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.milliseconds
 
 data class CommunityDetailUiState(
     val comment: String = "",
@@ -38,6 +40,7 @@ data class CommunityDetailUiState(
     val currentUid: String = "",
     val currentNickname: String = "",
     val isCommentSubmitting: Boolean = false,
+    val isRefreshing: Boolean = false,
 
     // 댓글 수정 상태
     val editingCommentId: String? = null,
@@ -54,16 +57,16 @@ sealed class CommunityDetailEvent {
 
 @HiltViewModel
 class CommunityDetailViewModel @Inject constructor(
-    private val observePostDetailUseCase: ObservePostDetailUseCase,
-    private val observeCommentsUseCase: ObserveCommentsUseCase,
+    private val repository: CommunityRepository,
     private val addCommentUseCase: AddCommentUseCase,
-    private val deletePostUseCase: DeletePostUseCase,
     private val toggleLikeUseCase: ToggleLikeUseCase,
-    private val updateCommentUseCase: UpdateCommentUseCase,
-    private val deleteCommentUseCase: DeleteCommentUseCase,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    companion object {
+        private val LIKE_DEBOUNCE = 500.milliseconds
+    }
 
     private val _uiState = MutableStateFlow(CommunityDetailUiState())
     val uiState = _uiState.asStateFlow()
@@ -78,19 +81,13 @@ class CommunityDetailViewModel @Inject constructor(
     private val _post = MutableStateFlow<Post?>(null)
     val post: StateFlow<Post?> = _post.asStateFlow()
 
-
-    private val _isLikeProcessing = MutableStateFlow(false)
-    val isLikeProcessing: StateFlow<Boolean> = _isLikeProcessing.asStateFlow()
+    // 좋아요 디바운스 상태
+    private var likeDebounceJob: Job? = null
+    private var likeInitialServerState: Boolean? = null  // 현재 디바운스 시퀀스 시작 시점의 서버값
 
     init {
         ensureCurrentUserUseCase { user -> _uiState.update { it.copy(currentUid = user.uid, currentNickname = user.nickname) } }
-        loadPostDetail()
-        observeComments()
-        onIsSharedChange()
-    }
-
-    private fun loadPostDetail() {
-        observePostDetailUseCase(postId).onEach { _post.value = it }.launchIn(viewModelScope)
+        refresh()
     }
 
     //공유 여부 체크
@@ -99,12 +96,27 @@ class CommunityDetailViewModel @Inject constructor(
             _uiState.update { it.copy(isShared = true) }
     }
 
-    // 댓글 실시간 구독: 로컬에 쓴 즉시(오프라인이어도) 반영되므로 addComment 등에서 별도로 다시 불러올 필요 없음
-    private fun observeComments() {
-        observeCommentsUseCase(postId)
-            .catch { e -> sendToast(e.message ?: "댓글을 불러오지 못했습니다.") }
-            .onEach { comments -> _uiState.update { it.copy(commentList = comments) } }
-            .launchIn(viewModelScope)
+    /** 게시글 상세 + 댓글 목록을 단건 조회로 다시 불러온다 (최초 진입 + pull-to-refresh 공용) */
+    fun refresh() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true) }
+
+            val postDeferred = async { repository.getPostDetail(postId) }
+            val commentsDeferred = async { repository.getComments(postId) }
+
+            postDeferred.await()
+                .onSuccess { post ->
+                    _post.value = post
+                    onIsSharedChange()
+                }
+                .onFailure { e -> sendToast(e.message) }
+
+            commentsDeferred.await()
+                .onSuccess { comments -> _uiState.update { it.copy(commentList = comments) } }
+                .onFailure { e -> sendToast(e.message) }
+
+            _uiState.update { it.copy(isRefreshing = false) }
+        }
     }
 
     fun onCommentChange(newText: String) { _uiState.update { it.copy(comment = newText) } }
@@ -119,12 +131,15 @@ class CommunityDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isCommentSubmitting = true) }
 
-            runWithSlowNotice { addCommentUseCase(postId, _post.value?.title ?: "", _uiState.value.comment) }
+            withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
+                addCommentUseCase(postId, _post.value?.title ?: "", _uiState.value.comment)
+            }
                 .onSuccess {
                     _uiState.update { it.copy(comment = "") }
+                    refresh()
                 }
                 .onFailure { e ->
-                    if (e is AppError.UnknownUser) ensureCurrentUserUseCase()
+                    // UnknownUser는 AddCommentUseCase 내부에서 이미 세션 만료 이벤트를 발송함
                     sendToast(e.message)
                 }
 
@@ -134,7 +149,9 @@ class CommunityDetailViewModel @Inject constructor(
 
     fun deletePost() {
         viewModelScope.launch {
-            runWithSlowNotice { deletePostUseCase(postId) }
+            withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
+                repository.deletePost(postId)
+            }
                 .onSuccess { _eventChannel.send(CommunityDetailEvent.NavigateBack) }
                 .onFailure { e ->
                     if (e is AppError.UnknownUser) ensureCurrentUserUseCase()
@@ -146,20 +163,56 @@ class CommunityDetailViewModel @Inject constructor(
 
     fun toggleLike() {
         val currentPost = _post.value ?: return
-
         if (currentPost.author.id == _uiState.value.currentUid) return
 
-        if (_isLikeProcessing.value) return
-
-        viewModelScope.launch {
-            _isLikeProcessing.value = true
-            runWithSlowNotice { toggleLikeUseCase(postId, currentPost.author.id, currentPost.isLiked, currentPost.title) }
-                .onFailure { e ->
-                    if (e is AppError.UnknownUser) ensureCurrentUserUseCase()
-                    sendToast(e.message)
-                }
-            _isLikeProcessing.value = false
+        // 새 디바운스 시퀀스의 시작이면 서버 상태 캡처 (연속 탭 동안 유지)
+        if (likeInitialServerState == null) {
+            likeInitialServerState = currentPost.isLiked
         }
+
+        // 낙관적 UI: 로컬 즉시 토글
+        val newIsLiked = !currentPost.isLiked
+        val delta = if (newIsLiked) 1 else -1
+        _post.value = currentPost.copy(
+            isLiked = newIsLiked,
+            likeCount = (currentPost.likeCount + delta).coerceAtLeast(0)
+        )
+
+        // 디바운스: 이전 타이머 취소하고 새로 시작
+        likeDebounceJob?.cancel()
+        likeDebounceJob = viewModelScope.launch {
+            delay(LIKE_DEBOUNCE)
+            commitLike()
+        }
+    }
+
+    private suspend fun commitLike() {
+        val initialState = likeInitialServerState ?: return
+        val post = _post.value ?: return
+        val finalState = post.isLiked
+
+        // 원위치(짝수 번 탭)면 서버 요청 스킵
+        if (initialState == finalState) {
+            likeInitialServerState = null
+            return
+        }
+
+        // isAlreadyLiked = 요청 직전 서버가 알고 있는 값 (= initialState)
+        toggleLikeUseCase(postId, post.author.id, initialState, post.title)
+            .onSuccess {
+                // 다음 시퀀스의 initial은 현재 서버에 반영된 값
+                likeInitialServerState = finalState
+            }
+            .onFailure { e ->
+                sendToast(e.message)
+                // 롤백: 서버는 initial 상태 그대로이므로 UI를 되돌림
+                _post.value = _post.value?.copy(
+                    isLiked = initialState,
+                    likeCount = ((_post.value?.likeCount ?: 0) + if (initialState) 1 else -1)
+                        .coerceAtLeast(0)
+                )
+                likeInitialServerState = null
+            }
     }
 
     // 댓글 수정 관련 함수
@@ -186,12 +239,15 @@ class CommunityDetailViewModel @Inject constructor(
         if (state.editingCommentText.isBlank()) return
 
         viewModelScope.launch {
-            runWithSlowNotice { updateCommentUseCase(postId, commentId, state.editingCommentText) }
+            withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
+                repository.updateComment(postId, commentId, state.editingCommentText)
+            }
                 .onFailure { e ->
                     if (e is AppError.UnknownUser) ensureCurrentUserUseCase()
                     sendToast(e.message)
                 }
             _uiState.update { it.copy(editingCommentId = null, editingCommentText = "") }
+            refresh()
         }
     }
 
@@ -210,41 +266,20 @@ class CommunityDetailViewModel @Inject constructor(
         val commentId = _uiState.value.deletingCommentId ?: return
 
         viewModelScope.launch {
-            runWithSlowNotice { deleteCommentUseCase(postId, commentId) }
+            withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
+                repository.deleteComment(postId, commentId)
+            }
                 .onFailure { e ->
                     if (e is AppError.UnknownUser) ensureCurrentUserUseCase()
                     sendToast(e.message)
                 }
             _uiState.update { it.copy(deletingCommentId = null) }
+            refresh()
         }
-    }
-
-    /**
-     * Firestore 쓰기 작업(set/update/runBatch)은 오프라인이어도 로컬 큐에 즉시 등록되고,
-     * 재연결 시 그대로 서버에 반영된다. 즉 코루틴을 타임아웃으로 "포기"해도 이미 큐잉된 쓰기 자체는
-     * 취소되지 않는다 — 여기서 진짜로 취소해버리면 "실패했다"는 잘못된 신호를 주고 사용자가 재시도하게
-     * 만들어 중복 쓰기가 쌓인다.
-     *
-     * 그래서 작업은 끝까지 실행되도록 두고, [NETWORK_SLOW_MESSAGE_DELAY]가 지나도 끝나지 않으면
-     * "느리다"는 안내만 한 번 보여준다. 실제 성공/실패 결과는 작업이 실제로 끝났을 때만 반환된다.
-     */
-    private suspend fun <T> runWithSlowNotice(block: suspend () -> Result<T>): Result<T> = coroutineScope {
-        val noticeJob = launch {
-            delay(NETWORK_SLOW_MESSAGE_DELAY)
-            sendToast(NETWORK_SLOW_MESSAGE)
-        }
-        val result = block()
-        noticeJob.cancel()
-        result
     }
 
     private fun sendToast(message: String) {
         viewModelScope.launch { _eventChannel.send(CommunityDetailEvent.ShowToast(message)) }
-    }
-
-    companion object {
-        private val NETWORK_SLOW_MESSAGE_DELAY = 2.seconds
-        private const val NETWORK_SLOW_MESSAGE = "네트워크가 불안정합니다. 연결되면 자동으로 처리됩니다."
     }
 
 }

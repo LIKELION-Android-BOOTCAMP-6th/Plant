@@ -9,10 +9,12 @@ import kotlinx.coroutines.flow.Flow
 
 interface CommunityRepository {
 
-    // 글 목록/상세/댓글 실시간 구독
+    // 글 목록은 실시간 구독 (다른 사용자의 활동이 바로 반영되는 게 UX상 이득이 큼)
     fun getPostList(): Flow<List<Post>>
-    fun getPostDetail(postId: String): Flow<Post?>
-    fun observeComments(postId: String): Flow<List<Comment>>
+
+    // 상세/댓글은 단건 조회 (pull-to-refresh로 갱신, read 비용/복잡도 절감)
+    suspend fun getPostDetail(postId: String): Result<Post?>
+    suspend fun getComments(postId: String): Result<List<Comment>>
 
     suspend fun getTags(): Result<List<Tag>>
 

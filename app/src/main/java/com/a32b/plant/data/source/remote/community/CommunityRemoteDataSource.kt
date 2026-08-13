@@ -11,9 +11,9 @@ import kotlinx.coroutines.flow.Flow
 interface CommunityRemoteDataSource {
 
     fun getPostList(): Flow<List<PostDto>>
-    fun getPostDetail(postId: String): Flow<PostDto?>
 
-    fun observeComments(postId: String): Flow<List<CommentDto>>
+    suspend fun getPostDetail(postId: String): PostDto?
+    suspend fun getComments(postId: String): List<CommentDto>
     suspend fun getTags(): List<TagDto>
 
     suspend fun savePost(post: PostDto, activity: CommunityActivityDto): String

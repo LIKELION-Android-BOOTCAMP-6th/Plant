@@ -12,7 +12,6 @@ import com.a32b.plant.domain.type.ActivityType
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.MetadataChanges
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -49,40 +48,21 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         awaitClose { subscription.remove() }
     }
 
-    override fun getPostDetail(postId: String): Flow<PostDto?> = callbackFlow {
-        val subscription = db.collection("posts").document(postId)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    close(error)
-                    return@addSnapshotListener
-                }
-                trySend(snapshot?.toObject(PostDto::class.java))
-            }
-        awaitClose { subscription.remove() }
+    override suspend fun getPostDetail(postId: String): PostDto? {
+        return db.collection("posts").document(postId)
+            .get()
+            .await()
+            .toObject(PostDto::class.java)
     }
 
-    override fun observeComments(postId: String): Flow<List<CommentDto>> = callbackFlow {
-        val subscription = db.collection("posts").document(postId)
+    override suspend fun getComments(postId: String): List<CommentDto> {
+        return db.collection("posts").document(postId)
             .collection("comments")
             // 정렬 방식 : 최신이 맨 아래로 가게
             .orderBy("createdAt", Query.Direction.ASCENDING)
-            // 문서 내용이 아닌 hasPendingWrites 같은 메타데이터만 바뀌어도(서버 ack 등) 다시 알림받기 위함
-            .addSnapshotListener(MetadataChanges.INCLUDE) { snapshot, error ->
-                if (error != null) {
-                    close(error)
-                    return@addSnapshotListener
-                }
-
-                val comments = snapshot?.documents?.mapNotNull { doc ->
-                    doc.toObject(CommentDto::class.java)?.apply {
-                        // 아직 서버 ack를 못 받고 로컬 캐시에만 있는 쓰기인지(오프라인 등)
-                        isPending = doc.metadata.hasPendingWrites()
-                    }
-                } ?: emptyList()
-
-                trySend(comments)
-            }
-        awaitClose { subscription.remove() }
+            .get()
+            .await()
+            .documents.mapNotNull { doc -> doc.toObject(CommentDto::class.java) }
     }
 
     override suspend fun getTags(): List<TagDto> {
@@ -113,7 +93,10 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
     override suspend fun updatePost(isShared: Boolean, postId: String, title: String, content: String?, tag: TagDto?) {
         if (isShared) {
             db.collection("posts").document(postId)
-                .update("title", title)
+                .update(
+                    "title", title,
+                    "updatedAt", Timestamp.now()
+                )
                 .await()
         } else {
             db.collection("posts").document(postId)
@@ -121,7 +104,7 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
                     "title", title,
                     "content", content,
                     "tag", tag,
-                    "createdAt", Timestamp.now()
+                    "updatedAt", Timestamp.now() // createdAt은 최초 작성 시점 그대로 유지
                 )
                 .await()
         }
@@ -140,9 +123,10 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             commentDoc.reference.delete().await()
         }
 
-        // 2. 관련 activity 한번에 삭제 (게시글 + 댓글 activity 모두)
+        // 2. 게시글 자신의 activity만 삭제 (댓글/좋아요는 남의 활동 기록이라 건드리지 않음)
         db.collection("activities")
             .whereEqualTo("targetId", postId)
+            .whereEqualTo("type", ActivityType.POST)
             .get().await()
             .documents
             .forEach { doc -> doc.reference.delete().await() }
@@ -153,19 +137,26 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
 
     override suspend fun toggleLike(postId: String, uid: String, isAlreadyLiked: Boolean, title: String) {
         val postRef = db.collection("posts").document(postId)
-        if (isAlreadyLiked) {
-            postRef.update(
-                "likedBy", FieldValue.arrayRemove(uid),
-                "likeCount", FieldValue.increment(-1)
-            ).await()
-            deleteLikedActivity(postId)
-        } else {
-            postRef.update(
-                "likedBy", FieldValue.arrayUnion(uid),
-                "likeCount", FieldValue.increment(1)
-            ).await()
-            setLikedActivity(uid, postId, title)
-        }
+
+        // 트랜잭션으로 likeCount를 원자적으로 read-modify-write → DB에 음수 저장 방지
+        db.runTransaction { txn ->
+            val current = txn.get(postRef).getLong("likeCount") ?: 0L
+            if (isAlreadyLiked) {
+                val newCount = (current - 1).coerceAtLeast(0)
+                txn.update(postRef, mapOf(
+                    "likedBy" to FieldValue.arrayRemove(uid),
+                    "likeCount" to newCount
+                ))
+            } else {
+                txn.update(postRef, mapOf(
+                    "likedBy" to FieldValue.arrayUnion(uid),
+                    "likeCount" to current + 1
+                ))
+            }
+        }.await()
+
+        if (isAlreadyLiked) deleteLikedActivity(uid, postId)
+        else setLikedActivity(uid, postId, title)
     }
 
     override suspend fun addComment(postId: String, comment: Comment, activity: CommunityActivity) {
@@ -231,8 +222,9 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             .await()
     }
 
-    private suspend fun deleteLikedActivity(postId: String) {
+    private suspend fun deleteLikedActivity(uid: String, postId: String) {
         val docId = db.collection("activities")
+            .whereEqualTo("uid", uid)           // 본인 활동 기록만 조회 (보안 규칙 통과)
             .whereEqualTo("targetId", postId)
             .whereEqualTo("type", ActivityType.LIKE)
             .get()

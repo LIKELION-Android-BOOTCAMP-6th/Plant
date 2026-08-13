@@ -33,9 +33,7 @@ data class CommentDto(
     @get:PropertyName("activityId") @set:PropertyName("activityId")
     var activityId: String = "",
     @get:PropertyName("createdAt") @set:PropertyName("createdAt")
-    var createdAt: Timestamp? = Timestamp.now(),
-    // Firestore 문서 필드가 아닌, 로컬 캐시에서 읽을 때 SnapshotMetadata로 채워지는 값(서버 미반영 여부)
-    var isPending: Boolean = false
+    var createdAt: Timestamp? = Timestamp.now()
 )
 data class PostDto(
     @DocumentId
@@ -63,4 +61,6 @@ data class PostDto(
     var studyLogs: List<StudyLog>? = null,
     @get:PropertyName("isShared") @set:PropertyName("isShared")
     var isShared: Boolean? = false,
+    @get:PropertyName("updatedAt") @set:PropertyName("updatedAt")
+    var updatedAt: Timestamp? = null,
 )

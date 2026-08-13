@@ -11,10 +11,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -80,6 +80,11 @@ fun CommunityDetailScreen(
         )
     }
 
+    PullToRefreshBox(
+        isRefreshing = uiState.isRefreshing,
+        onRefresh = { viewModel.refresh() },
+        modifier = Modifier.fillMaxSize()
+    ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
@@ -124,7 +129,10 @@ fun CommunityDetailScreen(
                             Text(currentPost.author.nickname,  style = Typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface)
                             Spacer(modifier = Modifier.weight(1f))
-                            Text(TimeFormatter.formatTimeWithClock(currentPost.createdAt ?: 0), style = Typography.bodyMedium, fontSize = 12.sp,
+                            Text(
+                                TimeFormatter.formatTimeWithClock(currentPost.createdAt ?: 0) +
+                                    if (currentPost.updatedAt != null) " (수정됨)" else "",
+                                style = Typography.bodyMedium, fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurface)
                         }
                     }
@@ -238,6 +246,7 @@ fun CommunityDetailScreen(
             }
         }
     }
+    }
 }
 
 // CommentRow에 인라인 편집 모드 + 수정/삭제 아이콘 추가
@@ -256,8 +265,7 @@ fun CommentRow(
     val context = LocalContext.current
     val maxLength = 100
 
-    // 아직 서버에 반영되지 않은(오프라인 등으로 로컬에만 있는) 댓글은 흐리게 표시해 구분
-    Row(verticalAlignment = Alignment.Top, modifier = Modifier.alpha(if (comment.isPending) 0.5f else 1f)) {
+    Row(verticalAlignment = Alignment.Top) {
         ProfileImage(comment.user.profileImg, 24)
         Spacer(Modifier.width(8.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -267,7 +275,7 @@ fun CommentRow(
                     color = MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    text = if (comment.isPending) "전송 중..." else comment.createdAt?.let { TimeFormatter.formatTimeWithClock(it) } ?: "",
+                    text = comment.createdAt?.let { TimeFormatter.formatTimeWithClock(it) } ?: "",
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = Typography.bodyMedium

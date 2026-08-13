@@ -4,29 +4,25 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.util.NETWORK_SLOW_MESSAGE
+import com.a32b.plant.core.util.withSlowNotice
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.Tag
+import com.a32b.plant.domain.repository.CommunityRepository
 import com.a32b.plant.domain.repository.PotRepository
-import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.community.CreatePostUseCase
-import com.a32b.plant.domain.usecase.community.GetCommunityTagsUseCase
-import com.a32b.plant.domain.usecase.community.ObservePostDetailUseCase
-import com.a32b.plant.domain.usecase.community.UpdatePostUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
 import javax.inject.Inject
-import kotlin.time.Duration.Companion.seconds
 
 data class CommunityPostUiState(
     val postId: String? = null,
@@ -47,10 +43,8 @@ sealed class CommunityPostEvent{
 }
 @HiltViewModel
 class CommunityPostViewModel @Inject constructor(
+    private val repository: CommunityRepository,
     private val createPostUseCase: CreatePostUseCase,
-    private val updatePostUseCase: UpdatePostUseCase,
-    private val getCommunityTagsUseCase: GetCommunityTagsUseCase,
-    private val observePostDetailUseCase: ObservePostDetailUseCase,
     private val potRepository: PotRepository,
     savedStateHandle: SavedStateHandle,
 
@@ -79,7 +73,7 @@ class CommunityPostViewModel @Inject constructor(
     }
     private fun fetchTags(){
         viewModelScope.launch(Dispatchers.IO) {
-            getCommunityTagsUseCase()
+            repository.getTags()
                 .onSuccess { tags ->
                     _uiState.update { it.copy(tags = tags) }
                     matchSelectedTag()
@@ -101,16 +95,18 @@ class CommunityPostViewModel @Inject constructor(
     // ✅ 기존 글을 불러오는 함수
     fun getPost(postId: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            observePostDetailUseCase(postId).firstOrNull()?.let { post ->
-                if (post.isShared?:false){
-                    _uiState.update { it.copy(isShared = true,postId = post.postId,title = post.title, studyLogs = post.studyLogs, selected = post.tag) }
+            repository.getPostDetail(postId)
+                .onSuccess { post ->
+                    post ?: return@onSuccess
+                    if (post.isShared?:false){
+                        _uiState.update { it.copy(isShared = true,postId = post.postId,title = post.title, studyLogs = post.studyLogs, selected = post.tag) }
 
+                    }
+                    else{
+                        _uiState.update { it.copy( postId = post.postId,title = post.title, content = post.content, selected = post.tag) }
+                    }
                 }
-                else{
-                    _uiState.update { it.copy( postId = post.postId,title = post.title, content = post.content, selected = post.tag) }
-                }
-            }
-
+                .onFailure { e -> Log.e("CommunityPostVM", "게시글 조회 실패: ${e.message}") }
         }
     }
 
@@ -159,8 +155,8 @@ class CommunityPostViewModel @Inject constructor(
 
             if (postId != null) {
                 //게시글 수정
-                runWithSlowNotice {
-                    updatePostUseCase(
+                withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
+                    repository.updatePost(
                         isShared = isShared,
                         postId = postId!!,
                         title = _uiState.value.title,
@@ -176,7 +172,7 @@ class CommunityPostViewModel @Inject constructor(
                 }
             } else {
                 // 새 글 작성 모드
-                runWithSlowNotice {
+                withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
                     createPostUseCase(
                         isShared = isShared,
                         title = _uiState.value.title,
@@ -198,28 +194,7 @@ class CommunityPostViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Firestore 쓰기는 오프라인이어도 로컬 큐에 즉시 등록되고 재연결 시 그대로 반영된다.
-     * 여기서 타임아웃으로 작업 자체를 포기해버리면 "실패"로 오인한 사용자가 재시도하면서
-     * 게시글이 중복 생성될 수 있다. 그래서 작업은 끝까지 실행되도록 두고, 오래 걸리면
-     * 안내만 한 번 보여준다.
-     */
-    private suspend fun <T> runWithSlowNotice(block: suspend () -> Result<T>): Result<T> = coroutineScope {
-        val noticeJob = launch {
-            delay(NETWORK_SLOW_MESSAGE_DELAY)
-            sendToast(NETWORK_SLOW_MESSAGE)
-        }
-        val result = block()
-        noticeJob.cancel()
-        result
-    }
-
     private fun sendToast(message: String) {
         viewModelScope.launch { _eventChannel.send(CommunityPostEvent.ShowToast(message)) }
-    }
-
-    companion object {
-        private val NETWORK_SLOW_MESSAGE_DELAY = 2.seconds
-        private const val NETWORK_SLOW_MESSAGE = "네트워크가 불안정합니다. 연결되면 자동으로 처리됩니다."
     }
 }

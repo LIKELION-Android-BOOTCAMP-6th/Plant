@@ -32,15 +32,25 @@ class CommunityRepositoryImpl @Inject constructor(
             .map { dtos -> dtos.map { it.toDomain(currentUid, emptyList()) } }
     }
 
-    override fun getPostDetail(postId: String): Flow<Post?> {
-        return communityRemoteDataSource.getPostDetail(postId)
-            .map { it?.toDomain(currentUid, emptyList()) }
-    }
+    override suspend fun getPostDetail(postId: String): Result<Post?> = safeRunCatching {
+        communityRemoteDataSource.getPostDetail(postId)?.toDomain(currentUid, emptyList())
+    }.fold(
+        onSuccess = { Result.Success(it) },
+        onFailure = { e ->
+            Log.e("Community", "게시글 상세 조회 실패", e)
+            Result.Failure(handleError(e, "게시글을 불러오지 못했습니다."))
+        }
+    )
 
-    override fun observeComments(postId: String): Flow<List<Comment>> {
-        return communityRemoteDataSource.observeComments(postId)
-            .map { dtos -> dtos.map { it.toDomain() } }
-    }
+    override suspend fun getComments(postId: String): Result<List<Comment>> = safeRunCatching {
+        communityRemoteDataSource.getComments(postId).map { it.toDomain() }
+    }.fold(
+        onSuccess = { Result.Success(it) },
+        onFailure = { e ->
+            Log.e("Community", "댓글 목록 조회 실패", e)
+            Result.Failure(handleError(e, "댓글을 불러오지 못했습니다."))
+        }
+    )
 
     override suspend fun getTags(): Result<List<Tag>> = safeRunCatching {
         communityRemoteDataSource.getTags().map { it.toDomain() }
@@ -58,7 +68,7 @@ class CommunityRepositoryImpl @Inject constructor(
         onSuccess = { Result.Success(it) },
         onFailure = { e ->
             Log.e("Community", "게시글 등록 실패", e)
-            Result.Failure(handleError(e, "게시글 등록에 실패했습니다."))
+            Result.Failure(handleError(e, "게시글 등록에 실패했습니다.", isWrite = true))
         }
     )
 
@@ -68,7 +78,7 @@ class CommunityRepositoryImpl @Inject constructor(
         onSuccess = { Result.Success(Unit) },
         onFailure = { e ->
             Log.e("Community", "게시글 수정 실패", e)
-            Result.Failure(handleError(e, "게시글 수정에 실패했습니다."))
+            Result.Failure(handleError(e, "게시글 수정에 실패했습니다.", isWrite = true))
         }
     )
 
@@ -78,7 +88,7 @@ class CommunityRepositoryImpl @Inject constructor(
         onSuccess = { Result.Success(Unit) },
         onFailure = { e ->
             Log.e("Community", "게시글 삭제 실패", e)
-            Result.Failure(handleError(e, "게시글 삭제에 실패했습니다."))
+            Result.Failure(handleError(e, "게시글 삭제에 실패했습니다.", isWrite = true))
         }
     )
 
@@ -88,7 +98,7 @@ class CommunityRepositoryImpl @Inject constructor(
         onSuccess = { Result.Success(Unit) },
         onFailure = { e ->
             Log.e("Community", "좋아요 처리 실패", e)
-            Result.Failure(handleError(e, "좋아요 처리에 실패했습니다."))
+            Result.Failure(handleError(e, "좋아요 처리에 실패했습니다.", isWrite = true))
         }
     )
 
@@ -98,7 +108,7 @@ class CommunityRepositoryImpl @Inject constructor(
         onSuccess = { Result.Success(Unit) },
         onFailure = { e ->
             Log.e("Community", "댓글 등록 실패", e)
-            Result.Failure(handleError(e, "댓글 등록에 실패했습니다."))
+            Result.Failure(handleError(e, "댓글 등록에 실패했습니다.", isWrite = true))
         }
     )
 
@@ -108,7 +118,7 @@ class CommunityRepositoryImpl @Inject constructor(
         onSuccess = { Result.Success(Unit) },
         onFailure = { e ->
             Log.e("Community", "댓글 수정 실패", e)
-            Result.Failure(handleError(e, "댓글 수정에 실패했습니다."))
+            Result.Failure(handleError(e, "댓글 수정에 실패했습니다.", isWrite = true))
         }
     )
 
@@ -118,19 +128,20 @@ class CommunityRepositoryImpl @Inject constructor(
         onSuccess = { Result.Success(Unit) },
         onFailure = { e ->
             Log.e("Community", "댓글 삭제 실패", e)
-            Result.Failure(handleError(e, "댓글 삭제에 실패했습니다."))
+            Result.Failure(handleError(e, "댓글 삭제에 실패했습니다.", isWrite = true))
         }
     )
 
-    private fun handleError(e: Throwable, defaultMessage: String): AppError = when (e) {
+    private fun handleError(e: Throwable, defaultMessage: String, isWrite: Boolean = false): AppError = when (e) {
+        is AppError -> e   // 이미 AppError면 타입 보존 (UnknownUser 등이 Custom으로 뭉개지는 것 방지)
         is FirebaseFirestoreException -> when (e.code) {
             FirebaseFirestoreException.Code.UNAVAILABLE,
             FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
 
             FirebaseFirestoreException.Code.PERMISSION_DENIED -> AppError.Permission()
 
-            else -> AppError.Custom(defaultMessage)
+            else -> if (isWrite) AppError.Upload() else AppError.Custom(defaultMessage)
         }
-        else -> AppError.Custom(defaultMessage)
+        else -> if (isWrite) AppError.Upload() else AppError.Custom(defaultMessage)
     }
 }
