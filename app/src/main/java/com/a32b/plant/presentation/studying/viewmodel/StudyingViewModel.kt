@@ -87,6 +87,15 @@ class StudyingViewModel @Inject constructor(
     val uiState = _uiState.asStateFlow()
 
 
+    init {
+        startStopwatch()
+        viewModelScope.launch {
+            initStudyingUser()
+        }
+        onStudyingUsersChange()
+    }
+    /** 현재 시간 기록 */
+    fun onStartTimeChange(value : String) = _uiState.update { it.copy(startTime = value) }
 
     /** 비정상 종료 대비 로컬 디비에 데이터 저장   */
     private suspend fun saveSession(){
@@ -95,58 +104,6 @@ class StudyingViewModel @Inject constructor(
             .onFailure { e ->
                 if (e is AppError.Custom) _uiState.update { it.copy(isLocalSaved = false) }
             }
-    }
-
-    /** db에서 같은 태그로 공부중인 사용자 데이터 가져오기 */
-    fun onStudyingUsersChange(){
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.observeStudyingUser(_uiState.value.tag)
-                .collect { users ->
-                    _uiState.update { it.copy(studyingUsers = users) }
-                }
-        }
-    }
-
-    /** 공부중 상태 변경 */
-    fun onStudyingStatusChange() {
-         _uiState.update { it.copy(isStudying = !it.isStudying) }
-
-        if(_uiState.value.isStudying) startStopwatch()
-        else stopStopwatch()
-    }
-
-    /** 스톱워치 */
-    private var job: Job? = null
-    fun onTimerChange() = _uiState.update { it.copy(timer = it.timer + 1000 ) }
-    fun startStopwatch(){
-        job?.cancel()
-        job = viewModelScope.launch {
-            while (true){
-                delay(1000)
-                onTimerChange()
-                if(_uiState.value.timer % 5_000L == 0L) saveSession() //5초마다 로컬 디비 저장
-                if(_uiState.value.timer % 60_000L == 0L) updateUser() //1분마다 원격 디비 저장
-            }
-        }
-    }
-    private fun updateUser(){
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.updateStudyingTime(_uiState.value.tag, _uiState.value.timer)
-                .onFailure { if (it is AppError.UnknownUser) ensureCurrentUserUseCase() } //유저 정보 없을 시 로그아웃 처리
-        }
-
-    }
-    fun stopStopwatch(){
-        _uiState.update { it.copy(isStudying = false) }
-        job?.cancel()
-    }
-
-    init {
-        startStopwatch()
-        viewModelScope.launch {
-            initStudyingUser()
-        }
-        onStudyingUsersChange()
     }
 
     /** 최초 시작 시 로컬 + 원격 db에 현재 사용자 정보 저장 */
@@ -166,18 +123,64 @@ class StudyingViewModel @Inject constructor(
         }
     }
 
-    /**  학습 종료 버튼 클릭 시 학습 기록하는 다이얼로그 표출    */
-    fun onFinishDialogShownChange() = _uiState.update { it.copy(isFinishDialogShown = !it.isFinishDialogShown) }
+    /** db에서 같은 태그로 공부중인 사용자 데이터 가져오기 */
+    fun onStudyingUsersChange(){
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.observeStudyingUser(_uiState.value.tag)
+                .collect { users ->
+                    _uiState.update { it.copy(studyingUsers = users) }
+                }
+        }
+    }
 
-    /** ⭐️ 학습 중 기록 수정 했을 시
-     근데 수정할 수 있게 할건지, 아니면 보여만 줄건지 논의 필요
-     */
+    /** 스톱워치 */
+    private var job: Job? = null
+    fun onTimerChange() = _uiState.update { it.copy(timer = it.timer + 1000 ) }
+    fun startStopwatch(){
+        job?.cancel()
+        job = viewModelScope.launch {
+            while (true){
+                delay(1000)
+                onTimerChange()
+                if(_uiState.value.timer % 5_000L == 0L) saveSession() //5초마다 로컬 디비 저장
+                if(_uiState.value.timer % 60_000L == 0L) updateUser() //1분마다 원격 디비 저장
+            }
+        }
+    }
+    fun stopStopwatch(){
+        _uiState.update { it.copy(isStudying = false) }
+        job?.cancel()
+    }
+
+    /** 공부중 상태 변경 */
+    fun onStudyingStatusChange() {
+         _uiState.update { it.copy(isStudying = !it.isStudying) }
+
+        if(_uiState.value.isStudying) startStopwatch()
+        else stopStopwatch()
+    }
+
+    /** 유저 정보 업데이트 */
+    private fun updateUser(){
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateStudyingTime(_uiState.value.tag, _uiState.value.timer)
+                .onFailure { if (it is AppError.UnknownUser) ensureCurrentUserUseCase() } //유저 정보 없을 시 로그아웃 처리
+        }
+
+    }
+
+    /**  학습 중 기록 수정 */
     fun setStudyLog(studyLog: List<String>) {
         _uiState.update { it.copy(studyLog = studyLog.filter { log -> log.isNotBlank()  }) }
         viewModelScope.launch {
             updateLocalStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title, potId, _uiState.value.timer, _uiState.value.studyLog)
         }
     }
+
+    /**  학습 종료 버튼 클릭 시 학습 기록하는 다이얼로그 표출 */
+    fun onFinishDialogShownChange() = _uiState.update { it.copy(isFinishDialogShown = !it.isFinishDialogShown) }
+
+    /** 학습 종료 버튼 취소 클릭 시 */
     fun onDialogDismissClick(){
         _uiState.update { it.copy(isFinishDialogShown = false, isStudying = true) }
         startStopwatch()
@@ -185,11 +188,13 @@ class StudyingViewModel @Inject constructor(
 
     /** 학습 완전 종료 시 (= 다이얼로그에서도 기록 입력 후 종료 버튼 클릭했을 때)    */
     fun onIsStudyFinishChange() = _uiState.update { it.copy(isStudyFinish = true) }
+
     private fun getCurrentTime(): String{
         val now = LocalDateTime.now()
         return TimeFormatter.formatToTimeOnly(now)
     }
 
+    /** 학습 내역 저장 및 결과창으로 이동 */
     fun onFinishStudyingClick() {
         var isLogSaved = true
         _uiState.update { it.copy(isLoading = true) }
@@ -241,7 +246,6 @@ class StudyingViewModel @Inject constructor(
                 }
             }
     }
-    fun onStartTimeChange(value : String) = _uiState.update { it.copy(startTime = value) }
 
     /**  에러 다이얼로그 표출 시 세션 클리어 및 홈으로 이동 */
     fun onErrorConfirmClicked(){
