@@ -10,7 +10,10 @@ import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.model.StudyLog
+import com.a32b.plant.domain.result.onFailure
+import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.pot.*
+import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import com.a32b.plant.domain.usecase.studyLog.*
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
@@ -18,7 +21,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import okhttp3.Route
 import javax.inject.Inject
 
 @HiltViewModel
@@ -29,14 +31,15 @@ class StudyPlanDetailViewModel @Inject constructor(
     private val updatePotNameUseCase: UpdatePotNameUseCase,
     private val deleteStudyLogUseCase: DeleteStudyLogUseCase,
     private val deleteEntirePotUseCase: DeleteEntirePotUseCase,
-    private val completeStudyPlanUseCase: CompleteStudyPlanUseCase
+    private val completeStudyPlanUseCase: CompleteStudyPlanUseCase,
+    private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase
 ) : ViewModel() {
     private val auth = Firebase.auth
 
     // Navigation에서 넘겨준 potId
     private val args = savedStateHandle.toRoute<Routes.StudyPlanDetail>()
     private val potId: String = args.potId
-    private val userId: String = auth.currentUser?.uid ?: ""
+    private var userId: String = ""
 
     private val _potDetail = MutableStateFlow<Pot?>(null)
     val potDetail = _potDetail.asStateFlow()
@@ -65,17 +68,34 @@ class StudyPlanDetailViewModel @Inject constructor(
     val isShareMode = _isShareMode.asStateFlow()
 
     init {
-        loadPotDetail()
-        loadStudyLogs()
+        checkUseAndLoadData()
     }
 
+    private fun checkUseAndLoadData(){
+        viewModelScope.launch {
+            ensureCurrentUserUseCase { user ->
+                userId = user.uid
+                if(userId.isNotEmpty() && potId.isNotEmpty()){
+                    loadPotDetail()
+                    loadStudyLogs()
+                }
+            }
+        }
+    }
     private fun loadPotDetail() {
-        if (userId.isEmpty() || potId.isEmpty()) return
+        Log.d("StudyPlanDetailVM", "loadPotDetail called - userId: $userId, potId: $potId")
+        if (userId.isEmpty() || potId.isEmpty()){
+            Log.e("StudyPlanDetailVM", "ERROR: userId or potId is empty!")
+            return
+        }
         viewModelScope.launch {
             safeRunCatching {
                 getPotDetailUseCase(userId,potId)
             }.onSuccess { pot ->
+                Log.d("StudyPlanDetailVM", "Successfully fetched pot result: $pot")
                 _potDetail.value = pot
+            }.onFailure { error ->
+                Log.e("StudyPlanDetailVM", "Failed to load pot detail: ${error.message}", error)
             }
         }
     }
@@ -84,9 +104,18 @@ class StudyPlanDetailViewModel @Inject constructor(
         if (userId.isEmpty() || potId.isEmpty()) return
         viewModelScope.launch {
             safeRunCatching {
-                getStudyLogsUseCase(userId, potId).collect { logs ->
-                    _studyLogs.value = logs
+                getStudyLogsUseCase(userId, potId)
+            }.onSuccess { flow ->
+                // flow를 collect하여 실제 List<StudyLog>를 대입
+                flow.collect { result ->
+                    result.onSuccess { logs ->
+                        _studyLogs.value = logs
+                    }.onFailure { error ->
+                        Log.e("StudyPlanDetailVM", "Failed to load study logs: ${error.message}")
+                    }
                 }
+            }.onFailure { error ->
+                Log.e("StudyPlanDetailVM", "Failed to collect study logs flow: ${error.message}")
             }
         }
     }

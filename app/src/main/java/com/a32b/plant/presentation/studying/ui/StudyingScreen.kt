@@ -77,12 +77,12 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
 
     val context = LocalContext.current
     //이전 스택에서 보낸 값을 args에 넣어서 뽑아낼 수 있음
-    val args = navController.currentBackStackEntry?.toRoute<Routes.Studying>()
-
-    val tag = args!!.tagName
-    val title = args.title
-    val potId = args.potId
-    val level = args.level
+//    val args = navController.currentBackStackEntry?.toRoute<Routes.Studying>()
+//
+//    val tag = args!!.tagName
+//    val title = args.title
+//    val potId = args.potId
+//    val level = args.level
 
     val startTime = remember {
         val now = LocalDateTime.now()
@@ -109,7 +109,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
                         log = event.log,
                         time = event.time,
                         potId = event.potId,
-                        level
+                        uiState.level
                     )){
                         popUpTo(Routes.HomeMain) { inclusive = false }
                     }
@@ -138,7 +138,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
         ) {
 
             Spacer(modifier = Modifier.height(40.dp))
-            StudyStatusBadge(tag, title)
+            StudyStatusBadge(uiState.tag, uiState.title)
 
             Spacer(modifier = Modifier.height(70.dp))
             Text("$startTime ~", style = Typography.bodyMedium, fontSize = 13.sp,
@@ -155,7 +155,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
             }
             Spacer(modifier = Modifier.weight(1f))
 
-            StudyingUserCard(studyingUsers, tag)
+            StudyingUserCard(studyingUsers, uiState.tag)
         }
     }
     if(uiState.isFinishDialogShown){
@@ -166,7 +166,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
             viewModel.onIsStudyFinishChange()
             viewModel.setStudyLog(logs)
             viewModel.onFinishStudyingClick()
-        }, tag, title)
+        }, uiState.tag, uiState.title)
     }
 
     if (uiState.isLoading)

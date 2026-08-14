@@ -38,9 +38,10 @@ class PotRepositoryImpl @Inject constructor(
 
     //특정 화분 정보 조회
     override suspend fun getUserPotById(uid: String, potId: String): Pot? {
-        return db.collection("users").document(uid)
+        val document = db.collection("users").document(uid)
             .collection("pots").document(potId)
-            .get().await()?.toObject(Pot::class.java)
+            .get().await()
+        return document?.toObject(com.a32b.plant.data.model.PotDto::class.java)?.toDomain()
     }
 
     //중복 제거된 레벨 리스트 조회
@@ -59,7 +60,7 @@ class PotRepositoryImpl @Inject constructor(
             .whereEqualTo("isCompleted", isCompleted)
             .get()
             .await()
-        return snapshot.toObjects(Pot::class.java)
+        return snapshot.toObjects(com.a32b.plant.data.model.PotDto::class.java).map { it.toDomain() }
     }
 
     override fun getAvailableTags(): Flow<List<Tag>> = callbackFlow {

@@ -13,7 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.a32b.plant.presentation.studyPlanDetail.viewmodel.StudyPlanDetailViewModel
 import com.a32b.plant.R
@@ -28,14 +27,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.presentation.theme.fontColorSub
-import java.time.ZoneId
 import androidx.compose.ui.window.Dialog
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudyPlanDetailScreen(
     navController: NavController,
-    viewModel: StudyPlanDetailViewModel = viewModel()
+    viewModel: StudyPlanDetailViewModel = hiltViewModel()
 ) {
     val potInfo by viewModel.potDetail.collectAsState()
     val logs by viewModel.studyLogs.collectAsState()

@@ -23,7 +23,6 @@ import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.component.getLogoImage
 import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
 import com.a32b.plant.presentation.theme.*
-import okhttp3.Route
 
 @Composable
 fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltViewModel()) {
@@ -72,8 +71,11 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                     },
                     onRecordClick = {
                         if (!hasNoPot) {
-                            navController.navigate(Routes.PotDetail(displayPot.id.ifEmpty { "default_pot" }))
-                        }
+                            navController.navigate(
+                                Routes.StudyPlanDetail(
+                                    potId = displayPot.id.ifEmpty { "default_pot" }
+                                )
+                            )                        }
                     } // 상세 기록 이동
                 )
             }
