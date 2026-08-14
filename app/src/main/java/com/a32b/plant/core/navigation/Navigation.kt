@@ -9,16 +9,15 @@ import androidx.compose.runtime.getValue
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.a32b.plant.presentation.auth.ui.SignInScreen
+import com.a32b.plant.presentation.auth.ui.SignUpScreen
 import com.a32b.plant.presentation.community.ui.CommunityDetailScreen
 import com.a32b.plant.presentation.community.ui.CommunityListScreen
 import com.a32b.plant.presentation.community.ui.CommunityPostScreen
-import com.a32b.plant.presentation.auth.ui.SignInScreen
-import com.a32b.plant.presentation.auth.ui.SignUpScreen
 import com.a32b.plant.presentation.home.ui.HomeScreen
-import com.a32b.plant.presentation.pot.ui.NewBornTreeScreen
-import com.a32b.plant.presentation.mypage.ui.MyCommunityFeedScreen
 import com.a32b.plant.presentation.mypage.ui.MyPageScreen
 import com.a32b.plant.presentation.mypage.ui.MyPageSettingScreen
+import com.a32b.plant.presentation.pot.ui.NewBornTreeScreen
 import com.a32b.plant.presentation.pot.ui.PotListScreen
 import com.a32b.plant.presentation.report.ReportScreen
 import com.a32b.plant.presentation.splash.SplashViewModel
@@ -49,8 +48,8 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
 
             composable<Routes.CommunityPost> { CommunityPostScreen(navController) }
 
-            composable<Routes.CommunityDetail> { 
-                CommunityDetailScreen(navController) 
+            composable<Routes.CommunityDetail> {
+                CommunityDetailScreen(navController)
             }
 
             composable<Routes.Studying> { StudyingScreen(navController) }
@@ -59,7 +58,6 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
             composable<Routes.SignUp> { SignUpScreen(navController) }
             composable<Routes.NewBornTree> { NewBornTreeScreen(navController) }
             composable<Routes.StudyPlanDetail> { StudyPlanDetailScreen(navController = navController) }
-            composable<Routes.MyCommunityFeed> { MyCommunityFeedScreen(navController) }
 
             composable<Routes.PotList> { PotListScreen(navController = navController) }
             composable<Routes.Report> { ReportScreen(navController) }

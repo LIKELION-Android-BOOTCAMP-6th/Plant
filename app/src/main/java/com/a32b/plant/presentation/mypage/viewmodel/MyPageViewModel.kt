@@ -4,19 +4,17 @@ import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
 import com.a32b.plant.domain.error.AppError
-import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.auth.SignOutUseCase
 import com.a32b.plant.domain.usecase.mypage.GetProfileImageLevelListUseCase
 import com.a32b.plant.domain.usecase.mypage.UpdateDarkModeUseCase
 import com.a32b.plant.domain.usecase.mypage.UpdateProfileUseCase
+import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -43,12 +41,11 @@ data class MyPageUiState(
 sealed class MyPageEvent {
     data class ShowToast(val message: String) : MyPageEvent()
     object NavigateToSignIn : MyPageEvent()// 로그인화면 보내기용 ************
-    object NavigateToMyCommunityFeed : MyPageEvent()
 }
 
 @HiltViewModel
 class MyPageViewModel @Inject constructor(
-    private val userRepository: UserRepository,
+    private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     private val getProfileImageLevelListUseCase: GetProfileImageLevelListUseCase,
     private val signOutUseCase: SignOutUseCase,
     private val updateDarkModeUseCase: UpdateDarkModeUseCase,
@@ -61,19 +58,17 @@ class MyPageViewModel @Inject constructor(
     val events = _eventChannel.receiveAsFlow()
 
     init {
-        viewModelScope.launch {
-            userRepository.currentUser.filterNotNull().collectLatest { user ->
-                _uiState.update {
-                    it.copy(
-                        nickname = user.nickname,
-                        profileImg = user.profileImg,
-                        isDarkMode = user.isDarkMode,
-                        totalStudyTime = formatToDigitalClock(user.totalStudyTime)
-                    )
-                }
-                // 빈화면 -> 홈화면
-                loaded()
+        ensureCurrentUserUseCase { user ->
+            _uiState.update {
+                it.copy(
+                    nickname = user.nickname,
+                    profileImg = user.profileImg,
+                    isDarkMode = user.isDarkMode,
+                    totalStudyTime = formatToDigitalClock(user.totalStudyTime)
+                )
             }
+            // 빈화면 -> 홈화면
+            loaded()
         }
     }
 
@@ -125,15 +120,6 @@ class MyPageViewModel @Inject constructor(
         }
     }
 
-    fun notifyUpdateSuccess() {
-        _uiState.update {
-            it.copy(
-                isUpdateSuccess = true,
-                nicknameError = null
-            )
-        }
-    }
-
     fun clearProfileState() {
         _uiState.update {
             it.copy(
@@ -174,13 +160,4 @@ class MyPageViewModel @Inject constructor(
             _eventChannel.send(MyPageEvent.NavigateToSignIn)
         }
     }
-
-    fun moveToMyCommunityFeed() {
-        viewModelScope.launch {
-            _eventChannel.send(MyPageEvent.NavigateToMyCommunityFeed)
-        }
-    }
-
-    //데이터베이스에서 값을 안 가져와도 되는 경우
-    fun getTag() = "자격증"
 }
