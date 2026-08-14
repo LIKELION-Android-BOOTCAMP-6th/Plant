@@ -9,10 +9,12 @@ import com.a32b.plant.core.util.withSlowNotice
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.CommunityRepository
-import com.a32b.plant.domain.repository.PotRepository
+import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.community.CreatePostUseCase
+import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
+import com.a32b.plant.domain.usecase.studyLog.GetSelectedStudyLogUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -45,7 +47,8 @@ sealed class CommunityPostEvent{
 class CommunityPostViewModel @Inject constructor(
     private val repository: CommunityRepository,
     private val createPostUseCase: CreatePostUseCase,
-    private val potRepository: PotRepository,
+    private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
+    private val getSelectedStudyLogUseCase: GetSelectedStudyLogUseCase,
     savedStateHandle: SavedStateHandle,
 
     ) : ViewModel() {
@@ -110,15 +113,19 @@ class CommunityPostViewModel @Inject constructor(
         }
     }
 
-    fun getStudyLog(){
+    fun getStudyLog() {
         val currentPotId = potId ?: return
         val currentStudyLogIds = studyLogIds ?: return
         //개별 학습 기록 공유 시
         viewModelScope.launch(Dispatchers.IO) {
-            val logs = currentStudyLogIds.mapNotNull { id->
-                potRepository.getSelectedStudyLog(currentPotId, id)
+            val user = when (val result = ensureCurrentUserUseCase()) {
+                is Result.Success -> result.data
+                is Result.Failure -> return@launch // 세션 만료는 UseCase 내부에서 이미 알림
             }
-            _uiState.update { it.copy(studyLogs = (it.studyLogs?:emptyList()) + logs) }
+            val logs = currentStudyLogIds.mapNotNull { id ->
+                getSelectedStudyLogUseCase(user.uid, currentPotId, id)
+            }
+            _uiState.update { it.copy(studyLogs = (it.studyLogs ?: emptyList()) + logs) }
         }
     }
     fun getTags(list: List<Tag>) = _uiState.update { it.copy(tags = list) }
