@@ -9,7 +9,7 @@ val background = Color(0xFFF9FBF6)
 val textFieldBackground = Color(0xFFEEEEEE)
 
 //메인 색상
-val primary = Color(0xFF529943)
+val primary = Color(0xFF97BC62)
 
 //그린 서브 색상1
 val sub_green1 = Color(0xFFebf7e4)

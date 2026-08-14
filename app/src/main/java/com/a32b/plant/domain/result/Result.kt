@@ -30,3 +30,11 @@ fun <T, R> Result<T>.map(transform: (T) -> R): Result<R> {
         is Result.Failure -> Result.Failure(error)
     }
 }
+
+
+fun <T> Result<T>.getOrNull(): T? {
+    return when (this) {
+        is Result.Success -> data
+        is Result.Failure -> null
+    }
+}
