@@ -52,8 +52,6 @@ fun MyPageSettingScreen(
                     navController.navigate(Routes.SignIn) {
                         popUpTo(0) { inclusive = true }
                     }
-
-                is MyPageEvent.NavigateToMyCommunityFeed -> Unit
             }
         }
     }
