@@ -125,7 +125,7 @@ class CommunityPostViewModel @Inject constructor(
             val logs = currentStudyLogIds.mapNotNull { id ->
                 getSelectedStudyLogUseCase(user.uid, currentPotId, id)
             }
-            _uiState.update { it.copy(studyLogs = (it.studyLogs ?: emptyList()) + logs) }
+            _uiState.update { it.copy(studyLogs = logs) }
         }
     }
     fun getTags(list: List<Tag>) = _uiState.update { it.copy(tags = list) }
