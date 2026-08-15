@@ -1,7 +1,6 @@
 package com.a32b.plant.presentation.community.ui
 
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -30,6 +29,7 @@ import com.a32b.plant.presentation.core.component.TagSheet
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.community.viewmodel.CommunityPostEvent
 import com.a32b.plant.presentation.community.viewmodel.CommunityPostViewModel
+import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.theme.Typography
 import com.a32b.plant.presentation.theme.background
 
@@ -59,6 +59,7 @@ fun CommunityPostScreen(
                         popUpTo<Routes.CommunityPost> { inclusive = true }
                     }
                 }
+                is CommunityPostEvent.ShowToast -> context.showToast(event.message)
             }
         }
     }
@@ -69,6 +70,7 @@ fun CommunityPostScreen(
         topBar = {
             PostTopBar(
                 isEditMode = postId != null,
+                isSubmitting = uiState.isSubmitting,
                 onBackClick = {
                     viewModel.onIsDismissDialogShowChange()
                 },
@@ -76,17 +78,17 @@ fun CommunityPostScreen(
                     val isInvalid = uiState.title.isBlank() ||
                             (uiState.studyLogs == null && uiState.content.isNullOrBlank())
                     if (isInvalid) {
-                        Toast.makeText(context, "제목과 내용을 모두 입력해주세요.", Toast.LENGTH_SHORT).show()
-                    } else if(uiState.selected?.id?.isEmpty() == true){
-                        Toast.makeText(context, "태그를 선택해주세요.", Toast.LENGTH_SHORT).show()
-                    } else{
+                        context.showToast("제목과 내용을 모두 입력해주세요.")
+                    } else if (uiState.selected?.id.isNullOrEmpty()) {
+                        context.showToast("태그를 선택해주세요.")
+                    } else {
                         viewModel.savePost() { isSuccess ->
                             if (isSuccess) {
                                 val msg = if (postId != null) "수정되었습니다!" else "성공적으로 등록되었습니다!"
-                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                context.showToast(msg)
                                 navController.popBackStack()
                             } else {
-                                Toast.makeText(context, "등록에 실패했습니다.", Toast.LENGTH_SHORT).show()
+                                context.showToast("등록에 실패했습니다.")
                             }
                         }
                     }
@@ -138,7 +140,7 @@ fun CommunityPostScreen(
                     Spacer(modifier = Modifier.width(8.dp))
 
                     Text(
-                        text = "${uiState.selected!!.name}${(if (uiState.isShared) ", 공유" else "")}",
+                        text = "${uiState.selected?.name ?: "태그를 선택하세요"}${(if (uiState.isShared) ", 공유" else "")}",
                         style = Typography.bodyMedium,
                         fontSize = 13.sp,
                         modifier = Modifier.padding(top = 4.dp),
@@ -203,7 +205,7 @@ fun CommunityPostScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PostTopBar(isEditMode: Boolean, onBackClick: () -> Unit, onRegisterClick: () -> Unit) {
+fun PostTopBar(isEditMode: Boolean, isSubmitting: Boolean = false, onBackClick: () -> Unit, onRegisterClick: () -> Unit) {
     CenterAlignedTopAppBar(
         title = { Text(if (isEditMode) "글 수정" else "글쓰기", style = Typography.titleLarge,
             color = MaterialTheme.colorScheme.onSurface) },
@@ -216,21 +218,20 @@ fun PostTopBar(isEditMode: Boolean, onBackClick: () -> Unit, onRegisterClick: ()
             Surface(
                 modifier = Modifier
                     .padding(end = 12.dp)
-                    .clickable { onRegisterClick() },
+                    .clickable(enabled = !isSubmitting) { onRegisterClick() },
                 shape = RoundedCornerShape(4.dp),
-                color = MaterialTheme.colorScheme.primary
+                color = if (isSubmitting) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.primary
             ) {
                 Text(
-                    text = if (isEditMode) "수정" else "등록",
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    fontSize = 12.sp,
+                    text = if (isSubmitting) "처리 중" else if (isEditMode) "수정" else "등록",
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimary,
-                    style = Typography.bodyMedium
+                    style = Typography.bodySmall
                 )
             }
         },
-        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
+        colors = TopAppBarDefaults. centerAlignedTopAppBarColors(containerColor = Color.Transparent)
     )
 }
 @Composable
@@ -251,7 +252,7 @@ fun PostInputField(
                 if (input.length <= maxLength) {
                     onValueChange(input)
                 } else {
-                    Toast.makeText(context, "${maxLength}자 이하로 입력해주세요.", Toast.LENGTH_SHORT).show()
+                    context.showToast("${maxLength}자 이하로 입력해주세요.")
                 }
             },
 
