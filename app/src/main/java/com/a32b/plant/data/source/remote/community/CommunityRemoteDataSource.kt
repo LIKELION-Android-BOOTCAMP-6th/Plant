@@ -20,7 +20,7 @@ interface CommunityRemoteDataSource {
     suspend fun updatePost(isShared: Boolean, postId: String, title: String, content: String?, tag: TagDto?)
     suspend fun deletePost(postId: String)
 
-    suspend fun toggleLike(postId: String, uid: String, isAlreadyLiked: Boolean, title: String)
+    suspend fun toggleLike(postId: String, uid: String, title: String): Boolean
 
     suspend fun addComment(postId : String, comment: Comment, activity: CommunityActivity)
     suspend fun updateComment(postId: String, commentId: String, newContent: String)
