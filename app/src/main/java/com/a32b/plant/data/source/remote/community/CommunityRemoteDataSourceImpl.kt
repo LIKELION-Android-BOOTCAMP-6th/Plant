@@ -135,13 +135,19 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         postRef.delete().await()
     }
 
-    override suspend fun toggleLike(postId: String, uid: String, isAlreadyLiked: Boolean, title: String) {
+    override suspend fun toggleLike(postId: String, uid: String, title: String): Boolean {
         val postRef = db.collection("posts").document(postId)
 
-        // 트랜잭션으로 likeCount를 원자적으로 read-modify-write → DB에 음수 저장 방지
-        db.runTransaction { txn ->
-            val current = txn.get(postRef).getLong("likeCount") ?: 0L
-            if (isAlreadyLiked) {
+        // 트랜잭션 안에서 likedBy를 직접 읽어 좋아요/취소 방향을 서버가 자체 결정
+        // → 다른 기기에서 상태가 바뀌어도 잘못된 방향으로 flip되지 않음
+        val wasLiked = db.runTransaction { txn ->
+            val snapshot = txn.get(postRef)
+            val current = snapshot.getLong("likeCount") ?: 0L
+            @Suppress("UNCHECKED_CAST")
+            val likedBy = (snapshot.get("likedBy") as? List<String>) ?: emptyList()
+            val already = uid in likedBy
+
+            if (already) {
                 val newCount = (current - 1).coerceAtLeast(0)
                 txn.update(postRef, mapOf(
                     "likedBy" to FieldValue.arrayRemove(uid),
@@ -153,10 +159,13 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
                     "likeCount" to current + 1
                 ))
             }
+            already
         }.await()
 
-        if (isAlreadyLiked) deleteLikedActivity(uid, postId)
+        if (wasLiked) deleteLikedActivity(uid, postId)
         else setLikedActivity(uid, postId, title)
+
+        return wasLiked
     }
 
     override suspend fun addComment(postId: String, comment: Comment, activity: CommunityActivity) {

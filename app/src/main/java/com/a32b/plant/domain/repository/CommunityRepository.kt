@@ -22,7 +22,7 @@ interface CommunityRepository {
     suspend fun updatePost(isShared: Boolean, postId: String, title: String, content: String?, tag: Tag?): Result<Unit>
     suspend fun deletePost(postId: String): Result<Unit>
 
-    suspend fun toggleLike(postId: String, uid: String, isAlreadyLiked: Boolean, title: String): Result<Unit>
+    suspend fun toggleLike(postId: String, uid: String, title: String): Result<Boolean>
 
     suspend fun addComment(postId: String, comment: Comment, activity: CommunityActivity): Result<Unit>
     suspend fun updateComment(postId: String, commentId: String, newContent: String): Result<Unit>

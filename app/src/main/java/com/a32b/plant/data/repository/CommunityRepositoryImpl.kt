@@ -92,10 +92,10 @@ class CommunityRepositoryImpl @Inject constructor(
         }
     )
 
-    override suspend fun toggleLike(postId: String, uid: String, isAlreadyLiked: Boolean, title: String): Result<Unit> = safeRunCatching {
-        communityRemoteDataSource.toggleLike(postId, uid, isAlreadyLiked, title)
+    override suspend fun toggleLike(postId: String, uid: String, title: String): Result<Boolean> = safeRunCatching {
+        communityRemoteDataSource.toggleLike(postId, uid, title)
     }.fold(
-        onSuccess = { Result.Success(Unit) },
+        onSuccess = { Result.Success(it) },
         onFailure = { e ->
             Log.e("Community", "좋아요 처리 실패", e)
             Result.Failure(handleError(e, "좋아요 처리에 실패했습니다.", isWrite = true))

@@ -83,7 +83,6 @@ class CommunityDetailViewModel @Inject constructor(
 
     // 좋아요 디바운스 상태
     private var likeDebounceJob: Job? = null
-    private var likeInitialServerState: Boolean? = null  // 현재 디바운스 시퀀스 시작 시점의 서버값
 
     init {
         ensureCurrentUserUseCase { user -> _uiState.update { it.copy(currentUid = user.uid, currentNickname = user.nickname) } }
@@ -165,11 +164,6 @@ class CommunityDetailViewModel @Inject constructor(
         val currentPost = _post.value ?: return
         if (currentPost.author.id == _uiState.value.currentUid) return
 
-        // 새 디바운스 시퀀스의 시작이면 서버 상태 캡처 (연속 탭 동안 유지)
-        if (likeInitialServerState == null) {
-            likeInitialServerState = currentPost.isLiked
-        }
-
         // 낙관적 UI: 로컬 즉시 토글
         val newIsLiked = !currentPost.isLiked
         val delta = if (newIsLiked) 1 else -1
@@ -187,31 +181,20 @@ class CommunityDetailViewModel @Inject constructor(
     }
 
     private suspend fun commitLike() {
-        val initialState = likeInitialServerState ?: return
         val post = _post.value ?: return
-        val finalState = post.isLiked
-
-        // 원위치(짝수 번 탭)면 서버 요청 스킵
-        if (initialState == finalState) {
-            likeInitialServerState = null
-            return
-        }
-
-        // isAlreadyLiked = 요청 직전 서버가 알고 있는 값 (= initialState)
-        toggleLikeUseCase(postId, post.author.id, initialState, post.title)
-            .onSuccess {
-                // 다음 시퀀스의 initial은 현재 서버에 반영된 값
-                likeInitialServerState = finalState
+        toggleLikeUseCase(postId, post.author.id, post.title)
+            .onSuccess { wasLiked ->
+                // 서버가 실제로 반영한 최종 상태 (wasLiked=true이면 취소됐으니 최종은 false)
+                val serverFinal = !wasLiked
+                if (_post.value?.isLiked != serverFinal) {
+                    // 다른 기기에서 상태가 바뀐 케이스 → 서버 기준으로 UI 정정
+                    _post.value = _post.value?.copy(isLiked = serverFinal)
+                }
             }
             .onFailure { e ->
                 sendToast(e.message)
-                // 롤백: 서버는 initial 상태 그대로이므로 UI를 되돌림
-                _post.value = _post.value?.copy(
-                    isLiked = initialState,
-                    likeCount = ((_post.value?.likeCount ?: 0) + if (initialState) 1 else -1)
-                        .coerceAtLeast(0)
-                )
-                likeInitialServerState = null
+                // 정확한 롤백값을 모르므로 서버 상태 재조회로 정합성 확보
+                refresh()
             }
     }
 
