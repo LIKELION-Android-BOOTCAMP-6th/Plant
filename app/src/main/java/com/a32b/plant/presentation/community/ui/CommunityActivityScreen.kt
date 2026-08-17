@@ -73,7 +73,6 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
 
             TagGroup(list, init = listOf(uiState.selected),isMultiSelected = false){ selected ->
                 viewModel.onSelectedChange(selected.get(0))
-                Log.d("뷰모델 확니", uiState.selected)
             }
 
             if (uiState.activities.isEmpty()){
