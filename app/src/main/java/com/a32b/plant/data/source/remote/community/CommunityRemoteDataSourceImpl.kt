@@ -124,12 +124,6 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         }
 
         // 2. 게시글 자신의 activity만 삭제 (댓글/좋아요는 남의 활동 기록이라 건드리지 않음)
-//        db.collection("activities")
-//            .whereEqualTo("targetId", postId)
-//            .whereEqualTo("type", ActivityType.POST)
-//            .get().await()
-//            .documents
-//            .forEach { doc -> doc.reference.delete().await() }
         deleteActivity(activityId = activityId)
 
         // 3. 게시글 문서 삭제
@@ -163,7 +157,6 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             already
         }.await()
 
-//        if (wasLiked) deleteLikedActivity(uid, postId)
         if (wasLiked) deleteActivity(uid = uid, targetId = postId, type = ActivityType.LIKE)
         else setLikedActivity(uid, postId, title)
 
@@ -211,7 +204,6 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         commentDoc.delete().await()
 
         if (!activityId.isNullOrEmpty()) {
-//            db.collection("activities").document(activityId).delete().await()
             deleteActivity(activityId = activityId)
         }
 
@@ -233,22 +225,6 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             .add(data)
             .await()
     }
-
-//    private suspend fun deleteLikedActivity(uid: String, postId: String) {
-//        val docId = db.collection("activities")
-//            .whereEqualTo("uid", uid)           // 본인 활동 기록만 조회 (보안 규칙 통과)
-//            .whereEqualTo("targetId", postId)
-//            .whereEqualTo("type", ActivityType.LIKE)
-//            .get()
-//            .await()
-//            .documents
-//            .firstOrNull()?.reference?.id
-//        docId?.let {
-//            db.collection("activities").document(it)
-//                .delete()
-//                .await()
-//        }
-//    }
 
     override fun observeActivity(uid: String, selected: String): Flow<List<CommunityActivityDto>> = callbackFlow {
         val listener = db.collection("activities")
