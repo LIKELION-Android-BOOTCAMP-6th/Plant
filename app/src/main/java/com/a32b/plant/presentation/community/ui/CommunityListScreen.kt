@@ -41,7 +41,6 @@ import com.a32b.plant.presentation.community.viewmodel.CommunityListEvent
 import com.a32b.plant.presentation.community.viewmodel.CommunityListViewModel
 import com.a32b.plant.presentation.theme.Typography
 import com.a32b.plant.presentation.theme.primary
-import kotlinx.coroutines.flow.filter
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
