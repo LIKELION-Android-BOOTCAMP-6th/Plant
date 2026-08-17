@@ -65,14 +65,14 @@ class UserRepositoryImpl @Inject constructor(
             .await() // Firebase 확장 함수 사용
     }
 
-    override suspend fun getUser(uid: String): Result<User?> = runCatching {
+    override suspend fun getUser(uid: String): Result<User?> = safeRunCatching {
         userRemoteDataSource.getUser(uid)?.toDomain()
     }.fold(
         onSuccess = { Result.Success(it) },
         onFailure = { e -> Result.Failure(handleError(e, "유저 정보 조회 실패")) }
     )
 
-    override suspend fun createUser(uid: String): Result<User> = runCatching {
+    override suspend fun createUser(uid: String): Result<User> = safeRunCatching {
         val newUser = User.create().copy(uid = uid)
         userRemoteDataSource.createUser(uid, newUser.toDto())
         newUser
@@ -82,7 +82,7 @@ class UserRepositoryImpl @Inject constructor(
     )
 
     override suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit> =
-        runCatching {
+        safeRunCatching {
             userRemoteDataSource.completeFirstLogin(uid, nickname)
         }.fold(
             onSuccess = { Result.Success(Unit) },
@@ -137,7 +137,7 @@ class UserRepositoryImpl @Inject constructor(
         onFailure = { e -> Result.Failure(handleError(e, "닉네임 삭제 실패")) }
     )
 
-    override suspend fun deleteUserData(uid: String): Result<Unit> = runCatching {
+    override suspend fun deleteUserData(uid: String): Result<Unit> = safeRunCatching {
         userRemoteDataSource.deleteUserData(uid)
     }.fold(
         onSuccess = { Result.Success(Unit) },
