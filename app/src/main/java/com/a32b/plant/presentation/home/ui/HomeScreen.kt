@@ -1,5 +1,6 @@
 package com.a32b.plant.presentation.home.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,7 +14,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.a32b.plant.core.navigation.Routes
@@ -23,6 +27,9 @@ import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.component.getLogoImage
 import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
 import com.a32b.plant.presentation.theme.*
+import java.time.LocalDate
+import java.time.format.TextStyle
+import java.util.Locale
 
 @Composable
 fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltViewModel()) {
@@ -34,17 +41,17 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
 
     val hasNoPot = displayPot.id.isEmpty() || displayPot == Pot.EMPTY
 
-    // 유저 아이디 표출 확인하기
     LoadableScreen(viewModel) {
         Scaffold(
-            topBar = { HomeTopBar(userName) }
+            topBar = { HomeTopBar(userName) },
+            containerColor = MaterialTheme.colorScheme.background
         ) { paddingValues ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
                     .background(MaterialTheme.colorScheme.background),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 MainPlantCard(
                     displayPot = displayPot,
@@ -235,21 +242,35 @@ fun PotChangeDialog(
 @Composable
 fun HomeTopBar(userName: String) {
     val displayName = if (userName.isBlank()) "사용자" else userName
+
+    //오늘 날짜 표출
+    val currentDate = LocalDate.now()
+    val year = currentDate.year
+    val month = currentDate.monthValue
+    val day = currentDate.dayOfMonth
+    val dayOfWeek = currentDate.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.KOREAN)
+    val dateString = "${year}년 ${month}월 ${day}일 ${dayOfWeek}"
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(24.dp)
+            .padding(horizontal = 24.dp, vertical = 16.dp),
     ) {
         Text(
             text = "${displayName}의 Garden",
             style = MaterialTheme.typography.displayLarge,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.primary,
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Start
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(30.dp))
         Text(
-            text = "공부가 자라나는 나만의 정원",
+            text = dateString,
+            modifier = Modifier.fillMaxWidth(),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Center
         )
     }
 }
@@ -265,23 +286,48 @@ fun MainPlantCard(
     Card(
         modifier = Modifier
             .fillMaxWidth(0.9f)
-            .padding(16.dp),
-        shape = RoundedCornerShape(24.dp)
+            .padding(8.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = sub_green1
+        ),
+        border = BorderStroke(1.dp, primary)
     ) {
         Column(
-            modifier = Modifier.padding(24.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            //상단 태그
+            if(!hasNoPot && displayPot.tagName.isNotEmpty()){
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = sub_green1,
+                    border = BorderStroke(1.dp, primary)
+                ) {
+                    Text(
+                        text = displayPot.tagName,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = sub_green3,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
             Text(
                 text = if(hasNoPot) "공부 화분이 없습니다" else displayPot.name.ifEmpty { "실험용" },
-                style = MaterialTheme.typography.headlineMedium
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = fontColor
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             if(hasNoPot){
                 Box(
-                    modifier = Modifier.size(150.dp),
+                    modifier = Modifier.size(140.dp),
                     contentAlignment = Alignment.Center
                 ){
                     getLogoImage()
@@ -290,7 +336,30 @@ fun MainPlantCard(
                 ProfileImage(level = displayPot.level.ifEmpty { "Lv.1" }, size = 150)
 
             }
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 학습 시간
+            Text(
+                text = "오늘 학습 시간",
+                style = MaterialTheme.typography.bodySmall,
+                color = fontColorSub
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "00:00",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                color = fontColor,
+                fontSize = 32.sp
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "누적 학습 시간  2시간 30분",
+                style = MaterialTheme.typography.bodySmall,
+                color = fontColorSub
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             //공부 시작 버튼
             Button(
