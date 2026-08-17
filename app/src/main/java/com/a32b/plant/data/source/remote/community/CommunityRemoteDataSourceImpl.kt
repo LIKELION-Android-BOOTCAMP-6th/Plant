@@ -124,7 +124,7 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         }
 
         // 2. 게시글 자신의 activity만 삭제 (댓글/좋아요는 남의 활동 기록이라 건드리지 않음)
-        deleteActivity(activityId = activityId)
+        deleteActivity(DeleteActivityRequest.ById(activityId))
 
         // 3. 게시글 문서 삭제
         postRef.delete().await()
@@ -157,7 +157,7 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             already
         }.await()
 
-        if (wasLiked) deleteActivity(uid = uid, targetId = postId, type = ActivityType.LIKE)
+        if (wasLiked) deleteActivity(DeleteActivityRequest.ByLike(uid, postId))
         else setLikedActivity(uid, postId, title)
 
         return wasLiked
@@ -204,7 +204,7 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         commentDoc.delete().await()
 
         if (!activityId.isNullOrEmpty()) {
-            deleteActivity(activityId = activityId)
+            deleteActivity(DeleteActivityRequest.ById(activityId))
         }
 
         db.collection("posts").document(postId)
@@ -251,39 +251,33 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
 
     override suspend fun deleteActivities(activityIds: List<String>) {
         activityIds.forEach {
-            deleteActivity(activityId = it)
+            deleteActivity(DeleteActivityRequest.ById(it))
         }
     }
 
-    private suspend fun deleteActivity(uid:String? = null, activityId: String? = null, targetId: String? = null, type : String? = null){
+    sealed interface DeleteActivityRequest{
+        data class ById(val id: String) : DeleteActivityRequest
+        data class ByLike(val uid: String, val targetId: String) : DeleteActivityRequest
+    }
 
-        when(type){
-            ActivityType.LIKE -> {
-                requireNotNull(uid){"uid 없음"}
-                requireNotNull(targetId){"targetId 없음"}
-
+    private suspend fun deleteActivity(request: DeleteActivityRequest){
+        when(request){
+            is DeleteActivityRequest.ById -> {
                 db.collection("activities")
-                    .whereEqualTo("uid", uid)
-                    .whereEqualTo("targetId", targetId)
-                    .whereEqualTo("type", type)
-                    .get()
-                    .await()
-                    .documents
-                    .forEach { doc -> doc.reference.delete().await() }
-            }
-            null -> {
-                requireNotNull(activityId){ " activityId 없음"}
-
-                db.collection("activities")
-                    .document(activityId)
+                    .document(request.id)
                     .delete()
                     .await()
             }
-            else -> {
-                throw IllegalArgumentException("액티비티 삭제 실패")
+            is DeleteActivityRequest.ByLike -> {
+                db.collection("activities")
+                    .whereEqualTo("uid", request.uid)
+                    .whereEqualTo("targetId", request.targetId)
+                    .whereEqualTo("type", ActivityType.LIKE)
+                    .get()
+                    .await()
+                    .documents
+                    .forEach { it.reference.delete().await() }
             }
-
         }
-
     }
 }
