@@ -3,7 +3,8 @@ package com.a32b.plant.presentation.theme
 import androidx.compose.ui.graphics.Color
 
 //배경 색상
-val background = Color(0xFFF9FBF6)
+val background = Color(0xFFFFFFFF)
+//FFF9FBF6 - 기존
 
 // 입력창 배경색
 val textFieldBackground = Color(0xFFEEEEEE)
