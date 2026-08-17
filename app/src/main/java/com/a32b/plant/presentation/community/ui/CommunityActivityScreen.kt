@@ -76,10 +76,20 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                 Log.d("뷰모델 확니", uiState.selected)
             }
 
-            ContentList(uiState.activities){ targetId ->
-                Log.d("타겟 아이디", targetId)
-                viewModel.moveToCommunityDetail(targetId)
-
+            if (uiState.activities.isEmpty()){
+                Box(modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ){
+                    Text(
+                        text = "커뮤니티 활동 내역이 없습니다.",
+                        style = Typography.bodyMedium,
+                    )
+                }
+            }else{
+                ContentList(uiState.activities){ targetId ->
+                    Log.d("타겟 아이디", targetId)
+                    viewModel.moveToCommunityDetail(targetId)
+                }
             }
         }
     }
