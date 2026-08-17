@@ -252,7 +252,8 @@ fun PostCard(post: Post, isLiked: Boolean, onClick: () -> Unit) {
                     modifier = Modifier.weight(1f)
                 )
                 Text(
-                    text = TimeFormatter.formatTimeAgo(post.createdAt ?: 0),
+                    text = TimeFormatter.formatTimeAgo(post.createdAt ?: 0) +
+                        if (post.updatedAt != null) " (수정됨)" else "",
                     fontSize = 11.sp,
                     style = Typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant

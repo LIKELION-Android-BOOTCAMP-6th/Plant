@@ -78,8 +78,11 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                     },
                     onRecordClick = {
                         if (!hasNoPot) {
-                            navController.navigate(Routes.PotDetail(displayPot.id.ifEmpty { "default_pot" }))
-                        }
+                            navController.navigate(
+                                Routes.StudyPlanDetail(
+                                    potId = displayPot.id.ifEmpty { "default_pot" }
+                                )
+                            )                        }
                     } // 상세 기록 이동
                 )
             }

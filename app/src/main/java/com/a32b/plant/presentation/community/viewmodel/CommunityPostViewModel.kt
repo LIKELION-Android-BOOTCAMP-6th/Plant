@@ -4,25 +4,26 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.a32b.plant.domain.type.ActivityType
-import com.a32b.plant.di.CurrentUser
-import com.a32b.plant.domain.model.CommunityActivity
-import com.a32b.plant.domain.model.Post
-import com.a32b.plant.domain.model.PostAuthor
+import com.a32b.plant.core.util.NETWORK_SLOW_MESSAGE
+import com.a32b.plant.core.util.withSlowNotice
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.Tag
+import com.a32b.plant.domain.repository.CommunityRepository
+import com.a32b.plant.domain.result.Result
+import com.a32b.plant.domain.result.onFailure
+import com.a32b.plant.domain.result.onSuccess
+import com.a32b.plant.domain.usecase.community.CreatePostUseCase
+import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import com.a32b.plant.domain.usecase.studyLog.GetSelectedStudyLogUseCase
-import com.a32b.plant.origin.OldPostRepository
-import com.google.firebase.Timestamp
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
 import javax.inject.Inject
 
 data class CommunityPostUiState(
@@ -35,14 +36,18 @@ data class CommunityPostUiState(
     val isDismissDialogShow: Boolean = false,
     val isShared: Boolean = false,
     val tags: List<Tag> = emptyList(),
-    val isTagSheetShown: Boolean = false
+    val isTagSheetShown: Boolean = false,
+    val isSubmitting: Boolean = false
 )
 sealed class CommunityPostEvent{
     data class NavigateToDetail(val postId: String) : CommunityPostEvent()
+    data class ShowToast(val message: String) : CommunityPostEvent()
 }
 @HiltViewModel
 class CommunityPostViewModel @Inject constructor(
-    private val repository: OldPostRepository,
+    private val repository: CommunityRepository,
+    private val createPostUseCase: CreatePostUseCase,
+    private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     private val getSelectedStudyLogUseCase: GetSelectedStudyLogUseCase,
     savedStateHandle: SavedStateHandle,
 
@@ -71,10 +76,12 @@ class CommunityPostViewModel @Inject constructor(
     }
     private fun fetchTags(){
         viewModelScope.launch(Dispatchers.IO) {
-            val fetchedTags = repository.getTag()
-            _uiState.update { it.copy(tags = fetchedTags) }
-            matchSelectedTag()
-
+            repository.getTags()
+                .onSuccess { tags ->
+                    _uiState.update { it.copy(tags = tags) }
+                    matchSelectedTag()
+                }
+                .onFailure { e -> Log.e("CommunityPostVM", "태그 목록 조회 실패: ${e.message}") }
         }
     }
     fun matchSelectedTag(){
@@ -91,30 +98,34 @@ class CommunityPostViewModel @Inject constructor(
     // ✅ 기존 글을 불러오는 함수
     fun getPost(postId: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            repository.getPostDetail(postId).firstOrNull()?.let { post ->
-                Log.d("getPost", post.tag.toString())
-                if (post.isShared?:false){
-                    _uiState.update { it.copy(isShared = true,postId = post.postId,title = post.title, studyLogs = post.studyLogs, selected = post.tag) }
+            repository.getPostDetail(postId)
+                .onSuccess { post ->
+                    post ?: return@onSuccess
+                    if (post.isShared?:false){
+                        _uiState.update { it.copy(isShared = true,postId = post.postId,title = post.title, studyLogs = post.studyLogs, selected = post.tag) }
 
+                    }
+                    else{
+                        _uiState.update { it.copy( postId = post.postId,title = post.title, content = post.content, selected = post.tag) }
+                    }
                 }
-                else{
-                    _uiState.update { it.copy( postId = post.postId,title = post.title, content = post.content, selected = post.tag) }
-                }
-            }
-
+                .onFailure { e -> Log.e("CommunityPostVM", "게시글 조회 실패: ${e.message}") }
         }
     }
 
-    fun getStudyLog(){
+    fun getStudyLog() {
         val currentPotId = potId ?: return
         val currentStudyLogIds = studyLogIds ?: return
-        val uid = CurrentUser.uid
         //개별 학습 기록 공유 시
         viewModelScope.launch(Dispatchers.IO) {
-            val logs = currentStudyLogIds.mapNotNull { id ->
-                getSelectedStudyLogUseCase(uid, currentPotId, id)
+            val user = when (val result = ensureCurrentUserUseCase()) {
+                is Result.Success -> result.data
+                is Result.Failure -> return@launch // 세션 만료는 UseCase 내부에서 이미 알림
             }
-            _uiState.update { it.copy(studyLogs = (it.studyLogs ?: emptyList()) + logs) }
+            val logs = currentStudyLogIds.mapNotNull { id ->
+                getSelectedStudyLogUseCase(user.uid, currentPotId, id)
+            }
+            _uiState.update { it.copy(studyLogs = logs) }
         }
     }
     fun getTags(list: List<Tag>) = _uiState.update { it.copy(tags = list) }
@@ -137,59 +148,60 @@ class CommunityPostViewModel @Inject constructor(
     }
 
     fun savePost(onComplete: (Boolean) -> Unit) {
+        // 등록/수정 중 중복 탭으로 게시글이 여러 번 생성되는 것을 방지
+        if (_uiState.value.isSubmitting) return
+
         viewModelScope.launch {
+            _uiState.update { it.copy(isSubmitting = true) }
+
             val isShared = _uiState.value.isShared
-            val selectedTag = _uiState.value.selected ?: return@launch
-            try {
+            val selectedTag = _uiState.value.selected ?: run {
+                _uiState.update { it.copy(isSubmitting = false) }
+                return@launch
+            }
+
+            if (postId != null) {
                 //게시글 수정
-                if (postId != null) {
-                    //게시글이 공유글인지 판별 후
+                withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
                     repository.updatePost(
                         isShared = isShared,
                         postId = postId!!,
                         title = _uiState.value.title,
-                        content = if(isShared) null else _uiState.value.content,
-                        tag = if (isShared) null else selectedTag,
-                        createdAt = if(isShared) null else Timestamp.now()
+                        content = if (isShared) null else _uiState.value.content,
+                        tag = if (isShared) null else selectedTag
                     )
-
-
-                } else {
-//                     ✅ 새 글 작성 모드
-//                    val newPost = Post(
-//                        author = PostAuthor(
-//                            CurrentUser.uid,
-//                            CurrentUser.nickname,
-//                            CurrentUser.profileImg),
-//                        title = _uiState.value.title,
-//                        content = if(isShared) null else _uiState.value.content,
-//                        studyLogs = if(isShared)_uiState.value.studyLogs else null,
-//                        tag = _uiState.value.selected,
-//                        isShared = _uiState.value.isShared
-//                    )
-                    val newPost = if (isShared) {
-                        Post.createShared(
-                            author = PostAuthor(CurrentUser.uid, CurrentUser.nickname, CurrentUser.profileImg),
-                            title = _uiState.value.title,
-                            studyLogs = _uiState.value.studyLogs ?: emptyList(),
-                            tag = selectedTag
-                        )
-                    } else {
-                        Post.createOriginal(
-                            author = PostAuthor(CurrentUser.uid, CurrentUser.nickname, CurrentUser.profileImg),
-                            title = _uiState.value.title,
-                            content = _uiState.value.content ?: "",
-                            tag = selectedTag
-                        )
-                    }
-                    postId = repository.savePost(newPost, CommunityActivity.post(CurrentUser.uid, _uiState.value.title))
+                }.onSuccess {
+                    onComplete(true)
+                    _eventChannel.send(CommunityPostEvent.NavigateToDetail(postId!!))
+                }.onFailure { e ->
+                    Log.e("CommunityPostVM", "게시글 수정 실패: ${e.message}")
+                    onComplete(false)
                 }
-                onComplete(true)
-            } catch (e: Exception) {
-                Log.e("CommunityPostVM", "Save post failed", e)
-                onComplete(false)
+            } else {
+                // 새 글 작성 모드
+                withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
+                    createPostUseCase(
+                        isShared = isShared,
+                        title = _uiState.value.title,
+                        content = _uiState.value.content,
+                        studyLogs = _uiState.value.studyLogs,
+                        tag = selectedTag
+                    )
+                }.onSuccess { newPostId ->
+                    postId = newPostId
+                    onComplete(true)
+                    _eventChannel.send(CommunityPostEvent.NavigateToDetail(newPostId))
+                }.onFailure { e ->
+                    Log.e("CommunityPostVM", "게시글 등록 실패: ${e.message}")
+                    onComplete(false)
+                }
             }
-            _eventChannel.send(CommunityPostEvent.NavigateToDetail(postId!!))
+
+            _uiState.update { it.copy(isSubmitting = false) }
         }
+    }
+
+    private fun sendToast(message: String) {
+        viewModelScope.launch { _eventChannel.send(CommunityPostEvent.ShowToast(message)) }
     }
 }

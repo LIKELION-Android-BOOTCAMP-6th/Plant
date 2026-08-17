@@ -1,6 +1,5 @@
 package com.a32b.plant.presentation.mypage.ui
 
-import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -96,9 +95,6 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                         navController.navigate(Routes.SignIn) {
                             popUpTo(0) { inclusive = true }
                         }
-
-                    is MyPageEvent.NavigateToMyCommunityFeed ->
-                        navController.navigate(Routes.MyCommunityFeed)
                 }
             }
         }
@@ -135,9 +131,6 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                     viewModel.getImageLevelList()
                     showProfileDialog = true
                 },
-                onMyActivityClick = {
-                    viewModel.moveToMyCommunityFeed()
-                },
                 onSettingClick = {
                     navController.navigate(Routes.MyPageSetting)
                 },
@@ -167,7 +160,6 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
 private fun MyPageContent(
     uiState: MyPageUiState,
     onProfileClick: () -> Unit,
-    onMyActivityClick: () -> Unit,
     onSettingClick: () -> Unit,
     onDarkModeToggle: (Boolean) -> Unit,
     onGuideClick: () -> Unit,
@@ -194,7 +186,6 @@ private fun MyPageContent(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 DividerImage()
-                ButtonTemplate(text = "내 활동", onClick = onMyActivityClick)
                 ButtonTemplate(text = "앱 설정", onClick = onSettingClick)
                 DarkModeToggleButton(
                     isDarkMode = uiState.isDarkMode,
@@ -222,7 +213,6 @@ private fun MyPageContentPreview() {
                 totalStudyTime = "4시간 10분"
             ),
             onProfileClick = {},
-            onMyActivityClick = {},
             onSettingClick = {},
             onDarkModeToggle = {},
             onGuideClick = {},
@@ -397,7 +387,6 @@ fun SetImages(
     selectedImageLevel: String,
     onImageClick: (String) -> Unit
 ) {
-    Log.d("PlantLog", "$levelList")
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
