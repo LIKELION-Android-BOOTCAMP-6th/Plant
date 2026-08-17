@@ -82,8 +82,8 @@ class CommunityRepositoryImpl @Inject constructor(
         }
     )
 
-    override suspend fun deletePost(postId: String): Result<Unit> = safeRunCatching {
-        communityRemoteDataSource.deletePost(postId)
+    override suspend fun deletePost(postId: String, activityId : String): Result<Unit> = safeRunCatching {
+        communityRemoteDataSource.deletePost(postId, activityId)
     }.fold(
         onSuccess = { Result.Success(Unit) },
         onFailure = { e ->
@@ -132,6 +132,22 @@ class CommunityRepositoryImpl @Inject constructor(
         }
     )
 
+    override fun observeActivity(selected: String): Flow<List<CommunityActivity>> {
+        return communityRemoteDataSource.observeActivity(uid = currentUid, selected)
+            .map { dtos -> dtos.map { it.toDomain() } }
+    }
+
+    override suspend fun deleteActivities(activityIds: List<String>): Result<Unit> = safeRunCatching {
+        communityRemoteDataSource.deleteActivities(activityIds)
+    }.fold(
+        onSuccess = { Result.Success(Unit)},
+        onFailure = { e ->
+            Log.e("Community", "커뮤니티 활동 삭제 실패", e)
+            Result.Failure(handleError(e, "오류가 발생했습니다.\n잠시 후 다시 시도해주세요."))
+
+        }
+    )
+
     private fun handleError(e: Throwable, defaultMessage: String, isWrite: Boolean = false): AppError = when (e) {
         is AppError -> e   // 이미 AppError면 타입 보존 (UnknownUser 등이 Custom으로 뭉개지는 것 방지)
         is FirebaseFirestoreException -> when (e.code) {
@@ -142,6 +158,7 @@ class CommunityRepositoryImpl @Inject constructor(
 
             else -> if (isWrite) AppError.Upload() else AppError.Custom(defaultMessage)
         }
+        is IllegalArgumentException -> AppError.Unknown()
         else -> if (isWrite) AppError.Upload() else AppError.Custom(defaultMessage)
     }
 }

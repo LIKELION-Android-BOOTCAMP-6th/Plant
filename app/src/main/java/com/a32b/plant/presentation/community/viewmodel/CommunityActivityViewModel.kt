@@ -45,7 +45,7 @@ class CommunityActivityViewModel @Inject constructor(
     fun loadActivity(selected: String) {
         collectJob?.cancel() // 이전 구독 취소
         collectJob = viewModelScope.launch {
-            repository.getActivityList(selected)
+            repository.observeActivity(selected)
                 .collect { list ->
                     _uiState.update { it.copy(activities = list) }
                 }

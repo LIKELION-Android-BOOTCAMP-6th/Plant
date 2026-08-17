@@ -114,7 +114,7 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             .await()
     }
 
-    override suspend fun deletePost(postId: String) {
+    override suspend fun deletePost(postId: String, activityId: String) {
         val postRef = db.collection("posts").document(postId)
 
         // 1. 하위 컬렉션 comments 문서 삭제
@@ -124,12 +124,13 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         }
 
         // 2. 게시글 자신의 activity만 삭제 (댓글/좋아요는 남의 활동 기록이라 건드리지 않음)
-        db.collection("activities")
-            .whereEqualTo("targetId", postId)
-            .whereEqualTo("type", ActivityType.POST)
-            .get().await()
-            .documents
-            .forEach { doc -> doc.reference.delete().await() }
+//        db.collection("activities")
+//            .whereEqualTo("targetId", postId)
+//            .whereEqualTo("type", ActivityType.POST)
+//            .get().await()
+//            .documents
+//            .forEach { doc -> doc.reference.delete().await() }
+        deleteActivity(activityId = activityId)
 
         // 3. 게시글 문서 삭제
         postRef.delete().await()
@@ -162,7 +163,8 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             already
         }.await()
 
-        if (wasLiked) deleteLikedActivity(uid, postId)
+//        if (wasLiked) deleteLikedActivity(uid, postId)
+        if (wasLiked) deleteActivity(uid = uid, targetId = postId, type = ActivityType.LIKE)
         else setLikedActivity(uid, postId, title)
 
         return wasLiked
@@ -209,7 +211,8 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         commentDoc.delete().await()
 
         if (!activityId.isNullOrEmpty()) {
-            db.collection("activities").document(activityId).delete().await()
+//            db.collection("activities").document(activityId).delete().await()
+            deleteActivity(activityId = activityId)
         }
 
         db.collection("posts").document(postId)
@@ -231,19 +234,80 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             .await()
     }
 
-    private suspend fun deleteLikedActivity(uid: String, postId: String) {
-        val docId = db.collection("activities")
-            .whereEqualTo("uid", uid)           // 본인 활동 기록만 조회 (보안 규칙 통과)
-            .whereEqualTo("targetId", postId)
-            .whereEqualTo("type", ActivityType.LIKE)
-            .get()
-            .await()
-            .documents
-            .firstOrNull()?.reference?.id
-        docId?.let {
-            db.collection("activities").document(it)
-                .delete()
-                .await()
+//    private suspend fun deleteLikedActivity(uid: String, postId: String) {
+//        val docId = db.collection("activities")
+//            .whereEqualTo("uid", uid)           // 본인 활동 기록만 조회 (보안 규칙 통과)
+//            .whereEqualTo("targetId", postId)
+//            .whereEqualTo("type", ActivityType.LIKE)
+//            .get()
+//            .await()
+//            .documents
+//            .firstOrNull()?.reference?.id
+//        docId?.let {
+//            db.collection("activities").document(it)
+//                .delete()
+//                .await()
+//        }
+//    }
+
+    override fun observeActivity(uid: String, selected: String): Flow<List<CommunityActivityDto>> = callbackFlow {
+        val listener = db.collection("activities")
+            .whereEqualTo("uid", uid)
+            .whereEqualTo("type", selected)
+            .orderBy("createAt", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshots, exception ->
+                if (exception != null){
+                    Log.e("커뮤니티 활동", "구독 종료", exception)
+                    close(exception)
+                    return@addSnapshotListener
+                }
+
+                val activities = snapshots?.documents?.mapNotNull { doc ->
+                    runCatching { doc.toObject(CommunityActivityDto::class.java)}.getOrNull()
+                } ?: emptyList()
+
+                trySend(activities)
+            }
+
+        awaitClose { listener.remove() }
+
+    }
+
+    override suspend fun deleteActivities(activityIds: List<String>) {
+        activityIds.forEach {
+            deleteActivity(activityId = it)
         }
+    }
+
+    private suspend fun deleteActivity(uid:String? = null, activityId: String? = null, targetId: String? = null, type : String? = null){
+
+        when(type){
+            ActivityType.LIKE -> {
+                requireNotNull(uid){"uid 없음"}
+                requireNotNull(targetId){"targetId 없음"}
+
+                db.collection("activities")
+                    .whereEqualTo("uid", uid)
+                    .whereEqualTo("targetId", targetId)
+                    .whereEqualTo("type", type)
+                    .get()
+                    .await()
+                    .documents
+                    .forEach { doc -> doc.reference.delete().await() }
+            }
+            null -> {
+                requireNotNull(activityId){ " activityId 없음"}
+
+                db.collection("activities")
+                    .document(activityId)
+                    .delete()
+                    .await()
+            }
+            else -> {
+                throw IllegalArgumentException("액티비티 삭제 실패")
+            }
+
+        }
+
     }
 }
