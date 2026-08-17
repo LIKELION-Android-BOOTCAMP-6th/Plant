@@ -1,6 +1,7 @@
 package com.a32b.plant.data.source.remote.community
 
 import android.util.Log
+import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.data.mapper.toDto
 import com.a32b.plant.data.model.CommentDto
 import com.a32b.plant.data.model.CommunityActivityDto
@@ -8,12 +9,17 @@ import com.a32b.plant.data.model.PostDto
 import com.a32b.plant.data.model.TagDto
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.CommunityActivity
+import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.type.ActivityType
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
@@ -22,7 +28,8 @@ import javax.inject.Singleton
 
 @Singleton
 class CommunityRemoteDataSourceImpl @Inject constructor(
-    private val db: FirebaseFirestore
+    private val db: FirebaseFirestore,
+    private val auth: FirebaseAuth
 ): CommunityRemoteDataSource {
 
     override fun getPostList(): Flow<List<PostDto>> = callbackFlow {
@@ -249,10 +256,8 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
 
     }
 
-    override suspend fun deleteActivities(activityIds: List<String>) {
-        activityIds.forEach {
-            deleteActivity(DeleteActivityRequest.ById(it))
-        }
+    override suspend fun deleteActivity(activityId : String){
+        deleteActivity(DeleteActivityRequest.ById(activityId))
     }
 
     sealed interface DeleteActivityRequest{
@@ -280,4 +285,6 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             }
         }
     }
+
+    override suspend fun isPostExist(postId: String): Boolean = db.collection("posts").document(postId).get().await().exists()
 }

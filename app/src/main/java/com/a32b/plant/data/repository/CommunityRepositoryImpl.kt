@@ -137,14 +137,24 @@ class CommunityRepositoryImpl @Inject constructor(
             .map { dtos -> dtos.map { it.toDomain() } }
     }
 
-    override suspend fun deleteActivities(activityIds: List<String>): Result<Unit> = safeRunCatching {
-        communityRemoteDataSource.deleteActivities(activityIds)
+    override suspend fun deleteActivity(activityId: String): Result<Unit> = safeRunCatching {
+        communityRemoteDataSource.deleteActivity(activityId)
     }.fold(
         onSuccess = { Result.Success(Unit)},
         onFailure = { e ->
             Log.e("Community", "커뮤니티 활동 삭제 실패", e)
             Result.Failure(handleError(e, "오류가 발생했습니다.\n잠시 후 다시 시도해주세요."))
 
+        }
+    )
+
+    override suspend fun isPostExist(postId: String): Result<Boolean> = safeRunCatching {
+        communityRemoteDataSource.isPostExist(postId)
+    }.fold(
+        onSuccess = { Result.Success(it)},
+        onFailure = { e ->
+            Log.e("Community", "게시물 존재 여부 조회 실패", e)
+            Result.Failure(handleError(e, "오류가 발생했습니다, \n잠시 후 다시 시도해주세요."))
         }
     )
 
