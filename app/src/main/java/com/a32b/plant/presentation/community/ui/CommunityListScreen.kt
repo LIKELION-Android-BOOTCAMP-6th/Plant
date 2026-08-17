@@ -130,6 +130,11 @@ fun CommunityListScreen(navController: NavController, viewModel: CommunityListVi
                         }
                     }
 
+                    /**임시 위치*/
+                    TextButton(onClick = {navController.navigate(Routes.CommunityActivity)}) {
+                        Text("내 활동", style = Typography.titleSmall)
+                    }
+
                 }
             },
             floatingActionButton = {
