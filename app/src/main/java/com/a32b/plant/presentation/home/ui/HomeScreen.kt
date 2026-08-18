@@ -12,6 +12,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,6 +28,7 @@ import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.domain.model.Pot
+import com.a32b.plant.presentation.attendance.ui.AttendanceCheckDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.component.getLogoImage
@@ -44,12 +48,17 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
 
     val hasNoPot = displayPot.id.isEmpty() || displayPot == Pot.EMPTY
 
+    var showAttendanceDialog by remember { mutableStateOf(false) }
+    if (showAttendanceDialog) {
+        AttendanceCheckDialog(onDismiss = { showAttendanceDialog = false })
+    }
+
     LoadableScreen(viewModel) {
         Scaffold(
             topBar = {
                 HomeTopBar(
                     userName = userName,
-                    onAttendanceClick = { navController.navigate(Routes.AttendanceCheck) }
+                    onAttendanceClick = { showAttendanceDialog = true }
                 )
             },
             containerColor = MaterialTheme.colorScheme.background

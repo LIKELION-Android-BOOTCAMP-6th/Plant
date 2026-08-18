@@ -9,7 +9,6 @@ import androidx.compose.runtime.getValue
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.a32b.plant.presentation.attendance.ui.AttendanceCheckScreen
 import com.a32b.plant.presentation.auth.ui.SignInScreen
 import com.a32b.plant.presentation.auth.ui.SignUpScreen
 import com.a32b.plant.presentation.community.ui.CommunityDetailScreen
@@ -40,7 +39,6 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
         ) {
 
             composable<Routes.HomeMain> { HomeScreen(navController) }
-            composable<Routes.AttendanceCheck> { AttendanceCheckScreen(navController) }
             composable<Routes.Mypage> { MyPageScreen(navController) }
             composable<Routes.MyPageSetting> { MyPageSettingScreen(navController) }
 
