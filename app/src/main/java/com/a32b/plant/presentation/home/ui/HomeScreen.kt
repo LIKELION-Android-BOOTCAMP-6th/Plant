@@ -280,13 +280,16 @@ fun HomeTopBar(
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Start
             )
-            Image(
-                painter = painterResource(id = R.drawable.ic_daily_default),
-                contentDescription = "출석체크",
-                modifier = Modifier
-                    .size(36.dp)
-                    .clickable(onClick = onAttendanceClick)
-            )
+            IconButton(
+                onClick = onAttendanceClick,
+                modifier = Modifier.offset(x = 6.dp)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_daily_default),
+                    contentDescription = "출석체크",
+                    modifier = Modifier.size(36.dp)
+                )
+            }
         }
         Spacer(modifier = Modifier.height(30.dp))
         Text(

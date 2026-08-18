@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,7 +15,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -23,25 +25,29 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.a32b.plant.R
 
 @Composable
 fun AttendanceCheckScreen(navController: NavController) {
     AttendanceCheckContent(
         checkedCount = 8,
-        rewards = sampleRewards
+        rewards = sampleRewards,
+        onBackClick = { navController.popBackStack() }
     )
 }
 
 @Composable
 private fun AttendanceCheckContent(
     checkedCount: Int,
-    rewards: List<AttendanceRewardUi>
+    rewards: List<AttendanceRewardUi>,
+    onBackClick: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -50,15 +56,33 @@ private fun AttendanceCheckContent(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp, vertical = 32.dp),
+                .padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
-            Text(
-                text = "출석체크",
-                style = MaterialTheme.typography.displayLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+            ) {
+                IconButton(
+                    onClick = onBackClick,
+                    modifier = Modifier.align(Alignment.CenterStart)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_backbtn),
+                        contentDescription = "뒤로가기",
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                Text(
+                    text = "출석체크",
+                    style = MaterialTheme.typography.displayLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
 
             Text(
                 text = "출석할수록 보상이 자라나요",
@@ -72,20 +96,15 @@ private fun AttendanceCheckContent(
                 rewards = rewards
             )
 
+            Spacer(modifier = Modifier.weight(1f))
+
             Button(
                 onClick = { },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 24.dp),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
+                    .padding(top = 24.dp)
             ) {
-                Text(
-                    text = "출석하기",
-                    style = MaterialTheme.typography.titleSmall
-                )
+                Text("출석하기")
             }
         }
     }
@@ -99,7 +118,7 @@ private fun AttendanceBoard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 28.dp)
+            .padding(top = 24.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .border(
@@ -107,8 +126,8 @@ private fun AttendanceBoard(
                 color = MaterialTheme.colorScheme.tertiary,
                 shape = RoundedCornerShape(20.dp)
             )
-            .padding(horizontal = 16.dp, vertical = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+            .padding(horizontal = 16.dp, vertical = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Column {
             Text(
@@ -117,7 +136,7 @@ private fun AttendanceBoard(
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "${checkedCount}/${rewards.size}일 출석",
+                text = "${rewards.size}칸 중 ${checkedCount}칸 완료",
                 modifier = Modifier.padding(top = 4.dp),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -130,11 +149,11 @@ private fun AttendanceBoard(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(10.dp)),
             color = MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.tertiary
+            trackColor = MaterialTheme.colorScheme.secondary
         )
 
         Column(
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             rewards.chunked(7).forEach { rowRewards ->
                 Row(
@@ -195,7 +214,7 @@ private fun AttendanceRewardItem(
                 .size(38.dp)
                 .clip(CircleShape)
                 .background(backgroundColor)
-                .border(1.dp, borderColor, CircleShape),
+                .border(if (isNext) 2.dp else 1.dp, borderColor, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -223,7 +242,8 @@ private fun AttendanceRewardItem(
 private fun AttendanceCheckContentPreview() {
     AttendanceCheckContent(
         checkedCount = 8,
-        rewards = sampleRewards
+        rewards = sampleRewards,
+        onBackClick = { }
     )
 }
 
