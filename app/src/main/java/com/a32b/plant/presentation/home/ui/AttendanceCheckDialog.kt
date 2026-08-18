@@ -1,4 +1,4 @@
-﻿package com.a32b.plant.presentation.attendance.ui
+package com.a32b.plant.presentation.home.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -73,7 +73,7 @@ private fun AttendanceDialogContent() {
 
             AttendanceBoard(
                 checkedCount = 8,
-                rewards = sampleRewards
+                rewards = sampleAttendanceRewards
             )
 
             Button(
@@ -88,9 +88,9 @@ private fun AttendanceDialogContent() {
     }
 }
 
-@Preview(showBackground = true, name = "다이얼로그 - 일반 폰", widthDp = 360)
-@Preview(showBackground = true, name = "다이얼로그 - 폴드3 접음", widthDp = 350)
-@Preview(showBackground = true, name = "다이얼로그 - 폴드3 펼침", widthDp = 673)
+@Preview(showBackground = true, name = "출석체크 다이얼로그", widthDp = 360)
+@Preview(showBackground = true, name = "출석체크 다이얼로그 - 폴드3 접음", widthDp = 350)
+@Preview(showBackground = true, name = "출석체크 다이얼로그 - 폴드3 펼침", widthDp = 673)
 @Composable
 private fun AttendanceDialogContentPreview() {
     PlantTheme {
@@ -242,7 +242,6 @@ private fun AttendanceRewardItem(
     }
 }
 
-
 /**
  * label   보상 이름. "다음 출석 보상" 안내 문구에 쓰이므로 아이콘이 있어도 비우지 않는다.
  * iconRes 원 안에 표시할 아이콘.
@@ -255,7 +254,7 @@ private data class AttendanceRewardUi(
     val showLabelBelow: Boolean = false
 )
 
-private val sampleRewards = listOf(
+private val sampleAttendanceRewards = listOf(
     AttendanceRewardUi(1),
     AttendanceRewardUi(2, "하트", R.drawable.ic_heart),
     AttendanceRewardUi(3),
@@ -285,5 +284,3 @@ private val sampleRewards = listOf(
     AttendanceRewardUi(27),
     AttendanceRewardUi(28, "500G", R.drawable.ic_coin, showLabelBelow = true)
 )
-
-

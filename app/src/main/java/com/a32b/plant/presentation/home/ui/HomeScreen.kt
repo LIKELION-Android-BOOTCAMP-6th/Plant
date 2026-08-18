@@ -28,7 +28,6 @@ import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.domain.model.Pot
-import com.a32b.plant.presentation.attendance.ui.AttendanceCheckDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.component.getLogoImage
