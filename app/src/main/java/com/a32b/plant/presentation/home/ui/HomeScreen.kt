@@ -1,6 +1,7 @@
 package com.a32b.plant.presentation.home.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -14,12 +15,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.presentation.core.component.LoadableScreen
@@ -43,7 +46,12 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
 
     LoadableScreen(viewModel) {
         Scaffold(
-            topBar = { HomeTopBar(userName) },
+            topBar = {
+                HomeTopBar(
+                    userName = userName,
+                    onAttendanceClick = { navController.navigate(Routes.AttendanceCheck) }
+                )
+            },
             containerColor = MaterialTheme.colorScheme.background
         ) { paddingValues ->
             Column(
@@ -240,7 +248,10 @@ fun PotChangeDialog(
 
 
 @Composable
-fun HomeTopBar(userName: String) {
+fun HomeTopBar(
+    userName: String,
+    onAttendanceClick: () -> Unit
+) {
     val displayName = if (userName.isBlank()) "사용자" else userName
 
     //오늘 날짜 표출
@@ -256,14 +267,27 @@ fun HomeTopBar(userName: String) {
             .fillMaxWidth()
             .padding(horizontal = 24.dp, vertical = 16.dp),
     ) {
-        Text(
-            text = "${displayName}의 Garden",
-            style = MaterialTheme.typography.displayLarge,
-            color = MaterialTheme.colorScheme.primary,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Start
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "${displayName}의 Garden",
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.displayLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Start
+            )
+            Image(
+                painter = painterResource(id = R.drawable.ic_daily_default),
+                contentDescription = "출석체크",
+                modifier = Modifier
+                    .size(36.dp)
+                    .clickable(onClick = onAttendanceClick)
+            )
+        }
         Spacer(modifier = Modifier.height(30.dp))
         Text(
             text = dateString,
