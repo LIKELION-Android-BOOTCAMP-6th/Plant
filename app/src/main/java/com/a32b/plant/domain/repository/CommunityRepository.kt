@@ -30,5 +30,7 @@ interface CommunityRepository {
 
     fun observeActivity(selected: String): Flow<List<CommunityActivity>>
     suspend fun deleteActivity(activityId : String): Result<Unit>
+
+    suspend fun findCommentItByActivityId(postId : String, activityId: String) : Result<String?>
     suspend fun isPostExist(postId: String) : Result<Boolean>
 }

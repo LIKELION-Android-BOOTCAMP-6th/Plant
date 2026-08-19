@@ -148,6 +148,7 @@ class CommunityRepositoryImpl @Inject constructor(
         }
     )
 
+
     override suspend fun isPostExist(postId: String): Result<Boolean> = safeRunCatching {
         communityRemoteDataSource.isPostExist(postId)
     }.fold(
@@ -155,6 +156,16 @@ class CommunityRepositoryImpl @Inject constructor(
         onFailure = { e ->
             Log.e("Community", "게시물 존재 여부 조회 실패", e)
             Result.Failure(handleError(e, "오류가 발생했습니다, \n잠시 후 다시 시도해주세요."))
+        }
+    )
+
+    override suspend fun findCommentItByActivityId(postId: String, activityId: String): Result<String?> = safeRunCatching {
+        communityRemoteDataSource.findCommentIdByActivityId(postId, activityId)
+    }.fold(
+        onSuccess = { Result.Success(it)},
+        onFailure = { e ->
+            Log.e("Community", "commentId 조회 실패", e)
+            Result.Failure(handleError(e, "알 수 없는 오류가 발생했습니다."))
         }
     )
 

@@ -286,5 +286,15 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         }
     }
 
+    override suspend fun findCommentIdByActivityId(postId: String, activityId: String): String? {
+        val snapshot = db.collection("posts").document(postId)
+            .collection("comments")
+            .whereEqualTo("activityId", activityId)
+            .limit(1)
+            .get()
+            .await()
+        return snapshot.documents.firstOrNull()?.id
+    }
+
     override suspend fun isPostExist(postId: String): Boolean = db.collection("posts").document(postId).get().await().exists()
 }
