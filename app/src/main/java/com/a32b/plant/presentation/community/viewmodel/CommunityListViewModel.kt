@@ -199,7 +199,12 @@ class CommunityListViewModel @Inject constructor(
     }
 
     // 태그 선택 변경 → 서버 재쿼리
+    // Firestore whereIn 제한: 최대 10개 → 초과 시 UI에서 차단
     fun onSelectedChanged(tags: List<Tag>) {
+        if (tags.size > 10) {
+            _events.trySend(CommunityListEvent.ShowToast("태그는 최대 10개까지만 선택할 수 있어요."))
+            return
+        }
         _uiState.update { it.copy(selected = tags) }
         loadInitial()
     }

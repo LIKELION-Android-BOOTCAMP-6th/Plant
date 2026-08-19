@@ -36,7 +36,6 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             query = query.whereEqualTo("isShared", true)
         }
         if (tagIds.isNotEmpty()) {
-            require(tagIds.size <= 10) { "Firestore whereIn 최대 10개" }
             query = query.whereIn("tag.id", tagIds)
         }
         if (cursor != null) {
@@ -67,7 +66,6 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             query = query.whereEqualTo("isShared", true)
         }
         if (tagIds.isNotEmpty()) {
-            require(tagIds.size <= 10) { "Firestore whereIn 최대 10개" }
             query = query.whereIn("tag.id", tagIds)
         }
         // limit 없음 → 전체 fetch

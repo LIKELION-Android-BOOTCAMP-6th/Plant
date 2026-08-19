@@ -14,7 +14,8 @@ import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.CommunityRepository
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
-import com.google.firebase.Timestamp
+import com.a32b.plant.core.extension.toLong
+import com.a32b.plant.core.extension.toTimestamp
 import com.google.firebase.firestore.FirebaseFirestoreException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -33,14 +34,12 @@ class CommunityRepositoryImpl @Inject constructor(
         tagIds: List<String>,
         sharedOnly: Boolean
     ): Result<PostPage> = safeRunCatching {
-        val cursorTs = cursor?.let {
-            Timestamp(it / 1000, ((it % 1000) * 1_000_000).toInt())
-        }
+        val cursorTs = cursor?.toTimestamp()
         val fetched = communityRemoteDataSource.loadPostPage(cursorTs, pageSize, tagIds, sharedOnly)
         val hasMore = fetched.size > pageSize
         val visible = if (hasMore) fetched.take(pageSize) else fetched
         val items = visible.map { it.toDomain(currentUid, emptyList()) }
-        val nextCursor = if (hasMore) visible.lastOrNull()?.createdAt?.toDate()?.time else null
+        val nextCursor = if (hasMore) visible.lastOrNull()?.createdAt.toLong().takeIf { it != 0L } else null
         PostPage(items = items, nextCursor = nextCursor, hasMore = hasMore)
     }.fold(
         onSuccess = { Result.Success(it) },
