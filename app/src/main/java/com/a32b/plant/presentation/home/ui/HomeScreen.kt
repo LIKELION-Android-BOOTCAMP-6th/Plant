@@ -101,6 +101,9 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                             )                        }
                     } // 상세 기록 이동
                 )
+
+
+                HomeItemBoxSection()
             }
 
             // 화분 변경 다이얼로그
@@ -321,7 +324,7 @@ fun MainPlantCard(
     Card(
         modifier = Modifier
             .fillMaxWidth(0.9f)
-            .padding(8.dp),
+            .wrapContentHeight(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = sub_green1
@@ -331,7 +334,7 @@ fun MainPlantCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
+                .padding(horizontal = 20.dp, vertical = 14.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             //상단 태그
@@ -343,13 +346,13 @@ fun MainPlantCard(
                 ) {
                     Text(
                         text = displayPot.tagName,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
                         style = MaterialTheme.typography.labelMedium,
                         color = sub_green3,
                         fontWeight = FontWeight.Medium
                     )
                 }
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(6.dp))
             }
             Text(
                 text = if(hasNoPot) "공부 화분이 없습니다" else displayPot.name.ifEmpty { "실험용" },
@@ -358,43 +361,74 @@ fun MainPlantCard(
                 color = fontColor
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             if(hasNoPot){
                 Box(
-                    modifier = Modifier.size(140.dp),
+                    modifier = Modifier.size(100.dp),
                     contentAlignment = Alignment.Center
                 ){
                     getLogoImage()
                 }
             } else {
-                ProfileImage(level = displayPot.level.ifEmpty { "Lv.1" }, size = 150)
+                ProfileImage(level = displayPot.level.ifEmpty { "Lv.1" }, size = 100)
 
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // 학습 시간
+            // 화분 하나의 오늘 총 학습 시간
             Text(
                 text = "오늘 학습 시간",
                 style = MaterialTheme.typography.bodySmall,
                 color = fontColorSub
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = "00:00",
+                text = "00:00", // 나중에 DB에서 가져오기
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
                 color = fontColor,
-                fontSize = 32.sp
+                fontSize = 26.sp
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "누적 학습 시간  2시간 30분",
-                style = MaterialTheme.typography.bodySmall,
-                color = fontColorSub
-            )
+            Spacer(modifier = Modifier.height(5.dp))
 
-            Spacer(modifier = Modifier.height(20.dp))
+            if (!hasNoPot) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "업그레이드 진행도",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = fontColorSub
+                        )
+                        Text(
+                            text = "60% (30분/50분)", // 예시 텍스트 (추후 뷰모델 데이터와 연결)
+                            style = MaterialTheme.typography.bodySmall,
+                            color = primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    LinearProgressIndicator(
+                        progress = { 0.6f }, // 예시 진행률 (0.0f ~ 1.0f)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp)),
+                        color = primary,
+                        trackColor = sub2
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(5.dp))
+
 
             //공부 시작 버튼
             Button(
@@ -405,7 +439,7 @@ fun MainPlantCard(
                 Text("공부 시작")
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(5.dp))
 
             //화분변경 / 기록 버튼 (가로 배치)
             Row(
@@ -425,6 +459,35 @@ fun MainPlantCard(
                 ) {
                     Text("공부 기록")
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun HomeItemBoxSection(){
+    Row(
+        modifier = Modifier
+            .fillMaxWidth(0.9f)
+            .height(40.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        //가로 데이티 리스트 확장 가능
+        repeat(3){ index ->
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(20.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surface),
+                contentAlignment = Alignment.Center
+            ){
+                Text(
+                    //아이템 전체 표출 및 DB에서 갯수 얻기 추가 필요
+                    text = "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = fontColor
+                )
             }
         }
     }

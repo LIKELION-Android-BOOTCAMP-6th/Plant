@@ -9,10 +9,13 @@ import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.domain.model.Post
+import com.a32b.plant.domain.model.PostPage
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.CommunityRepository
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
+import com.a32b.plant.core.extension.toLong
+import com.a32b.plant.core.extension.toTimestamp
 import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -27,10 +30,40 @@ class CommunityRepositoryImpl @Inject constructor(
 
     private val currentUid: String get() = userRepository.currentUser.value?.uid ?: ""
 
-    override fun getPostList(): Flow<List<Post>> {
-        return communityRemoteDataSource.getPostList()
-            .map { dtos -> dtos.map { it.toDomain(currentUid, emptyList()) } }
-    }
+    override suspend fun loadPostPage(
+        cursor: Long?,
+        pageSize: Int,
+        tagIds: List<String>,
+        sharedOnly: Boolean
+    ): Result<PostPage> = safeRunCatching {
+        val cursorTs = cursor?.toTimestamp()
+        val fetched = communityRemoteDataSource.loadPostPage(cursorTs, pageSize, tagIds, sharedOnly)
+        val hasMore = fetched.size > pageSize
+        val visible = if (hasMore) fetched.take(pageSize) else fetched
+        val items = visible.map { it.toDomain(currentUid, emptyList()) }
+        val nextCursor = if (hasMore) visible.lastOrNull()?.createdAt.toLong().takeIf { it != 0L } else null
+        PostPage(items = items, nextCursor = nextCursor, hasMore = hasMore)
+    }.fold(
+        onSuccess = { Result.Success(it) },
+        onFailure = { e ->
+            Log.e("Community", "게시글 페이지 조회 실패", e)
+            Result.Failure(handleError(e, "게시글 목록을 불러오지 못했습니다."))
+        }
+    )
+
+    override suspend fun getAllPosts(
+        tagIds: List<String>,
+        sharedOnly: Boolean
+    ): Result<List<Post>> = safeRunCatching {
+        communityRemoteDataSource.loadAllPosts(tagIds, sharedOnly)
+            .map { it.toDomain(currentUid, emptyList()) }
+    }.fold(
+        onSuccess = { Result.Success(it) },
+        onFailure = { e ->
+            Log.e("Community", "전체 게시글 조회 실패", e)
+            Result.Failure(handleError(e, "게시글 검색에 실패했습니다."))
+        }
+    )
 
     override suspend fun getPostDetail(postId: String): Result<Post?> = safeRunCatching {
         communityRemoteDataSource.getPostDetail(postId)?.toDomain(currentUid, emptyList())
@@ -82,8 +115,8 @@ class CommunityRepositoryImpl @Inject constructor(
         }
     )
 
-    override suspend fun deletePost(postId: String): Result<Unit> = safeRunCatching {
-        communityRemoteDataSource.deletePost(postId)
+    override suspend fun deletePost(postId: String, activityId : String): Result<Unit> = safeRunCatching {
+        communityRemoteDataSource.deletePost(postId, activityId)
     }.fold(
         onSuccess = { Result.Success(Unit) },
         onFailure = { e ->
@@ -132,6 +165,43 @@ class CommunityRepositoryImpl @Inject constructor(
         }
     )
 
+    override fun observeActivity(selected: String): Flow<List<CommunityActivity>> {
+        return communityRemoteDataSource.observeActivity(uid = currentUid, selected)
+            .map { dtos -> dtos.map { it.toDomain() } }
+    }
+
+    override suspend fun deleteActivity(activityId: String): Result<Unit> = safeRunCatching {
+        communityRemoteDataSource.deleteActivity(activityId)
+    }.fold(
+        onSuccess = { Result.Success(Unit)},
+        onFailure = { e ->
+            Log.e("Community", "커뮤니티 활동 삭제 실패", e)
+            Result.Failure(handleError(e, "오류가 발생했습니다.\n잠시 후 다시 시도해주세요."))
+
+        }
+    )
+
+
+    override suspend fun isPostExist(postId: String): Result<Boolean> = safeRunCatching {
+        communityRemoteDataSource.isPostExist(postId)
+    }.fold(
+        onSuccess = { Result.Success(it)},
+        onFailure = { e ->
+            Log.e("Community", "게시물 존재 여부 조회 실패", e)
+            Result.Failure(handleError(e, "오류가 발생했습니다, \n잠시 후 다시 시도해주세요."))
+        }
+    )
+
+    override suspend fun findCommentItByActivityId(postId: String, activityId: String): Result<String?> = safeRunCatching {
+        communityRemoteDataSource.findCommentIdByActivityId(postId, activityId)
+    }.fold(
+        onSuccess = { Result.Success(it)},
+        onFailure = { e ->
+            Log.e("Community", "commentId 조회 실패", e)
+            Result.Failure(handleError(e, "알 수 없는 오류가 발생했습니다."))
+        }
+    )
+
     private fun handleError(e: Throwable, defaultMessage: String, isWrite: Boolean = false): AppError = when (e) {
         is AppError -> e   // 이미 AppError면 타입 보존 (UnknownUser 등이 Custom으로 뭉개지는 것 방지)
         is FirebaseFirestoreException -> when (e.code) {
@@ -142,6 +212,7 @@ class CommunityRepositoryImpl @Inject constructor(
 
             else -> if (isWrite) AppError.Upload() else AppError.Custom(defaultMessage)
         }
+        is IllegalArgumentException -> AppError.Unknown()
         else -> if (isWrite) AppError.Upload() else AppError.Custom(defaultMessage)
     }
 }

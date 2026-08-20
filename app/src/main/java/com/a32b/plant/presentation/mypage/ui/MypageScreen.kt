@@ -272,9 +272,11 @@ fun DarkModeToggleButton(
 }
 
 @Composable
-fun ButtonTemplate(text: String, onClick: () -> Unit) {
+fun ButtonTemplate(text: String, enabled: Boolean = true, onClick: () -> Unit) {
     Button(
-        onClick = onClick, modifier = Modifier
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier
             .fillMaxWidth()
             .height(50.dp),
         shape = RoundedCornerShape(8.dp),
