@@ -1,5 +1,6 @@
 package com.a32b.plant.data.model
 
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 
@@ -21,7 +22,8 @@ data class UserDto(
     var isDarkMode: Boolean = false,
     @get:PropertyName("totalStudyTime") @set:PropertyName("totalStudyTime")
     var totalStudyTime: Long = 0L,
-    val coin: Int = 0,
+    @get:PropertyName("coin") @set:PropertyName("coin")
+    var coin: Int = 0,
     @get:PropertyName("dailyCheckThisMonth") @set:PropertyName("dailyCheckThisMonth")
     var monthCheck: DailyCheckThisMonthDto = DailyCheckThisMonthDto(),
     @get:PropertyName("item") @set:PropertyName("item")
@@ -31,16 +33,23 @@ data class UserDto(
 )
 
 data class DailyCheckThisMonthDto(
-    @get:PropertyName("isDailyChecked") @set:PropertyName("isDailyChecked")
-    var isDailyChecked: Boolean = false,
-    val count: Int = 0
+    @get:PropertyName("count") @set:PropertyName("count")
+    var count: Int = 0,
+    @get:PropertyName("lastCheckedAt") @set:PropertyName("lastCheckedAt")
+    var lastCheckedAt: Timestamp? = null
 )
 
 data class ItemDto(
-    val heart: Int = 0,
-    val sun: Int = 0,
-    val water: Int = 0,
-    val fertilizer: Int = 0,
-    val nutrient: Int = 0,
-    val box: Int = 0,
+    @get:PropertyName("heart") @set:PropertyName("heart")
+    var heart: Int = 0,
+    @get:PropertyName("sun") @set:PropertyName("sun")
+    var sun: Int = 0,
+    @get:PropertyName("water") @set:PropertyName("water")
+    var water: Int = 0,
+    @get:PropertyName("fertilizer") @set:PropertyName("fertilizer")
+    var fertilizer: Int = 0,
+    @get:PropertyName("nutrient") @set:PropertyName("nutrient")
+    var nutrient: Int = 0,
+    @get:PropertyName("box") @set:PropertyName("box")
+    var box: Int = 0,
 )

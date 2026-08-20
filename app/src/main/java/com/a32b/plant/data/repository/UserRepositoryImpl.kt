@@ -7,11 +7,14 @@ import com.a32b.plant.data.mapper.toDto
 import com.a32b.plant.data.source.remote.user.UserRemoteDataSource
 import com.a32b.plant.di.qualifier.ApplicationScope
 import com.a32b.plant.domain.error.AppError
+import com.a32b.plant.domain.model.AttendanceDecision
+import com.a32b.plant.domain.model.AttendanceReward
 import com.a32b.plant.domain.model.User
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -137,6 +140,21 @@ class UserRepositoryImpl @Inject constructor(
         onFailure = { e -> Result.Failure(handleError(e, "닉네임 삭제 실패")) }
     )
 
+    override suspend fun checkAttendance(uid: String): Result<AttendanceReward?> = safeRunCatching {
+        userRemoteDataSource.checkAttendance(uid)
+    }.fold(
+        onSuccess = { decision ->
+            when (decision) {
+                is AttendanceDecision.Success -> Result.Success(decision.reward)
+                AttendanceDecision.AlreadyChecked ->
+                    Result.Failure(AppError.Custom("이미 오늘 출석했습니다."))
+                AttendanceDecision.MonthCompleted ->
+                    Result.Failure(AppError.Custom("이번 달 출석을 모두 완료했습니다."))
+            }
+        },
+        onFailure = { e -> Result.Failure(handleAttendanceError(e)) }
+    )
+
     override suspend fun deleteUserData(uid: String): Result<Unit> = safeRunCatching {
         userRemoteDataSource.deleteUserData(uid)
     }.fold(
@@ -152,6 +170,25 @@ class UserRepositoryImpl @Inject constructor(
         return when (e) {
             is FirebaseNetworkException -> AppError.Network()
             else -> AppError.Custom(logMessage)
+        }
+    }
+
+    private fun handleAttendanceError(e: Throwable): AppError {
+        if (e is CancellationException) throw e
+
+        Log.e("UserRepository", "출석 처리 실패: ${e.message}", e)
+
+        return when (e) {
+            is AppError -> e
+            is FirebaseFirestoreException -> when (e.code) {
+                FirebaseFirestoreException.Code.UNAVAILABLE,
+                FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
+                FirebaseFirestoreException.Code.PERMISSION_DENIED ->
+                    AppError.Permission("출석 처리에 실패했습니다.")
+                else -> AppError.Custom("출석 처리 실패")
+            }
+            is FirebaseNetworkException -> AppError.Network()
+            else -> AppError.Custom("출석 처리 실패")
         }
     }
 }

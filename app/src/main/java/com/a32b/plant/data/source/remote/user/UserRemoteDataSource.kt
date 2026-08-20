@@ -1,6 +1,7 @@
 package com.a32b.plant.data.source.remote.user
 
 import com.a32b.plant.data.model.UserDto
+import com.a32b.plant.domain.model.AttendanceDecision
 import kotlinx.coroutines.flow.Flow
 
 interface UserRemoteDataSource {
@@ -14,5 +15,6 @@ interface UserRemoteDataSource {
     suspend fun isNicknameTaken(nickname: String): Boolean
     suspend fun registerNickname(nickname: String)
     suspend fun deleteNickname(nickname: String)
+    suspend fun checkAttendance(uid: String): AttendanceDecision
     suspend fun deleteUserData(uid: String)
 }
