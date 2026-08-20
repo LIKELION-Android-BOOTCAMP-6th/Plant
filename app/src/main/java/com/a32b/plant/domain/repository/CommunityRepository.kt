@@ -6,6 +6,7 @@ import com.a32b.plant.domain.model.Post
 import com.a32b.plant.domain.model.PostPage
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.result.Result
+import kotlinx.coroutines.flow.Flow
 
 interface CommunityRepository {
 
