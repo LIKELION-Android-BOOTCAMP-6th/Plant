@@ -24,10 +24,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageEvent
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageSettingViewModel
@@ -38,10 +40,12 @@ fun MyPageSettingScreen(
     viewModel: MyPageSettingViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     // 회원탈퇴 2단계 확인 다이얼로그 상태
     var showDeleteDialog by remember { mutableStateOf(false) }
     var isDeleteSecondConfirm by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
@@ -77,44 +81,54 @@ fun MyPageSettingScreen(
             }
         )
     }
+
     Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.background) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Box(
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                IconButton(
-                    onClick = { navController.popBackStack() },
-                    modifier = Modifier.align(Alignment.CenterStart)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
                 ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_backbtn),
-                        contentDescription = "뒤로가기",
-                        modifier = Modifier.size(24.dp),
-                        tint = MaterialTheme.colorScheme.onSurface
+                    IconButton(
+                        onClick = { navController.popBackStack() },
+                        modifier = Modifier.align(Alignment.CenterStart)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_backbtn),
+                            contentDescription = "뒤로가기",
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Text(
+                        text = "앱 설정",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.align(Alignment.Center)
                     )
                 }
-                Text(
-                    text = "앱 설정",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
-//        ButtonTemplate(text = "이용약관") { }
-//        ButtonTemplate(text = "FAQ") { }
-//        ButtonTemplate(text = "사용설명서") { }
-//        ButtonTemplate(text = "앱 테마") { }
+//            ButtonTemplate(text = "이용약관") { }
+//            ButtonTemplate(text = "FAQ") { }
+//            ButtonTemplate(text = "사용설명서") { }
+//            ButtonTemplate(text = "앱 테마") { }
 
-            ButtonTemplate(text = "회원탈퇴") {
-                isDeleteSecondConfirm = false
-                showDeleteDialog = true
+                ButtonTemplate(
+                    text = "회원탈퇴",
+                    enabled = !uiState.isLoading
+                ) {
+                    isDeleteSecondConfirm = false
+                    showDeleteDialog = true
+                }
+            }
+
+            if (uiState.isLoading) {
+                LoadingBox()
             }
         }
     }

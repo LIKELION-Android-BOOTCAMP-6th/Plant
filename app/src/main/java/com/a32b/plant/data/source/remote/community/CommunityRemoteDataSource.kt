@@ -7,6 +7,7 @@ import com.a32b.plant.data.model.TagDto
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.CommunityActivity
 import com.google.firebase.Timestamp
+import kotlinx.coroutines.flow.Flow
 
 interface CommunityRemoteDataSource {
 

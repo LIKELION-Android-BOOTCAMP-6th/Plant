@@ -174,6 +174,10 @@ fun CommunityListScreen(navController: NavController, viewModel: CommunityListVi
                                     Log.d("선택된 거 ", selected.toList().toString())
                                 }
                             }
+                            /**임시 위치*/
+                            TextButton(onClick = { navController.navigate(Routes.CommunityActivity) }) {
+                                Text("내 활동", style = Typography.titleSmall)
+                            }
                         }
                     },
                     floatingActionButton = {
@@ -190,87 +194,61 @@ fun CommunityListScreen(navController: NavController, viewModel: CommunityListVi
                             )
                         }
                     }
-
-                    /**임시 위치*/
-                    TextButton(onClick = {navController.navigate(Routes.CommunityActivity)}) {
-                        Text("내 활동", style = Typography.titleSmall)
-                    }
-
-                }
-            },
-            floatingActionButton = {
-                FloatingActionButton(
-                    onClick = { navController.navigate(Routes.CommunityPost()) },
-                    containerColor = MaterialTheme.colorScheme.secondary,
-                    shape = CircleShape
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_edit),
-                        contentDescription = null,
-                        modifier = Modifier.size(26.dp),
-                        tint = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
-            }
-        ) { innerPadding ->
-            Column(
-                modifier = Modifier
-                    .padding(innerPadding)
-                    .background(MaterialTheme.colorScheme.background)
-            ) {
-                if (postList.isEmpty()) {
-                    EmptyStateView()
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) { innerPadding ->
+                    Column(
+                        modifier = Modifier
+                            .padding(innerPadding)
+                            .background(MaterialTheme.colorScheme.background)
                     ) {
-                        if (filteredPosts.isEmpty() && !uiState.isLoadingMore) {
-                            EmptyStateView(hasQuery = searchQuery.isNotBlank())
+                        if (uiState.posts.isEmpty() && !uiState.isLoadingMore) {
+                            EmptyStateView()
                         } else {
-                            LazyColumn(
-                                state = listState,
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                items(filteredPosts, key = { it.postId }) { post ->
-                                    PostCard(
-                                        post = post,
-                                        isLiked = post.isLiked,
-                                        onClick = { navController.navigate(Routes.CommunityDetail(postId = post.postId)) }
-                                    )
-                                }
-                                // 하단 로딩 인디케이터 (loadMore 중, 데이터 있을 때만)
-                                if (uiState.hasMore && uiState.isLoadingMore && uiState.posts.isNotEmpty()) {
-                                    item(key = "loading_indicator") {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(16.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            CircularProgressIndicator(
-                                                strokeWidth = 2.dp,
-                                                modifier = Modifier.size(24.dp)
-                                            )
+                            if (filteredPosts.isEmpty() && !uiState.isLoadingMore) {
+                                EmptyStateView(hasQuery = searchQuery.isNotBlank())
+                            } else {
+                                LazyColumn(
+                                    state = listState,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    items(filteredPosts, key = { it.postId }) { post ->
+                                        PostCard(
+                                            post = post,
+                                            isLiked = post.isLiked,
+                                            onClick = { navController.navigate(Routes.CommunityDetail(postId = post.postId)) }
+                                        )
+                                    }
+                                    // 하단 로딩 인디케이터 (loadMore 중, 데이터 있을 때만)
+                                    if (uiState.hasMore && uiState.isLoadingMore && uiState.posts.isNotEmpty()) {
+                                        item(key = "loading_indicator") {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(16.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                CircularProgressIndicator(
+                                                    strokeWidth = 2.dp,
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                }
-            }
 
-            // 필터 변경 재쿼리 로딩 오버레이
-            if (uiState.hasLoadedOnce && uiState.isLoadingMore && uiState.posts.isEmpty()) {
-                LoadingBox()
-            }
-            // 검색 전체 로드 중 오버레이
-            if (uiState.isSearchLoading) {
-                LoadingBox()
+                    // 필터 변경 재쿼리 로딩 오버레이
+                    if (uiState.hasLoadedOnce && uiState.isLoadingMore && uiState.posts.isEmpty()) {
+                        LoadingBox()
+                    }
+                    // 검색 전체 로드 중 오버레이
+                    if (uiState.isSearchLoading) {
+                        LoadingBox()
+                    }
+                }
             }
         }
     }

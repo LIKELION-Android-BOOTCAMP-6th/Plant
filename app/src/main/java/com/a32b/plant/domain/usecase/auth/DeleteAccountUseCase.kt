@@ -21,7 +21,8 @@ class DeleteAccountUseCase @Inject constructor(
         if (deleteDataResult is Result.Failure) return deleteDataResult
 
         if (nickname.isNotBlank()) {
-            userRepository.deleteNickname(nickname)
+            val deleteNicknameResult = userRepository.deleteNickname(nickname)
+            if (deleteNicknameResult is Result.Failure) return deleteNicknameResult
         }
 
         // currentUser 실시간 구독을 먼저 끊어야 한다. Auth 계정을 지운 뒤에도 리스너가
