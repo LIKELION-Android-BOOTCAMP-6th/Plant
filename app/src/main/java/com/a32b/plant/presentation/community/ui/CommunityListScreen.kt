@@ -190,11 +190,41 @@ fun CommunityListScreen(navController: NavController, viewModel: CommunityListVi
                             )
                         }
                     }
-                ) { innerPadding ->
-                    Column(
-                        modifier = Modifier
-                            .padding(innerPadding)
-                            .background(MaterialTheme.colorScheme.background)
+
+                    /**임시 위치*/
+                    TextButton(onClick = {navController.navigate(Routes.CommunityActivity)}) {
+                        Text("내 활동", style = Typography.titleSmall)
+                    }
+
+                }
+            },
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = { navController.navigate(Routes.CommunityPost()) },
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    shape = CircleShape
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_edit),
+                        contentDescription = null,
+                        modifier = Modifier.size(26.dp),
+                        tint = MaterialTheme.colorScheme.onBackground,
+                    )
+                }
+            }
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                if (postList.isEmpty()) {
+                    EmptyStateView()
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         if (filteredPosts.isEmpty() && !uiState.isLoadingMore) {
                             EmptyStateView(hasQuery = searchQuery.isNotBlank())

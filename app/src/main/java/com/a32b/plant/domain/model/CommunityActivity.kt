@@ -3,6 +3,7 @@ package com.a32b.plant.domain.model
 import com.a32b.plant.domain.type.ActivityType
 
 data class CommunityActivity(
+    val id: String,
     val uid: String,
     val type: String ,
     val title: String,
@@ -13,6 +14,7 @@ data class CommunityActivity(
 ){
     companion object {
         fun like(uid: String, title: String, targetId: String) = CommunityActivity(
+            id = "",
             uid = uid,
             type = ActivityType.LIKE,
             title = title,
@@ -23,6 +25,7 @@ data class CommunityActivity(
         )
 
         fun comment(uid: String, title: String, targetId: String, content:String, commentId: String) = CommunityActivity(
+            id = "",
             uid = uid,
             type = ActivityType.COMMENT,
             title = title,
@@ -33,6 +36,7 @@ data class CommunityActivity(
         )
 
         fun post(uid: String, title: String) = CommunityActivity(
+            id = "",
             uid = uid,
             type = ActivityType.POST,
             title = title,
