@@ -6,11 +6,22 @@ import com.a32b.plant.data.model.PostDto
 import com.a32b.plant.data.model.TagDto
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.CommunityActivity
-import kotlinx.coroutines.flow.Flow
+import com.google.firebase.Timestamp
 
 interface CommunityRemoteDataSource {
 
-    fun getPostList(): Flow<List<PostDto>>
+    suspend fun loadPostPage(
+        cursor: Timestamp?,
+        pageSize: Int,
+        tagIds: List<String>,
+        sharedOnly: Boolean
+    ): List<PostDto>
+
+    // 검색용: limit 없이 전체 로드 (클라이언트 contains 필터 전용)
+    suspend fun loadAllPosts(
+        tagIds: List<String>,
+        sharedOnly: Boolean
+    ): List<PostDto>
 
     suspend fun getPostDetail(postId: String): PostDto?
     suspend fun getComments(postId: String): List<CommentDto>
