@@ -1,6 +1,7 @@
 package com.a32b.plant.data.source.remote.community
 
 import android.util.Log
+import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.data.mapper.toDto
 import com.a32b.plant.data.model.CommentDto
 import com.a32b.plant.data.model.CommunityActivityDto
@@ -9,18 +10,27 @@ import com.a32b.plant.data.model.TagDto
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.CommunityActivity
+import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.type.ActivityType
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class CommunityRemoteDataSourceImpl @Inject constructor(
-    private val db: FirebaseFirestore
+    private val db: FirebaseFirestore,
+    private val auth: FirebaseAuth
 ): CommunityRemoteDataSource {
 
     override suspend fun loadPostPage(
@@ -146,7 +156,7 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             .await()
     }
 
-    override suspend fun deletePost(postId: String) {
+    override suspend fun deletePost(postId: String, activityId: String) {
         val postRef = db.collection("posts").document(postId)
 
         // 1. 하위 컬렉션 comments 문서 삭제
@@ -156,12 +166,7 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         }
 
         // 2. 게시글 자신의 activity만 삭제 (댓글/좋아요는 남의 활동 기록이라 건드리지 않음)
-        db.collection("activities")
-            .whereEqualTo("targetId", postId)
-            .whereEqualTo("type", ActivityType.POST)
-            .get().await()
-            .documents
-            .forEach { doc -> doc.reference.delete().await() }
+        deleteActivity(DeleteActivityRequest.ById(activityId))
 
         // 3. 게시글 문서 삭제
         postRef.delete().await()
@@ -194,7 +199,7 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             already
         }.await()
 
-        if (wasLiked) deleteLikedActivity(uid, postId)
+        if (wasLiked) deleteActivity(DeleteActivityRequest.ByLike(uid, postId))
         else setLikedActivity(uid, postId, title)
 
         return wasLiked
@@ -241,7 +246,7 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         commentDoc.delete().await()
 
         if (!activityId.isNullOrEmpty()) {
-            db.collection("activities").document(activityId).delete().await()
+            deleteActivity(DeleteActivityRequest.ById(activityId))
         }
 
         db.collection("posts").document(postId)
@@ -263,19 +268,68 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             .await()
     }
 
-    private suspend fun deleteLikedActivity(uid: String, postId: String) {
-        val docId = db.collection("activities")
-            .whereEqualTo("uid", uid)           // 본인 활동 기록만 조회 (보안 규칙 통과)
-            .whereEqualTo("targetId", postId)
-            .whereEqualTo("type", ActivityType.LIKE)
-            .get()
-            .await()
-            .documents
-            .firstOrNull()?.reference?.id
-        docId?.let {
-            db.collection("activities").document(it)
-                .delete()
-                .await()
+    override fun observeActivity(uid: String, selected: String): Flow<List<CommunityActivityDto>> = callbackFlow {
+        val listener = db.collection("activities")
+            .whereEqualTo("uid", uid)
+            .whereEqualTo("type", selected)
+            .orderBy("createAt", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshots, exception ->
+                if (exception != null){
+                    Log.e("커뮤니티 활동", "구독 종료", exception)
+                    close(exception)
+                    return@addSnapshotListener
+                }
+
+                val activities = snapshots?.documents?.mapNotNull { doc ->
+                    runCatching { doc.toObject(CommunityActivityDto::class.java)}.getOrNull()
+                } ?: emptyList()
+
+                trySend(activities)
+            }
+
+        awaitClose { listener.remove() }
+
+    }
+
+    override suspend fun deleteActivity(activityId : String){
+        deleteActivity(DeleteActivityRequest.ById(activityId))
+    }
+
+    sealed interface DeleteActivityRequest{
+        data class ById(val id: String) : DeleteActivityRequest
+        data class ByLike(val uid: String, val targetId: String) : DeleteActivityRequest
+    }
+
+    private suspend fun deleteActivity(request: DeleteActivityRequest){
+        when(request){
+            is DeleteActivityRequest.ById -> {
+                db.collection("activities")
+                    .document(request.id)
+                    .delete()
+                    .await()
+            }
+            is DeleteActivityRequest.ByLike -> {
+                db.collection("activities")
+                    .whereEqualTo("uid", request.uid)
+                    .whereEqualTo("targetId", request.targetId)
+                    .whereEqualTo("type", ActivityType.LIKE)
+                    .get()
+                    .await()
+                    .documents
+                    .forEach { it.reference.delete().await() }
+            }
         }
     }
+
+    override suspend fun findCommentIdByActivityId(postId: String, activityId: String): String? {
+        val snapshot = db.collection("posts").document(postId)
+            .collection("comments")
+            .whereEqualTo("activityId", activityId)
+            .limit(1)
+            .get()
+            .await()
+        return snapshot.documents.firstOrNull()?.id
+    }
+
+    override suspend fun isPostExist(postId: String): Boolean = db.collection("posts").document(postId).get().await().exists()
 }

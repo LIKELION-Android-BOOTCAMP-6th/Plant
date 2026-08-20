@@ -149,7 +149,7 @@ class CommunityDetailViewModel @Inject constructor(
     fun deletePost() {
         viewModelScope.launch {
             withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
-                repository.deletePost(postId)
+                repository.deletePost(postId, _post.value?.activityId ?: "")
             }
                 .onSuccess { _eventChannel.send(CommunityDetailEvent.NavigateBack) }
                 .onFailure { e ->

@@ -12,6 +12,7 @@ import androidx.navigation.compose.composable
 import com.a32b.plant.presentation.attendance.ui.AttendanceCheckScreen
 import com.a32b.plant.presentation.auth.ui.SignInScreen
 import com.a32b.plant.presentation.auth.ui.SignUpScreen
+import com.a32b.plant.presentation.community.ui.CommunityActivityScreen
 import com.a32b.plant.presentation.community.ui.CommunityDetailScreen
 import com.a32b.plant.presentation.community.ui.CommunityListScreen
 import com.a32b.plant.presentation.community.ui.CommunityPostScreen
@@ -63,6 +64,7 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
 
             composable<Routes.PotList> { PotListScreen(navController = navController) }
             composable<Routes.Report> { ReportScreen(navController) }
+            composable<Routes.CommunityActivity> { CommunityActivityScreen(navController) }
         }
     }
 }
