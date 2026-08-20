@@ -1,20 +1,24 @@
 package com.a32b.plant.domain.usecase.auth
 
 import com.a32b.plant.di.CurrentUser
-import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.repository.AuthRepository
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
+import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import javax.inject.Inject
 
 class DeleteAccountUseCase @Inject constructor(
     private val authRepository: AuthRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase
 ) {
     suspend operator fun invoke(): Result<Unit> {
-        val uid = authRepository.currentUid()
-            ?: return Result.Failure(AppError.Auth("로그인 정보가 없습니다."))
-        val nickname = userRepository.currentUser.value?.nickname.orEmpty()
+        val user = when (val result = ensureCurrentUserUseCase()) {
+            is Result.Success -> result.data
+            is Result.Failure -> return result // UnknownUser — 세션 만료 이벤트 이미 발송됨
+        }
+        val uid = user.uid
+        val nickname = user.nickname
 
         // 1. Firestore 데이터 먼저 삭제 (인증 세션이 살아있는 동안)
         val deleteDataResult = userRepository.deleteUserData(uid)
