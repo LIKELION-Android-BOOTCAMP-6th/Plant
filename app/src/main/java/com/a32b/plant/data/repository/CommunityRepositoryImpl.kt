@@ -9,13 +9,14 @@ import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.domain.model.Post
+import com.a32b.plant.domain.model.PostPage
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.CommunityRepository
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
+import com.a32b.plant.core.extension.toLong
+import com.a32b.plant.core.extension.toTimestamp
 import com.google.firebase.firestore.FirebaseFirestoreException
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -27,10 +28,40 @@ class CommunityRepositoryImpl @Inject constructor(
 
     private val currentUid: String get() = userRepository.currentUser.value?.uid ?: ""
 
-    override fun getPostList(): Flow<List<Post>> {
-        return communityRemoteDataSource.getPostList()
-            .map { dtos -> dtos.map { it.toDomain(currentUid, emptyList()) } }
-    }
+    override suspend fun loadPostPage(
+        cursor: Long?,
+        pageSize: Int,
+        tagIds: List<String>,
+        sharedOnly: Boolean
+    ): Result<PostPage> = safeRunCatching {
+        val cursorTs = cursor?.toTimestamp()
+        val fetched = communityRemoteDataSource.loadPostPage(cursorTs, pageSize, tagIds, sharedOnly)
+        val hasMore = fetched.size > pageSize
+        val visible = if (hasMore) fetched.take(pageSize) else fetched
+        val items = visible.map { it.toDomain(currentUid, emptyList()) }
+        val nextCursor = if (hasMore) visible.lastOrNull()?.createdAt.toLong().takeIf { it != 0L } else null
+        PostPage(items = items, nextCursor = nextCursor, hasMore = hasMore)
+    }.fold(
+        onSuccess = { Result.Success(it) },
+        onFailure = { e ->
+            Log.e("Community", "게시글 페이지 조회 실패", e)
+            Result.Failure(handleError(e, "게시글 목록을 불러오지 못했습니다."))
+        }
+    )
+
+    override suspend fun getAllPosts(
+        tagIds: List<String>,
+        sharedOnly: Boolean
+    ): Result<List<Post>> = safeRunCatching {
+        communityRemoteDataSource.loadAllPosts(tagIds, sharedOnly)
+            .map { it.toDomain(currentUid, emptyList()) }
+    }.fold(
+        onSuccess = { Result.Success(it) },
+        onFailure = { e ->
+            Log.e("Community", "전체 게시글 조회 실패", e)
+            Result.Failure(handleError(e, "게시글 검색에 실패했습니다."))
+        }
+    )
 
     override suspend fun getPostDetail(postId: String): Result<Post?> = safeRunCatching {
         communityRemoteDataSource.getPostDetail(postId)?.toDomain(currentUid, emptyList())

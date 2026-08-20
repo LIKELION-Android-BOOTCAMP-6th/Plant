@@ -7,6 +7,7 @@ import com.a32b.plant.data.model.CommentDto
 import com.a32b.plant.data.model.CommunityActivityDto
 import com.a32b.plant.data.model.PostDto
 import com.a32b.plant.data.model.TagDto
+import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.domain.repository.UserRepository
@@ -32,27 +33,61 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
     private val auth: FirebaseAuth
 ): CommunityRemoteDataSource {
 
-    override fun getPostList(): Flow<List<PostDto>> = callbackFlow {
-        val subscription = db.collection("posts")
+    override suspend fun loadPostPage(
+        cursor: Timestamp?,
+        pageSize: Int,
+        tagIds: List<String>,
+        sharedOnly: Boolean
+    ): List<PostDto> {
+        var query: com.google.firebase.firestore.Query = db.collection("posts")
             .orderBy("createdAt", Query.Direction.DESCENDING)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    close(error)
-                    return@addSnapshotListener
-                }
 
-                val posts = snapshot?.documents?.mapNotNull { doc ->
-                    try {
-                        doc.toObject(PostDto::class.java)
-                    } catch (e: Exception) {
-                        Log.e("CommunityRemoteDataSource", "게시글 파싱 오류: ${doc.id}", e)
-                        null
-                    }
-                } ?: emptyList()
+        if (sharedOnly) {
+            query = query.whereEqualTo("isShared", true)
+        }
+        if (tagIds.isNotEmpty()) {
+            query = query.whereIn("tag.id", tagIds)
+        }
+        if (cursor != null) {
+            query = query.startAfter(cursor)
+        }
+        query = query.limit((pageSize + 1).toLong())
 
-                trySend(posts)
-            }
-        awaitClose { subscription.remove() }
+        val snapshot = query.get().await()
+        // isFromCache=true이면서 비어있음 → 오프라인 상태라 빈 캐시를 즉시 반환한 것
+        // (온라인이면 isFromCache=false, 오프라인+데이터 있으면 isFromCache=true but not empty)
+        if (snapshot.metadata.isFromCache && snapshot.isEmpty) throw AppError.Network()
+
+        return snapshot.documents.mapNotNull { doc ->
+            runCatching { doc.toObject(PostDto::class.java) }
+                .onFailure { e -> Log.e("CommunityRemoteDS", "게시글 파싱 실패: ${doc.id}", e) }
+                .getOrNull()
+        }
+    }
+
+    override suspend fun loadAllPosts(
+        tagIds: List<String>,
+        sharedOnly: Boolean
+    ): List<PostDto> {
+        var query: com.google.firebase.firestore.Query = db.collection("posts")
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+
+        if (sharedOnly) {
+            query = query.whereEqualTo("isShared", true)
+        }
+        if (tagIds.isNotEmpty()) {
+            query = query.whereIn("tag.id", tagIds)
+        }
+        // limit 없음 → 전체 fetch
+
+        val snapshot = query.get().await()
+        if (snapshot.metadata.isFromCache && snapshot.isEmpty) throw AppError.Network()
+
+        return snapshot.documents.mapNotNull { doc ->
+            runCatching { doc.toObject(PostDto::class.java) }
+                .onFailure { e -> Log.e("CommunityRemoteDS", "게시글 파싱 실패: ${doc.id}", e) }
+                .getOrNull()
+        }
     }
 
     override suspend fun getPostDetail(postId: String): PostDto? {
