@@ -31,23 +31,35 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.a32b.plant.R
+import com.a32b.plant.domain.model.AttendanceReward
+import com.a32b.plant.domain.model.AttendanceRewardTable
+import com.a32b.plant.domain.type.ItemType
+import com.a32b.plant.presentation.core.extension.resId
+import com.a32b.plant.presentation.home.viewmodel.AttendanceUiState
 import com.a32b.plant.presentation.theme.PlantTheme
 
 @Composable
 fun AttendanceCheckDialog(
+    uiState: AttendanceUiState,
+    isChecking: Boolean,
+    onCheckClick: () -> Unit,
     onDismiss: () -> Unit
 ) {
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        AttendanceDialogContent()
+        AttendanceDialogContent(uiState, isChecking, onCheckClick)
     }
 }
 
 // Dialog는 @Preview에서 제대로 그려지지 않을 수 있어 내용물을 분리해 미리보기에 쓴다.
 @Composable
-private fun AttendanceDialogContent() {
+private fun AttendanceDialogContent(
+    uiState: AttendanceUiState = AttendanceUiState(),
+    isChecking: Boolean = false,
+    onCheckClick: () -> Unit = {}
+) {
     Surface(
         modifier = Modifier
             .fillMaxWidth(0.92f)
@@ -72,17 +84,18 @@ private fun AttendanceDialogContent() {
             )
 
             AttendanceBoard(
-                checkedCount = 8,
-                rewards = sampleAttendanceRewards
+                checkedCount = uiState.count,
+                rewards = attendanceRewards
             )
 
             Button(
-                onClick = { },
+                onClick = onCheckClick,
+                enabled = uiState.buttonEnabled && !isChecking,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 24.dp)
             ) {
-                Text("출석하기")
+                Text(uiState.buttonText)
             }
         }
     }
@@ -94,7 +107,13 @@ private fun AttendanceDialogContent() {
 @Composable
 private fun AttendanceDialogContentPreview() {
     PlantTheme {
-        AttendanceDialogContent()
+        AttendanceDialogContent(
+            uiState = AttendanceUiState(
+                count = 8,
+                buttonText = "출석하기",
+                buttonEnabled = true
+            )
+        )
     }
 }
 
@@ -179,7 +198,7 @@ private fun AttendanceRewardItem(
 ) {
     val backgroundColor = when {
         isChecked -> MaterialTheme.colorScheme.primary
-        isNext -> MaterialTheme.colorScheme.secondaryContainer
+        isNext -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
         else -> MaterialTheme.colorScheme.background
     }
 
@@ -254,33 +273,25 @@ private data class AttendanceRewardUi(
     val showLabelBelow: Boolean = false
 )
 
-private val sampleAttendanceRewards = listOf(
-    AttendanceRewardUi(1),
-    AttendanceRewardUi(2, "하트", R.drawable.ic_heart),
-    AttendanceRewardUi(3),
-    AttendanceRewardUi(4, "햇빛", R.drawable.ic_sun),
-    AttendanceRewardUi(5),
-    AttendanceRewardUi(6),
-    AttendanceRewardUi(7, "100G", R.drawable.ic_coin, showLabelBelow = true),
-    AttendanceRewardUi(8),
-    AttendanceRewardUi(9, "물", R.drawable.ic_water),
-    AttendanceRewardUi(10),
-    AttendanceRewardUi(11),
-    AttendanceRewardUi(12, "하트", R.drawable.ic_heart),
-    AttendanceRewardUi(13),
-    AttendanceRewardUi(14, "200G", R.drawable.ic_coin, showLabelBelow = true),
-    AttendanceRewardUi(15),
-    AttendanceRewardUi(16),
-    AttendanceRewardUi(17, "햇빛", R.drawable.ic_sun),
-    AttendanceRewardUi(18),
-    AttendanceRewardUi(19),
-    AttendanceRewardUi(20, "비료", R.drawable.ic_fertilizer),
-    AttendanceRewardUi(21, "300G", R.drawable.ic_coin, showLabelBelow = true),
-    AttendanceRewardUi(22),
-    AttendanceRewardUi(23, "물", R.drawable.ic_water),
-    AttendanceRewardUi(24),
-    AttendanceRewardUi(25, "영양제", R.drawable.ic_nutrient),
-    AttendanceRewardUi(26),
-    AttendanceRewardUi(27),
-    AttendanceRewardUi(28, "500G", R.drawable.ic_coin, showLabelBelow = true)
-)
+private fun ItemType.attendanceLabel(): String = when (this) {
+    ItemType.HEART -> "하트"
+    ItemType.SUN -> "햇빛"
+    ItemType.WATER -> "물"
+    ItemType.FERTILIZER -> "비료"
+    ItemType.NUTRIENT -> "영양제"
+    ItemType.BOX -> "박스"
+    ItemType.GOLD_300, ItemType.GOLD_500, ItemType.GOLD_1000 ->
+        error("출석 보상 테이블에 골드 아이템 타입은 나오지 않습니다: $this")
+}
+
+private val attendanceRewards: List<AttendanceRewardUi> = (1..28).map { day ->
+    when (val reward = AttendanceRewardTable.of(day)) {
+        is AttendanceReward.Coin ->
+            AttendanceRewardUi(day, "${reward.amount}G", R.drawable.ic_coin, showLabelBelow = true)
+
+        is AttendanceReward.ItemReward ->
+            AttendanceRewardUi(day, reward.type.attendanceLabel(), reward.type.resId)
+
+        null -> AttendanceRewardUi(day)
+    }
+}

@@ -8,6 +8,7 @@ import com.a32b.plant.domain.model.AttendanceReward
 import com.a32b.plant.domain.type.ItemType
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -22,8 +23,8 @@ class UserRemoteDataSourceImpl @Inject constructor(
     private val db: FirebaseFirestore
 ) : UserRemoteDataSource {
 
-    override suspend fun getUser(uid: String): UserDto? {
-        val snapshot = db.collection("users").document(uid).get().await()
+    override suspend fun getUser(uid: String, source: Source): UserDto? {
+        val snapshot = db.collection("users").document(uid).get(source).await()
         return snapshot.toObject(UserDto::class.java)
     }
 

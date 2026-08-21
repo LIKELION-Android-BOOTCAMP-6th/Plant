@@ -15,6 +15,7 @@ import com.a32b.plant.domain.result.Result
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -70,6 +71,13 @@ class UserRepositoryImpl @Inject constructor(
 
     override suspend fun getUser(uid: String): Result<User?> = safeRunCatching {
         userRemoteDataSource.getUser(uid)?.toDomain()
+    }.fold(
+        onSuccess = { Result.Success(it) },
+        onFailure = { e -> Result.Failure(handleError(e, "유저 정보 조회 실패")) }
+    )
+
+    override suspend fun refreshUser(uid: String): Result<User?> = safeRunCatching {
+        userRemoteDataSource.getUser(uid, Source.SERVER)?.toDomain()
     }.fold(
         onSuccess = { Result.Success(it) },
         onFailure = { e -> Result.Failure(handleError(e, "유저 정보 조회 실패")) }
@@ -174,8 +182,8 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     private fun handleAttendanceError(e: Throwable): AppError {
-        if (e is CancellationException) throw e
-
+        // safeRunCatching이 CancellationException을 이미 가로채 다시 던지므로,
+        // 여기 e는 CancellationException일 수 없다 (fold()의 onFailure로 넘어오는 시점엔 항상 필터됨).
         Log.e("UserRepository", "출석 처리 실패: ${e.message}", e)
 
         return when (e) {
