@@ -5,7 +5,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -58,8 +60,10 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .background(MaterialTheme.colorScheme.background),
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
                 MainPlantCard(
                     displayPot = displayPot,
@@ -94,7 +98,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                     } // 상세 기록 이동
                 )
 
-
+                Spacer(modifier = Modifier.height(8.dp))
                 HomeItemBoxSection()
             }
 
@@ -315,7 +319,7 @@ fun MainPlantCard(
 ) {
     Card(
         modifier = Modifier
-            .fillMaxWidth(0.9f)
+            .fillMaxWidth()
             .wrapContentHeight(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
@@ -459,28 +463,50 @@ fun MainPlantCard(
 
 @Composable
 fun HomeItemBoxSection(){
-    Row(
-        modifier = Modifier
-            .fillMaxWidth(0.9f)
-            .height(40.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+           verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        //가로 데이티 리스트 확장 가능
-        repeat(3){ index ->
-            Box(
+        //총 개수를 넣을지, 개수를 없앨지 고민 필요
+        //추후 동적 연결 필요
+        var itemNumber = 3
+
+        Text(
+            text = "아이템 : ${itemNumber}개",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = fontColor
+        )
+        Spacer(modifier = Modifier.height(5.dp))
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 2.dp
+        ) {
+            LazyRow(
                 modifier = Modifier
-                    .weight(1f)
-                    .height(20.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surface),
-                contentAlignment = Alignment.Center
-            ){
-                Text(
-                    //아이템 전체 표출 및 DB에서 갯수 얻기 추가 필요
-                    text = "",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = fontColor
-                )
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(5) { index ->
+                    Box(
+                        modifier = Modifier
+                            .width(60.dp)
+                            .height(68.dp)
+                            .clip(RoundedCornerShape(0.dp))
+                            .background(sub_green1),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = fontColor
+                        )
+                    }
+                }
             }
         }
     }
