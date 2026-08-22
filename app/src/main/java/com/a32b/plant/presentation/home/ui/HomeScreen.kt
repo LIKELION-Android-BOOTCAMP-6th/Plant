@@ -414,7 +414,8 @@ fun MainPlantCard(
                             .height(8.dp)
                             .clip(RoundedCornerShape(4.dp)),
                         color = primary,
-                        trackColor = sub2
+                        trackColor = sub2,
+                        drawStopIndicator = {}
                     )
                 }
             }
