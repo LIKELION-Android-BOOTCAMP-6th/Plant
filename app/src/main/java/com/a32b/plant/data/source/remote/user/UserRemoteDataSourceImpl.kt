@@ -115,9 +115,24 @@ class UserRemoteDataSourceImpl @Inject constructor(
                     is AttendanceReward.Coin ->
                         updates["coin"] = FieldValue.increment(reward.amount.toLong())
 
-                    is AttendanceReward.ItemReward ->
-                        updates["item.${reward.type.toFirestoreFieldName()}"] =
+                    is AttendanceReward.ItemReward -> {
+                        val type = reward.type
+
+                        check(
+                            type != ItemType.GOLD_300 &&
+                                    type != ItemType.GOLD_500 &&
+                                    type != ItemType.GOLD_1000
+                        ) {
+                            "출석 아이템 보상에 골드 타입은 사용할 수 없습니다: $type"
+                        }
+
+                        val fieldKey = requireNotNull(type.fieldKey) {
+                            "출석 아이템 보상에 골드 타입은 사용할 수 없습니다: $type"
+                        }
+
+                        updates["item.$fieldKey"] =
                             FieldValue.increment(reward.amount.toLong())
+                    }
 
                     null -> Unit
                 }
@@ -127,17 +142,6 @@ class UserRemoteDataSourceImpl @Inject constructor(
 
             decision
         }.await()
-    }
-
-    private fun ItemType.toFirestoreFieldName(): String = when (this) {
-        ItemType.HEART -> "heart"
-        ItemType.SUN -> "sun"
-        ItemType.WATER -> "water"
-        ItemType.FERTILIZER -> "fertilizer"
-        ItemType.NUTRIENT -> "nutrient"
-        ItemType.BOX -> "box"
-        ItemType.GOLD_300, ItemType.GOLD_500, ItemType.GOLD_1000 ->
-            error("출석 보상 테이블에 골드 아이템 타입은 나오지 않습니다: $this")
     }
 
     override suspend fun deleteUserData(uid: String) {

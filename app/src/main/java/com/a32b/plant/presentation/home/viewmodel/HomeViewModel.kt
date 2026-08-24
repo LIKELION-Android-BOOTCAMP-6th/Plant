@@ -32,7 +32,8 @@ data class AttendanceUiState(
     val buttonText: String = "출석하기",
     val buttonEnabled: Boolean = true,
     val isAttendanceCompleted: Boolean = false,
-    val isChecking: Boolean = false
+    val isChecking: Boolean = false,
+    val reward: AttendanceReward? = null
 )
 
 sealed class HomeEvent {
@@ -105,9 +106,6 @@ class HomeViewModel @Inject constructor(
 
     private val _attendanceUiState = MutableStateFlow(AttendanceUiState())
     val attendanceUiState = _attendanceUiState.asStateFlow()
-
-    private val _attendanceReward = MutableStateFlow<AttendanceReward?>(null)
-    val attendanceReward = _attendanceReward.asStateFlow()
 
     private val _eventChannel = Channel<HomeEvent>(Channel.BUFFERED)
     val events = _eventChannel.receiveAsFlow()
@@ -194,32 +192,28 @@ class HomeViewModel @Inject constructor(
 
             ensureCurrentUserUseCase { user ->
                 userRepository.checkAttendance(user.uid)
-                    .onSuccess { reward ->
-                        reward?.let { _attendanceReward.value = it }
+                    .onSuccess { decision ->
+                        _attendanceUiState.update {
+                            it.copy(
+                                count = decision.newCount,
+                                buttonText = if (decision.isMonthCompleted) {
+                                    "이번 달 출석 완료"
+                                } else {
+                                    "오늘 출석 완료"
+                                },
+                                buttonEnabled = false,
+                                isAttendanceCompleted = true,
+                                reward = decision.reward
+                            )
+                        }
                     }
                     .onFailure { error ->
                         when (error) {
                             is AppError.UnknownUser -> ensureCurrentUserUseCase()
                             else -> _eventChannel.send(HomeEvent.ShowToast(error.message))
                         }
-                    }
 
-                // 트랜잭션 직후 getUser()의 기본 캐시 우선 조회는 옛날 값을 돌려줄 수 있어
-                // refreshUser()로 캐시를 건너뛰고 서버에서 직접 다시 읽는다.
-                // 성공/실패 여부와 무관하게 서버 최신 상태로 화면을 맞춘다 —
-                // 실패(예: 이미 출석함)도 로컬이 알던 상태가 낡았다는 신호이기 때문.
-                // 데이터 자체(출석 처리)는 위 checkAttendance()에서 이미 성공/실패가 갈렸으므로,
-                // 여기 실패는 "화면 갱신만 실패"한 것 — 토스트 대신 로그로만 남긴다.
-                userRepository.refreshUser(user.uid)
-                    .onSuccess { refreshed ->
-                        if (refreshed != null) {
-                            _attendanceUiState.value = refreshed.monthCheck.toAttendanceUiState()
-                        } else {
-                            Log.w("HomeViewModel", "refreshUser 성공했지만 유저 문서가 null - 출석판 갱신 안 됨")
-                        }
-                    }
-                    .onFailure { error ->
-                        Log.e("HomeViewModel", "출석 후 최신 상태 재조회 실패: ${error.message}", error)
+                        refreshAttendanceState(user.uid)
                     }
             }
 
@@ -227,7 +221,26 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private suspend fun refreshAttendanceState(uid: String) {
+        userRepository.refreshUser(uid)
+            .onSuccess { refreshed ->
+                if (refreshed != null) {
+                    _attendanceUiState.update { current ->
+                        refreshed.monthCheck.toAttendanceUiState().copy(
+                            isChecking = current.isChecking,
+                            reward = current.reward
+                        )
+                    }
+                } else {
+                    Log.w("HomeViewModel", "refreshUser 성공했지만 유저 문서가 null - 출석판 갱신 안 됨")
+                }
+            }
+            .onFailure { error ->
+                Log.e("HomeViewModel", "출석 후 최신 상태 재조회 실패: ${error.message}", error)
+            }
+    }
+
     fun dismissAttendanceReward() {
-        _attendanceReward.value = null
+        _attendanceUiState.update { it.copy(reward = null) }
     }
 }

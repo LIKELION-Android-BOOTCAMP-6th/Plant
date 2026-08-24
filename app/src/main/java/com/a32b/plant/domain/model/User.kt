@@ -10,12 +10,16 @@ sealed interface AttendanceDecision {
     data class Success(
         val newCount: Int,
         val reward: AttendanceReward?
-    ) : AttendanceDecision
+    ) : AttendanceDecision {
+        val isMonthCompleted: Boolean
+            get() = newCount >= MONTHLY_ATTENDANCE_LIMIT
+    }
 
     data object AlreadyChecked : AttendanceDecision
     data object MonthCompleted : AttendanceDecision
 }
 
+private const val MONTHLY_ATTENDANCE_LIMIT = 28
 private val KST_ZONE_ID = ZoneId.of("Asia/Seoul")
 data class DailyCheckThisMonth(
     val count: Int,
@@ -28,7 +32,7 @@ data class DailyCheckThisMonth(
         val isSameMonth = lastDate != null &&
             YearMonth.from(lastDate) == YearMonth.from(nowKst)
 
-        if (isSameMonth && count >= 28) {
+        if (isSameMonth && count >= MONTHLY_ATTENDANCE_LIMIT) {
             return AttendanceDecision.MonthCompleted
         }
 
@@ -37,7 +41,7 @@ data class DailyCheckThisMonth(
         }
 
         val newCount = if (isSameMonth) count + 1 else 1
-        if (newCount > 28) {
+        if (newCount > MONTHLY_ATTENDANCE_LIMIT) {
             return AttendanceDecision.MonthCompleted
         }
 

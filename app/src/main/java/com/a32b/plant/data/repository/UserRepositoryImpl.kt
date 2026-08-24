@@ -8,7 +8,6 @@ import com.a32b.plant.data.source.remote.user.UserRemoteDataSource
 import com.a32b.plant.di.qualifier.ApplicationScope
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.AttendanceDecision
-import com.a32b.plant.domain.model.AttendanceReward
 import com.a32b.plant.domain.model.User
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
@@ -148,12 +147,12 @@ class UserRepositoryImpl @Inject constructor(
         onFailure = { e -> Result.Failure(handleError(e, "닉네임 삭제 실패")) }
     )
 
-    override suspend fun checkAttendance(uid: String): Result<AttendanceReward?> = safeRunCatching {
+    override suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success> = safeRunCatching {
         userRemoteDataSource.checkAttendance(uid)
     }.fold(
         onSuccess = { decision ->
             when (decision) {
-                is AttendanceDecision.Success -> Result.Success(decision.reward)
+                is AttendanceDecision.Success -> Result.Success(decision)
                 AttendanceDecision.AlreadyChecked ->
                     Result.Failure(AppError.Custom("이미 오늘 출석했습니다."))
                 AttendanceDecision.MonthCompleted ->

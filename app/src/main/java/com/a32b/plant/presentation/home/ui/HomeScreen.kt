@@ -55,7 +55,6 @@ import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.domain.model.AttendanceReward
 import com.a32b.plant.domain.model.Pot
-import com.a32b.plant.domain.type.ItemType
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.ProfileImage
@@ -81,7 +80,6 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
     val allPots by viewModel.allPots.collectAsState()
     val tempSelectedPot by viewModel.tempSelectedPot.collectAsState()
     val attendanceUiState by viewModel.attendanceUiState.collectAsState()
-    val attendanceReward by viewModel.attendanceReward.collectAsState()
     val context = LocalContext.current
 
     val hasNoPot = displayPot.id.isEmpty() || displayPot == Pot.EMPTY
@@ -95,7 +93,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
         )
     }
 
-    attendanceReward?.let { reward ->
+    attendanceUiState.reward?.let { reward ->
         ConfirmDialog(
             text = reward.announceText(),
             isSingleBtn = true,
@@ -193,12 +191,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
 
 private fun AttendanceReward.announceText(): String = when (this) {
     is AttendanceReward.Coin -> "${amount}골드를 획득했습니다!"
-    is AttendanceReward.ItemReward -> "${type.attendanceDisplayName()} ${amount}개를 획득했습니다!"
-}
-
-private fun ItemType.attendanceDisplayName(): String = when (this) {
-    ItemType.HEART -> "하트"
-    else -> kor
+    is AttendanceReward.ItemReward -> "${type.kor} ${amount}개를 획득했습니다!"
 }
 
 @Composable

@@ -1,6 +1,6 @@
 package com.a32b.plant.domain.repository
 
-import com.a32b.plant.domain.model.AttendanceReward
+import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.User
 import com.a32b.plant.domain.result.Result
 import kotlinx.coroutines.flow.StateFlow
@@ -27,6 +27,6 @@ interface UserRepository {
     suspend fun isNicknameTaken(nickname: String): Result<Boolean>
     suspend fun registerNickname(nickname: String): Result<Unit>
     suspend fun deleteNickname(nickname: String): Result<Unit>
-    suspend fun checkAttendance(uid: String): Result<AttendanceReward?>
+    suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success>
     suspend fun deleteUserData(uid: String): Result<Unit>
 }

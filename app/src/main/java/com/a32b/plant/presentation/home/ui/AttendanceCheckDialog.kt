@@ -33,7 +33,6 @@ import androidx.compose.ui.window.DialogProperties
 import com.a32b.plant.R
 import com.a32b.plant.domain.model.AttendanceReward
 import com.a32b.plant.domain.model.AttendanceRewardTable
-import com.a32b.plant.domain.type.ItemType
 import com.a32b.plant.presentation.core.extension.resId
 import com.a32b.plant.presentation.home.viewmodel.AttendanceUiState
 import com.a32b.plant.presentation.theme.PlantTheme
@@ -271,16 +270,6 @@ private data class AttendanceRewardUi(
     val showLabelBelow: Boolean = false
 )
 
-private fun ItemType.attendanceLabel(): String = when (this) {
-    ItemType.HEART -> "하트"
-    ItemType.SUN -> "햇빛"
-    ItemType.WATER -> "물"
-    ItemType.FERTILIZER -> "비료"
-    ItemType.NUTRIENT -> "영양제"
-    ItemType.BOX -> "박스"
-    ItemType.GOLD_300, ItemType.GOLD_500, ItemType.GOLD_1000 ->
-        error("출석 보상 테이블에 골드 아이템 타입은 나오지 않습니다: $this")
-}
 
 private val attendanceRewards: List<AttendanceRewardUi> = (1..28).map { day ->
     when (val reward = AttendanceRewardTable.of(day)) {
@@ -288,7 +277,7 @@ private val attendanceRewards: List<AttendanceRewardUi> = (1..28).map { day ->
             AttendanceRewardUi(day, "${reward.amount}G", R.drawable.ic_coin, showLabelBelow = true)
 
         is AttendanceReward.ItemReward ->
-            AttendanceRewardUi(day, reward.type.attendanceLabel(), reward.type.resId)
+            AttendanceRewardUi(day, reward.type.kor, reward.type.resId)
 
         null -> AttendanceRewardUi(day)
     }
