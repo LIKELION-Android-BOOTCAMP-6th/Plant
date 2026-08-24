@@ -1,17 +1,21 @@
 package com.a32b.plant.presentation.studying.ui
 
+import android.graphics.drawable.PaintDrawable
 import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,6 +27,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -36,22 +41,28 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -70,6 +81,7 @@ import com.a32b.plant.presentation.studying.viewmodel.StudyingEvent
 import com.a32b.plant.presentation.studying.viewmodel.StudyingViewModel
 import com.a32b.plant.presentation.theme.Typography
 import com.a32b.plant.presentation.theme.sub3
+import com.a32b.plant.presentation.theme.title
 import java.time.LocalDateTime
 
 @Composable
@@ -158,8 +170,39 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
             StudyingUserCard(studyingUsers, uiState.tag)
         }
     }
+    if (uiState.isGoalDialogShown){
+        GoalInputDialog(
+            tag = uiState.tag,
+            title = uiState.title,
+            studyLogs = uiState.studyLog,
+            onDismiss = {viewModel.onGoalInputDialogChange(false)},
+            onConfirm = {
+                viewModel.setStudyLog(it)
+                viewModel.onGoalInputDialogChange(false)
+            }
+        )
+        /**
+         onDismiss -> 스톱워치 시작, isStudying == true, 다이얼로그 닫기
+         onConfirm -> 스톱워치 시작, isStudying == true, 다이얼로그 닫기, 스터디로그 비정상에 업데이트
+
+         일단은
+         0. 공부중 화면 진입
+         1. 학습 목표 기입 다이얼로그 표출
+         2. 닫으면 학습 기록 로컬 디비 업데이트 + 학습 시작
+         3. 공부중 오늘 목표 칸을 클릭하면 -> 다이얼로그가 뜨면서 기입한 학습 목표가 뜸 + 없으면 "입력한 학습 목표가 없어요" 표출
+         3-1. 수정 버튼도 존재하고, 수정 시 목표 기입 다이얼로그 표출
+         4. 공부 종료 버튼 클릭 시 목표확인 다이얼로그 똑같이 뜨고 밑에 종료 버튼이 추가됨
+         5. 공부 종료 시 해당 내용 그대로 학습 완료창으로 이동
+
+         학습 목표 기입하는 다이얼로그는 그냥 여기서 만들면 됨
+         학습 목표 확인하는 다이얼로그는 파일 새로 생성해서 만들고,
+         비정상종료를 감지하는 파라미터 추가하기
+
+         */
+
+    }
     if(uiState.isFinishDialogShown){
-        viewModel.stopStopwatch()
+        viewModel.onStudyingStatusChange(false)
 
         StudyFinishDialog(onDismiss = {viewModel.onDialogDismissClick()},onConfirm = { logs ->
             Log.d("입력값 확인", logs.toString())
@@ -261,6 +304,193 @@ fun StudyinUserItem(user: StudyingUser){
             modifier = Modifier.padding(top = 3.dp, start = 3.dp))
         Text(text = " ${TimeFormatter.formatToMinute(user.studyingTime)} 째 공부중!", style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+@Composable
+fun GoalInputDialog(
+    tag: String,
+    title: String,
+    studyLogs: List<String>,
+    onDismiss: () -> Unit,
+    onConfirm: (List<String>) -> Unit
+) {
+    val maxLength = 100
+    val maxLogSize = 10
+
+    val localLogs = remember(studyLogs) {
+        mutableStateListOf<String>().apply {
+            if (studyLogs.isEmpty()) add("") else addAll(studyLogs)
+        }
+    }
+    var index by remember { mutableIntStateOf(0) }
+    val currentText = localLogs.getOrElse(index) { "" }
+
+    val focusManager = LocalFocusManager.current
+
+    Dialog(onDismissRequest = {}) {
+        Card(
+            shape = RoundedCornerShape(21.dp),
+            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceVariant),
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.5f)
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = {
+                        focusManager.clearFocus()
+                    })
+                }
+        ) {
+            Column(
+                modifier = Modifier.padding(top = 10.dp, bottom = 5.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+
+                Text("[$tag] $title", style = Typography.titleSmall)
+
+                Spacer(Modifier.height(7.dp))
+
+                Text(
+                    "${index + 1} / 10 ",
+                    style = Typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(top = 7.dp)
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth().weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+
+                ) {
+                    IconButton(
+                        onClick = {
+                            focusManager.clearFocus()
+                            if (index > 0) index--
+                        },
+                        enabled = index > 0
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.ic_left),
+                            contentDescription = "왼쪽",
+                            modifier = Modifier.size(23.dp)
+                        )
+                    }
+
+                    Box(modifier = Modifier
+                        .weight(1f)
+                        ) {
+                        OutlinedTextField(
+                            value = currentText,
+                            shape = RoundedCornerShape(10.dp),
+                            onValueChange = { newValue ->
+                                if (newValue.length <= maxLength) {
+                                    localLogs[index] = newValue
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().fillMaxHeight(0.9f),
+                            placeholder = {
+                                Text(
+                                    text = "오늘의 학습 목표를 기록해보세요!",
+                                    style = Typography.bodyMedium,
+                                    color = Color.LightGray
+                                )
+                            },
+                            maxLines = 11,
+                            textStyle = Typography.bodyMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+
+                        Text(
+                            "${currentText.length}/$maxLength",
+                            style = Typography.bodySmall,
+                            color = if (currentText.length >= maxLength) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(end = 12.dp, bottom = 8.dp)
+                        )
+
+                    }
+
+                    IconButton(
+                        onClick = {
+                            focusManager.clearFocus()
+                            if (index < 10) index++
+                        },
+                        enabled = index < localLogs.size - 1
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.ic_right),
+                            contentDescription = "오른쪽",
+                            modifier = Modifier.size(23.dp)
+                        )
+                    }
+
+                }
+
+                Row(
+                    modifier = Modifier.padding(horizontal = 13.dp).fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = {
+                            if (localLogs.size < maxLogSize) {
+                                localLogs.add("")
+                                index = localLogs.size - 1
+                            }
+                        },
+                        enabled = localLogs.size < maxLogSize,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.height(33.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = sub3, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+                    ) { Text("추가", style = Typography.bodySmall) }
+
+                    Button(
+                        onClick = {
+                            if (localLogs.size > 1) {
+                                localLogs.removeAt(index)
+                                if (index >= localLogs.size) index = localLogs.size - 1
+                            } else {
+                                localLogs[0] = ""
+                            }
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.height(33.dp).padding(start = 10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error.copy(0.3f), contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+                    ) { Text("삭제", style = Typography.bodySmall) }
+
+
+                    Spacer(Modifier.weight(1f))
+
+                    Button(
+                        onClick = {onConfirm(localLogs.toList())},
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.height(33.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(0.7f), contentColor = MaterialTheme.colorScheme.primary)
+                    ) { Text("완료", style = Typography.bodySmall)}
+
+                }
+
+                Row(modifier = Modifier.fillMaxWidth().padding(start = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically
+
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text(
+                            "다음에 입력하기",
+                            style = Typography.bodySmall,
+                            color = Color.Gray,
+                            textDecoration = TextDecoration.Underline
+                        )
+                        Spacer(Modifier.weight(1f))
+                    }
+                }
+
+
+            }
+        }
     }
 }
 
