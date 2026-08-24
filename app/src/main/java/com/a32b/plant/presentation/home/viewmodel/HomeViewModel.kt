@@ -16,9 +16,12 @@ import com.a32b.plant.domain.usecase.pot.GetActivePotUseCase
 import com.a32b.plant.domain.usecase.pot.GetPotListUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
@@ -27,8 +30,14 @@ import javax.inject.Inject
 data class AttendanceUiState(
     val count: Int = 0,
     val buttonText: String = "출석하기",
-    val buttonEnabled: Boolean = true
+    val buttonEnabled: Boolean = true,
+    val isAttendanceCompleted: Boolean = false,
+    val isChecking: Boolean = false
 )
+
+sealed class HomeEvent {
+    data class ShowToast(val message: String) : HomeEvent()
+}
 
 private fun DailyCheckThisMonth.toAttendanceUiState(): AttendanceUiState {
     val nowKst = LocalDate.now(ZoneId.of("Asia/Seoul"))
@@ -47,10 +56,20 @@ private fun DailyCheckThisMonth.toAttendanceUiState(): AttendanceUiState {
             AttendanceUiState(displayCount, "출석하기", true)
 
         AttendanceDecision.AlreadyChecked ->
-            AttendanceUiState(displayCount, "오늘 출석 완료", false)
+            AttendanceUiState(
+                count = displayCount,
+                buttonText = "오늘 출석 완료",
+                buttonEnabled = false,
+                isAttendanceCompleted = true
+            )
 
         AttendanceDecision.MonthCompleted ->
-            AttendanceUiState(displayCount, "이번 달 출석 완료", false)
+            AttendanceUiState(
+                count = displayCount,
+                buttonText = "이번 달 출석 완료",
+                buttonEnabled = false,
+                isAttendanceCompleted = true
+            )
     }
 }
 
@@ -90,11 +109,8 @@ class HomeViewModel @Inject constructor(
     private val _attendanceReward = MutableStateFlow<AttendanceReward?>(null)
     val attendanceReward = _attendanceReward.asStateFlow()
 
-    private val _attendanceErrorMessage = MutableStateFlow<String?>(null)
-    val attendanceErrorMessage = _attendanceErrorMessage.asStateFlow()
-
-    private val _isCheckingAttendance = MutableStateFlow(false)
-    val isCheckingAttendance = _isCheckingAttendance.asStateFlow()
+    private val _eventChannel = Channel<HomeEvent>(Channel.BUFFERED)
+    val events = _eventChannel.receiveAsFlow()
 
     init {
         checkUserAndLoadData()
@@ -171,10 +187,10 @@ class HomeViewModel @Inject constructor(
     }
 
     fun checkAttendance() {
-        if (_isCheckingAttendance.value) return
+        if (_attendanceUiState.value.isChecking) return
 
         viewModelScope.launch {
-            _isCheckingAttendance.value = true
+            _attendanceUiState.update { it.copy(isChecking = true) }
 
             ensureCurrentUserUseCase { user ->
                 userRepository.checkAttendance(user.uid)
@@ -184,7 +200,7 @@ class HomeViewModel @Inject constructor(
                     .onFailure { error ->
                         when (error) {
                             is AppError.UnknownUser -> ensureCurrentUserUseCase()
-                            else -> _attendanceErrorMessage.value = error.message
+                            else -> _eventChannel.send(HomeEvent.ShowToast(error.message))
                         }
                     }
 
@@ -207,15 +223,11 @@ class HomeViewModel @Inject constructor(
                     }
             }
 
-            _isCheckingAttendance.value = false
+            _attendanceUiState.update { it.copy(isChecking = false) }
         }
     }
 
     fun dismissAttendanceReward() {
         _attendanceReward.value = null
-    }
-
-    fun dismissAttendanceError() {
-        _attendanceErrorMessage.value = null
     }
 }

@@ -41,7 +41,6 @@ import com.a32b.plant.presentation.theme.PlantTheme
 @Composable
 fun AttendanceCheckDialog(
     uiState: AttendanceUiState,
-    isChecking: Boolean,
     onCheckClick: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -49,7 +48,7 @@ fun AttendanceCheckDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        AttendanceDialogContent(uiState, isChecking, onCheckClick)
+        AttendanceDialogContent(uiState, onCheckClick)
     }
 }
 
@@ -57,7 +56,6 @@ fun AttendanceCheckDialog(
 @Composable
 private fun AttendanceDialogContent(
     uiState: AttendanceUiState = AttendanceUiState(),
-    isChecking: Boolean = false,
     onCheckClick: () -> Unit = {}
 ) {
     Surface(
@@ -90,7 +88,7 @@ private fun AttendanceDialogContent(
 
             Button(
                 onClick = onCheckClick,
-                enabled = uiState.buttonEnabled && !isChecking,
+                enabled = uiState.buttonEnabled && !uiState.isChecking,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 24.dp)

@@ -61,6 +61,7 @@ import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.component.getLogoImage
 import com.a32b.plant.presentation.core.extension.showToast
+import com.a32b.plant.presentation.home.viewmodel.HomeEvent
 import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
 import com.a32b.plant.presentation.theme.fontColor
 import com.a32b.plant.presentation.theme.fontColorSub
@@ -80,9 +81,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
     val allPots by viewModel.allPots.collectAsState()
     val tempSelectedPot by viewModel.tempSelectedPot.collectAsState()
     val attendanceUiState by viewModel.attendanceUiState.collectAsState()
-    val isCheckingAttendance by viewModel.isCheckingAttendance.collectAsState()
     val attendanceReward by viewModel.attendanceReward.collectAsState()
-    val attendanceErrorMessage by viewModel.attendanceErrorMessage.collectAsState()
     val context = LocalContext.current
 
     val hasNoPot = displayPot.id.isEmpty() || displayPot == Pot.EMPTY
@@ -91,7 +90,6 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
     if (showAttendanceDialog) {
         AttendanceCheckDialog(
             uiState = attendanceUiState,
-            isChecking = isCheckingAttendance,
             onCheckClick = { viewModel.checkAttendance() },
             onDismiss = { showAttendanceDialog = false }
         )
@@ -106,10 +104,11 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
         )
     }
 
-    LaunchedEffect(attendanceErrorMessage) {
-        attendanceErrorMessage?.let { message ->
-            context.showToast(message)
-            viewModel.dismissAttendanceError()
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is HomeEvent.ShowToast -> context.showToast(event.message)
+            }
         }
     }
 
@@ -118,6 +117,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
             topBar = {
                 HomeTopBar(
                     userName = userName,
+                    isAttendanceCompleted = attendanceUiState.isAttendanceCompleted,
                     onAttendanceClick = { showAttendanceDialog = true }
                 )
             },
@@ -332,6 +332,7 @@ fun PotChangeDialog(
 @Composable
 fun HomeTopBar(
     userName: String,
+    isAttendanceCompleted: Boolean,
     onAttendanceClick: () -> Unit
 ) {
     val displayName = if (userName.isBlank()) "사용자" else userName
@@ -367,7 +368,13 @@ fun HomeTopBar(
                 modifier = Modifier.offset(x = 6.dp)
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.ic_daily_default),
+                    painter = painterResource(
+                        id = if (isAttendanceCompleted) {
+                            R.drawable.plant_attendance_checked
+                        } else {
+                            R.drawable.ic_daily_default
+                        }
+                    ),
                     contentDescription = "출석체크",
                     modifier = Modifier.size(36.dp)
                 )
