@@ -1,7 +1,5 @@
 package com.a32b.plant.presentation.studying.ui
 
-import android.graphics.drawable.PaintDrawable
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -13,29 +11,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -52,23 +39,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
-import androidx.navigation.toRoute
 import com.a32b.plant.R
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.core.navigation.Routes
@@ -82,20 +64,12 @@ import com.a32b.plant.presentation.studying.viewmodel.StudyingEvent
 import com.a32b.plant.presentation.studying.viewmodel.StudyingViewModel
 import com.a32b.plant.presentation.theme.Typography
 import com.a32b.plant.presentation.theme.sub3
-import com.a32b.plant.presentation.theme.title
 import java.time.LocalDateTime
 
 @Composable
 fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = hiltViewModel()) {
 
     val context = LocalContext.current
-    //이전 스택에서 보낸 값을 args에 넣어서 뽑아낼 수 있음
-//    val args = navController.currentBackStackEntry?.toRoute<Routes.Studying>()
-//
-//    val tag = args!!.tagName
-//    val title = args.title
-//    val potId = args.potId
-//    val level = args.level
 
     val startTime = remember {
         val now = LocalDateTime.now()
@@ -142,7 +116,6 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
 
     val studyingUsers = uiState.studyingUsers
     Surface(modifier = Modifier.fillMaxSize(),
-//        color = Color(0xFFF8F6F6)
         color = MaterialTheme.colorScheme.surfaceVariant
     ) {
         Column(
@@ -300,7 +273,7 @@ fun StudyingUserCard(users: List<StudyingUser>, tag: String){
             Text("$tag ${users.size}", style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface)
             users.take(3).forEach { user ->
-                StudyinUserItem(user)
+                StudyingUserItem(user)
                 Spacer(modifier = Modifier.height(8.dp))
             }
         }
@@ -308,7 +281,7 @@ fun StudyingUserCard(users: List<StudyingUser>, tag: String){
 }
 
 @Composable
-fun StudyinUserItem(user: StudyingUser){
+fun StudyingUserItem(user: StudyingUser){
     Row(Modifier.padding(10.dp),
         verticalAlignment = Alignment.CenterVertically) {
         ProfileImage(user.profileImg, 30)

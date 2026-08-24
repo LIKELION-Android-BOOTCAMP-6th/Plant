@@ -30,7 +30,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDateTime
 import javax.inject.Inject
-import kotlin.math.log
 import kotlin.time.Duration.Companion.seconds
 
 data class StudyLogUi(
@@ -79,7 +78,6 @@ class StudyingViewModel @Inject constructor(
     private val finishStudyingUseCase: FinishStudyingUseCase,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     savedStateHandle: SavedStateHandle
-
 ) : ViewModel() {
     private val _eventChannel = Channel<StudyingEvent>(Channel.BUFFERED)
     val event = _eventChannel.receiveAsFlow()
@@ -101,6 +99,7 @@ class StudyingViewModel @Inject constructor(
         }
         onStudyingUsersChange()
     }
+
     /** 현재 시간 기록 */
     fun onStartTimeChange(value : String) = _uiState.update { it.copy(startTime = value) }
 
@@ -124,8 +123,6 @@ class StudyingViewModel @Inject constructor(
                         is AppError.Network -> sendToast(e.message)
                         else -> _uiState.update { it.copy(error = e.message) }
                     }
-
-
                 }
         }
     }
