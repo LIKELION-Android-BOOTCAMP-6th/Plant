@@ -369,7 +369,7 @@ fun HomeTopBar(
                         }
                     ),
                     contentDescription = "출석체크",
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(32.dp)
                 )
             }
         }
