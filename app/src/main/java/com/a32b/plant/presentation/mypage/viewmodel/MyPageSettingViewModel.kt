@@ -39,16 +39,22 @@ class MyPageSettingViewModel @Inject constructor(
     private val _eventChannel = Channel<MyPageSettingEvent>(Channel.BUFFERED)
     val events = _eventChannel.receiveAsFlow()
 
-    /** 2단계 확인 완료 후 로그인 제공자에 따라 재인증 방식 분기 */
+    /** 2단계 확인 완료 후 로딩 시작 → 로그인 제공자에 따라 재인증 방식 분기 */
     fun requestDeleteAccount() {
         val provider = authRepository.getSignInProvider()
+        _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
             if (provider == "google.com") {
                 _eventChannel.send(MyPageSettingEvent.RequestGoogleReauth)
             } else {
-                _uiState.update { it.copy(showPasswordDialog = true) }
+                // 이메일: 비밀번호 다이얼로그가 즉시 뜨므로 로딩 해제
+                _uiState.update { it.copy(showPasswordDialog = true, isLoading = false) }
             }
         }
+    }
+
+    fun cancelLoading() {
+        _uiState.update { it.copy(isLoading = false) }
     }
 
     fun dismissPasswordDialog() {

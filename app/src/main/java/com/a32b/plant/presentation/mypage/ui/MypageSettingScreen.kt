@@ -111,13 +111,16 @@ fun MyPageSettingScreen(
                                 .createFrom(result.credential.data).idToken
                             viewModel.reauthenticateWithGoogleAndDelete(idToken)
                         } catch (e: GetCredentialCancellationException) {
-                            // 사용자가 취소 — 아무것도 하지 않음
+                            // 사용자가 취소 — 로딩 해제 후 복귀
+                            viewModel.cancelLoading()
                         } catch (e: NoCredentialException) {
+                            viewModel.cancelLoading()
                             context.showToast("기기에 등록된 Google 계정이 없습니다.")
                             val intent = Intent(Settings.ACTION_ADD_ACCOUNT)
                             intent.putExtra("account_types", arrayOf("com.google"))
                             context.startActivity(intent)
                         } catch (e: Exception) {
+                            viewModel.cancelLoading()
                             context.showToast("구글 재인증에 실패했습니다. 다시 시도해주세요.")
                         }
                     }
