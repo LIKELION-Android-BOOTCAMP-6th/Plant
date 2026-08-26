@@ -18,9 +18,13 @@ class AuthRepositoryImpl @Inject constructor(
 
     override fun currentUid(): String? = authRemoteDataSource.currentUid()
 
+    override fun currentEmail(): String? = authRemoteDataSource.currentEmail()
+
     override fun hasSession(): Boolean = authRemoteDataSource.hasSession()
 
     override fun isEmailVerified(): Boolean = authRemoteDataSource.isEmailVerified()
+
+    override fun getSignInProvider(): String? = authRemoteDataSource.getSignInProvider()
 
     override suspend fun signInWithEmail(email: String, password: String): Result<String> = safeRunCatching {
         authRemoteDataSource.signInWithEmail(email, password)
@@ -57,6 +61,20 @@ class AuthRepositoryImpl @Inject constructor(
         onFailure = { e -> Result.Failure(handleAuthError(e, "비밀번호 재설정 메일 발송 실패")) }
     )
 
+    override suspend fun reauthenticateWithEmail(email: String, password: String): Result<Unit> = safeRunCatching {
+        authRemoteDataSource.reauthenticateWithEmail(email, password)
+    }.fold(
+        onSuccess = { Result.Success(Unit) },
+        onFailure = { e -> Result.Failure(handleAuthError(e, "이메일 재인증 실패")) }
+    )
+
+    override suspend fun reauthenticateWithGoogle(idToken: String): Result<Unit> = safeRunCatching {
+        authRemoteDataSource.reauthenticateWithGoogle(idToken)
+    }.fold(
+        onSuccess = { Result.Success(Unit) },
+        onFailure = { e -> Result.Failure(handleAuthError(e, "구글 재인증 실패")) }
+    )
+
     override suspend fun deleteAuthAccount(): Result<Unit> = safeRunCatching {
         authRemoteDataSource.deleteAuthAccount()
     }.fold(
@@ -64,7 +82,7 @@ class AuthRepositoryImpl @Inject constructor(
         onFailure = { e ->
             val error = if (e.message?.contains("RECENT_LOGIN_REQUIRED") == true) {
                 Log.e("AuthRepository", "계정 삭제 실패 - 재인증 필요", e)
-                AppError.Custom("데이터는 삭제되었으나 계정 삭제에 실패했습니다. 재로그인 후 다시 시도해주세요.")
+                AppError.Custom("보안을 위해 재로그인 후 다시 시도해주세요.")
             } else {
                 handleAuthError(e, "계정 삭제 실패")
             }
@@ -89,9 +107,9 @@ class AuthRepositoryImpl @Inject constructor(
             "ERROR_EMAIL_ALREADY_IN_USE" -> AppError.Custom("이미 등록된 계정입니다.")
             else -> when (e) {
                 is FirebaseNetworkException -> AppError.Network()
-                // datasource에서 uid/현재 유저를 가져오지 못했을 때 던지는 예외.
-                // 상세 사유는 위 Log.e에 남고, 사용자에게는 공통 문구를 보여준다.
-                is IllegalStateException -> AppError.Auth("인증 정보를 가져오지 못했습니다. 다시 시도해주세요.")
+                // datasource에서 auth.currentUser가 null일 때 던지는 예외.
+                // 의미적으로 "유저 없음"이므로 UnknownUser로 통일해 세션 만료 플로우를 탄다.
+                is IllegalStateException -> AppError.UnknownUser()
                 else -> AppError.Unknown()
             }
         }
