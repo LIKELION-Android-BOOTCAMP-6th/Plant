@@ -192,7 +192,6 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
             onDismiss = {viewModel.onChangeGoalCheckMode(null)},
             onConfirm = {
                 viewModel.onIsStudyFinishChange()
-                viewModel.onFinishStudyingClick()
             }
         )
     }

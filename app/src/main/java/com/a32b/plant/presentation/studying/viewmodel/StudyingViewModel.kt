@@ -45,7 +45,6 @@ data class StudyingUiState(
     val buttonText: String = "일시정지",
     val studyingUsers: List<StudyingUser> = emptyList(),
     val studyLog: List<StudyLogUi> = emptyList(),
-    val isStudyFinish: Boolean = false, //true시 학습 완전 종료, 디비로 값 넘기기
     val isLocalSaved: Boolean = true, // 로컬 저장 성공 여부 체크
     val startTime: String = "",
     val isLoading: Boolean = false,
@@ -213,7 +212,10 @@ class StudyingViewModel @Inject constructor(
     }
 
     /** 학습 완전 종료 시 (= 다이얼로그에서도 기록 입력 후 종료 버튼 클릭했을 때)    */
-    fun onIsStudyFinishChange() = _uiState.update { it.copy(isStudyFinish = true) }
+    fun onIsStudyFinishChange() {
+        _uiState.update { it.copy(isLoading = true, goalCheckMode = null) }
+        onFinishStudyingClick()
+    }
 
     private fun getCurrentTime(): String{
         val now = LocalDateTime.now()
@@ -221,9 +223,8 @@ class StudyingViewModel @Inject constructor(
     }
 
     /** 학습 내역 저장 및 결과창으로 이동 */
-    fun onFinishStudyingClick() {
+    private fun onFinishStudyingClick() {
         var isLogSaved = true
-        _uiState.update { it.copy(isLoading = true) }
         //개별 학습 기록의 제목
         val timestamp = "${TimeFormatter.formatToKoreanDate(LocalDateTime.now())} ${_uiState.value.startTime} ~ ${getCurrentTime()}"
         val resultTimestamp = "${TimeFormatter.formatWithDayOfWeek(LocalDateTime.now())} ${_uiState.value.startTime} ~ ${getCurrentTime()}"
