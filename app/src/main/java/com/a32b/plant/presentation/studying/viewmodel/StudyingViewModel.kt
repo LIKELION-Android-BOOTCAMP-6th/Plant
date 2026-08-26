@@ -152,7 +152,6 @@ class StudyingViewModel @Inject constructor(
         }
     }
     private fun stopStopwatch(){
-        _uiState.update { it.copy(isStudying = false) }
         job?.cancel()
     }
 
@@ -255,7 +254,7 @@ class StudyingViewModel @Inject constructor(
                     tag = _uiState.value.tag,
                     potId = potId,
                     title = _uiState.value.title,
-                    log = _uiState.value.studyLog.map { it.log } ?: emptyList(),
+                    log = _uiState.value.studyLog.map { it.log },
                     time = _uiState.value.timer,
                     level = _uiState.value.level
                 ))
