@@ -1,5 +1,6 @@
 package com.a32b.plant.presentation.studying.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,6 +15,7 @@ import com.a32b.plant.domain.usecase.studying.ClearStudyingSessionUseCase
 import com.a32b.plant.domain.usecase.studying.FinishStudyingUseCase
 import com.a32b.plant.domain.usecase.studying.StartStudyingSessionUseCase
 import com.a32b.plant.domain.usecase.studying.UpdateLocalStudyingSessionUseCase
+import com.a32b.plant.presentation.core.type.StudyingGoalCheckMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -30,21 +32,25 @@ import java.time.LocalDateTime
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 
+data class StudyLogUi(
+    val log: String = "",
+    val isCompleted: Boolean = false
+)
 data class StudyingUiState(
     val tag: String,
     val title: String,
     val level: String,
     val timer: Long = 0L,
-    val isStudying: Boolean = true, //스톱워치 가동을 위한 공부중 여부 체크
+    val isStudying: Boolean = false, //스톱워치 가동을 위한 공부중 여부 체크
     val buttonText: String = "일시정지",
     val studyingUsers: List<StudyingUser> = emptyList(),
-    val isFinishDialogShown: Boolean = false, //학습 종료 다이얼로그 표출 여부 체크
-    val studyLog: List<String>? = null,
-    val isStudyFinish: Boolean = false, //true시 학습 완전 종료, 디비로 값 넘기기
+    val studyLog: List<StudyLogUi> = emptyList(),
     val isLocalSaved: Boolean = true, // 로컬 저장 성공 여부 체크
     val startTime: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,
+    val isGoalInputDialogShown: Boolean = true, //학습 목표 입력
+    val goalCheckMode: StudyingGoalCheckMode? = null
 )
 
 sealed class StudyingEvent{
@@ -71,7 +77,6 @@ class StudyingViewModel @Inject constructor(
     private val finishStudyingUseCase: FinishStudyingUseCase,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     savedStateHandle: SavedStateHandle
-
 ) : ViewModel() {
     private val _eventChannel = Channel<StudyingEvent>(Channel.BUFFERED)
     val event = _eventChannel.receiveAsFlow()
@@ -88,12 +93,12 @@ class StudyingViewModel @Inject constructor(
 
 
     init {
-        startStopwatch()
         viewModelScope.launch {
             initStudyingUser()
         }
         onStudyingUsersChange()
     }
+
     /** 현재 시간 기록 */
     fun onStartTimeChange(value : String) = _uiState.update { it.copy(startTime = value) }
 
@@ -109,7 +114,7 @@ class StudyingViewModel @Inject constructor(
     /** 최초 시작 시 로컬 + 원격 db에 현재 사용자 정보 저장 */
     suspend fun initStudyingUser(){
         withContext(Dispatchers.IO){
-            startStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title,potId,_uiState.value.timer, _uiState.value.studyLog)
+            startStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title,potId,_uiState.value.timer, _uiState.value.studyLog.map { it.log })
                 .onFailure { e ->
                     when (e){
                         is AppError.UnknownUser -> Unit //유즈케이스에서 호출했으므로 따로 호출 x
@@ -117,8 +122,6 @@ class StudyingViewModel @Inject constructor(
                         is AppError.Network -> sendToast(e.message)
                         else -> _uiState.update { it.copy(error = e.message) }
                     }
-
-
                 }
         }
     }
@@ -136,7 +139,7 @@ class StudyingViewModel @Inject constructor(
     /** 스톱워치 */
     private var job: Job? = null
     fun onTimerChange() = _uiState.update { it.copy(timer = it.timer + 1000 ) }
-    fun startStopwatch(){
+    private fun startStopwatch(){
         job?.cancel()
         job = viewModelScope.launch {
             while (true){
@@ -147,16 +150,15 @@ class StudyingViewModel @Inject constructor(
             }
         }
     }
-    fun stopStopwatch(){
-        _uiState.update { it.copy(isStudying = false) }
+    private fun stopStopwatch(){
         job?.cancel()
     }
 
-    /** 공부중 상태 변경 */
-    fun onStudyingStatusChange() {
-         _uiState.update { it.copy(isStudying = !it.isStudying) }
+    /** 공부중 상태 변경 t: studying f:!studying */
+    fun onStudyingStatusChange(studying: Boolean = !_uiState.value.isStudying) {
+         _uiState.update { it.copy(isStudying = studying) }
 
-        if(_uiState.value.isStudying) startStopwatch()
+        if(studying) startStopwatch()
         else stopStopwatch()
     }
 
@@ -169,25 +171,51 @@ class StudyingViewModel @Inject constructor(
 
     }
 
-    /**  학습 중 기록 수정 */
+    /**  학습 목표 설정 */
     fun setStudyLog(studyLog: List<String>) {
-        _uiState.update { it.copy(studyLog = studyLog.filter { log -> log.isNotBlank()  }) }
+        if (studyLog.isEmpty()) return
+        val current = _uiState.value.studyLog
+
+        _uiState.update {
+            it.copy(studyLog = studyLog
+                .mapIndexed { index, string ->
+                    val existing = current.getOrNull(index)
+                    StudyLogUi(log = string, isCompleted = existing?.isCompleted ?: false)
+                }
+                .filter { studyLog -> studyLog.log.isNotBlank() }
+            )
+        }
+        Log.d("입력값 확인", "$studyLog")
         viewModelScope.launch {
-            updateLocalStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title, potId, _uiState.value.timer, _uiState.value.studyLog)
+            updateLocalStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title, potId, _uiState.value.timer, _uiState.value.studyLog.map { it.log })
         }
     }
 
-    /**  학습 종료 버튼 클릭 시 학습 기록하는 다이얼로그 표출 */
-    fun onFinishDialogShownChange() = _uiState.update { it.copy(isFinishDialogShown = !it.isFinishDialogShown) }
+    /** 학습 목표 다이얼로그 표출 여부 제어*/
+    fun onGoalInputDialogChange(value: Boolean) {
+        _uiState.update { it.copy(isGoalInputDialogShown = value) }
+        onStudyingStatusChange(!value)
+    }
 
-    /** 학습 종료 버튼 취소 클릭 시 */
-    fun onDialogDismissClick(){
-        _uiState.update { it.copy(isFinishDialogShown = false, isStudying = true) }
-        startStopwatch()
+    /** 학습 목표 확인 다이얼로그 표출 모드 제어*/
+    fun onChangeGoalCheckMode(mode: StudyingGoalCheckMode?){
+        _uiState.update { it.copy(goalCheckMode = mode) }
+        if (mode != null) onStudyingStatusChange(false)
+        else onStudyingStatusChange(true)
+    }
+
+    /** 목표 달성 토글 */
+    fun onStudyLogCompleted(index: Int, value: Boolean) = _uiState.update {
+        it.copy(studyLog = it.studyLog.mapIndexed { i, log ->
+            if (i == index) log.copy(isCompleted = value) else log
+        })
     }
 
     /** 학습 완전 종료 시 (= 다이얼로그에서도 기록 입력 후 종료 버튼 클릭했을 때)    */
-    fun onIsStudyFinishChange() = _uiState.update { it.copy(isStudyFinish = true) }
+    fun onIsStudyFinishChange() {
+        _uiState.update { it.copy(isLoading = true, goalCheckMode = null) }
+        onFinishStudyingClick()
+    }
 
     private fun getCurrentTime(): String{
         val now = LocalDateTime.now()
@@ -195,9 +223,8 @@ class StudyingViewModel @Inject constructor(
     }
 
     /** 학습 내역 저장 및 결과창으로 이동 */
-    fun onFinishStudyingClick() {
+    private fun onFinishStudyingClick() {
         var isLogSaved = true
-        _uiState.update { it.copy(isLoading = true) }
         //개별 학습 기록의 제목
         val timestamp = "${TimeFormatter.formatToKoreanDate(LocalDateTime.now())} ${_uiState.value.startTime} ~ ${getCurrentTime()}"
         val resultTimestamp = "${TimeFormatter.formatWithDayOfWeek(LocalDateTime.now())} ${_uiState.value.startTime} ~ ${getCurrentTime()}"
@@ -205,7 +232,7 @@ class StudyingViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO){
 
             val result = withTimeoutOrNull(5.seconds){
-                finishStudyingUseCase(potId, timestamp, _uiState.value.studyLog ?: emptyList(), _uiState.value.timer)
+                finishStudyingUseCase(potId, timestamp, _uiState.value.studyLog.map { it.log }, _uiState.value.timer)
                     .onSuccess { clearSession() }
                     .onFailure { e ->
                         when (e){
@@ -228,7 +255,7 @@ class StudyingViewModel @Inject constructor(
                     tag = _uiState.value.tag,
                     potId = potId,
                     title = _uiState.value.title,
-                    log = _uiState.value.studyLog ?: emptyList(),
+                    log = _uiState.value.studyLog.map { it.log },
                     time = _uiState.value.timer,
                     level = _uiState.value.level
                 ))
