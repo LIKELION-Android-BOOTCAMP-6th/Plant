@@ -33,6 +33,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.a32b.plant.R
 import com.a32b.plant.domain.model.AttendanceReward
 import com.a32b.plant.domain.model.AttendanceRewardTable
+import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.core.extension.resId
 import com.a32b.plant.presentation.home.viewmodel.AttendanceUiState
 import com.a32b.plant.presentation.theme.PlantTheme
@@ -64,35 +65,42 @@ private fun AttendanceDialogContent(
         shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.background
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "출석체크",
-                style = MaterialTheme.typography.displayLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = "출석할수록 보상이 자라나요",
-                modifier = Modifier.padding(top = 8.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            AttendanceBoard(
-                checkedCount = uiState.count,
-                rewards = attendanceRewards
-            )
-
-            Button(
-                onClick = onCheckClick,
-                enabled = uiState.buttonEnabled && !uiState.isChecking,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 24.dp)
+        Box {
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(uiState.buttonText)
+                Text(
+                    text = "출석체크",
+                    style = MaterialTheme.typography.displayLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "출석할수록 보상이 자라나요",
+                    modifier = Modifier.padding(top = 8.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                AttendanceBoard(
+                    checkedCount = uiState.count,
+                    rewards = attendanceRewards
+                )
+
+                Button(
+                    onClick = onCheckClick,
+                    enabled = !uiState.isAttendanceCompleted && !uiState.isChecking,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 24.dp)
+                ) {
+                    Text(uiState.buttonText)
+                }
+            }
+            if (uiState.isChecking) {
+                LoadingBox(
+                    modifier = Modifier.matchParentSize()
+                )
             }
         }
     }
@@ -107,8 +115,7 @@ private fun AttendanceDialogContentPreview() {
         AttendanceDialogContent(
             uiState = AttendanceUiState(
                 count = 8,
-                buttonText = "출석하기",
-                buttonEnabled = true
+                buttonText = "출석하기"
             )
         )
     }

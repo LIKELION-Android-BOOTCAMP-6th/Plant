@@ -18,8 +18,6 @@ interface UserRepository {
     suspend fun updateLastSelectedPot(uid: String, potId: String)
 
     suspend fun getUser(uid: String): Result<User?>
-    /** 캐시를 건너뛰고 서버에서 직접 조회한다. 트랜잭션 직후처럼 최신 값이 확실히 필요할 때 쓴다. */
-    suspend fun refreshUser(uid: String): Result<User?>
     suspend fun createUser(uid: String): Result<User>
     suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit>
     suspend fun updateDarkMode(user: User): Result<Unit>

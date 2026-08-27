@@ -1,6 +1,5 @@
 package com.a32b.plant.presentation.home.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.safeRunCatching
@@ -30,7 +29,6 @@ import javax.inject.Inject
 data class AttendanceUiState(
     val count: Int = 0,
     val buttonText: String = "출석하기",
-    val buttonEnabled: Boolean = true,
     val isAttendanceCompleted: Boolean = false,
     val isChecking: Boolean = false,
     val reward: AttendanceReward? = null
@@ -54,13 +52,12 @@ private fun DailyCheckThisMonth.toAttendanceUiState(): AttendanceUiState {
 
     return when (decision) {
         is AttendanceDecision.Success ->
-            AttendanceUiState(displayCount, "출석하기", true)
+            AttendanceUiState(displayCount, "출석하기")
 
         AttendanceDecision.AlreadyChecked ->
             AttendanceUiState(
                 count = displayCount,
                 buttonText = "오늘 출석 완료",
-                buttonEnabled = false,
                 isAttendanceCompleted = true
             )
 
@@ -68,7 +65,6 @@ private fun DailyCheckThisMonth.toAttendanceUiState(): AttendanceUiState {
             AttendanceUiState(
                 count = displayCount,
                 buttonText = "이번 달 출석 완료",
-                buttonEnabled = false,
                 isAttendanceCompleted = true
             )
     }
@@ -104,9 +100,11 @@ class HomeViewModel @Inject constructor(
     private val _userName = MutableStateFlow("")
     val userName = _userName.asStateFlow()
 
+    // 출석체크 UI 상태
     private val _attendanceUiState = MutableStateFlow(AttendanceUiState())
     val attendanceUiState = _attendanceUiState.asStateFlow()
 
+    // 일회성 화면 이벤트
     private val _eventChannel = Channel<HomeEvent>(Channel.BUFFERED)
     val events = _eventChannel.receiveAsFlow()
 
@@ -201,7 +199,6 @@ class HomeViewModel @Inject constructor(
                                 } else {
                                     "오늘 출석 완료"
                                 },
-                                buttonEnabled = false,
                                 isAttendanceCompleted = true,
                                 reward = decision.reward
                             )
@@ -212,32 +209,11 @@ class HomeViewModel @Inject constructor(
                             is AppError.UnknownUser -> ensureCurrentUserUseCase()
                             else -> _eventChannel.send(HomeEvent.ShowToast(error.message))
                         }
-
-                        refreshAttendanceState(user.uid)
                     }
             }
 
             _attendanceUiState.update { it.copy(isChecking = false) }
         }
-    }
-
-    private suspend fun refreshAttendanceState(uid: String) {
-        userRepository.refreshUser(uid)
-            .onSuccess { refreshed ->
-                if (refreshed != null) {
-                    _attendanceUiState.update { current ->
-                        refreshed.monthCheck.toAttendanceUiState().copy(
-                            isChecking = current.isChecking,
-                            reward = current.reward
-                        )
-                    }
-                } else {
-                    Log.w("HomeViewModel", "refreshUser 성공했지만 유저 문서가 null - 출석판 갱신 안 됨")
-                }
-            }
-            .onFailure { error ->
-                Log.e("HomeViewModel", "출석 후 최신 상태 재조회 실패: ${error.message}", error)
-            }
     }
 
     fun dismissAttendanceReward() {

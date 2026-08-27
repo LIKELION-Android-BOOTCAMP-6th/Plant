@@ -9,7 +9,6 @@ import com.a32b.plant.domain.model.AttendanceReward
 import com.a32b.plant.domain.type.ItemType
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Source
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -24,8 +23,8 @@ class UserRemoteDataSourceImpl @Inject constructor(
     private val db: FirebaseFirestore
 ) : UserRemoteDataSource {
 
-    override suspend fun getUser(uid: String, source: Source): UserDto? {
-        val snapshot = db.collection("users").document(uid).get(source).await()
+    override suspend fun getUser(uid: String): UserDto? {
+        val snapshot = db.collection("users").document(uid).get().await()
         return snapshot.toObject(UserDto::class.java)
     }
 
@@ -128,7 +127,7 @@ class UserRemoteDataSourceImpl @Inject constructor(
                         }
 
                         val fieldKey = requireNotNull(type.fieldKey) {
-                            "출석 아이템 보상에 골드 타입은 사용할 수 없습니다: $type"
+                            "출석 아이템 보상의 Firestore 필드 키가 없습니다: $type"
                         }
 
                         updates["item.$fieldKey"] =
