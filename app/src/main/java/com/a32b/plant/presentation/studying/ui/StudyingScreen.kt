@@ -168,6 +168,8 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
     }
     if (uiState.isGoalInputDialogShown){
         GoalInputDialog(
+            isEditing = uiState.isEditing,
+            index = uiState.logIndex ?: 0,
             tag = uiState.tag,
             title = uiState.title,
             studyLogs = uiState.studyLog.map { it.log },
@@ -175,6 +177,11 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
             onConfirm = {
                 viewModel.setStudyLog(it)
                 viewModel.onGoalInputDialogChange(false)
+            },
+            onConfirmEdit = {
+                viewModel.onStudyLogChanged(index = uiState.logIndex ?: 0, log = it )
+                viewModel.onGoalInputDialogChange(false)
+                viewModel.onIsEditingChanged(false, index = null)
             }
         )
     }
@@ -183,11 +190,11 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
             mode = it,
             studyLog = uiState.studyLog,
             onEdit = {
-                viewModel.onChangeGoalCheckMode(null)
+                viewModel.onIsEditingChanged(index = it, value = true)
                 viewModel.onGoalInputDialogChange(true)
              },
             onCompleted = {index, isCompleted ->
-                viewModel.onStudyLogCompleted(index, isCompleted)
+                viewModel.onStudyLogChanged(index, isCompleted)
             },
             onDismiss = {viewModel.onChangeGoalCheckMode(null)},
             onConfirm = {
@@ -293,11 +300,14 @@ fun StudyingUserItem(user: StudyingUser){
 
 @Composable
 fun GoalInputDialog(
+    isEditing: Boolean = false,
+    index: Int = 0,
     tag: String,
     title: String,
     studyLogs: List<String>,
     onDismiss: () -> Unit,
-    onConfirm: (List<String>) -> Unit
+    onConfirm: (List<String>) -> Unit,
+    onConfirmEdit: (String) -> Unit = {}
 ) {
     val maxLength = 100
     val maxLogSize = 10
@@ -307,7 +317,7 @@ fun GoalInputDialog(
             if (studyLogs.isEmpty()) add("") else addAll(studyLogs)
         }
     }
-    var index by remember { mutableIntStateOf(0) }
+    var index by remember { mutableIntStateOf(index) }
     val currentText = localLogs.getOrElse(index) { "" }
 
     val focusManager = LocalFocusManager.current
@@ -318,7 +328,7 @@ fun GoalInputDialog(
             colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceVariant),
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.5f)
+                .fillMaxHeight(if(!isEditing)0.5f else 0.3f)
                 .pointerInput(Unit) {
                     detectTapGestures(onTap = {
                         focusManager.clearFocus()
@@ -334,12 +344,15 @@ fun GoalInputDialog(
 
                 Spacer(Modifier.height(7.dp))
 
-                Text(
-                    "${index + 1} / 10 ",
-                    style = Typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(top = 7.dp)
-                )
+                if (!isEditing){
+                    Text(
+                        "${index + 1} / 10 ",
+                        style = Typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(top = 7.dp)
+                    )
+                }
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth().weight(1f),
@@ -347,23 +360,24 @@ fun GoalInputDialog(
                     horizontalArrangement = Arrangement.Center
 
                 ) {
-                    IconButton(
-                        onClick = {
-                            focusManager.clearFocus()
-                            if (index > 0) index--
-                        },
-                        enabled = index > 0
-                    ) {
-                        Image(
-                            painter = painterResource(R.drawable.ic_left),
-                            contentDescription = "왼쪽",
-                            modifier = Modifier.size(23.dp)
-                        )
+                    if (!isEditing){
+                        IconButton(
+                            onClick = {
+                                focusManager.clearFocus()
+                                if (index > 0) index--
+                            },
+                            enabled = index > 0
+                        ) {
+                            Image(
+                                painter = painterResource(R.drawable.ic_left),
+                                contentDescription = "왼쪽",
+                                modifier = Modifier.size(23.dp)
+                            )
+                        }
                     }
 
-                    Box(modifier = Modifier
-                        .weight(1f)
-                        ) {
+                    if (isEditing) Spacer(Modifier.width(10.dp))
+                    Box(modifier = Modifier.weight(1f)) {
                         OutlinedTextField(
                             value = currentText,
                             shape = RoundedCornerShape(10.dp),
@@ -397,21 +411,24 @@ fun GoalInputDialog(
                         )
 
                     }
+                    if (isEditing) Spacer(Modifier.width(10.dp))
 
-                    IconButton(
-                        onClick = {
-                            focusManager.clearFocus()
-                            if (index < 10) index++
-                        },
-                        enabled = index < localLogs.size - 1
-                    ) {
-                        Image(
-                            painter = painterResource(R.drawable.ic_right),
-                            contentDescription = "오른쪽",
-                            modifier = Modifier.size(23.dp)
-                        )
+
+                    if (!isEditing){
+                        IconButton(
+                            onClick = {
+                                focusManager.clearFocus()
+                                if (index < 10) index++
+                            },
+                            enabled = index < localLogs.size - 1
+                        ) {
+                            Image(
+                                painter = painterResource(R.drawable.ic_right),
+                                contentDescription = "오른쪽",
+                                modifier = Modifier.size(23.dp)
+                            )
+                        }
                     }
-
                 }
 
                 Row(
@@ -420,25 +437,32 @@ fun GoalInputDialog(
                 ) {
                     Button(
                         onClick = {
-                            if (localLogs.size < maxLogSize) {
+                            if (isEditing){
+                                onDismiss()
+                            }else if (!isEditing && localLogs.size < maxLogSize){
                                 localLogs.add("")
                                 index = localLogs.size - 1
                             }
                         },
-                        enabled = localLogs.size < maxLogSize,
+                        enabled = localLogs.size < maxLogSize || isEditing,
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.height(33.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = sub3, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
-                    ) { Text("추가", style = Typography.bodySmall) }
+                    ) { Text(if (isEditing) "취소" else "추가", style = Typography.bodySmall) }
 
                     Button(
                         onClick = {
-                            if (localLogs.size > 1) {
-                                localLogs.removeAt(index)
-                                if (index >= localLogs.size) index = localLogs.size - 1
-                            } else {
-                                localLogs[0] = ""
+                            if (!isEditing){
+                                if (localLogs.size > 1) {
+                                    localLogs.removeAt(index)
+                                    if (index >= localLogs.size) index = localLogs.size - 1
+                                } else {
+                                    localLogs[0] = ""
+                                }
+                            } else{
+                                localLogs[index] = ""
                             }
+
                         },
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.height(33.dp).padding(start = 10.dp),
@@ -449,7 +473,7 @@ fun GoalInputDialog(
                     Spacer(Modifier.weight(1f))
 
                     Button(
-                        onClick = {onConfirm(localLogs.toList())},
+                        onClick = {if (isEditing) onConfirmEdit(localLogs[index]) else onConfirm(localLogs.toList())},
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.height(33.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(0.7f), contentColor = MaterialTheme.colorScheme.primary)
@@ -457,10 +481,7 @@ fun GoalInputDialog(
 
                 }
 
-                Row(modifier = Modifier.fillMaxWidth().padding(start = 7.dp),
-                    verticalAlignment = Alignment.CenterVertically
-
-                ) {
+                if (!isEditing){
                     TextButton(onClick = onDismiss) {
                         Text(
                             "다음에 입력하기",
