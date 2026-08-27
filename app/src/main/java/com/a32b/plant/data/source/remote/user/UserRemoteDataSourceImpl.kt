@@ -126,11 +126,7 @@ class UserRemoteDataSourceImpl @Inject constructor(
                             "출석 아이템 보상에 골드 타입은 사용할 수 없습니다: $type"
                         }
 
-                        val fieldKey = requireNotNull(type.fieldKey) {
-                            "출석 아이템 보상의 Firestore 필드 키가 없습니다: $type"
-                        }
-
-                        updates["item.$fieldKey"] =
+                        updates["item.${type.fieldKey}"] =
                             FieldValue.increment(reward.amount.toLong())
                     }
 
