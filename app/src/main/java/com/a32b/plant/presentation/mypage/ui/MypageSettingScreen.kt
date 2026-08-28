@@ -98,6 +98,7 @@ fun MyPageSettingScreen(
                 is MyPageSettingEvent.RequestGoogleReauth -> {
                     // 구글 재인증: Credential Manager로 idToken 획득 후 ViewModel에 전달
                     coroutineScope.launch {
+                        context.showToast("보안을 위해 Google 계정을 다시 확인합니다")
                         val googleIdOption = GetSignInWithGoogleOption.Builder(webClientId).build()
                         val request = GetCredentialRequest.Builder()
                             .addCredentialOption(googleIdOption)
