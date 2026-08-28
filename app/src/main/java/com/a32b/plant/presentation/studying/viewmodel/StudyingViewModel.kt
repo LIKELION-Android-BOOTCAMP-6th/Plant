@@ -50,7 +50,9 @@ data class StudyingUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val isGoalInputDialogShown: Boolean = true, //학습 목표 입력
-    val goalCheckMode: StudyingGoalCheckMode? = null
+    val goalCheckMode: StudyingGoalCheckMode? = null,
+    val isEditing: Boolean = false,
+    val logIndex: Int? = null
 )
 
 sealed class StudyingEvent{
@@ -191,10 +193,10 @@ class StudyingViewModel @Inject constructor(
         }
     }
 
-    /** 학습 목표 다이얼로그 표출 여부 제어*/
+    /** 학습 목표 설정 다이얼로그 표출 여부 제어*/
     fun onGoalInputDialogChange(value: Boolean) {
         _uiState.update { it.copy(isGoalInputDialogShown = value) }
-        onStudyingStatusChange(!value)
+        if (!_uiState.value.isEditing) onStudyingStatusChange(!value)
     }
 
     /** 학습 목표 확인 다이얼로그 표출 모드 제어*/
@@ -204,11 +206,52 @@ class StudyingViewModel @Inject constructor(
         else onStudyingStatusChange(true)
     }
 
-    /** 목표 달성 토글 */
-    fun onStudyLogCompleted(index: Int, value: Boolean) = _uiState.update {
-        it.copy(studyLog = it.studyLog.mapIndexed { i, log ->
-            if (i == index) log.copy(isCompleted = value) else log
-        })
+    /** 수정중으로 변환*/
+    fun onIsEditingChanged(value: Boolean, index: Int? = null) {
+        _uiState.update { state ->
+            when {
+                // 편집 종료 + 방금 새로 추가한 로그를 저장하지 않은 경우 -> 마지막 로그 제거
+                !value && index == null && state.logIndex == state.studyLog.lastIndex && state.studyLog.last().log.isEmpty()-> {
+                    state.copy(
+                        studyLog = state.studyLog.dropLast(1),
+                        isEditing = false,
+                        logIndex = -1
+                    )
+                }
+
+                // 새 로그 추가 시작
+                index == -1 -> {
+                    val newLog = state.studyLog + StudyLogUi()
+                    state.copy(studyLog = newLog, isEditing = value, logIndex = newLog.lastIndex)
+                }
+
+                // 기존 로그 편집
+                index != null -> state.copy(isEditing = value, logIndex = index)
+
+                // 그 외 (index == null, 단순 편집 상태만 토글)
+                else -> state.copy(isEditing = value, logIndex = index)
+            }
+        }
+    }
+
+    /** 목표 수정 함수 */
+    fun onStudyLogChanged(index: Int, completed: Boolean? = null, log: String? = null) = _uiState.update {
+        it.copy(
+            studyLog = if (log == "") {
+                it.studyLog.filterIndexed { i, _ -> i != index }
+            } else {
+                it.studyLog.mapIndexed { i, item ->
+                    if (i == index) {
+                        item.copy(
+                            isCompleted = completed ?: item.isCompleted,
+                            log = log ?: item.log
+                        )
+                    } else {
+                        item
+                    }
+                }
+            }
+        )
     }
 
     /** 학습 완전 종료 시 (= 다이얼로그에서도 기록 입력 후 종료 버튼 클릭했을 때)    */
