@@ -16,6 +16,7 @@ import com.a32b.plant.domain.result.Result
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import java.io.IOException
 import javax.inject.Inject
@@ -32,6 +33,7 @@ class StudyingRepositoryImpl @Inject constructor(
     override fun observeStudyingUser(tag: String): Flow<List<StudyingUser>> {
         return studyingRemoteDataSource.observeStudyingUser(tag)
             .map { dtoList -> dtoList.map { it.toDomain() } }
+            .catch { e -> Log.e("StudyingRepository", "학습중 유저 구독 실패: ${e.message}", e) }
     }
 
     override suspend fun initStudyingUser(user: StudyingUser): Result<Unit> = safeRunCatching {
