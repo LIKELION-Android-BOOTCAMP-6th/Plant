@@ -211,7 +211,7 @@ class StudyingViewModel @Inject constructor(
         _uiState.update { state ->
             when {
                 // 편집 종료 + 방금 새로 추가한 로그를 저장하지 않은 경우 -> 마지막 로그 제거
-                !value && index == null && state.logIndex == state.studyLog.lastIndex -> {
+                !value && index == null && state.logIndex == state.studyLog.lastIndex && state.studyLog.last().log.isEmpty()-> {
                     state.copy(
                         studyLog = state.studyLog.dropLast(1),
                         isEditing = false,
