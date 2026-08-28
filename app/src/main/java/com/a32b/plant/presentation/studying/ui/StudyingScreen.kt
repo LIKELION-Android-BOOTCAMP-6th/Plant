@@ -192,8 +192,8 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
         StudyingGoalCheckDialog(
             mode = it,
             studyLog = uiState.studyLog,
-            onEdit = {
-                viewModel.onIsEditingChanged(index = it, value = true)
+            onEdit = { index ->
+                viewModel.onIsEditingChanged(index = index, value = true)
                 viewModel.onGoalInputDialogChange(true)
              },
             onCompleted = {index, isCompleted ->
