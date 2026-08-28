@@ -29,7 +29,8 @@ data class Post(
     val isLiked: Boolean, // likes 서브컬렉션에서 조회 후 설정
     val studyLogs: List<StudyLog>?,
     var isShared: Boolean?,
-    val comments: List<Comment> = emptyList()   // comments 서브컬렉션에서 조회 후 설정
+    val comments: List<Comment> = emptyList(),   // comments 서브컬렉션에서 조회 후 설정
+    val updatedAt: Long? = null // 수정된 적 있으면 그 시각, 없으면 null (createdAt은 최초 작성 시점 그대로 유지)
 ){
     companion object{
         fun createOriginal(author: PostAuthor, title: String, content: String, tag: Tag) = Post(

@@ -1,10 +1,13 @@
 package com.a32b.plant.data.model
 
+import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 
 // TODO: 화분 목록은 따로 받아온 후 매퍼로 변환 시 넣어주기
 
 data class UserDto(
+    @DocumentId
+    var uid: String = "",
     @get:PropertyName("nickname") @set:PropertyName("nickname")
     var nickname: String = "",
     @get:PropertyName("profileImg") @set:PropertyName("profileImg")

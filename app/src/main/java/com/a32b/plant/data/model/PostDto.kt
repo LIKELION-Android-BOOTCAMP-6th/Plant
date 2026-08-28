@@ -1,8 +1,6 @@
 package com.a32b.plant.data.model
 
-import com.a32b.plant.domain.model.CommentUser
 import com.a32b.plant.domain.model.StudyLog
-import com.a32b.plant.domain.model.Tag
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
@@ -63,4 +61,6 @@ data class PostDto(
     var studyLogs: List<StudyLog>? = null,
     @get:PropertyName("isShared") @set:PropertyName("isShared")
     var isShared: Boolean? = false,
+    @get:PropertyName("updatedAt") @set:PropertyName("updatedAt")
+    var updatedAt: Timestamp? = null,
 )

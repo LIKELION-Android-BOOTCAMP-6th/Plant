@@ -1,67 +1,65 @@
 package com.a32b.plant.presentation.studying.ui
 
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
-import androidx.navigation.toRoute
 import com.a32b.plant.R
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyingUser
+import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.core.component.LoadingBox
+import com.a32b.plant.presentation.core.extension.showToast
+import com.a32b.plant.presentation.core.type.StudyingGoalCheckMode
 import com.a32b.plant.presentation.studying.viewmodel.StudyingEvent
 import com.a32b.plant.presentation.studying.viewmodel.StudyingViewModel
 import com.a32b.plant.presentation.theme.Typography
@@ -71,13 +69,7 @@ import java.time.LocalDateTime
 @Composable
 fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = hiltViewModel()) {
 
-    //이전 스택에서 보낸 값을 args에 넣어서 뽑아낼 수 있음
-    val args = navController.currentBackStackEntry?.toRoute<Routes.Studying>()
-
-    val tag = args!!.tagName
-    val title = args.title
-    val potId = args.potId
-    val level = args.level
+    val context = LocalContext.current
 
     val startTime = remember {
         val now = LocalDateTime.now()
@@ -89,7 +81,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
     val timerButtonBack = if (uiState.isStudying) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
 
     BackHandler {
-        viewModel.onFinishDialogShownChange()
+        viewModel.onChangeGoalCheckMode(StudyingGoalCheckMode.FINISH)
     }
 
     LaunchedEffect(Unit) {
@@ -104,11 +96,18 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
                         log = event.log,
                         time = event.time,
                         potId = event.potId,
-                        level
+                        uiState.level
                     )){
                         popUpTo(Routes.HomeMain) { inclusive = false }
                     }
                 }
+                is StudyingEvent.NavigateToHome -> {
+                    navController.navigate(Routes.HomeMain) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+
+                is StudyingEvent.ShowToast -> context.showToast(event.message)
             }
         }
     }
@@ -117,7 +116,6 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
 
     val studyingUsers = uiState.studyingUsers
     Surface(modifier = Modifier.fillMaxSize(),
-//        color = Color(0xFFF8F6F6)
         color = MaterialTheme.colorScheme.surfaceVariant
     ) {
         Column(
@@ -126,35 +124,91 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
         ) {
 
             Spacer(modifier = Modifier.height(40.dp))
-            StudyStatusBadge(tag, title)
+            StudyStatusBadge(uiState.tag, uiState.title)
 
-            Spacer(modifier = Modifier.height(70.dp))
+            Spacer(modifier = Modifier.height(30.dp))
             Text("$startTime ~", style = Typography.bodyMedium, fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             SetTimer(uiState.timer)
 
-            Spacer(modifier = Modifier.height(30.dp))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Card(
+                modifier = Modifier.padding(10.dp)
+                    .clickable{ viewModel.onChangeGoalCheckMode(StudyingGoalCheckMode.CHECK)},
+                shape = RoundedCornerShape(10.dp),
+                colors = CardDefaults.cardColors(MaterialTheme.colorScheme.background),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Row(modifier = Modifier.padding(vertical = 17.dp, horizontal = 13.dp).width(250.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ){
+                    Text("오늘의 학습 목표", style = Typography.bodyMedium, textDecoration = TextDecoration.Underline )
+
+                    Image(painter = painterResource(R.drawable.ic_right), contentDescription = "goalCheck")
+
+                }
+
+            }
+
+            Spacer(modifier = Modifier.height(15.dp))
+
             Row {
                 //일시정지/학습시작 버튼
                 StateChangeButton(timerButtonText, timerButtonBack){ viewModel.onStudyingStatusChange()}
                 StateChangeButton("학습종료", MaterialTheme.colorScheme.secondary) {
-                    viewModel.onFinishDialogShownChange()
+                    viewModel.onChangeGoalCheckMode(StudyingGoalCheckMode.FINISH)
                 }
             }
             Spacer(modifier = Modifier.weight(1f))
 
-            StudyingUserCard(studyingUsers, tag)
+            StudyingUserCard(studyingUsers, uiState.tag)
         }
     }
-    if(uiState.isFinishDialogShown){
-        viewModel.stopStopwatch()
+    if (uiState.isGoalInputDialogShown){
+        GoalInputDialog(
+            tag = uiState.tag,
+            title = uiState.title,
+            studyLogs = uiState.studyLog.map { it.log },
+            onDismiss = {viewModel.onGoalInputDialogChange(false)},
+            onConfirm = {
+                viewModel.setStudyLog(it)
+                viewModel.onGoalInputDialogChange(false)
+            }
+        )
+    }
+    uiState.goalCheckMode?.let {
+        StudyingGoalCheckDialog(
+            mode = it,
+            studyLog = uiState.studyLog,
+            onEdit = {
+                viewModel.onChangeGoalCheckMode(null)
+                viewModel.onGoalInputDialogChange(true)
+             },
+            onCompleted = {index, isCompleted ->
+                viewModel.onStudyLogCompleted(index, isCompleted)
+            },
+            onDismiss = {viewModel.onChangeGoalCheckMode(null)},
+            onConfirm = {
+                viewModel.onIsStudyFinishChange()
+            }
+        )
+    }
 
-        StudyFinishDialog(onDismiss = {viewModel.onDialogDismissClick()},onConfirm = { logs ->
-            Log.d("입력값 확인", logs.toString())
-            viewModel.onIsStudyFinishChange()
-            viewModel.setStudyLog(logs)
-            viewModel.onFinishStudyingClick()
-        }, tag, title)
+    if (uiState.isLoading)
+        LoadingBox()
+
+    if (uiState.error != null)
+        ConfirmDialog(
+            text = "${uiState.error}",
+            semiText = "메인 화면으로 이동합니다.",
+            onDismiss = {},
+            onConfirm = { viewModel.onErrorConfirmClicked() }
+        )
+
+    if (!uiState.isLocalSaved){
+        //TODO 배너나 알림 창 같은 거 조그맣게 띄위기
     }
 }
 
@@ -218,7 +272,7 @@ fun StudyingUserCard(users: List<StudyingUser>, tag: String){
             Text("$tag ${users.size}", style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface)
             users.take(3).forEach { user ->
-                StudyinUserItem(user)
+                StudyingUserItem(user)
                 Spacer(modifier = Modifier.height(8.dp))
             }
         }
@@ -226,7 +280,7 @@ fun StudyingUserCard(users: List<StudyingUser>, tag: String){
 }
 
 @Composable
-fun StudyinUserItem(user: StudyingUser){
+fun StudyingUserItem(user: StudyingUser){
     Row(Modifier.padding(10.dp),
         verticalAlignment = Alignment.CenterVertically) {
         ProfileImage(user.profileImg, 30)
@@ -238,115 +292,186 @@ fun StudyinUserItem(user: StudyingUser){
 }
 
 @Composable
-fun StudyFinishDialog(
-    onDismiss: () -> Unit,
-    onConfirm: (List<String>) -> Unit,
+fun GoalInputDialog(
     tag: String,
-    title: String
+    title: String,
+    studyLogs: List<String>,
+    onDismiss: () -> Unit,
+    onConfirm: (List<String>) -> Unit
 ) {
-    val inputs = remember { mutableStateListOf("") }  // 입력창 리스트
-    val focus = remember { mutableStateListOf(FocusRequester()) } //포커스 조절하는 거
+    val maxLength = 100
+    val maxLogSize = 10
 
-    val scrollState = rememberLazyListState()
-    LaunchedEffect(inputs.size) {
-        if (inputs.size > 1) {
-            focus.last().requestFocus()
-            scrollState.animateScrollToItem(inputs.size)
+    val localLogs = remember(studyLogs) {
+        mutableStateListOf<String>().apply {
+            if (studyLogs.isEmpty()) add("") else addAll(studyLogs)
         }
     }
+    var index by remember { mutableIntStateOf(0) }
+    val currentText = localLogs.getOrElse(index) { "" }
+
+    val focusManager = LocalFocusManager.current
+
     Dialog(onDismissRequest = {}) {
         Card(
-            shape = RoundedCornerShape(8.dp),
-            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceVariant)) {
-            Column(modifier = Modifier.padding(16.dp)
-                .consumeWindowInsets(WindowInsets.ime) //키보드 패딩
-                .imePadding(),
-                horizontalAlignment = Alignment.CenterHorizontally) {
-                LazyColumn(
-                    state = scrollState,
-                    modifier = Modifier.weight(1f, fill = false),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    item {
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Text("학습 종료", style = Typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = MaterialTheme.colorScheme.onSurface)
-
-                        Text("[$tag] $title", style = Typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-
-                        Spacer(modifier = Modifier.height(21.dp))
-                    }
-
-                    // 입력창 리스트
-                    itemsIndexed(inputs) { index, value ->
-                        OutlinedTextField(
-                            value = value,
-                            shape = RoundedCornerShape(10.dp),
-                            onValueChange = { inputs[index] = it },
-                            modifier = Modifier.fillMaxWidth()
-                                .focusRequester(focus[index]),
-                            placeholder = {Text(
-                                text = "오늘의 학습을 기록해보세요!",
-                                style = Typography.bodyMedium,
-//                                color = Color(0xFF858585))},
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)},
-                            textStyle =Typography.bodyMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurface
-                            ),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                            keyboardActions = KeyboardActions(
-                                onNext = {
-                                    inputs.add("")
-                                    focus.add(FocusRequester())
-                                }
-                            )
-                        )
-                        Spacer(modifier = Modifier.height(22.dp))
-                    }
-
-                    item {
-                        // 플러스 버튼
-                        IconButton(onClick = {
-                            inputs.add("")
-                            focus.add(FocusRequester())
-                        }) {
-                            Image(painter = painterResource(R.drawable.ic_studying_plus),
-                                contentDescription = "추가 버튼",
-                                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface)
-                            )
-
-                        }
-
-                        Spacer(modifier = Modifier.height(30.dp))
-                    }
+            shape = RoundedCornerShape(21.dp),
+            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceVariant),
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.5f)
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = {
+                        focusManager.clearFocus()
+                    })
                 }
-                // 취소 / 종료 버튼
-                Row(modifier = Modifier.fillMaxWidth().padding(10.dp)) {
-                    Button(onClick = onDismiss,
-                        modifier = Modifier.height(45.dp).weight(1f),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = sub3,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    ) { Text("취소", style = Typography.bodyMedium) }
+        ) {
+            Column(
+                modifier = Modifier.padding(top = 10.dp, bottom = 5.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
 
-                    Spacer(modifier = Modifier.width(16.dp))
+                Text("[$tag] $title", style = Typography.titleSmall)
+
+                Spacer(Modifier.height(7.dp))
+
+                Text(
+                    "${index + 1} / 10 ",
+                    style = Typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(top = 7.dp)
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth().weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+
+                ) {
+                    IconButton(
+                        onClick = {
+                            focusManager.clearFocus()
+                            if (index > 0) index--
+                        },
+                        enabled = index > 0
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.ic_left),
+                            contentDescription = "왼쪽",
+                            modifier = Modifier.size(23.dp)
+                        )
+                    }
+
+                    Box(modifier = Modifier
+                        .weight(1f)
+                        ) {
+                        OutlinedTextField(
+                            value = currentText,
+                            shape = RoundedCornerShape(10.dp),
+                            onValueChange = { newValue ->
+                                if (newValue.length <= maxLength) {
+                                    localLogs[index] = newValue
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().fillMaxHeight(0.9f),
+                            placeholder = {
+                                Text(
+                                    text = "오늘의 학습 목표를 기록해보세요!",
+                                    style = Typography.bodyMedium,
+                                    color = Color.LightGray
+                                )
+                            },
+                            maxLines = 11,
+                            textStyle = Typography.bodyMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+
+                        Text(
+                            "${currentText.length}/$maxLength",
+                            style = Typography.bodySmall,
+                            color = if (currentText.length >= maxLength) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(end = 12.dp, bottom = 8.dp)
+                        )
+
+                    }
+
+                    IconButton(
+                        onClick = {
+                            focusManager.clearFocus()
+                            if (index < 10) index++
+                        },
+                        enabled = index < localLogs.size - 1
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.ic_right),
+                            contentDescription = "오른쪽",
+                            modifier = Modifier.size(23.dp)
+                        )
+                    }
+
+                }
+
+                Row(
+                    modifier = Modifier.padding(horizontal = 13.dp).fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = {
+                            if (localLogs.size < maxLogSize) {
+                                localLogs.add("")
+                                index = localLogs.size - 1
+                            }
+                        },
+                        enabled = localLogs.size < maxLogSize,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.height(33.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = sub3, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+                    ) { Text("추가", style = Typography.bodySmall) }
 
                     Button(
-                        onClick = { onConfirm(inputs.toList()) },
-                        modifier = Modifier.height(45.dp).weight(1f),
+                        onClick = {
+                            if (localLogs.size > 1) {
+                                localLogs.removeAt(index)
+                                if (index >= localLogs.size) index = localLogs.size - 1
+                            } else {
+                                localLogs[0] = ""
+                            }
+                        },
                         shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        modifier = Modifier.height(33.dp).padding(start = 10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error.copy(0.3f), contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+                    ) { Text("삭제", style = Typography.bodySmall) }
+
+
+                    Spacer(Modifier.weight(1f))
+
+                    Button(
+                        onClick = {onConfirm(localLogs.toList())},
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.height(33.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(0.7f), contentColor = MaterialTheme.colorScheme.primary)
+                    ) { Text("완료", style = Typography.bodySmall)}
+
+                }
+
+                Row(modifier = Modifier.fillMaxWidth().padding(start = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically
+
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text(
+                            "다음에 입력하기",
+                            style = Typography.bodySmall,
+                            color = Color.Gray,
+                            textDecoration = TextDecoration.Underline
                         )
-                    ) { Text("종료", style = Typography.titleSmall) }
+                        Spacer(Modifier.weight(1f))
+                    }
                 }
             }
-
         }
     }
 }

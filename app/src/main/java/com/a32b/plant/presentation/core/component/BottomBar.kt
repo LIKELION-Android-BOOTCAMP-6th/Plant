@@ -29,6 +29,7 @@ fun BottomBar(navController: NavController){
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
+    val size = 23
     Surface(modifier = Modifier
         .fillMaxWidth()
         .navigationBarsPadding(),
@@ -45,10 +46,27 @@ fun BottomBar(navController: NavController){
                 contentDescription = "COMMUNITY",
                 modifier = Modifier
                     .weight(1f)
-                    .size(32.dp)
+                    .size(size.dp)
                     .clickable{
                         if (!isCommunitySelected) {  // ★
                             navController.navigate(Routes.CommunityList) {
+                                popUpTo(Routes.HomeMain) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
+            )
+
+            val isPotSelected = currentDestination?.hasRoute<Routes.PotList>() == true
+            Image(
+                painter = painterResource(id = if(isPotSelected) R.drawable.ic_bottom_pot_selected else R.drawable.ic_bottom_pot_normal),
+                contentDescription = "POTLIST",
+                modifier = Modifier
+                    .weight(1f)
+                    .size(size.dp)
+                    .clickable{
+                        if (!isPotSelected) {  // ★
+                            navController.navigate(Routes.PotList) {
                                 popUpTo(Routes.HomeMain) { inclusive = false }
                                 launchSingleTop = true
                             }
@@ -62,8 +80,7 @@ fun BottomBar(navController: NavController){
                 contentDescription = "HOME",
                 modifier = Modifier
                     .weight(1f)
-                    .width(24.dp)
-                    .height(32.dp)
+                    .size(size.dp)
                     .clickable{
                         if (!isHomeSelected) {  // ★
                             navController.navigate(Routes.HomeMain) {
@@ -74,14 +91,31 @@ fun BottomBar(navController: NavController){
                     }
             )
 
+            val isReportSelected = currentDestination?.hasRoute<Routes.Report>() == true
+            Image(
+                painter = painterResource(id = if(isReportSelected) R.drawable.ic_bottom_report_selected else R.drawable.ic_bottom_report_normal),
+                contentDescription = "REPORT",
+                modifier = Modifier
+                    .weight(1f)
+                    .size(size.dp)
+                    .clickable{
+                        if (!isReportSelected) {  // ★
+                            navController.navigate(Routes.Report) {
+                                popUpTo(Routes.HomeMain) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
+            )
+
+
             val isMyPageSelected = currentDestination?.hasRoute<Routes.Mypage>() == true
             Image(
                 painter = painterResource(id = if(isMyPageSelected) R.drawable.ic_bottom_mypage_selected else R.drawable.ic_bottom_mypage_normal),
                 contentDescription = "MYPAGE",
                 modifier = Modifier
                     .weight(1f)
-                    .width(24.dp)
-                    .height(32.dp)
+                    .size(size.dp)
                     .clickable{
                         if (!isMyPageSelected) {  // ★
                             navController.navigate(Routes.Mypage) {

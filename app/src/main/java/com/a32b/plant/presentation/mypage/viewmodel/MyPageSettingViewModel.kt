@@ -1,73 +1,109 @@
 package com.a32b.plant.presentation.mypage.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.a32b.plant.di.CurrentUser
-import com.a32b.plant.origin.OldNicknameRepository
-import com.a32b.plant.origin.OldUserRepository
-import com.google.firebase.auth.FirebaseAuth
+import com.a32b.plant.domain.error.AppError
+import com.a32b.plant.domain.repository.AuthRepository
+import com.a32b.plant.domain.result.onFailure
+import com.a32b.plant.domain.result.onSuccess
+import com.a32b.plant.domain.usecase.auth.DeleteAccountUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
+
+data class MyPageSettingUiState(
+    val isLoading: Boolean = false,
+    val showPasswordDialog: Boolean = false
+)
+
+sealed class MyPageSettingEvent {
+    data class ShowToast(val message: String) : MyPageSettingEvent()
+    object NavigateToSignIn : MyPageSettingEvent()
+    object RequestGoogleReauth : MyPageSettingEvent()
+}
 
 @HiltViewModel
 class MyPageSettingViewModel @Inject constructor(
-    private val userRepository: OldUserRepository,
-    private val nicknameRepository: OldNicknameRepository,
-    private val firebaseAuth: FirebaseAuth
+    private val deleteAccountUseCase: DeleteAccountUseCase,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(MyPageUiState())
+
+    private val _uiState = MutableStateFlow(MyPageSettingUiState())
     val uiState = _uiState.asStateFlow()
 
-    private val _eventChannel = Channel<MyPageEvent>(Channel.BUFFERED)
+    private val _eventChannel = Channel<MyPageSettingEvent>(Channel.BUFFERED)
     val events = _eventChannel.receiveAsFlow()
 
-    fun deleteAccount() {
+    /** 2단계 확인 완료 후 로딩 시작 → 로그인 제공자에 따라 재인증 방식 분기 */
+    fun requestDeleteAccount() {
+        val provider = authRepository.getSignInProvider()
+        _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
-            try {
-                // 1. 현재 로그인된 유저 정보 받기
-                val uid = CurrentUser.uid
-                val nickname = CurrentUser.nickname
-
-                val firebaseUser = firebaseAuth.currentUser // 기존 auth.currentUser
-
-                // 현재 firebase에 로그인 세션 없을 때
-                // auth.currentUser가 FirebaseUser? 타입이라 nullable인데, Kotlin 컴파일러가 null 체크 없이 .delete() 호출 불허..
-                if (firebaseUser == null) {
-                    _eventChannel.send(MyPageEvent.ShowToast("로그인 정보가 없습니다."))
-                    return@launch
-                }
-
-                // 1. Firestore 데이터 먼저 삭제 (인증 세션이 살아있는 동안)
-                userRepository.deleteUser(uid)
-
-                if (nickname.isNotBlank()) {
-                    nicknameRepository.deleteNickname(nickname)
-                }
-
-                // 2. Firebase Auth 계정은 맨 마지막에 삭제
-                firebaseUser.delete().await()
-
-                // 3. 로컬 유저 정보 초기화
-                CurrentUser.clear()
-                _eventChannel.send(MyPageEvent.ShowToast("회원탈퇴가 완료되었습니다."))
-                _eventChannel.send(MyPageEvent.NavigateToSignIn)
-
-            } catch (e: Exception) {
-                Log.e("MyPage", "회원탈퇴 실패: ${e.message}", e)
-
-                if (e.message?.contains("RECENT_LOGIN_REQUIRED") == true) {
-                    _eventChannel.send(MyPageEvent.ShowToast("보안을 위해 재로그인 후 다시 시도해주세요."))
-                } else {
-                    _eventChannel.send(MyPageEvent.ShowToast("회원탈퇴에 실패했습니다. 다시 시도해주세요."))
-                }
+            if (provider == "google.com") {
+                _eventChannel.send(MyPageSettingEvent.RequestGoogleReauth)
+            } else {
+                // 이메일: 비밀번호 다이얼로그가 즉시 뜨므로 로딩 해제
+                _uiState.update { it.copy(showPasswordDialog = true, isLoading = false) }
             }
         }
+    }
+
+    fun cancelLoading() {
+        _uiState.update { it.copy(isLoading = false) }
+    }
+
+    fun dismissPasswordDialog() {
+        _uiState.update { it.copy(showPasswordDialog = false) }
+    }
+
+    /** 이메일 유저: 비밀번호로 재인증 후 삭제 */
+    fun reauthenticateWithEmailAndDelete(password: String) {
+        val email = authRepository.currentEmail() ?: return
+        _uiState.update { it.copy(showPasswordDialog = false, isLoading = true) }
+        viewModelScope.launch {
+            authRepository.reauthenticateWithEmail(email, password)
+                .onSuccess { performDelete() }
+                .onFailure { error ->
+                    _uiState.update { it.copy(isLoading = false) }
+                    if (error !is AppError.UnknownUser) {
+                        _eventChannel.send(MyPageSettingEvent.ShowToast(error.message))
+                    }
+                }
+        }
+    }
+
+    /** 구글 유저: idToken으로 재인증 후 삭제 (idToken은 Screen에서 Credential Manager로 획득) */
+    fun reauthenticateWithGoogleAndDelete(idToken: String) {
+        _uiState.update { it.copy(isLoading = true) }
+        viewModelScope.launch {
+            authRepository.reauthenticateWithGoogle(idToken)
+                .onSuccess { performDelete() }
+                .onFailure { error ->
+                    _uiState.update { it.copy(isLoading = false) }
+                    if (error !is AppError.UnknownUser) {
+                        _eventChannel.send(MyPageSettingEvent.ShowToast(error.message))
+                    }
+                }
+        }
+    }
+
+    private suspend fun performDelete() {
+        deleteAccountUseCase()
+            .onSuccess {
+                _uiState.update { it.copy(isLoading = false) }
+                _eventChannel.send(MyPageSettingEvent.ShowToast("회원탈퇴가 완료되었습니다."))
+                _eventChannel.send(MyPageSettingEvent.NavigateToSignIn)
+            }
+            .onFailure { error ->
+                _uiState.update { it.copy(isLoading = false) }
+                if (error !is AppError.UnknownUser) {
+                    _eventChannel.send(MyPageSettingEvent.ShowToast(error.message))
+                }
+            }
     }
 }

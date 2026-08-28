@@ -24,8 +24,15 @@ import com.a32b.plant.presentation.theme.primary
 import com.a32b.plant.presentation.theme.sub2
 
 @Composable
-fun ConfirmDialog(text: String, semiText:String? = null,onDismiss: () -> Unit, onConfirm: () -> Unit) {
-    Dialog(onDismissRequest = {}) {
+fun ConfirmDialog(
+    text: String,
+    semiText: String? = null,
+    isSingleBtn: Boolean = false,
+    isCancelable: Boolean = true,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    Dialog(onDismissRequest = {if (isCancelable) onDismiss() }) {
         Card(shape = RoundedCornerShape(30.dp),
             colors = CardDefaults.cardColors(MaterialTheme.colorScheme.secondaryContainer),
             elevation = CardDefaults.cardElevation(3.dp)) {
@@ -42,13 +49,16 @@ fun ConfirmDialog(text: String, semiText:String? = null,onDismiss: () -> Unit, o
                 Spacer(modifier = Modifier.height(22.dp))
 
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    Button(onClick = onDismiss,
-                        modifier = Modifier.height(30.dp).weight(1f),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(sub2)) {
-                        Text("취소", style = Typography.bodyMedium)
+                    if (!isSingleBtn){
+                        Button(onClick = onDismiss,
+                            modifier = Modifier.height(30.dp).weight(1f),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(sub2)) {
+                            Text("취소", style = Typography.bodyMedium)
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
                     }
-                    Spacer(modifier = Modifier.width(10.dp))
+
                     Button(onClick = onConfirm,
                         modifier = Modifier.height(30.dp).weight(1f),
                         shape = RoundedCornerShape(8.dp),

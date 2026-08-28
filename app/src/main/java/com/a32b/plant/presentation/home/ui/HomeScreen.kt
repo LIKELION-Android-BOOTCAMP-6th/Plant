@@ -1,485 +1,486 @@
 package com.a32b.plant.presentation.home.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
-import androidx.compose.material3.FloatingActionButtonDefaults.elevation
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.a32b.plant.R
+import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.ProfileImage
-import com.a32b.plant.core.navigation.Routes
-import com.a32b.plant.core.util.TimeFormatter
-import com.a32b.plant.di.CurrentUser
-import com.a32b.plant.data.local.StudyingSession
-import com.a32b.plant.domain.model.Pot
+import com.a32b.plant.presentation.core.component.getLogoImage
 import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
-import com.a32b.plant.presentation.theme.Typography
-import com.a32b.plant.presentation.theme.primary
-
+import com.a32b.plant.presentation.theme.*
+import java.time.LocalDate
+import java.time.format.TextStyle
+import java.util.Locale
 
 @Composable
 fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltViewModel()) {
+    val displayPot by viewModel.displayPot.collectAsState()
+    val userName by viewModel.userName.collectAsState()
+    val showPotChangeDialog by viewModel.showPotChangeDialog.collectAsState()
+    val allPots by viewModel.allPots.collectAsState()
+    val tempSelectedPot by viewModel.tempSelectedPot.collectAsState()
 
-    //화면전환 빈화면 -> 홈화면
+    val hasNoPot = displayPot.id.isEmpty() || displayPot == Pot.EMPTY
+
     LoadableScreen(viewModel) {
-        val userName by viewModel.userName.collectAsState()
-        val currentDate by viewModel.currentDate.collectAsState() // 로컬 날짜 획득
-        val displayPot by viewModel.displayPot.collectAsState()
-        val potList by viewModel.potList.collectAsState()
-        val interruptedUiState by viewModel.interruptedUiState.collectAsState() //공부중 비정상 종료 감지
-
-        if (interruptedUiState.isInterrupted) {
-            val tag = interruptedUiState.interruptedStudySession!!.tag
-            val title = interruptedUiState.interruptedStudySession!!.title
-            val time = interruptedUiState.interruptedStudySession!!.time
-            InterruptedDialog(
-                onDismiss = { viewModel.onInterruptedDialogDismiss() },
-                onConfirm = { inputs ->
-                    viewModel.setInterruptedStudyLog(inputs)
-                    viewModel.saveStudyLog()
-                    viewModel.onInterruptedDialogDismiss()
-                },
-                StudyingSession(CurrentUser.uid, tag = tag, title = title, time = time)
-            )
-        }
         Scaffold(
-            topBar = { HomeTopBar(userName) }
+            topBar = {
+                HomeTopBar(
+                    userName = userName,
+                    onAttendanceClick = { navController.navigate(Routes.AttendanceCheck) }
+                )
+            },
+            containerColor = MaterialTheme.colorScheme.background
         ) { paddingValues ->
-            LazyColumn(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
                     .background(MaterialTheme.colorScheme.background),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                contentPadding = PaddingValues(bottom = 50.dp)
             ) {
-                // [홈 1 영역] 상단 메인 카드
-                item {
-                    HomeHeaderSection(currentDate, displayPot) {
-                        if (!displayPot.id.isNullOrEmpty()) {
+                MainPlantCard(
+                    displayPot = displayPot,
+                    hasNoPot = hasNoPot,
+                    onStartClick = {
+                        if(!hasNoPot) {
                             navController.navigate(
                                 Routes.Studying(
-                                    potId = displayPot.id!!,
-                                    tagId = displayPot.tagId ?: "",     // PotInfo의 tag_id
-                                    tagName = displayPot.tagName ?: "", // PotInfo의 tag_name
-                                    title = displayPot.name ?: "",
-                                    level = displayPot.level
-                                )
-                            )
+                                potId = displayPot.id.ifEmpty { "default_pot" },
+                                tagId = displayPot.tagId,
+                                tagName = displayPot.tagName,
+                                title = displayPot.name.ifEmpty { "공부 목표" },
+                                level = displayPot.level.ifEmpty { "Lv.1" }
+                            ))
                         }
-                    }
-                }
-
-                // 하단 그리드
-                items(potList.chunked(3)) { rowPots ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        rowPots.forEach { pot ->
-                            GridPlantItem(
-                                pot = pot,
-                                modifier = Modifier.weight(1f),
-                                // 이미지 클릭 시 -> 메인 카드 교체
-                                onImageClick = {
-                                    viewModel.selectPot(pot)
-                                },
-                                // 텍스트 클릭 시 -> 학습 계획창으로 이동
-                                onTextClick = {
-                                    pot.id?.let { id ->
-                                        navController.navigate(Routes.StudyPlanDetail(id))
-                                    }
-
-                                }
-                            )
-                        }
-
-                        // 빈 칸 채우기 로직
-                        val emptySlots = 3 - rowPots.size
-                        repeat(emptySlots) {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
-                    }
-                }
-                // [추가 버튼 영역]
-//             IconButton 대신 FloatingActionButton 사용
-                item {
-                    Spacer(modifier = Modifier.height(30.dp))
-
-                    FloatingActionButton(
-                        onClick = {
+                    },
+                    //화분 생성 이동 or 화분 변경 다이얼로그 오픈
+                    onChangeOrMakeClick = {
+                        if(hasNoPot){
                             navController.navigate(Routes.NewBornTree)
-                        },
-                        modifier = Modifier.size(56.dp),
-                        shape = CircleShape,
-                        containerColor = primary,
-                        elevation = elevation(
-                            defaultElevation = 6.dp,
-                            pressedElevation = 2.dp
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "화분 추가",
-                            modifier = Modifier.fillMaxSize(),
-                            tint = MaterialTheme.colorScheme.background
-                        )
+                        } else {
+                            viewModel.setShowPotChangeDialog(true)
+                        }
+                    },
+                    onRecordClick = {
+                        if (!hasNoPot) {
+                            navController.navigate(
+                                Routes.StudyPlanDetail(
+                                    potId = displayPot.id.ifEmpty { "default_pot" }
+                                )
+                            )                        }
+                    } // 상세 기록 이동
+                )
+
+
+                HomeItemBoxSection()
+            }
+
+            // 화분 변경 다이얼로그
+            if (showPotChangeDialog){
+                PotChangeDialog(
+                    pots = allPots,
+                    selectedPot = tempSelectedPot,
+                    onPotSelected = {
+                        viewModel.setTempSelectedPot(it)
+                    },
+                    onDismiss = {
+                        viewModel.setShowPotChangeDialog(false)
+                    },
+                    onConfirm ={
+                        viewModel.confirmPotChange()
+                    },
+                    onCreateNewClick = {
+                        viewModel.setShowPotChangeDialog(false)
+                        navController.navigate(Routes.NewBornTree)
                     }
-                    Spacer(modifier = Modifier.height(50.dp))
-                }
+                )
             }
         }
     }
 }
 
 @Composable
-fun HomeTopBar(userName: String) {
-    Text(
-        text = "${userName}의 Garden",
-        modifier = Modifier.padding(16.dp),
-        style = MaterialTheme.typography.displayLarge,
-        color = MaterialTheme.colorScheme.primary
+fun PotChangeDialog(
+    pots: List<Pot>,
+    selectedPot: Pot?,
+    onPotSelected: (Pot) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+    onCreateNewClick: () -> Unit
+){
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.background,
+        title = {
+            Text(
+                text = "화분 변경",
+                style = MaterialTheme.typography.headlineMedium,
+                color = fontColor
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 300.dp)
+            ) {
+                Text(
+                    text = "정원에 있는 다른 공부 화분으로\n변경할 수 있습니다.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = fontColorSub
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (pots.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "생성된 다른 화분이 없습니다.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = fontColorSub
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(pots) { pot ->
+                            val isSelected = pot.id == selectedPot?.id
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable { onPotSelected(pot) },
+                                color = if (isSelected) sub_green1 else sub2,
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = pot.name.ifEmpty { "이름 없는 화분" },
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = fontColor
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = "태그: ${pot.tagName.ifEmpty { "없음" }}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = fontColorSub
+                                        )
+                                    }
+                                    Text(
+                                        text = pot.level.ifEmpty { "Lv.0" },
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = if(isSelected) primary else fontColorSub
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // 새 화분 생성 버튼 (다이얼로그 내부 추가 옵션)
+                TextButton(
+                    onClick = onCreateNewClick,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "+ 새로운 화분 만들기",
+                        color = primary
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                enabled = selectedPot != null && selectedPot != Pot.EMPTY,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = primary
+                )
+            ) {
+                Text("선택 완료")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = fontColorSub
+                )
+            ) {
+                Text("취소")
+            }
+        },
+        shape = RoundedCornerShape(24.dp)
     )
 }
 
-@Composable
-fun HomeHeaderSection(date: String, displayPot: Pot, onStartClick: () -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.padding(vertical = 20.dp)
-    ) {
-        Text(
-            date,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(20.dp))
-        MainPlantCard(displayPot = displayPot, onStartClick = onStartClick)
-        Spacer(modifier = Modifier.height(40.dp))
-        Text(
-            "아래로 내려서 화분 확인하기",
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(20.dp))
-        Icon(
-            painter = painterResource(id = R.drawable.ic_down_two),
-            contentDescription = "스크롤 안내",
-            tint = Color.LightGray
-        )
 
+@Composable
+fun HomeTopBar(
+    userName: String,
+    onAttendanceClick: () -> Unit
+) {
+    val displayName = if (userName.isBlank()) "사용자" else userName
+
+    //오늘 날짜 표출
+    val currentDate = LocalDate.now()
+    val year = currentDate.year
+    val month = currentDate.monthValue
+    val day = currentDate.dayOfMonth
+    val dayOfWeek = currentDate.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.KOREAN)
+    val dateString = "${year}년 ${month}월 ${day}일 ${dayOfWeek}"
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "${displayName}의 Garden",
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.displayLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Start
+            )
+            IconButton(
+                onClick = onAttendanceClick,
+                modifier = Modifier.offset(x = 6.dp)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_daily_default),
+                    contentDescription = "출석체크",
+                    modifier = Modifier.size(36.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(30.dp))
+        Text(
+            text = dateString,
+            modifier = Modifier.fillMaxWidth(),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
 @Composable
-fun MainPlantCard(displayPot: Pot, onStartClick: () -> Unit) {
-    val isPotEmpty = displayPot.id.isNullOrEmpty()
+fun MainPlantCard(
+    displayPot: Pot,
+    hasNoPot: Boolean,
+    onStartClick: () -> Unit,
+    onChangeOrMakeClick: () -> Unit,
+    onRecordClick: () -> Unit
+) {
     Card(
-        modifier = Modifier.fillMaxWidth(0.85f),
+        modifier = Modifier
+            .fillMaxWidth(0.9f)
+            .wrapContentHeight(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        elevation = CardDefaults.cardElevation(4.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = sub_green1
+        ),
+        border = BorderStroke(1.dp, primary)
     ) {
         Column(
-            modifier = Modifier.padding(24.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 14.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 화분이 있을 때만 태그 표시 (ID가 비어있지 않을 때)
-            if (!isPotEmpty && !displayPot.tagName.isNullOrEmpty()) {
+            //상단 태그
+            if(!hasNoPot && displayPot.tagName.isNotEmpty()){
                 Surface(
-                    color = MaterialTheme.colorScheme.primary,
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    color = sub_green1,
+                    border = BorderStroke(1.dp, primary)
                 ) {
                     Text(
                         text = displayPot.tagName,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        style = MaterialTheme.typography.bodySmall
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = sub_green3,
+                        fontWeight = FontWeight.Medium
                     )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
             }
-
-            // 화분이 없으면 안내 문구
             Text(
-                text = if (isPotEmpty) "화분을 등록해보세요" else (displayPot.name ?: "이름 없음"),
-                style = MaterialTheme.typography.displayLarge,
-                color = MaterialTheme.colorScheme.onSurface,
+                text = if(hasNoPot) "공부 화분이 없습니다" else displayPot.name.ifEmpty { "실험용" },
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = fontColor
             )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // 화분 이미지
-            ProfileImage(
-                level = displayPot.level,
-                size = 150
-            )
-
-            Spacer(modifier = Modifier.height(40.dp))
-
-            // [공부 시간] 화분이 없으면 00:00:00
-            Text(
-                text = TimeFormatter.formatToDigitalClock(displayPot.potTotalStudyingTime ?: 0L),
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = onStartClick,
-                // 화분이 있을 때 버튼을 활성화함
-                enabled = !isPotEmpty,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    disabledContainerColor = MaterialTheme.colorScheme.outlineVariant,
-                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                ),
-//                colors = ButtonDefaults.buttonColors(containerColor = primary,
-//                    disabledContainerColor = Color.LightGray),
-                shape = RoundedCornerShape(12.dp),
-                elevation = ButtonDefaults.buttonElevation(
-                    defaultElevation = 6.dp,
-                    pressedElevation = 2.dp,
-                    disabledElevation = 0.dp
-                )
-            ) {
-                Text(
-                    text = if (isPotEmpty) "화분을 등록해주세요" else "공부 시작",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun GridPlantItem(
-    pot: Pot,
-    modifier: Modifier = Modifier,
-    onImageClick: () -> Unit,
-    onTextClick: () -> Unit
-) {
-    // 화분 ID가 비어있지 않을 때만 실제 내용을 표시
-    if (!pot.id.isNullOrEmpty()) {
-        Column(
-            modifier = modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp))
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // 1. 화분 그림 (ProfileImage) - 메인 카드 교체용
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable { onImageClick() }
-            ) {
-                ProfileImage(
-                    level = pot.level,
-                    size = 60
-                )
-            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 2. 화분 정보 (시간, 이름) - 학습 계획창 이동용
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onTextClick() },
-                horizontalAlignment = Alignment.CenterHorizontally
+            if(hasNoPot){
+                Box(
+                    modifier = Modifier.size(100.dp),
+                    contentAlignment = Alignment.Center
+                ){
+                    getLogoImage()
+                }
+            } else {
+                ProfileImage(level = displayPot.level.ifEmpty { "Lv.1" }, size = 100)
+
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 화분 하나의 오늘 총 학습 시간
+            Text(
+                text = "오늘 학습 시간",
+                style = MaterialTheme.typography.bodySmall,
+                color = fontColorSub
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "00:00", // 나중에 DB에서 가져오기
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                color = fontColor,
+                fontSize = 26.sp
+            )
+            Spacer(modifier = Modifier.height(5.dp))
+
+            if (!hasNoPot) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "업그레이드 진행도",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = fontColorSub
+                        )
+                        Text(
+                            text = "60% (30분/50분)", // 예시 텍스트 (추후 뷰모델 데이터와 연결)
+                            style = MaterialTheme.typography.bodySmall,
+                            color = primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    LinearProgressIndicator(
+                        progress = { 0.6f }, // 예시 진행률 (0.0f ~ 1.0f)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp)),
+                        color = primary,
+                        trackColor = sub2
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(5.dp))
+
+
+            //공부 시작 버튼
+            Button(
+                onClick = onStartClick,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !hasNoPot
             ) {
-                // 총 공부 시간 (Medium 적용)
-                Text(
-                    text = TimeFormatter.formatToDigitalClock(pot.potTotalStudyingTime ?: 0L),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                // 화분 이름 (Medium 적용)
-                Text(
-                    text = pot.name ?: "이름 없음",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Text("공부 시작")
+            }
+
+            Spacer(modifier = Modifier.height(5.dp))
+
+            //화분변경 / 기록 버튼 (가로 배치)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onChangeOrMakeClick,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(if(hasNoPot) "화분 생성" else "화분 변경")
+                }
+                OutlinedButton(
+                    onClick = onRecordClick,
+                    modifier = Modifier.weight(1f),
+                    enabled = !hasNoPot
+                ) {
+                    Text("공부 기록")
+                }
             }
         }
-    } else {
-        // 화분이 없는 빈 칸은 투명한 공간으로 둠 (그리드 정렬 유지용)
-        Spacer(modifier = modifier.fillMaxWidth())
     }
 }
 
 @Composable
-fun InterruptedDialog(
-    onDismiss: () -> Unit,
-    onConfirm: (List<String>) -> Unit,
-    studySession: StudyingSession
-) {
-    val inputs = remember { mutableStateListOf("") }
-    val focus = remember { mutableStateListOf(FocusRequester()) }
-    val scrollState = rememberLazyListState()
-
-    LaunchedEffect(inputs.size) {
-        if (inputs.size > 1) {
-            focus.last().requestFocus()
-            scrollState.animateScrollToItem(inputs.size)
-        }
-    }
-    Dialog(onDismissRequest = {}) {
-        Card(
-            shape = RoundedCornerShape(30.dp),
-            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.background)
-        ) {
-            Column(
+fun HomeItemBoxSection(){
+    Row(
+        modifier = Modifier
+            .fillMaxWidth(0.9f)
+            .height(40.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        //가로 데이티 리스트 확장 가능
+        repeat(3){ index ->
+            Box(
                 modifier = Modifier
-                    .padding(22.dp)
-                    .consumeWindowInsets(WindowInsets.ime)
-                    .imePadding()
-            ) {
-                LazyColumn(
-                    state = scrollState,
-                    modifier = Modifier.weight(1f, fill = false),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    item {
-                        Text(
-                            "이전 학습 기록이 저장되지 않았습니다!",
-                            style = Typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(
-                            "저장하시겠습니까?",
-                            style = Typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Text(
-                            "[${studySession.tag}] ${studySession.title}",
-                            style = Typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            TimeFormatter.formatToDigitalClock(studySession.time!!),
-                            style = Typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-                    }
-
-                    itemsIndexed(inputs) { index, value ->
-                        OutlinedTextField(
-                            value = value,
-                            shape = RoundedCornerShape(10.dp),
-                            onValueChange = { inputs[index] = it },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .focusRequester(focus[index]),
-                            placeholder = {
-                                Text(
-                                    "학습을 기록해보세요!",
-                                    style = Typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            },
-                            textStyle = Typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                            keyboardActions = KeyboardActions(
-                                onNext = {
-                                    inputs.add("")
-                                    focus.add(FocusRequester())
-                                }
-                            )
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-
-                    item {
-                        // 플러스 버튼
-                        IconButton(onClick = {
-                            inputs.add("")
-                            focus.add(FocusRequester())
-                        }, modifier = Modifier.size(30.dp)) {
-                            Image(
-                                painter = painterResource(R.drawable.ic_studying_plus),
-                                contentDescription = "추가 버튼"
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                    }
-                }
-
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Button(
-                        onClick = onDismiss,
-                        modifier = Modifier
-                            .height(30.dp)
-                            .weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurface
-                        )
-                    ) {
-                        Text("취소", style = Typography.bodyMedium)
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Button(
-                        onClick = { onConfirm(inputs.toList()) },
-                        modifier = Modifier
-                            .height(30.dp)
-                            .weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        )
-                    ) {
-                        Text("저장", style = Typography.bodyMedium)
-                    }
-                }
-
+                    .weight(1f)
+                    .height(20.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surface),
+                contentAlignment = Alignment.Center
+            ){
+                Text(
+                    //아이템 전체 표출 및 DB에서 갯수 얻기 추가 필요
+                    text = "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = fontColor
+                )
             }
-
         }
     }
-
 }

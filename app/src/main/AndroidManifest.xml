@@ -14,10 +14,13 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Plant">
         <activity
-            android:name=".MainActivity"
+            android:name=".presentation.MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.Plant">
+            android:theme="@style/Theme.Plant"
+            android:screenOrientation="portrait"
+            >
+<!--            세로 고정용 screenOrientation-->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

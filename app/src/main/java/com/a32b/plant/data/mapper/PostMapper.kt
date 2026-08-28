@@ -41,7 +41,8 @@ fun PostDto.toDomain(uid: String, comments: List<Comment>) : Post = Post(
     isLiked = uid in likedBy,
     studyLogs = studyLogs,
     isShared = isShared,
-    comments = comments
+    comments = comments,
+    updatedAt = updatedAt?.toDate()?.time
 )
 
 /**
@@ -75,5 +76,6 @@ fun Post.toDto() : PostDto = PostDto(
     createdAt = createdAt.toTimestamp(),
     activityId = activityId,
     studyLogs = studyLogs,
-    isShared = isShared
+    isShared = isShared,
+    updatedAt = updatedAt?.toTimestamp()
 )

@@ -9,18 +9,19 @@ import androidx.compose.runtime.getValue
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.a32b.plant.presentation.attendance.ui.AttendanceCheckScreen
+import com.a32b.plant.presentation.auth.ui.SignInScreen
+import com.a32b.plant.presentation.auth.ui.SignUpScreen
+import com.a32b.plant.presentation.community.ui.CommunityActivityScreen
 import com.a32b.plant.presentation.community.ui.CommunityDetailScreen
 import com.a32b.plant.presentation.community.ui.CommunityListScreen
 import com.a32b.plant.presentation.community.ui.CommunityPostScreen
-import com.a32b.plant.presentation.auth.ui.SignInScreen
-import com.a32b.plant.presentation.auth.ui.SignUpScreen
 import com.a32b.plant.presentation.home.ui.HomeScreen
-import com.a32b.plant.presentation.home.ui.NewBornTreeScreen
-import com.a32b.plant.presentation.mypage.ui.MyPageArchiveDetailScreen
-import com.a32b.plant.presentation.mypage.ui.MyCommunityFeedScreen
-import com.a32b.plant.presentation.mypage.ui.MyPageArchiveScreen
 import com.a32b.plant.presentation.mypage.ui.MyPageScreen
 import com.a32b.plant.presentation.mypage.ui.MyPageSettingScreen
+import com.a32b.plant.presentation.pot.ui.NewBornTreeScreen
+import com.a32b.plant.presentation.pot.ui.PotListScreen
+import com.a32b.plant.presentation.report.ReportScreen
 import com.a32b.plant.presentation.splash.SplashViewModel
 import com.a32b.plant.presentation.studyPlanDetail.ui.StudyPlanDetailScreen
 import com.a32b.plant.presentation.studying.ui.StudyResultScreen
@@ -40,13 +41,9 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
         ) {
 
             composable<Routes.HomeMain> { HomeScreen(navController) }
+            composable<Routes.AttendanceCheck> { AttendanceCheckScreen(navController) }
             composable<Routes.Mypage> { MyPageScreen(navController) }
             composable<Routes.MyPageSetting> { MyPageSettingScreen(navController) }
-            composable<Routes.MyPageArchive> { MyPageArchiveScreen(navController) }
-
-            composable<Routes.MyPageArchiveDetail> {
-                MyPageArchiveDetailScreen(navController = navController)
-            }
 
             composable<Routes.CommunityList> {
                 CommunityListScreen(navController)
@@ -54,8 +51,8 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
 
             composable<Routes.CommunityPost> { CommunityPostScreen(navController) }
 
-            composable<Routes.CommunityDetail> { 
-                CommunityDetailScreen(navController) 
+            composable<Routes.CommunityDetail> {
+                CommunityDetailScreen(navController)
             }
 
             composable<Routes.Studying> { StudyingScreen(navController) }
@@ -64,7 +61,10 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
             composable<Routes.SignUp> { SignUpScreen(navController) }
             composable<Routes.NewBornTree> { NewBornTreeScreen(navController) }
             composable<Routes.StudyPlanDetail> { StudyPlanDetailScreen(navController = navController) }
-            composable<Routes.MyCommunityFeed> { MyCommunityFeedScreen(navController) }
+
+            composable<Routes.PotList> { PotListScreen(navController = navController) }
+            composable<Routes.Report> { ReportScreen(navController) }
+            composable<Routes.CommunityActivity> { CommunityActivityScreen(navController) }
         }
     }
 }

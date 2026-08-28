@@ -1,23 +1,23 @@
 package com.a32b.plant.presentation.mypage.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
-import com.a32b.plant.di.CurrentUser
-import com.a32b.plant.di.UserModel
-import com.a32b.plant.origin.OldNicknameRepository
-import com.a32b.plant.origin.OldPotRepository
-import com.a32b.plant.origin.OldUserRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import com.google.firebase.auth.FirebaseAuth
+import com.a32b.plant.domain.error.AppError
+import com.a32b.plant.domain.result.onFailure
+import com.a32b.plant.domain.result.onSuccess
+import com.a32b.plant.domain.usecase.auth.SignOutUseCase
+import com.a32b.plant.domain.usecase.mypage.GetProfileImageLevelListUseCase
+import com.a32b.plant.domain.usecase.mypage.UpdateDarkModeUseCase
+import com.a32b.plant.domain.usecase.mypage.UpdateProfileUseCase
+import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 
@@ -32,24 +32,24 @@ data class MyPageUiState(
     val isUpdateSuccess: Boolean = false,
     val levelList: List<String> = emptyList(), // 프로필 편집 - 화분 이미지 띄우기 위해 쓰이는 레벨 리스트
     val isDarkMode: Boolean = false,
+    val isDarkModeUpdating: Boolean = false,
     val isLoading: Boolean = false,
     val nicknameError: String? = null,
     val totalStudyTime: String = "0시간 0분",
-    val completedPotCount: Int = 0,
 )
 
 sealed class MyPageEvent {
     data class ShowToast(val message: String) : MyPageEvent()
     object NavigateToSignIn : MyPageEvent()// 로그인화면 보내기용 ************
-    object NavigateToMyCommunityFeed : MyPageEvent()
 }
 
 @HiltViewModel
 class MyPageViewModel @Inject constructor(
-    private val userRepository: OldUserRepository,
-    private val potRepository: OldPotRepository,
-    private val nicknameRepository: OldNicknameRepository,
-    private val firebaseAuth: FirebaseAuth
+    private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
+    private val getProfileImageLevelListUseCase: GetProfileImageLevelListUseCase,
+    private val signOutUseCase: SignOutUseCase,
+    private val updateDarkModeUseCase: UpdateDarkModeUseCase,
+    private val updateProfileUseCase: UpdateProfileUseCase
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow(MyPageUiState())
     val uiState = _uiState.asStateFlow()
@@ -58,125 +58,51 @@ class MyPageViewModel @Inject constructor(
     val events = _eventChannel.receiveAsFlow()
 
     init {
-        viewModelScope.launch {
-//            potRepository.createPot()
-            userRepository.getUserProfile(CurrentUser.uid).collectLatest { profile ->
-                if (profile != null) {
-                    _uiState.update {
-                        it.copy(
-                            nickname = profile.nickname ?: "이름없음",
-                            profileImg = profile.profileImg ?: "",
-                            isDarkMode = profile.isDarkMode ?: true,
-                            totalStudyTime = formatToDigitalClock(profile.totalStudyTime ?: 0L)
-                        )
-                    }
-                    getCompletedPotCount()
-
-                    // 빈화면 -> 홈화면
-                    loaded()
-
-                } else {
-                    Log.e("error", "-----------사용자 정보 없음")
-                }
+        ensureCurrentUserUseCase { user ->
+            _uiState.update {
+                it.copy(
+                    nickname = user.nickname,
+                    profileImg = user.profileImg,
+                    isDarkMode = user.isDarkMode,
+                    totalStudyTime = formatToDigitalClock(user.totalStudyTime)
+                )
             }
-        }
-    }
-
-    // 사용자의 완료 화분 개수 구해 _uiState.completedPotCount 에 넣기
-    fun getCompletedPotCount() {
-        viewModelScope.launch {
-            try {
-                val myPotList = userRepository.getUsersPots(CurrentUser.uid)
-                _uiState.update { it ->
-                    it.copy(
-                        completedPotCount = myPotList.count { it.isCompleted }
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e("error", e.message.toString())
-            }
+            // 빈화면 -> 홈화면
+            loaded()
         }
     }
 
     // 보유한 레벨 중복 제거 레벨 리스트 가져오기
     fun getImageLevelList() {
         viewModelScope.launch {
-            val resultList = potRepository.getDuplicationLevelList(CurrentUser.uid).toMutableList()
-            if (resultList.isEmpty()) {
-                resultList.add("")
-            }
-            _uiState.update { it.copy(levelList = resultList) }
-        }
-    }
-
-    // 닉네임 검사용 2~10글자 허용
-    private fun checkNicknameValidation(text: String): String? {
-        val len = text.length
-        return if (len !in 2..10) {
-            "닉네임은 2자 이상 10자 이하로 입력해주세요"
-        } else {
-            null
+            val levelList = getProfileImageLevelListUseCase()
+            _uiState.update { it.copy(levelList = levelList) }
         }
     }
 
     fun updateProfile(nickname: String, imageLevel: String) {
-        val validationResult = checkNicknameValidation(nickname)
-        val currentNickname = uiState.value.nickname
-        val currentImage = uiState.value.profileImg
+        if (uiState.value.isLoading) return
 
-        // 닉네임과 이미지가 모두 현재 같으면 막기
-        if (nickname == currentNickname && imageLevel == currentImage) {
-            notifyUpdateFailure("변경사항이 없습니다.")
-            return
-        }
-
-        if (validationResult != null) {
-            notifyUpdateFailure(validationResult)
-            return
-        }
-
-
-        if (nickname == uiState.value.nickname && imageLevel == uiState.value.profileImg) {
-            clearProfileState()
-        }
+        _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
-            try {
-                val currentNickname = _uiState.value.nickname
-//                 닉네임 같으면 프로필 사진만 변경하려는 의도로 판단
-                if (nickname != currentNickname) {
-////                 닉네임 중복 검사
-                    if (nicknameRepository.isNicknameTaken(nickname)) {
-                        notifyUpdateFailure("이미 사용중인 닉네임입니다")
-                        return@launch
-                    }
-                    nicknameRepository.registerNickname(nickname)
-                    nicknameRepository.deleteNickname(currentNickname)
-                }
-
-                userRepository.updateNicknameAndImage(
-                    CurrentUser.uid,
-                    nickname,
-                    imageLevel
-                )
+            updateProfileUseCase(
+                newNickname = nickname,
+                newImageLevel = imageLevel
+            ).onSuccess {
                 _uiState.update {
                     it.copy(
                         nickname = nickname,
                         profileImg = imageLevel,
                         isUpdateSuccess = true,
+                        isLoading = false,
                         nicknameError = null
                     )
                 }
-
-                CurrentUser.set(UserModel(
-                    nickname = nickname,
-                    profileImg = imageLevel))
-
-//                CurrentUser.nickname = nickname
-//                CurrentUser.profileImg = imageLevel
-
-            } catch (e: Exception) {
-                Log.e("error", e.message.toString())
-                notifyUpdateFailure("업데이트 중 오류가 발생했습니다")
+            }.onFailure { e ->
+                _uiState.update { it.copy(isLoading = false) }
+                if (e !is AppError.UnknownUser) {
+                    notifyUpdateFailure(e.message)
+                }
             }
         }
     }
@@ -194,15 +120,6 @@ class MyPageViewModel @Inject constructor(
         }
     }
 
-    fun notifyUpdateSuccess() {
-        _uiState.update {
-            it.copy(
-                isUpdateSuccess = true,
-                nicknameError = null
-            )
-        }
-    }
-
     fun clearProfileState() {
         _uiState.update {
             it.copy(
@@ -212,44 +129,35 @@ class MyPageViewModel @Inject constructor(
         }
     }
 
-    fun resetIsUpdateSuccess() {
-        _uiState.update { it.copy(isUpdateSuccess = false) }
-    }
+    fun updateDarkMode(isDarkMode: Boolean) {
+        if (uiState.value.isDarkModeUpdating || uiState.value.isDarkMode == isDarkMode) {
+            return
+        }
+        _uiState.update { it.copy(isDarkModeUpdating = true) }
 
-
-    fun toggleDarkMode() {
-        val state = !uiState.value.isDarkMode
         viewModelScope.launch {
-            try {
-                userRepository.updateIsDarkMode(
-                    uid = CurrentUser.uid,
-                    state = state
-                )
-                _uiState.update { it.copy(isDarkMode = state) }
-            } catch (e: Exception) {
-                Log.e("error", e.message.toString())
-            }
+            updateDarkModeUseCase(isDarkMode)
+                .onSuccess {
+                    _uiState.update {
+                        it.copy(
+                            isDarkMode = isDarkMode,
+                            isDarkModeUpdating = false
+                        )
+                    }
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(isDarkModeUpdating = false) }
+                    if (e !is AppError.UnknownUser) {
+                        _eventChannel.send(MyPageEvent.ShowToast(e.message))
+                    }
+                }
         }
     }
 
     fun logout() {
-        // auth.signOut(): Firebase Auth 세션 제거 -> 다음 앱 실행 시 auth.currentUser == null -> 스플래시 to 로그인 화면
-//        auth.signOut()
-        firebaseAuth.signOut()
-        // CurrentUser.clear(): 앱 메모리(CurrentUser 내 uid, nickname, profileImg 초기화
-        CurrentUser.clear()
-        // 로그인 화면 이동
         viewModelScope.launch {
+            signOutUseCase()
             _eventChannel.send(MyPageEvent.NavigateToSignIn)
         }
     }
-
-    fun moveToMyCommunityFeed() {
-        viewModelScope.launch {
-            _eventChannel.send(MyPageEvent.NavigateToMyCommunityFeed)
-        }
-    }
-
-    //데이터베이스에서 값을 안 가져와도 되는 경우
-    fun getTag() = "자격증"
 }
