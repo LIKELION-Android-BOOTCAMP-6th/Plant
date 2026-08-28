@@ -207,16 +207,30 @@ class StudyingViewModel @Inject constructor(
     }
 
     /** 수정중으로 변환*/
-    fun onIsEditingChanged(value: Boolean, index: Int? = null){
-        if (index == -1) {
-            // 새 로그 추가
-            _uiState.update { state ->
-                state.copy(studyLog = state.studyLog + StudyLogUi())
+    fun onIsEditingChanged(value: Boolean, index: Int? = null) {
+        _uiState.update { state ->
+            when {
+                // 편집 종료 + 방금 새로 추가한 로그를 저장하지 않은 경우 -> 마지막 로그 제거
+                !value && index == null && state.logIndex == state.studyLog.lastIndex -> {
+                    state.copy(
+                        studyLog = state.studyLog.dropLast(1),
+                        isEditing = false,
+                        logIndex = -1
+                    )
+                }
+
+                // 새 로그 추가 시작
+                index == -1 -> {
+                    val newLog = state.studyLog + StudyLogUi()
+                    state.copy(studyLog = newLog, isEditing = value, logIndex = newLog.lastIndex)
+                }
+
+                // 기존 로그 편집
+                index != null -> state.copy(isEditing = value, logIndex = index)
+
+                // 그 외 (index == null, 단순 편집 상태만 토글)
+                else -> state.copy(isEditing = value, logIndex = index)
             }
-            val newIndex = _uiState.value.studyLog.lastIndex
-            _uiState.update { it.copy(isEditing = value, logIndex = newIndex) }
-        } else{
-            _uiState.update { it.copy(isEditing = value, logIndex = index) }
         }
     }
 
