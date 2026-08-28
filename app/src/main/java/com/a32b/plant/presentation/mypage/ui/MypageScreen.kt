@@ -1,5 +1,9 @@
 package com.a32b.plant.presentation.mypage.ui
 
+import android.app.Activity
+import android.content.Intent
+import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -39,6 +43,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,24 +52,37 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.NoCredentialException
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
+import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.extension.showToast
+import com.a32b.plant.presentation.mypage.viewmodel.DeleteAccountEvent
+import com.a32b.plant.presentation.mypage.viewmodel.DeleteAccountViewModel
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageEvent
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageUiState
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageViewModel
 import com.a32b.plant.presentation.theme.PlantTheme
 import com.a32b.plant.presentation.theme.Typography
-
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 
 @Composable
 fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hiltViewModel()) {
@@ -74,6 +92,17 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
     // 프로필 수정 다이얼로그 상태
     var showProfileDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
+
+    // 회원탈퇴
+    val deleteViewModel: DeleteAccountViewModel = hiltViewModel()
+    val deleteUiState by deleteViewModel.uiState.collectAsStateWithLifecycle()
+    val coroutineScope = rememberCoroutineScope()
+    val webClientId = stringResource(R.string.default_web_client_id)
+    val credentialManager = remember { CredentialManager.create(context) }
+
+    // 회원탈퇴 2단계 확인 다이얼로그 상태
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var isDeleteSecondConfirm by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.isUpdateSuccess) {
         if (uiState.isUpdateSuccess) {
@@ -98,6 +127,61 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                 }
             }
         }
+
+        // 회원탈퇴 이벤트
+        LaunchedEffect(Unit) {
+            deleteViewModel.events.collect { event ->
+                when (event) {
+                    is DeleteAccountEvent.ShowToast ->
+                        context.showToast(event.message)
+
+                    is DeleteAccountEvent.NavigateToSignIn ->
+                        navController.navigate(Routes.SignIn) {
+                            popUpTo(0) { inclusive = true }
+                        }
+
+                    is DeleteAccountEvent.RequestGoogleReauth -> {
+                        // 구글 재인증: Credential Manager로 idToken 획득 후 ViewModel에 전달
+                        coroutineScope.launch {
+                            context.showToast(
+                                "보안을 위해 Google 계정을\n다시 확인합니다.",
+                                Toast.LENGTH_LONG
+                            )
+                            val googleIdOption =
+                                GetSignInWithGoogleOption.Builder(webClientId).build()
+                            val request = GetCredentialRequest.Builder()
+                                .addCredentialOption(googleIdOption)
+                                .build()
+                            try {
+                                val result = credentialManager.getCredential(
+                                    request = request,
+                                    context = context as Activity
+                                )
+                                val idToken = GoogleIdTokenCredential
+                                    .createFrom(result.credential.data).idToken
+                                deleteViewModel.reauthenticateWithGoogleAndDelete(idToken)
+                            } catch (e: GetCredentialCancellationException) {
+                                // 사용자가 취소 — 로딩 해제 후 복귀
+                                deleteViewModel.cancelLoading()
+                            } catch (e: NoCredentialException) {
+                                deleteViewModel.cancelLoading()
+                                context.showToast("기기에 등록된 Google 계정이 없습니다.")
+                                val intent = Intent(Settings.ACTION_ADD_ACCOUNT)
+                                intent.putExtra("account_types", arrayOf("com.google"))
+                                context.startActivity(intent)
+                            } catch (e: CancellationException) {
+                                deleteViewModel.cancelLoading()
+                                throw e
+                            } catch (e: Exception) {
+                                deleteViewModel.cancelLoading()
+                                context.showToast("구글 재인증에 실패했습니다. 다시 시도해주세요.")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
 
         // 로그아웃 확인 다이얼로그
         if (showLogoutDialog) {
@@ -124,15 +208,58 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                 viewModel = viewModel
             )
         }
+        // 회원탈퇴 2단계 확인 다이얼로그
+        if (showDeleteDialog) {
+            ConfirmDialog(
+                text = if (isDeleteSecondConfirm) "정말로 탈퇴하시겠습니까?"
+                else "탈퇴 하시겠습니까?",
+                semiText = if (isDeleteSecondConfirm) "탈퇴 시 모든 학습 기록이 삭제되며 복구할 수 없습니다."
+                else "계정을 삭제하시려면 '예'를 눌러주세요.",
+                onDismiss = {
+                    showDeleteDialog = false
+                    isDeleteSecondConfirm = false
+                },
+                onConfirm = {
+                    if (isDeleteSecondConfirm) {
+                        showDeleteDialog = false
+                        isDeleteSecondConfirm = false
+                        deleteViewModel.requestDeleteAccount()
+                    } else {
+                        isDeleteSecondConfirm = true
+                    }
+                }
+            )
+        }
+
+        // 비밀번호 재인증 다이얼로그 (이메일 유저)
+        if (deleteUiState.showPasswordDialog) {
+            PasswordReauthDialog(
+                onDismiss = { deleteViewModel.dismissPasswordDialog() },
+                onConfirm = { password ->
+                    deleteViewModel.reauthenticateWithEmailAndDelete(password)
+                }
+            )
+        }
+
+        // 탈퇴 진행 중 화면 이탈 차단
+        if (deleteUiState.isLoading) {
+            Dialog(
+                onDismissRequest = {},
+                properties = DialogProperties(
+                    dismissOnBackPress = false,
+                    dismissOnClickOutside = false
+                )
+            ) {
+                LoadingBox(modifier = Modifier.size(80.dp))
+            }
+        }
+
         LoadableScreen(viewModel) {
             MyPageContent(
                 uiState = uiState,
                 onProfileClick = {
                     viewModel.getImageLevelList()
                     showProfileDialog = true
-                },
-                onSettingClick = {
-                    navController.navigate(Routes.MyPageSetting)
                 },
                 onDarkModeToggle = { isDarkMode ->
                     viewModel.updateDarkMode(isDarkMode)
@@ -148,6 +275,11 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                 },
                 onLogoutClick = {
                     showLogoutDialog = true
+                },
+                isDeleting = deleteUiState.isLoading,
+                onDeleteAccountClick = {
+                    isDeleteSecondConfirm = false
+                    showDeleteDialog = true
                 }
             )
         }
@@ -160,12 +292,13 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
 private fun MyPageContent(
     uiState: MyPageUiState,
     onProfileClick: () -> Unit,
-    onSettingClick: () -> Unit,
     onDarkModeToggle: (Boolean) -> Unit,
     onGuideClick: () -> Unit,
     onTermsClick: () -> Unit,
     onPrivacyClick: () -> Unit,
-    onLogoutClick: () -> Unit
+    onLogoutClick: () -> Unit,
+    isDeleting: Boolean,
+    onDeleteAccountClick: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -186,7 +319,6 @@ private fun MyPageContent(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 DividerImage()
-                ButtonTemplate(text = "앱 설정", onClick = onSettingClick)
                 DarkModeToggleButton(
                     isDarkMode = uiState.isDarkMode,
                     isEnabled = !uiState.isDarkModeUpdating,
@@ -196,6 +328,11 @@ private fun MyPageContent(
                 ButtonTemplate(text = "서비스 이용약관", onClick = onTermsClick)
                 ButtonTemplate(text = "개인정보처리방침", onClick = onPrivacyClick)
                 ButtonTemplate(text = "로그아웃", onClick = onLogoutClick)
+                ButtonTemplate(
+                    text = "회원탈퇴",
+                    enabled = !isDeleting,
+                    onClick = onDeleteAccountClick
+                )
             }
         }
     }
@@ -213,12 +350,13 @@ private fun MyPageContentPreview() {
                 totalStudyTime = "4시간 10분"
             ),
             onProfileClick = {},
-            onSettingClick = {},
             onDarkModeToggle = {},
             onGuideClick = {},
             onTermsClick = {},
             onPrivacyClick = {},
-            onLogoutClick = {}
+            onLogoutClick = {},
+            isDeleting = false,
+            onDeleteAccountClick = {}
         )
     }
 }
