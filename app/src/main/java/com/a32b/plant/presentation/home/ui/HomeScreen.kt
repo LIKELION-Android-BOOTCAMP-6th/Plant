@@ -4,17 +4,46 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -24,12 +53,21 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.domain.model.AttendanceReward
 import com.a32b.plant.domain.model.Pot
+import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.component.getLogoImage
+import com.a32b.plant.presentation.core.extension.showToast
+import com.a32b.plant.presentation.home.viewmodel.HomeEvent
 import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
-import com.a32b.plant.presentation.theme.*
+import com.a32b.plant.presentation.theme.fontColor
+import com.a32b.plant.presentation.theme.fontColorSub
+import com.a32b.plant.presentation.theme.primary
+import com.a32b.plant.presentation.theme.sub2
+import com.a32b.plant.presentation.theme.sub_green1
+import com.a32b.plant.presentation.theme.sub_green3
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -41,15 +79,44 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
     val showPotChangeDialog by viewModel.showPotChangeDialog.collectAsState()
     val allPots by viewModel.allPots.collectAsState()
     val tempSelectedPot by viewModel.tempSelectedPot.collectAsState()
+    val attendanceUiState by viewModel.attendanceUiState.collectAsState()
+    val context = LocalContext.current
 
     val hasNoPot = displayPot.id.isEmpty() || displayPot == Pot.EMPTY
+
+    var showAttendanceDialog by remember { mutableStateOf(false) }
+    if (showAttendanceDialog) {
+        AttendanceCheckDialog(
+            uiState = attendanceUiState,
+            onCheckClick = { viewModel.checkAttendance() },
+            onDismiss = { showAttendanceDialog = false }
+        )
+    }
+
+    attendanceUiState.reward?.let { reward ->
+        ConfirmDialog(
+            text = reward.announceText(),
+            isSingleBtn = true,
+            onDismiss = viewModel::dismissAttendanceReward,
+            onConfirm = viewModel::dismissAttendanceReward
+        )
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is HomeEvent.ShowToast -> context.showToast(event.message)
+            }
+        }
+    }
 
     LoadableScreen(viewModel) {
         Scaffold(
             topBar = {
                 HomeTopBar(
                     userName = userName,
-                    onAttendanceClick = { navController.navigate(Routes.AttendanceCheck) }
+                    isAttendanceCompleted = attendanceUiState.isAttendanceCompleted,
+                    onAttendanceClick = { showAttendanceDialog = true }
                 )
             },
             containerColor = MaterialTheme.colorScheme.background
@@ -120,6 +187,11 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
             }
         }
     }
+}
+
+private fun AttendanceReward.announceText(): String = when (this) {
+    is AttendanceReward.Coin -> "${amount}골드를 획득했습니다!"
+    is AttendanceReward.ItemReward -> "${type.kor} ${amount}개를 획득했습니다!"
 }
 
 @Composable
@@ -253,6 +325,7 @@ fun PotChangeDialog(
 @Composable
 fun HomeTopBar(
     userName: String,
+    isAttendanceCompleted: Boolean,
     onAttendanceClick: () -> Unit
 ) {
     val displayName = if (userName.isBlank()) "사용자" else userName
@@ -288,9 +361,15 @@ fun HomeTopBar(
                 modifier = Modifier.offset(x = 6.dp)
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.ic_daily_default),
+                    painter = painterResource(
+                        id = if (isAttendanceCompleted) {
+                            R.drawable.plant_attendance_checked
+                        } else {
+                            R.drawable.ic_daily_default
+                        }
+                    ),
                     contentDescription = "출석체크",
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(32.dp)
                 )
             }
         }

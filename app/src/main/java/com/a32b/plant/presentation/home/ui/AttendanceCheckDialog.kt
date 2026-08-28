@@ -1,13 +1,12 @@
-﻿package com.a32b.plant.presentation.attendance.ui
+package com.a32b.plant.presentation.home.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -15,8 +14,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -31,82 +28,96 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.a32b.plant.R
+import com.a32b.plant.domain.model.AttendanceReward
+import com.a32b.plant.domain.model.AttendanceRewardTable
+import com.a32b.plant.presentation.core.component.LoadingBox
+import com.a32b.plant.presentation.core.extension.resId
+import com.a32b.plant.presentation.home.viewmodel.AttendanceUiState
+import com.a32b.plant.presentation.theme.PlantTheme
 
 @Composable
-fun AttendanceCheckScreen(navController: NavController) {
-    AttendanceCheckContent(
-        checkedCount = 8,
-        rewards = sampleRewards,
-        onBackClick = { navController.popBackStack() }
-    )
+fun AttendanceCheckDialog(
+    uiState: AttendanceUiState,
+    onCheckClick: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        AttendanceDialogContent(uiState, onCheckClick)
+    }
 }
 
+// Dialog는 @Preview에서 제대로 그려지지 않을 수 있어 내용물을 분리해 미리보기에 쓴다.
 @Composable
-private fun AttendanceCheckContent(
-    checkedCount: Int,
-    rewards: List<AttendanceRewardUi>,
-    onBackClick: () -> Unit
+private fun AttendanceDialogContent(
+    uiState: AttendanceUiState = AttendanceUiState(),
+    onCheckClick: () -> Unit = {}
 ) {
     Surface(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxWidth(0.92f)
+            .padding(vertical = 24.dp),
+        shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.background
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
+        Box {
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                IconButton(
-                    onClick = onBackClick,
-                    modifier = Modifier.align(Alignment.CenterStart)
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_backbtn),
-                        contentDescription = "뒤로가기",
-                        modifier = Modifier.size(24.dp),
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
                 Text(
                     text = "출석체크",
                     style = MaterialTheme.typography.displayLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.align(Alignment.Center)
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "출석할수록 보상이 자라나요",
+                    modifier = Modifier.padding(top = 8.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                AttendanceBoard(
+                    checkedCount = uiState.count,
+                    rewards = attendanceRewards
+                )
+
+                Button(
+                    onClick = onCheckClick,
+                    enabled = !uiState.isAttendanceCompleted && !uiState.isChecking,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 24.dp)
+                ) {
+                    Text(uiState.buttonText)
+                }
+            }
+            if (uiState.isChecking) {
+                LoadingBox(
+                    modifier = Modifier.matchParentSize()
                 )
             }
-
-            Text(
-                text = "출석할수록 보상이 자라나요",
-                modifier = Modifier.padding(top = 8.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            AttendanceBoard(
-                checkedCount = checkedCount,
-                rewards = rewards
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            Button(
-                onClick = { },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 24.dp)
-            ) {
-                Text("출석하기")
-            }
         }
+    }
+}
+
+@Preview(showBackground = true, name = "출석체크 다이얼로그", widthDp = 360)
+@Preview(showBackground = true, name = "출석체크 다이얼로그 - 폴드3 접음", widthDp = 350)
+@Preview(showBackground = true, name = "출석체크 다이얼로그 - 폴드3 펼침", widthDp = 673)
+@Composable
+private fun AttendanceDialogContentPreview() {
+    PlantTheme {
+        AttendanceDialogContent(
+            uiState = AttendanceUiState(
+                count = 8,
+                buttonText = "출석하기"
+            )
+        )
     }
 }
 
@@ -149,7 +160,9 @@ private fun AttendanceBoard(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(10.dp)),
             color = MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.secondary
+            trackColor = MaterialTheme.colorScheme.secondary,
+            gapSize = 0.dp,
+            drawStopIndicator = {}
         )
 
         Column(
@@ -189,7 +202,7 @@ private fun AttendanceRewardItem(
 ) {
     val backgroundColor = when {
         isChecked -> MaterialTheme.colorScheme.primary
-        isNext -> MaterialTheme.colorScheme.secondaryContainer
+        isNext -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
         else -> MaterialTheme.colorScheme.background
     }
 
@@ -217,16 +230,31 @@ private fun AttendanceRewardItem(
                 .border(if (isNext) 2.dp else 1.dp, borderColor, CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = if (isChecked) "✓" else reward.day.toString(),
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = if (isChecked || isNext) FontWeight.Bold else FontWeight.Normal,
-                color = textColor
-            )
+            when {
+                isChecked -> Text(
+                    text = "✓",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = textColor
+                )
+
+                reward.iconRes != null -> Image(
+                    painter = painterResource(id = reward.iconRes),
+                    contentDescription = reward.label.ifBlank { "보상" },
+                    modifier = Modifier.size(22.dp)
+                )
+
+                else -> Text(
+                    text = reward.day.toString(),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = if (isNext) FontWeight.Bold else FontWeight.Normal,
+                    color = textColor
+                )
+            }
         }
 
         Text(
-            text = reward.label.ifBlank { " " },
+            text = if (reward.showLabelBelow) reward.label else " ",
             modifier = Modifier.width(42.dp),
             style = MaterialTheme.typography.bodySmall,
             fontSize = 11.sp,
@@ -237,51 +265,27 @@ private fun AttendanceRewardItem(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-private fun AttendanceCheckContentPreview() {
-    AttendanceCheckContent(
-        checkedCount = 8,
-        rewards = sampleRewards,
-        onBackClick = { }
-    )
-}
-
-
+/**
+ * label   보상 이름. "다음 출석 보상" 안내 문구에 쓰이므로 아이콘이 있어도 비우지 않는다.
+ * iconRes 원 안에 표시할 아이콘.
+ * showLabelBelow 원 아래에도 글씨를 보일지. 금액 구분이 필요한 골드만 true.
+ */
 private data class AttendanceRewardUi(
     val day: Int,
-    val label: String = ""
-)
-
-private val sampleRewards = listOf(
-    AttendanceRewardUi(1),
-    AttendanceRewardUi(2, "하트"),
-    AttendanceRewardUi(3),
-    AttendanceRewardUi(4, "햇빛"),
-    AttendanceRewardUi(5),
-    AttendanceRewardUi(6),
-    AttendanceRewardUi(7, "100G"),
-    AttendanceRewardUi(8),
-    AttendanceRewardUi(9, "물"),
-    AttendanceRewardUi(10),
-    AttendanceRewardUi(11),
-    AttendanceRewardUi(12, "하트"),
-    AttendanceRewardUi(13),
-    AttendanceRewardUi(14, "200G"),
-    AttendanceRewardUi(15),
-    AttendanceRewardUi(16),
-    AttendanceRewardUi(17, "햇빛"),
-    AttendanceRewardUi(18),
-    AttendanceRewardUi(19),
-    AttendanceRewardUi(20, "비료"),
-    AttendanceRewardUi(21, "300G"),
-    AttendanceRewardUi(22),
-    AttendanceRewardUi(23, "물"),
-    AttendanceRewardUi(24),
-    AttendanceRewardUi(25, "영양제"),
-    AttendanceRewardUi(26),
-    AttendanceRewardUi(27),
-    AttendanceRewardUi(28, "500G")
+    val label: String = "",
+    val iconRes: Int? = null,
+    val showLabelBelow: Boolean = false
 )
 
 
+private val attendanceRewards: List<AttendanceRewardUi> = (1..28).map { day ->
+    when (val reward = AttendanceRewardTable.of(day)) {
+        is AttendanceReward.Coin ->
+            AttendanceRewardUi(day, "${reward.amount}G", R.drawable.ic_coin, showLabelBelow = true)
+
+        is AttendanceReward.ItemReward ->
+            AttendanceRewardUi(day, reward.type.kor, reward.type.resId)
+
+        null -> AttendanceRewardUi(day)
+    }
+}
