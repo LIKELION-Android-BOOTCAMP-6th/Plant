@@ -3,6 +3,7 @@ package com.a32b.plant.presentation.mypage.ui
 import android.app.Activity
 import android.content.Intent
 import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -98,7 +99,7 @@ fun MyPageSettingScreen(
                 is MyPageSettingEvent.RequestGoogleReauth -> {
                     // 구글 재인증: Credential Manager로 idToken 획득 후 ViewModel에 전달
                     coroutineScope.launch {
-                        context.showToast("보안을 위해 Google 계정을\n다시 확인합니다.")
+                        context.showToast("보안을 위해 Google 계정을\n다시 확인합니다.", Toast.LENGTH_LONG)
                         val googleIdOption = GetSignInWithGoogleOption.Builder(webClientId).build()
                         val request = GetCredentialRequest.Builder()
                             .addCredentialOption(googleIdOption)
