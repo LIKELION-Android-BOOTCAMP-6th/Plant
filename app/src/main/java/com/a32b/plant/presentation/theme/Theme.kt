@@ -52,6 +52,9 @@ private val LightColorScheme = lightColorScheme(
 
     tertiary = sub2,
 
+/*    onSurface = fontColor, //메인 폰트색
+    onSecondary = fontColorSub, // 서브 폰트색
+    onTertiary = Color.LightGray*/
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),
@@ -84,7 +87,7 @@ fun PlantTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = Typography, //todo 여기 선언한 타이포그래피 함수로 변경해주기
         content = content
     )
 }
