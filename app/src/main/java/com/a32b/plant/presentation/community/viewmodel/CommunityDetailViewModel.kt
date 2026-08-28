@@ -86,7 +86,26 @@ class CommunityDetailViewModel @Inject constructor(
 
     init {
         ensureCurrentUserUseCase { user -> _uiState.update { it.copy(currentUid = user.uid, currentNickname = user.nickname) } }
-        refresh()
+        loadInitial()
+    }
+
+    /** 첫 진입 시 데이터 로딩 — isRefreshing을 건드리지 않아 pull-to-refresh 인디케이터가 나타나지 않음 */
+    private fun loadInitial() {
+        viewModelScope.launch {
+            val postDeferred = async { repository.getPostDetail(postId) }
+            val commentsDeferred = async { repository.getComments(postId) }
+
+            postDeferred.await()
+                .onSuccess { post ->
+                    _post.value = post
+                    onIsSharedChange()
+                }
+                .onFailure { e -> sendToast(e.message) }
+
+            commentsDeferred.await()
+                .onSuccess { comments -> _uiState.update { it.copy(commentList = comments) } }
+                .onFailure { e -> sendToast(e.message) }
+        }
     }
 
     //공유 여부 체크
@@ -95,7 +114,7 @@ class CommunityDetailViewModel @Inject constructor(
             _uiState.update { it.copy(isShared = true) }
     }
 
-    /** 게시글 상세 + 댓글 목록을 단건 조회로 다시 불러온다 (최초 진입 + pull-to-refresh 공용) */
+    /** pull-to-refresh 전용: 인디케이터를 표시하며 데이터를 다시 불러온다 */
     fun refresh() {
         viewModelScope.launch {
             _uiState.update { it.copy(isRefreshing = true) }
