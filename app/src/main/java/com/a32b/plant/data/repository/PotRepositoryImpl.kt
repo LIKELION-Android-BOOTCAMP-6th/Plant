@@ -74,7 +74,7 @@ class PotRepositoryImpl @Inject constructor(
             trySend(tags)
         }
         awaitClose { listener.remove() }
-    }
+    }.catch { e -> Log.e("PotRepository", "태그 목록 구독 실패: ${e.message}", e) }
 
     override suspend fun updatePotName(uid: String, potId: String, newName: String) {
         db.collection("users").document(uid)

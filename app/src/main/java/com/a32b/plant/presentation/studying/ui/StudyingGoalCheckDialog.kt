@@ -24,6 +24,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,10 +43,10 @@ import com.a32b.plant.presentation.theme.sub3
 fun StudyingGoalCheckDialog(
     mode: StudyingGoalCheckMode,
     studyLog: List<StudyLogUi>,
-    onEdit: () -> Unit = {},
+    onEdit: (Int) -> Unit,
     onCompleted: (index: Int, isCompleted: Boolean) -> Unit,
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
 ) {
     val showEditButton = mode != StudyingGoalCheckMode.INTERRUPTED
     val showActionRow = mode != StudyingGoalCheckMode.CHECK
@@ -64,22 +65,10 @@ fun StudyingGoalCheckDialog(
                         style = Typography.titleSmall,
                         modifier = Modifier.align(Alignment.Center)
                     )
-
-                    if(showEditButton){
-                        IconButton(
-                            onClick = onEdit,
-                            modifier = Modifier.align(Alignment.CenterEnd)
-                        ) {
-                            Image(
-                                painter = painterResource(R.drawable.ic_edit),
-                                contentDescription = "edit",
-                                modifier = Modifier.size(17.dp)
-                            )
-                        }
-                    }
                 }
 
                 if(studyLog.isEmpty()){
+                    Spacer(Modifier.height(4.dp))
                     Text("아직 학습 목표를 설정하지 않았어요.", style = Typography.bodyMedium)
                     Spacer(Modifier.height(7.dp))
                 }else{
@@ -92,11 +81,23 @@ fun StudyingGoalCheckDialog(
                             StudyLogItem(
                                 isInterrupted = !showEditButton,
                                 log = item,
+                                onEdit = { onEdit(index) },
                                 onCompleted = {onCompleted(index, it)}
                             )
                         }
                     }
                 }
+
+                if (showEditButton){
+                    TextButton(onClick = {onEdit(-1)}) {
+                        Text(
+                            "추가하기",
+                            style = Typography.bodySmall,
+                            textDecoration = TextDecoration.Underline
+                        )
+                    }
+                }
+
 
                 if (showActionRow){
                     Row(modifier = Modifier.fillMaxWidth().padding(7.dp),
@@ -122,7 +123,7 @@ fun StudyingGoalCheckDialog(
 }
 
 @Composable
-fun StudyLogItem(isInterrupted: Boolean, log: StudyLogUi, onCompleted: (Boolean) -> Unit ){
+fun StudyLogItem(isInterrupted: Boolean, log: StudyLogUi, onEdit: () -> Unit, onCompleted: (Boolean) -> Unit ){
     Row(
         modifier = Modifier.fillMaxWidth()
             .clickable{onCompleted(!log.isCompleted)}
@@ -140,6 +141,19 @@ fun StudyLogItem(isInterrupted: Boolean, log: StudyLogUi, onCompleted: (Boolean)
             color = if (log.isCompleted) Color.LightGray else MaterialTheme.colorScheme.onSurface,
             textDecoration = if (log.isCompleted) TextDecoration.LineThrough else TextDecoration.None
         )
+        Spacer(Modifier.weight(1f))
+
+        if(!isInterrupted){
+            IconButton(
+                onClick = onEdit,
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.ic_edit),
+                    contentDescription = "edit",
+                    modifier = Modifier.size(17.dp).padding(end = 5.dp)
+                )
+            }
+        }
 
 
     }

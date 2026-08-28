@@ -18,6 +18,8 @@ import com.a32b.plant.core.extension.toLong
 import com.a32b.plant.core.extension.toTimestamp
 import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -166,8 +168,13 @@ class CommunityRepositoryImpl @Inject constructor(
     )
 
     override fun observeActivity(selected: String): Flow<List<CommunityActivity>> {
+        if (currentUid.isEmpty()) {
+            Log.e("CommunityRepository", "UID가 비어있어 활동 구독을 시작하지 않습니다.")
+            return flowOf(emptyList())
+        }
         return communityRemoteDataSource.observeActivity(uid = currentUid, selected)
             .map { dtos -> dtos.map { it.toDomain() } }
+            .catch { e -> Log.e("CommunityRepository", "활동 구독 실패: ${e.message}", e) }
     }
 
     override suspend fun deleteActivity(activityId: String): Result<Unit> = safeRunCatching {
