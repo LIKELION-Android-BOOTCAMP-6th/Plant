@@ -65,40 +65,47 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                MainPlantCard(
-                    displayPot = displayPot,
-                    hasNoPot = hasNoPot,
-                    onStartClick = {
-                        if(!hasNoPot) {
-                            navController.navigate(
-                                Routes.Studying(
-                                potId = displayPot.id.ifEmpty { "default_pot" },
-                                tagId = displayPot.tagId,
-                                tagName = displayPot.tagName,
-                                title = displayPot.name.ifEmpty { "공부 목표" },
-                                level = displayPot.level.ifEmpty { "Lv.1" }
-                            ))
-                        }
-                    },
-                    //화분 생성 이동 or 화분 변경 다이얼로그 오픈
-                    onChangeOrMakeClick = {
-                        if(hasNoPot){
-                            navController.navigate(Routes.NewBornTree)
-                        } else {
-                            viewModel.setShowPotChangeDialog(true)
-                        }
-                    },
-                    onRecordClick = {
-                        if (!hasNoPot) {
-                            navController.navigate(
-                                Routes.StudyPlanDetail(
-                                    potId = displayPot.id.ifEmpty { "default_pot" }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false),
+                    contentAlignment = Alignment.Center
+                ) {
+                    MainPlantCard(
+                        displayPot = displayPot,
+                        hasNoPot = hasNoPot,
+                        onStartClick = {
+                            if (!hasNoPot) {
+                                navController.navigate(
+                                    Routes.Studying(
+                                        potId = displayPot.id.ifEmpty { "default_pot" },
+                                        tagId = displayPot.tagId,
+                                        tagName = displayPot.tagName,
+                                        title = displayPot.name.ifEmpty { "공부 목표" },
+                                        level = displayPot.level.ifEmpty { "Lv.1" }
+                                    ))
+                            }
+                        },
+                        //화분 생성 이동 or 화분 변경 다이얼로그 오픈
+                        onChangeOrMakeClick = {
+                            if (hasNoPot) {
+                                navController.navigate(Routes.NewBornTree)
+                            } else {
+                                viewModel.setShowPotChangeDialog(true)
+                            }
+                        },
+                        onRecordClick = {
+                            if (!hasNoPot) {
+                                navController.navigate(
+                                    Routes.StudyPlanDetail(
+                                        potId = displayPot.id.ifEmpty { "default_pot" }
+                                    )
                                 )
-                            )                        }
-                    } // 상세 기록 이동
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                        } // 상세 기록 이동
+                    )
+                }
+                Spacer(modifier = Modifier.height(18.dp))
                 HomeItemBoxSection()
             }
 
@@ -272,7 +279,7 @@ fun HomeTopBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 16.dp),
+            .padding(horizontal = 30.dp, vertical = 5.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -298,7 +305,7 @@ fun HomeTopBar(
                 )
             }
         }
-        Spacer(modifier = Modifier.height(30.dp))
+        Spacer(modifier = Modifier.height(15.dp))
         Text(
             text = dateString,
             modifier = Modifier.fillMaxWidth(),
@@ -325,7 +332,7 @@ fun MainPlantCard(
         colors = CardDefaults.cardColors(
             containerColor = sub_green1
         ),
-        border = BorderStroke(1.dp, primary)
+        //border = BorderStroke(1.dp, primary)
     ) {
         Column(
             modifier = Modifier
@@ -405,7 +412,7 @@ fun MainPlantCard(
                         )
                         Text(
                             text = "60% (30분/50분)", // 예시 텍스트 (추후 뷰모델 데이터와 연결)
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.labelMedium,
                             color = primary,
                             fontWeight = FontWeight.Bold
                         )
@@ -473,11 +480,11 @@ fun HomeItemBoxSection(){
 
         Text(
             text = "아이템 : ${itemNumber}개",
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Bold,
-            color = fontColor
+            color = fontColor,
+            modifier = Modifier.padding(start = 10.dp)
         )
-        Spacer(modifier = Modifier.height(5.dp))
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
@@ -495,7 +502,7 @@ fun HomeItemBoxSection(){
                     Box(
                         modifier = Modifier
                             .width(60.dp)
-                            .height(68.dp)
+                            .height(95.dp)
                             .clip(RoundedCornerShape(0.dp))
                             .background(sub_green1),
                         contentAlignment = Alignment.Center
