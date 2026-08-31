@@ -4,20 +4,10 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -125,43 +115,52 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .background(MaterialTheme.colorScheme.background),
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                MainPlantCard(
-                    displayPot = displayPot,
-                    hasNoPot = hasNoPot,
-                    onStartClick = {
-                        if(!hasNoPot) {
-                            navController.navigate(
-                                Routes.Studying(
-                                potId = displayPot.id.ifEmpty { "default_pot" },
-                                tagId = displayPot.tagId,
-                                tagName = displayPot.tagName,
-                                title = displayPot.name.ifEmpty { "공부 목표" },
-                                level = displayPot.level.ifEmpty { "Lv.1" }
-                            ))
-                        }
-                    },
-                    //화분 생성 이동 or 화분 변경 다이얼로그 오픈
-                    onChangeOrMakeClick = {
-                        if(hasNoPot){
-                            navController.navigate(Routes.NewBornTree)
-                        } else {
-                            viewModel.setShowPotChangeDialog(true)
-                        }
-                    },
-                    onRecordClick = {
-                        if (!hasNoPot) {
-                            navController.navigate(
-                                Routes.StudyPlanDetail(
-                                    potId = displayPot.id.ifEmpty { "default_pot" }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false),
+                    contentAlignment = Alignment.Center
+                ) {
+                    MainPlantCard(
+                        displayPot = displayPot,
+                        hasNoPot = hasNoPot,
+                        onStartClick = {
+                            if (!hasNoPot) {
+                                navController.navigate(
+                                    Routes.Studying(
+                                        potId = displayPot.id.ifEmpty { "default_pot" },
+                                        tagId = displayPot.tagId,
+                                        tagName = displayPot.tagName,
+                                        title = displayPot.name.ifEmpty { "공부 목표" },
+                                        level = displayPot.level.ifEmpty { "Lv.1" }
+                                    ))
+                            }
+                        },
+                        //화분 생성 이동 or 화분 변경 다이얼로그 오픈
+                        onChangeOrMakeClick = {
+                            if (hasNoPot) {
+                                navController.navigate(Routes.NewBornTree)
+                            } else {
+                                viewModel.setShowPotChangeDialog(true)
+                            }
+                        },
+                        onRecordClick = {
+                            if (!hasNoPot) {
+                                navController.navigate(
+                                    Routes.StudyPlanDetail(
+                                        potId = displayPot.id.ifEmpty { "default_pot" }
+                                    )
                                 )
-                            )                        }
-                    } // 상세 기록 이동
-                )
-
-
+                            }
+                        } // 상세 기록 이동
+                    )
+                }
+                Spacer(modifier = Modifier.height(18.dp))
                 HomeItemBoxSection()
             }
 
@@ -341,7 +340,7 @@ fun HomeTopBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 16.dp),
+            .padding(horizontal = 30.dp, vertical = 5.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -373,7 +372,7 @@ fun HomeTopBar(
                 )
             }
         }
-        Spacer(modifier = Modifier.height(30.dp))
+        Spacer(modifier = Modifier.height(15.dp))
         Text(
             text = dateString,
             modifier = Modifier.fillMaxWidth(),
@@ -394,13 +393,13 @@ fun MainPlantCard(
 ) {
     Card(
         modifier = Modifier
-            .fillMaxWidth(0.9f)
+            .fillMaxWidth()
             .wrapContentHeight(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = sub_green1
         ),
-        border = BorderStroke(1.dp, primary)
+        //border = BorderStroke(1.dp, primary)
     ) {
         Column(
             modifier = Modifier
@@ -480,7 +479,7 @@ fun MainPlantCard(
                         )
                         Text(
                             text = "60% (30분/50분)", // 예시 텍스트 (추후 뷰모델 데이터와 연결)
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.labelMedium,
                             color = primary,
                             fontWeight = FontWeight.Bold
                         )
@@ -493,7 +492,8 @@ fun MainPlantCard(
                             .height(8.dp)
                             .clip(RoundedCornerShape(4.dp)),
                         color = primary,
-                        trackColor = sub2
+                        trackColor = sub2,
+                        drawStopIndicator = {}
                     )
                 }
             }
@@ -537,28 +537,50 @@ fun MainPlantCard(
 
 @Composable
 fun HomeItemBoxSection(){
-    Row(
-        modifier = Modifier
-            .fillMaxWidth(0.9f)
-            .height(40.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+           verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        //가로 데이티 리스트 확장 가능
-        repeat(3){ index ->
-            Box(
+        //총 개수를 넣을지, 개수를 없앨지 고민 필요
+        //추후 동적 연결 필요
+        var itemNumber = 3
+
+        Text(
+            text = "아이템 : ${itemNumber}개",
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Bold,
+            color = fontColor,
+            modifier = Modifier.padding(start = 10.dp)
+        )
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 2.dp
+        ) {
+            LazyRow(
                 modifier = Modifier
-                    .weight(1f)
-                    .height(20.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surface),
-                contentAlignment = Alignment.Center
-            ){
-                Text(
-                    //아이템 전체 표출 및 DB에서 갯수 얻기 추가 필요
-                    text = "",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = fontColor
-                )
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(5) { index ->
+                    Box(
+                        modifier = Modifier
+                            .width(60.dp)
+                            .height(95.dp)
+                            .clip(RoundedCornerShape(0.dp))
+                            .background(sub_green1),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = fontColor
+                        )
+                    }
+                }
             }
         }
     }
