@@ -3,15 +3,72 @@ package com.a32b.plant.presentation.home.viewmodel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.safeRunCatching
+import com.a32b.plant.domain.error.AppError
+import com.a32b.plant.domain.model.AttendanceDecision
+import com.a32b.plant.domain.model.AttendanceReward
+import com.a32b.plant.domain.model.DailyCheckThisMonth
 import com.a32b.plant.domain.model.Pot
+import com.a32b.plant.domain.repository.UserRepository
+import com.a32b.plant.domain.result.onFailure
+import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.pot.GetActivePotUseCase
 import com.a32b.plant.domain.usecase.pot.GetPotListUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
-import com.a32b.plant.domain.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
+
+data class AttendanceUiState(
+    val count: Int = 0,
+    val buttonText: String = "출석하기",
+    val isAttendanceCompleted: Boolean = false,
+    val isChecking: Boolean = false,
+    val reward: AttendanceReward? = null
+)
+
+sealed class HomeEvent {
+    data class ShowToast(val message: String) : HomeEvent()
+}
+
+private fun DailyCheckThisMonth.toAttendanceUiState(): AttendanceUiState {
+    val nowKst = LocalDate.now(ZoneId.of("Asia/Seoul"))
+    val decision = decideNext(nowKst)
+
+    // newCount == 1은 "이번이 이번 달 첫 체크가 될 것"이라는 뜻(신규 달 진입 포함).
+    // 그 외에는 저장된 count를 쓰되, 손상된 값(28 초과)이 그대로 화면에 새지 않게 clamp한다.
+    val displayCount = if (decision is AttendanceDecision.Success && decision.newCount == 1) {
+        0
+    } else {
+        count.coerceIn(0, 28)
+    }
+
+    return when (decision) {
+        is AttendanceDecision.Success ->
+            AttendanceUiState(displayCount, "출석하기")
+
+        AttendanceDecision.AlreadyChecked ->
+            AttendanceUiState(
+                count = displayCount,
+                buttonText = "오늘 출석 완료",
+                isAttendanceCompleted = true
+            )
+
+        AttendanceDecision.MonthCompleted ->
+            AttendanceUiState(
+                count = displayCount,
+                buttonText = "이번 달 출석 완료",
+                isAttendanceCompleted = true
+            )
+    }
+}
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -43,6 +100,14 @@ class HomeViewModel @Inject constructor(
     private val _userName = MutableStateFlow("")
     val userName = _userName.asStateFlow()
 
+    // 출석체크 UI 상태
+    private val _attendanceUiState = MutableStateFlow(AttendanceUiState())
+    val attendanceUiState = _attendanceUiState.asStateFlow()
+
+    // 일회성 화면 이벤트
+    private val _eventChannel = Channel<HomeEvent>(Channel.BUFFERED)
+    val events = _eventChannel.receiveAsFlow()
+
     init {
         checkUserAndLoadData()
     }
@@ -50,6 +115,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             ensureCurrentUserUseCase { user ->
                 _userName.value = user.nickname
+                _attendanceUiState.value = user.monthCheck.toAttendanceUiState()
 
                 loadActivePot(uid = user.uid, lastSelectedPotId = user.lastSelectedPotId)
                 loaded()
@@ -114,5 +180,43 @@ class HomeViewModel @Inject constructor(
 
             }
         }
+    }
+
+    fun checkAttendance() {
+        if (_attendanceUiState.value.isChecking) return
+
+        viewModelScope.launch {
+            _attendanceUiState.update { it.copy(isChecking = true) }
+
+            ensureCurrentUserUseCase { user ->
+                userRepository.checkAttendance(user.uid)
+                    .onSuccess { decision ->
+                        _attendanceUiState.update {
+                            it.copy(
+                                count = decision.newCount,
+                                buttonText = if (decision.isMonthCompleted) {
+                                    "이번 달 출석 완료"
+                                } else {
+                                    "오늘 출석 완료"
+                                },
+                                isAttendanceCompleted = true,
+                                reward = decision.reward
+                            )
+                        }
+                    }
+                    .onFailure { error ->
+                        when (error) {
+                            is AppError.UnknownUser -> ensureCurrentUserUseCase()
+                            else -> _eventChannel.send(HomeEvent.ShowToast(error.message))
+                        }
+                    }
+            }
+
+            _attendanceUiState.update { it.copy(isChecking = false) }
+        }
+    }
+
+    fun dismissAttendanceReward() {
+        _attendanceUiState.update { it.copy(reward = null) }
     }
 }

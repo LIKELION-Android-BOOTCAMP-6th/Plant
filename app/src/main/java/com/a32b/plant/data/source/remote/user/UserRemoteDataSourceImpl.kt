@@ -1,12 +1,20 @@
 package com.a32b.plant.data.source.remote.user
 
 import android.util.Log
+import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.model.UserDto
+import com.a32b.plant.domain.error.AppError
+import com.a32b.plant.domain.model.AttendanceDecision
+import com.a32b.plant.domain.model.AttendanceReward
+import com.a32b.plant.domain.type.ItemType
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -84,6 +92,52 @@ class UserRemoteDataSourceImpl @Inject constructor(
 
     override suspend fun deleteNickname(nickname: String) {
         db.collection("nicknames").document(nickname).delete().await()
+    }
+
+    override suspend fun checkAttendance(uid: String): AttendanceDecision {
+        val userRef = db.collection("users").document(uid)
+
+        return db.runTransaction { txn ->
+            val snapshot = txn.get(userRef)
+            val dto = snapshot.toObject(UserDto::class.java)
+                ?: throw AppError.UnknownUser()
+
+            val nowKst = LocalDate.now(ZoneId.of("Asia/Seoul"))
+            val decision = dto.toDomain().monthCheck.decideNext(nowKst)
+
+            if (decision is AttendanceDecision.Success) {
+                val updates = mutableMapOf<String, Any>(
+                    "dailyCheckThisMonth.count" to decision.newCount,
+                    "dailyCheckThisMonth.lastCheckedAt" to FieldValue.serverTimestamp()
+                )
+
+                when (val reward = decision.reward) {
+                    is AttendanceReward.Coin ->
+                        updates["coin"] = FieldValue.increment(reward.amount.toLong())
+
+                    is AttendanceReward.ItemReward -> {
+                        val type = reward.type
+
+                        check(
+                            type != ItemType.GOLD_300 &&
+                                    type != ItemType.GOLD_500 &&
+                                    type != ItemType.GOLD_1000
+                        ) {
+                            "출석 아이템 보상에 골드 타입은 사용할 수 없습니다: $type"
+                        }
+
+                        updates["item.${type.fieldKey}"] =
+                            FieldValue.increment(reward.amount.toLong())
+                    }
+
+                    null -> Unit
+                }
+
+                txn.update(userRef, updates)
+            }
+
+            decision
+        }.await()
     }
 
     override suspend fun deleteUserData(uid: String) {

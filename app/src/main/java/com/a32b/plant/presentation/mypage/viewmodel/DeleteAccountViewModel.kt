@@ -16,27 +16,27 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class MyPageSettingUiState(
+data class DeleteAccountUiState(
     val isLoading: Boolean = false,
     val showPasswordDialog: Boolean = false
 )
 
-sealed class MyPageSettingEvent {
-    data class ShowToast(val message: String) : MyPageSettingEvent()
-    object NavigateToSignIn : MyPageSettingEvent()
-    object RequestGoogleReauth : MyPageSettingEvent()
+sealed class DeleteAccountEvent {
+    data class ShowToast(val message: String) : DeleteAccountEvent()
+    object NavigateToSignIn : DeleteAccountEvent()
+    object RequestGoogleReauth : DeleteAccountEvent()
 }
 
 @HiltViewModel
-class MyPageSettingViewModel @Inject constructor(
+class DeleteAccountViewModel @Inject constructor(
     private val deleteAccountUseCase: DeleteAccountUseCase,
     private val authRepository: AuthRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(MyPageSettingUiState())
+    private val _uiState = MutableStateFlow(DeleteAccountUiState())
     val uiState = _uiState.asStateFlow()
 
-    private val _eventChannel = Channel<MyPageSettingEvent>(Channel.BUFFERED)
+    private val _eventChannel = Channel<DeleteAccountEvent>(Channel.BUFFERED)
     val events = _eventChannel.receiveAsFlow()
 
     /** 2단계 확인 완료 후 로딩 시작 → 로그인 제공자에 따라 재인증 방식 분기 */
@@ -45,7 +45,7 @@ class MyPageSettingViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
             if (provider == "google.com") {
-                _eventChannel.send(MyPageSettingEvent.RequestGoogleReauth)
+                _eventChannel.send(DeleteAccountEvent.RequestGoogleReauth)
             } else {
                 // 이메일: 비밀번호 다이얼로그가 즉시 뜨므로 로딩 해제
                 _uiState.update { it.copy(showPasswordDialog = true, isLoading = false) }
@@ -71,7 +71,7 @@ class MyPageSettingViewModel @Inject constructor(
                 .onFailure { error ->
                     _uiState.update { it.copy(isLoading = false) }
                     if (error !is AppError.UnknownUser) {
-                        _eventChannel.send(MyPageSettingEvent.ShowToast(error.message))
+                        _eventChannel.send(DeleteAccountEvent.ShowToast(error.message))
                     }
                 }
         }
@@ -86,7 +86,7 @@ class MyPageSettingViewModel @Inject constructor(
                 .onFailure { error ->
                     _uiState.update { it.copy(isLoading = false) }
                     if (error !is AppError.UnknownUser) {
-                        _eventChannel.send(MyPageSettingEvent.ShowToast(error.message))
+                        _eventChannel.send(DeleteAccountEvent.ShowToast(error.message))
                     }
                 }
         }
@@ -96,13 +96,13 @@ class MyPageSettingViewModel @Inject constructor(
         deleteAccountUseCase()
             .onSuccess {
                 _uiState.update { it.copy(isLoading = false) }
-                _eventChannel.send(MyPageSettingEvent.ShowToast("회원탈퇴가 완료되었습니다."))
-                _eventChannel.send(MyPageSettingEvent.NavigateToSignIn)
+                _eventChannel.send(DeleteAccountEvent.ShowToast("회원탈퇴가 완료되었습니다."))
+                _eventChannel.send(DeleteAccountEvent.NavigateToSignIn)
             }
             .onFailure { error ->
                 _uiState.update { it.copy(isLoading = false) }
                 if (error !is AppError.UnknownUser) {
-                    _eventChannel.send(MyPageSettingEvent.ShowToast(error.message))
+                    _eventChannel.send(DeleteAccountEvent.ShowToast(error.message))
                 }
             }
     }
