@@ -20,7 +20,6 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.a32b.plant.domain.model.Tag
-import com.a32b.plant.presentation.theme.Typography
 import com.a32b.plant.presentation.theme.primary
 
 @Composable
@@ -45,8 +44,7 @@ fun TagSheet(tags: List<Tag>, init : List<Tag> = emptyList(),
         Column {
             Spacer(modifier = Modifier.height(8.dp))
             groupedTags.forEach { (parent, group) ->
-                Text(parent, style = Typography.titleSmall, modifier = Modifier.padding(start = 10.dp),
-                    color = MaterialTheme.colorScheme.onSecondaryContainer)
+                Text(parent, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 10.dp))
 
                 LazyRow(modifier = Modifier.padding(start = 10.dp)) {
                     items(group) { tag ->
@@ -72,7 +70,7 @@ fun TagSheet(tags: List<Tag>, init : List<Tag> = emptyList(),
                                 onSelectedChange(selectedTags)
                             }) {
                             Text(tag.name, modifier = Modifier.padding(top = 5.dp, bottom = 5.dp, start = 10.dp, end = 10.dp),
-                                style = Typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondaryContainer
+                                style = MaterialTheme.typography.bodyMedium
                             )
                         }
 
