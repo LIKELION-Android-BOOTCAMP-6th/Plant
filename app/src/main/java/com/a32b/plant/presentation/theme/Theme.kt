@@ -12,7 +12,7 @@ private val DarkColorScheme = darkColorScheme(
     onPrimary = Color(0xFF000000),
 
     background = Color(0xFF2D2D2D),
-    onBackground = Color(0xFFE6E1D6),
+    onBackground = Color(0xFFF1F1F1),
 
     //다이얼로그 백, 커뮤니티 포스트 입력창, 커뮤니티 디테일 내용
     //기본 바탕이 흰 색인 것
@@ -39,7 +39,7 @@ private val LightColorScheme = lightColorScheme(
     onPrimary = Color.White,
 
     background = background,
-    onBackground = Color(0xFF1C1B1F),
+    onBackground = fontColor,
 
     secondaryContainer = Color.White,
     onSecondaryContainer = fontColor,

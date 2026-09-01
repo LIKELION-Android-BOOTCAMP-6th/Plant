@@ -30,7 +30,6 @@ import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.community.viewmodel.CommunityPostEvent
 import com.a32b.plant.presentation.community.viewmodel.CommunityPostViewModel
 import com.a32b.plant.presentation.core.extension.showToast
-import com.a32b.plant.presentation.theme.Typography
 import com.a32b.plant.presentation.theme.background
 
 @Composable
@@ -106,8 +105,7 @@ fun CommunityPostScreen(
             item { Spacer(modifier = Modifier.height(10.dp)) }
 
             item {
-                Text("제목", style = Typography.bodyMedium, fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground)
+                Text("제목", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
                 PostInputField(
                     value = uiState.title,
@@ -127,7 +125,7 @@ fun CommunityPostScreen(
                         },
                     verticalAlignment = Alignment.CenterVertically
                 ){
-                    Text("태그", style = Typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground,fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
+                    Text("태그", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
 
                     if (!uiState.isShared) {
                         Icon(
@@ -141,11 +139,11 @@ fun CommunityPostScreen(
 
                     Text(
                         text = "${uiState.selected?.name ?: "태그를 선택하세요"}${(if (uiState.isShared) ", 공유" else "")}",
-                        style = Typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyMedium,
                         fontSize = 13.sp,
                         modifier = Modifier.padding(top = 4.dp),
                         // 공유 모드일 때는 텍스트 색상을 흐리게 하여 수정 불가임을 알림
-                        color = if (uiState.isShared) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onBackground
+                        color = if (uiState.isShared) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface
                     )
 
                 }
@@ -176,8 +174,7 @@ fun CommunityPostScreen(
                 }
             }else{
                 item {
-                    Text("본문", style = Typography.bodyMedium, fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground)
+                    Text("본문", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                     PostInputField(
                         value = uiState.content,
@@ -207,8 +204,7 @@ fun CommunityPostScreen(
 @Composable
 fun PostTopBar(isEditMode: Boolean, isSubmitting: Boolean = false, onBackClick: () -> Unit, onRegisterClick: () -> Unit) {
     CenterAlignedTopAppBar(
-        title = { Text(if (isEditMode) "글 수정" else "글쓰기", style = Typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface) },
+        title = { Text(if (isEditMode) "글 수정" else "글쓰기", style = MaterialTheme.typography.titleLarge) },
         navigationIcon = {
             IconButton(onClick = onBackClick) {
                 Icon(Icons.Default.ArrowBack, contentDescription = null, tint = Color.DarkGray)
@@ -227,7 +223,7 @@ fun PostTopBar(isEditMode: Boolean, isSubmitting: Boolean = false, onBackClick: 
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimary,
-                    style = Typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
         },
@@ -256,7 +252,7 @@ fun PostInputField(
                 }
             },
 
-            placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant, style = Typography.bodyMedium) },
+            placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium) },
             modifier = modifier.fillMaxWidth()
                 .shadow(elevation = 1.dp, shape = RoundedCornerShape(8.dp))
                 .background(background),
@@ -268,14 +264,14 @@ fun PostInputField(
                 unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
             ),
             shape = RoundedCornerShape(8.dp),
-            textStyle = Typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
+            textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
         )
 
         Text(
             "${value?.length ?: 0} / $maxLength",
-            style = Typography.bodyMedium,
+            style = MaterialTheme.typography.bodyMedium,
             color = if ((value?.length ?: 0) >= maxLength)
-                MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
             modifier = Modifier
                 .align(Alignment.End)
                 .padding(end = 8.dp, top = 4.dp)
