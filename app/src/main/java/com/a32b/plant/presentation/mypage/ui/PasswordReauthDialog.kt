@@ -33,11 +33,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.a32b.plant.presentation.theme.fontColor
-import com.a32b.plant.presentation.theme.fontColorSub
 import com.a32b.plant.presentation.theme.primary
 import com.a32b.plant.presentation.theme.sub2
-import com.a32b.plant.presentation.theme.textFieldBackground
 
 @Composable
 fun PasswordReauthDialog(
@@ -89,14 +86,14 @@ fun PasswordReauthDialog(
                         }
                     },
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = textFieldBackground,
-                        unfocusedContainerColor = textFieldBackground,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
-                        focusedTextColor = fontColor,
-                        unfocusedTextColor = fontColor,
-                        focusedPlaceholderColor = fontColorSub,
-                        unfocusedPlaceholderColor = fontColorSub
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        focusedPlaceholderColor = MaterialTheme.colorScheme.onSecondary,
+                        unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSecondary
                     ),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,

@@ -31,6 +31,7 @@ private val DarkColorScheme = darkColorScheme(
     secondary = Color(0xFFD8B787),
     tertiary = Color(0xFF44474E),
 
+    surfaceContainerHigh = textFieldBackgroundDark
 
 )
 
@@ -56,7 +57,9 @@ private val LightColorScheme = lightColorScheme(
 
     onSurface = fontColor, //메인 폰트색
     onSecondary = fontColorSub, // 서브 폰트색
-    onTertiary = Color.LightGray
+    onTertiary = Color.LightGray,
+
+    surfaceContainerHigh = textFieldBackground
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),

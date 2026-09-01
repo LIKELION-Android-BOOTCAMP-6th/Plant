@@ -31,10 +31,7 @@ import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.auth.viewmodel.SignUpEvent
 import com.a32b.plant.presentation.auth.viewmodel.SignUpViewModel
 import com.a32b.plant.presentation.theme.background
-import com.a32b.plant.presentation.theme.fontColor
-import com.a32b.plant.presentation.theme.fontColorSub
 import com.a32b.plant.presentation.theme.primary
-import com.a32b.plant.presentation.theme.textFieldBackground
 
 @Composable
 fun SignUpScreen(
@@ -82,7 +79,7 @@ fun SignUpScreen(
                 text = "Plant",
                 style = MaterialTheme.typography.displayLarge,
                 fontWeight = FontWeight.Bold,
-                color = background,
+                color = MaterialTheme.colorScheme.background,
                 fontSize = 40.sp
             )
 
@@ -119,14 +116,14 @@ fun SignUpScreen(
                             )
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = textFieldBackground,
-                            unfocusedContainerColor = textFieldBackground,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
-                            focusedTextColor = fontColor,
-                            unfocusedTextColor = fontColor,
-                            focusedPlaceholderColor = fontColorSub,
-                            unfocusedPlaceholderColor = fontColorSub
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSecondary,
+                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSecondary
                         ),
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -154,14 +151,14 @@ fun SignUpScreen(
                             )
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = textFieldBackground,
-                            unfocusedContainerColor = textFieldBackground,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
-                            focusedTextColor = fontColor,
-                            unfocusedTextColor = fontColor,
-                            focusedPlaceholderColor = fontColorSub,
-                            unfocusedPlaceholderColor = fontColorSub
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSecondary,
+                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSecondary
                         ),
                         modifier = Modifier.fillMaxWidth(),
                         visualTransformation = if (passwordVisible) VisualTransformation.None
@@ -193,14 +190,14 @@ fun SignUpScreen(
                         value = uiState.passwordConfirm,
                         onValueChange = viewModel::onPasswordConfirmChange,
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = textFieldBackground,
-                            unfocusedContainerColor = textFieldBackground,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
-                            focusedTextColor = fontColor,
-                            unfocusedTextColor = fontColor,
-                            focusedPlaceholderColor = fontColorSub,
-                            unfocusedPlaceholderColor = fontColorSub
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSecondary,
+                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSecondary
                         ),
                         modifier = Modifier.fillMaxWidth(),
                         visualTransformation = if (passwordConfirmVisible) VisualTransformation.None
@@ -253,7 +250,7 @@ fun SignUpScreen(
                             Text(
                                 "회원가입 완료",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = background,
+                                color = MaterialTheme.colorScheme.background,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -261,7 +258,7 @@ fun SignUpScreen(
 
                     HorizontalDivider(
                         modifier = Modifier.padding(vertical = 16.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant
+                        color = MaterialTheme.colorScheme.outlineVariant //todo 색 변경하거나 새로 지정해주기
                     )
                     Box(
                         modifier = Modifier.fillMaxWidth(),
@@ -272,7 +269,6 @@ fun SignUpScreen(
                                 text = "이미 계정이 있으신가요? ",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontSize = 15.sp,
-                                color = fontColor
                             )
                             Text(
                                 text = "로그인",

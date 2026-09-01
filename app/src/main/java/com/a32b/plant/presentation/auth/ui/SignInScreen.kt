@@ -36,11 +36,8 @@ import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.auth.viewmodel.SignInEvent
 import com.a32b.plant.presentation.auth.viewmodel.SignInViewModel
 import com.a32b.plant.presentation.theme.background
-import com.a32b.plant.presentation.theme.fontColor
-import com.a32b.plant.presentation.theme.fontColorSub
 import com.a32b.plant.presentation.theme.primary
 import com.a32b.plant.presentation.theme.sub2
-import com.a32b.plant.presentation.theme.textFieldBackground
 import androidx.compose.ui.res.stringResource
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
@@ -127,7 +124,6 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                     Text(
                         text = "Plant에서 사용 할 닉네임을 설정해주세요.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = fontColorSub
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))
@@ -143,14 +139,14 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                             )
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = textFieldBackground,
-                            unfocusedContainerColor = textFieldBackground,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
-                            focusedTextColor = fontColor,
-                            unfocusedTextColor = fontColor,
-                            focusedPlaceholderColor = fontColorSub,
-                            unfocusedPlaceholderColor = fontColorSub
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSecondary,
+                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSecondary
                         ),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
@@ -189,7 +185,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                             Text(
                                 "설정 완료",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = background,
+                                color = MaterialTheme.colorScheme.background,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -223,7 +219,6 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                     Text(
                         "가입한 이메일을 입력하면\n비밀번호 재설정 메일을 보내드립니다.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = fontColorSub
                     )
 
                     Spacer(modifier = Modifier.height(20.dp))
@@ -238,14 +233,14 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                             Text("이메일을 입력하세요", style = MaterialTheme.typography.bodySmall)
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = textFieldBackground,
-                            unfocusedContainerColor = textFieldBackground,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
-                            focusedTextColor = fontColor,
-                            unfocusedTextColor = fontColor,
-                            focusedPlaceholderColor = fontColorSub,
-                            unfocusedPlaceholderColor = fontColorSub
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSecondary,
+                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSecondary
                         ),
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -310,7 +305,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                 text = "Plant",
                 style = MaterialTheme.typography.displayLarge,
                 fontWeight = FontWeight.Bold,
-                color = background,
+                color = MaterialTheme.colorScheme.background,
                 fontSize = 40.sp
             )
 
@@ -320,7 +315,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
             Text(
                 text = "로그인해서 계속하세요",
                 style = MaterialTheme.typography.bodyMedium,
-                color = background,
+                color = MaterialTheme.colorScheme.background,
                 fontSize = 16.sp
             )
 
@@ -357,14 +352,14 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                             )
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = textFieldBackground,
-                            unfocusedContainerColor = textFieldBackground,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
-                            focusedTextColor = fontColor,
-                            unfocusedTextColor = fontColor,
-                            focusedPlaceholderColor = fontColorSub,
-                            unfocusedPlaceholderColor = fontColorSub
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSecondary,
+                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSecondary
                         ),
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -392,14 +387,14 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                             )
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = textFieldBackground,
-                            unfocusedContainerColor = textFieldBackground,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
-                            focusedTextColor = fontColor,
-                            unfocusedTextColor = fontColor,
-                            focusedPlaceholderColor = fontColorSub,
-                            unfocusedPlaceholderColor = fontColorSub
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSecondary,
+                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSecondary
                         ),
                         modifier = Modifier.fillMaxWidth(),
                         visualTransformation = if (passwordVisible) VisualTransformation.None
@@ -428,7 +423,6 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                             text = "비밀번호를 잊으셨나요?",
                             style = MaterialTheme.typography.bodySmall,
                             fontSize = 13.sp,
-                            color = fontColorSub,
                             modifier = Modifier.clickable {
                                 showFindPasswordDialog = true
                             }
@@ -465,7 +459,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                             Text(
                                 "로그인",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = background,
+                                color = MaterialTheme.colorScheme.background,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -489,7 +483,6 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                             text = "또는",
                             style = MaterialTheme.typography.bodySmall,
                             fontSize = 13.sp,
-                            color = fontColorSub,
                             modifier = Modifier.padding(horizontal = 12.dp)
                         )
                         Image(
@@ -642,7 +635,6 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                                 text = "계정이 없으신가요? ",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontSize = 15.sp,
-                                color = fontColor
                             )
                             Text(
                                 text = "회원가입",
