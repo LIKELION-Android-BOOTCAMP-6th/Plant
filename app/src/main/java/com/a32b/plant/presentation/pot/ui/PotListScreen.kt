@@ -144,11 +144,11 @@ fun PotGridItem(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = if (isCompleted) "🌳" else "🌱",
-                    style = MaterialTheme.typography.headlineMedium
+                    style = MaterialTheme.typography.headlineMedium //todo 스타일 변경 혹은 새로 지정하기
                 )
                 Text(
                     text = "Lv.$level",
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelSmall,//todo 스타일 변경 혹은 새로 지정하기
                     color = MaterialTheme.colorScheme.primary
                 )
             }
