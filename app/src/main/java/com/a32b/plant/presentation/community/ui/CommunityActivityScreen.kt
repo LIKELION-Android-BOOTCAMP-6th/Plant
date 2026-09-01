@@ -39,7 +39,6 @@ import com.a32b.plant.domain.type.ActivityType
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.presentation.community.viewmodel.CommunityActivityEvent
-import com.a32b.plant.presentation.theme.Typography
 @Composable
 fun CommunityActivityScreen(navController: NavController, viewModel: CommunityActivityViewModel = hiltViewModel()){
 
@@ -68,7 +67,7 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                     Image(painter = painterResource(R.drawable.ic_backbtn),
                         contentDescription = "뒤로가기")
                 }
-                Text("내 활동", style = Typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text("내 활동", style = MaterialTheme.typography.titleLarge)
             }
 
             TagGroup(list, init = listOf(uiState.selected),isMultiSelected = false){ selected ->
@@ -81,7 +80,7 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                 ){
                     Text(
                         text = "커뮤니티 활동 내역이 없습니다.",
-                        style = Typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
             }else{
@@ -114,20 +113,18 @@ fun ContentList(lists : List<CommunityActivity>, onClick: (String) -> Unit){
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(list.title, style = Typography.titleSmall,maxLines = 1,
+                        Text(list.title, style = MaterialTheme.typography.titleSmall, maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f),
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Text(TimeFormatter.formatTimeToDate(list.createAt ?: 0), style = Typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(TimeFormatter.formatTimeToDate(list.createAt ?: 0), style = MaterialTheme.typography.bodySmall)
                     }
                     list.comment?.let {
                         Text(
                             list.comment,
-                            style = Typography.bodyMedium,
+                            style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(top = 3.dp),
-                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }

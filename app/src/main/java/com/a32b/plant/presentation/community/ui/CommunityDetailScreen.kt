@@ -115,8 +115,7 @@ fun CommunityDetailScreen(
                                 Image(painter = painterResource(R.drawable.ic_backbtn),
                                     contentDescription = "뒤로가기")
                             }
-                            Text(currentPost.title, fontSize = 24.sp,style = Typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurface,
+                            Text(currentPost.title, fontSize = 24.sp, style = MaterialTheme.typography.titleSmall,
                                 modifier = Modifier.padding(horizontal = 46.dp),
                                 textAlign = TextAlign.Center)
 
@@ -126,14 +125,12 @@ fun CommunityDetailScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             ProfileImage(currentPost.author.profileImg, 36)
                             Spacer(modifier = Modifier.width(10.dp))
-                            Text(currentPost.author.nickname,  style = Typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface)
+                            Text(currentPost.author.nickname,  style = MaterialTheme.typography.bodyMedium)
                             Spacer(modifier = Modifier.weight(1f))
                             Text(
                                 TimeFormatter.formatTimeWithClock(currentPost.createdAt ?: 0) +
                                     if (currentPost.updatedAt != null) " (수정됨)" else "",
-                                style = Typography.bodyMedium, fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurface)
+                                style = MaterialTheme.typography.bodyMedium, fontSize = 12.sp)
                         }
                     }
                     item{
@@ -152,8 +149,7 @@ fun CommunityDetailScreen(
                         }
                     }else{
                         item {
-                            Text(currentPost.content?:"", style = Typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface)
+                            Text(currentPost.content?:"", style = MaterialTheme.typography.bodyMedium)
 
                         }
                     }
@@ -174,8 +170,7 @@ fun CommunityDetailScreen(
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
 //                                tint = Color.Gray
                                 modifier = Modifier.size(18.dp))
-                            Text(" ${currentPost.commentCount}", style = Typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
+                            Text(" ${currentPost.commentCount}", style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.padding(end = 16.dp))
 
                             Row(
@@ -189,8 +184,7 @@ fun CommunityDetailScreen(
                                     modifier = Modifier.size(18.dp),
                                     contentDescription = null
                                 )
-                                Text(" ${currentPost.likeCount}", style = Typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface)
+                                Text(" ${currentPost.likeCount}", style = MaterialTheme.typography.bodyMedium)
                             }
 
                             Spacer(modifier = Modifier.weight(1f))
@@ -271,14 +265,12 @@ fun CommentRow(
         Column(modifier = Modifier.weight(1f)) {
             // 닉네임 + 작성 시간을 한 줄에 표시
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(comment.user.nickname, fontWeight = FontWeight.Bold, fontSize = 13.sp, style = Typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface)
+                Text(comment.user.nickname, fontWeight = FontWeight.Bold, fontSize = 13.sp, style = MaterialTheme.typography.bodyMedium)
                 Spacer(Modifier.width(6.dp))
                 Text(
                     text = comment.createdAt?.let { TimeFormatter.formatTimeWithClock(it) } ?: "",
                     fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = Typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
             Spacer(modifier = Modifier.height(7.dp))
@@ -302,19 +294,18 @@ fun CommentRow(
                         cursorColor = MaterialTheme.colorScheme.primary
                     ),
                     shape = RoundedCornerShape(8.dp),
-                    textStyle = Typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
 
                 )
                 Row {
                     TextButton(onClick = onEditSubmit) {
                         Text("저장",
                               color = MaterialTheme.colorScheme.primary,
-                            fontSize = 12.sp,style = Typography.bodyMedium)
+                            fontSize = 12.sp,style = MaterialTheme.typography.bodyMedium)
                     }
                     TextButton(onClick = onEditCancel) {
                         Text("취소",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 12.sp,style = Typography.bodyMedium)
+                            fontSize = 12.sp,style = MaterialTheme.typography.bodyMedium)
                     }
                     Spacer(modifier = Modifier.weight(1f))
                     Text(
@@ -323,14 +314,13 @@ fun CommentRow(
                         color = if (editingText.length >= maxLength)
                             MaterialTheme.colorScheme.error
                         else
-                            MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = Typography.bodyMedium,
+                            MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(end = 20.dp)
                     )
                 }
             } else {
-                Text(comment.content, fontSize = 14.sp, style = Typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface)
+                Text(comment.content, fontSize = 14.sp, style = MaterialTheme.typography.bodyMedium)
             }
         }
 
@@ -367,8 +357,7 @@ fun CommentInputSection(nickname: String, text: String, isSubmitting: Boolean = 
         elevation = CardDefaults.elevatedCardElevation(1.dp)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text(nickname, fontSize = 13.sp, fontWeight = FontWeight.Bold, style = Typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface)
+            Text(nickname, fontSize = 13.sp, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
             TextField(
                 value = text,
                 onValueChange = { input ->
@@ -379,8 +368,8 @@ fun CommentInputSection(nickname: String, text: String, isSubmitting: Boolean = 
                     .height(70.dp)
                     .padding(top = 8.dp),
                 placeholder = { Text("댓글을 남겨보세요...", fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = Typography.bodyMedium) },
+                    color = MaterialTheme.colorScheme.onSecondary,
+                    style = MaterialTheme.typography.bodyMedium) },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
                     unfocusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -401,7 +390,7 @@ fun CommentInputSection(nickname: String, text: String, isSubmitting: Boolean = 
                     "${text.length} / $maxLength",
                     fontSize = 12.sp,
                     color = if (text.length >= maxLength) Color.Red else Color.Gray,
-                    style = Typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 Button(
@@ -415,7 +404,7 @@ fun CommentInputSection(nickname: String, text: String, isSubmitting: Boolean = 
                     shape = RoundedCornerShape(4.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
                 ) {
-                    Text(if (isSubmitting) "등록 중" else "등록", fontSize = 12.sp, color = Color.White,style = Typography.bodyMedium)
+                    Text(if (isSubmitting) "등록 중" else "등록", fontSize = 12.sp, color = Color.White,style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }
