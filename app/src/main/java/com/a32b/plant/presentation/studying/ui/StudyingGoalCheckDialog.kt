@@ -28,7 +28,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -36,7 +35,6 @@ import androidx.compose.ui.window.Dialog
 import com.a32b.plant.R
 import com.a32b.plant.presentation.core.type.StudyingGoalCheckMode
 import com.a32b.plant.presentation.studying.viewmodel.StudyLogUi
-import com.a32b.plant.presentation.theme.Typography
 import com.a32b.plant.presentation.theme.sub3
 
 @Composable
@@ -62,14 +60,14 @@ fun StudyingGoalCheckDialog(
                 Box(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = "학습 목표",
-                        style = Typography.titleSmall,
+                        style = MaterialTheme.typography.titleSmall,
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
 
                 if(studyLog.isEmpty()){
                     Spacer(Modifier.height(4.dp))
-                    Text("아직 학습 목표를 설정하지 않았어요.", style = Typography.bodyMedium)
+                    Text("아직 학습 목표를 설정하지 않았어요.", style = MaterialTheme.typography.bodyMedium)
                     Spacer(Modifier.height(7.dp))
                 }else{
                     LazyColumn(
@@ -92,7 +90,7 @@ fun StudyingGoalCheckDialog(
                     TextButton(onClick = {onEdit(-1)}) {
                         Text(
                             "추가하기",
-                            style = Typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall,
                             textDecoration = TextDecoration.Underline
                         )
                     }
@@ -108,13 +106,13 @@ fun StudyingGoalCheckDialog(
                             onClick = onDismiss,
                             shape = RoundedCornerShape(8.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = sub3, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
-                        ) { Text("취소", style = Typography.bodySmall)}
+                        ) { Text("취소", style = MaterialTheme.typography.bodySmall)}
 
                         Button(
                             onClick = onConfirm,
                             shape = RoundedCornerShape(8.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(0.7f), contentColor = MaterialTheme.colorScheme.primary)
-                        ) { Text( if(showEditButton) "종료" else "저장", style = Typography.bodySmall)}
+                        ) { Text( if(showEditButton) "종료" else "저장", style = MaterialTheme.typography.bodySmall)}
                     }
                 }
             }
@@ -137,8 +135,8 @@ fun StudyLogItem(isInterrupted: Boolean, log: StudyLogUi, onEdit: () -> Unit, on
         }
         Text(
             text = log.log,
-            style = Typography.bodyMedium,
-            color = if (log.isCompleted) Color.LightGray else MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (log.isCompleted) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSurface,
             textDecoration = if (log.isCompleted) TextDecoration.LineThrough else TextDecoration.None
         )
         Spacer(Modifier.weight(1f))

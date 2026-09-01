@@ -42,7 +42,6 @@ import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.presentation.studying.viewmodel.StudyResultViewModel
-import com.a32b.plant.presentation.theme.Typography
 
 @Composable
 fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewModel = hiltViewModel()) {
@@ -105,8 +104,7 @@ fun StudyResultContent(timestamp: String, tag: String, title: String, log: List<
             horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(modifier = Modifier.height(17.dp))
 
-            Text(timestamp , style = Typography.titleSmall , fontSize = 22.sp,
-                color = MaterialTheme.colorScheme.onSurface)
+            Text(timestamp , style = MaterialTheme.typography.titleSmall , fontSize = 22.sp)
             Spacer(modifier = Modifier.height(13.dp))
 
             Card(modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(7.dp),
@@ -118,12 +116,10 @@ fun StudyResultContent(timestamp: String, tag: String, title: String, log: List<
             ) {
                 Spacer(modifier = Modifier.height(22.dp))
                 Text(modifier = Modifier.padding(start = 12.dp),
-                    text = "[$tag] $title", style = Typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface)
+                    text = "[$tag] $title", style = MaterialTheme.typography.titleSmall,)
 
                 log.forEach { text ->
-                    Text("- $text", style = Typography.bodyMedium, modifier = Modifier.padding(start = 22.dp, top = 10.dp, bottom = 10.dp),
-                        color = MaterialTheme.colorScheme.onSurface)
+                    Text("- $text", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 22.dp, top = 10.dp, bottom = 10.dp),)
                 }
 
                 Column(modifier = Modifier.fillMaxWidth()
@@ -131,15 +127,14 @@ fun StudyResultContent(timestamp: String, tag: String, title: String, log: List<
                     ProfileImage(level, 200)
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Text(TimeFormatter.formatToDigitalClock(time), style = Typography.titleLarge, fontSize = 50.sp,
-                        color = MaterialTheme.colorScheme.onSurface)
+                    Text(TimeFormatter.formatToDigitalClock(time), style = MaterialTheme.typography.titleLarge, fontSize = 50.sp,)
 
                     Spacer(modifier = Modifier.weight(1f))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(painter = painterResource(id = R.drawable.logo_plant),
                             contentDescription = "logo",
                             modifier = Modifier.size(30.dp).padding(end = 10.dp))
-                        Text("식물이 한 뼘 더 자랐습니다!", style = Typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        Text("식물이 한 뼘 더 자랐습니다!", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
 
                     }
                     Spacer(modifier = Modifier.height(22.dp))

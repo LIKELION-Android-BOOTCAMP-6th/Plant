@@ -39,7 +39,6 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.a32b.plant.R
-import com.a32b.plant.presentation.theme.Typography
 import com.a32b.plant.presentation.theme.sub3
 
 @Composable
@@ -84,14 +83,14 @@ fun StudyingGoalInputDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
 
-                Text("[$tag] $title", style = Typography.titleSmall)
+                Text("[$tag] $title", style = MaterialTheme.typography.titleSmall)
 
                 Spacer(Modifier.height(7.dp))
 
                 if (!isEditing){
                     Text(
                         "${index + 1} / 10 ",
-                        style = Typography.bodySmall,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(top = 7.dp)
                     )
@@ -134,19 +133,17 @@ fun StudyingGoalInputDialog(
                             placeholder = {
                                 Text(
                                     text = "오늘의 학습 목표를 기록해보세요!",
-                                    style = Typography.bodyMedium,
-                                    color = Color.LightGray
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onTertiary
                                 )
                             },
                             maxLines = 11,
-                            textStyle = Typography.bodyMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
+                            textStyle = MaterialTheme.typography.bodyMedium
                         )
 
                         Text(
                             "${currentText.length}/$maxLength",
-                            style = Typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall,
                             color = if (currentText.length >= maxLength) MaterialTheme.colorScheme.error
                             else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier
@@ -192,7 +189,7 @@ fun StudyingGoalInputDialog(
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.height(33.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = sub3, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
-                    ) { Text(if (isEditing) "취소" else "추가", style = Typography.bodySmall) }
+                    ) { Text(if (isEditing) "취소" else "추가", style = MaterialTheme.typography.bodySmall) }
 
                     Button(
                         onClick = {
@@ -211,7 +208,7 @@ fun StudyingGoalInputDialog(
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.height(33.dp).padding(start = 10.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error.copy(0.3f), contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
-                    ) { Text("삭제", style = Typography.bodySmall) }
+                    ) { Text("삭제", style = MaterialTheme.typography.bodySmall) }
 
 
                     Spacer(Modifier.weight(1f))
@@ -221,7 +218,7 @@ fun StudyingGoalInputDialog(
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.height(33.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(0.7f), contentColor = MaterialTheme.colorScheme.primary)
-                    ) { Text("완료", style = Typography.bodySmall)}
+                    ) { Text("완료", style = MaterialTheme.typography.bodySmall)}
 
                 }
 
@@ -229,8 +226,8 @@ fun StudyingGoalInputDialog(
                     TextButton(onClick = onDismiss) {
                         Text(
                             "다음에 입력하기",
-                            style = Typography.bodySmall,
-                            color = Color.Gray,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onTertiary,
                             textDecoration = TextDecoration.Underline
                         )
                         Spacer(Modifier.weight(1f))
