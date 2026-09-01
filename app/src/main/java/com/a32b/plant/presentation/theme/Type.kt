@@ -31,14 +31,14 @@ fun plantTypography(colorScheme: ColorScheme): Typography{
         titleLarge = TextStyle(
             fontFamily = bold,
             fontSize = 30.sp,
-            color = colorScheme.onSecondaryContainer
+            color = colorScheme.onSurface
         ),
 
         //작은 글씨 강조용 - 홈의 날짜, 커뮤니티 리스트의 글제목, 다이얼로그 제목 등
         titleSmall = TextStyle(
             fontFamily = bold,
             fontSize = 18.sp,
-            color = colorScheme.onSecondaryContainer
+            color = colorScheme.onSurface
 
         ),
         //기본 글씨 - 커뮤니티의 게시글 본문 등 기타 모든 일반 글씨 작성 시
@@ -46,14 +46,14 @@ fun plantTypography(colorScheme: ColorScheme): Typography{
             fontFamily = basic,
             fontSize = 17.sp,
             lineHeight = 23.sp,
-            color = colorScheme.onSecondaryContainer
+            color = colorScheme.onSurface
         ),
         //작은 글씨, 힌트용 - 홈의 나만의 화분 안내 문구(더 연한 색상으로 변경해도 됨), 커뮤니티 날짜, 마이페이지 총 공부 시간
         bodySmall = TextStyle(
             fontFamily = basic,
             fontSize = 15.sp,
             lineHeight = 20.sp,
-            color = fontColorSub
+            color = colorScheme.onSecondary
         )
     )
 }
