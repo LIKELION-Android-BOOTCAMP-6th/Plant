@@ -60,7 +60,6 @@ fun PasswordReauthDialog(
                 Text(
                     "본인 확인",
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -68,7 +67,6 @@ fun PasswordReauthDialog(
                 Text(
                     "탈퇴를 위해 비밀번호를 입력해주세요.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))

@@ -78,7 +78,6 @@ import com.a32b.plant.presentation.mypage.viewmodel.MyPageEvent
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageUiState
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageViewModel
 import com.a32b.plant.presentation.theme.PlantTheme
-import com.a32b.plant.presentation.theme.Typography
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.launch
@@ -388,9 +387,8 @@ fun DarkModeToggleButton(
             // 좌측
             Text(
                 text = "다크모드",
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyLarge, //todo 스타일 변경하거나 새로 지정하기
                 modifier = Modifier.padding(start = 8.dp),
-                color = MaterialTheme.colorScheme.onSurface
             )
             // 우측
             Switch(
@@ -433,7 +431,6 @@ fun ButtonTemplate(text: String, enabled: Boolean = true, onClick: () -> Unit) {
         ) {
             Text(
                 text = text, style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -479,8 +476,7 @@ fun ProfileRow(
             ) {
                 Text(
                     text = "${uiState.nickname} 님",
-                    style = Typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -491,14 +487,13 @@ fun ProfileRow(
             ) {
                 Text(
                     text = "총 공부 시간",
-                    style = Typography.bodySmall,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.width(14.dp))
                 Text(
                     text = uiState.totalStudyTime,
-                    style = Typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -594,7 +589,7 @@ fun ProfileDialog(
                             focusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
                             unfocusedContainerColor = MaterialTheme.colorScheme.secondaryContainer
                         ),
-                        label = { Text("닉네임 변경 (2~10자)", style = Typography.labelSmall) },
+                        label = { Text("닉네임 변경 (2~10자)", style = MaterialTheme.typography.labelSmall) }, //todo 스타일 변경하거나 새로 지정하기
                         isError = uiState.nicknameError != null
                     )
 
@@ -602,7 +597,7 @@ fun ProfileDialog(
                         Text(
                             text = uiState.nicknameError,
                             color = Color.Red,
-                            style = Typography.labelSmall,
+                            style = MaterialTheme.typography.labelSmall, //todo 스타일 변경하거나 새로 지정하기
                             modifier = Modifier.padding(start = 8.dp, top = 4.dp)
                         )
                     }
@@ -634,8 +629,7 @@ fun ProfileDialog(
                     ) {
                         Text(
                             "취소",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
 
@@ -652,7 +646,7 @@ fun ProfileDialog(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary
                         )
-                    ) { Text("저장", style = Typography.bodyMedium) }
+                    ) { Text("저장", style = MaterialTheme.typography.bodyMedium) }
                 }
             }
         }
