@@ -23,16 +23,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyLog
-import com.a32b.plant.presentation.theme.fontColor
 import com.a32b.plant.presentation.theme.fontColorSub
-import java.time.ZoneId
 
 @Composable
 fun StudyLogDetailDialog(
@@ -46,7 +43,7 @@ fun StudyLogDetailDialog(
                 .fillMaxWidth()
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onPrimary),
             elevation = CardDefaults.cardElevation(4.dp)
             ) {
             Column(
@@ -85,12 +82,13 @@ fun StudyLogDetailDialog(
                 ){
                     Text(text = TimeFormatter.formatTimeToDate(log.createAt ?: 0),
                         style = MaterialTheme.typography.bodySmall,
-                        color = fontColor
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(text = "공부시간 : [${TimeFormatter.formatToDigitalClock(log.studyingTime)}]",
                         style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = fontColor)
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -99,7 +97,6 @@ fun StudyLogDetailDialog(
                     Text(text = "학습 내용",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
-                        color = fontColor
                     )
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -108,19 +105,20 @@ fun StudyLogDetailDialog(
                             Row(modifier = Modifier.padding(vertical = 4.dp)){
                                 Text(text = "•",
                                     modifier = Modifier.padding(end = 8.dp),
-                                    color = fontColor
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = content,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = fontColor,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
                         }
                     }
                 } else {
-                    Text(text = "기록된 상세 내용이 없습니다.")
+                    Text(text = "기록된 상세 내용이 없습니다.", style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }

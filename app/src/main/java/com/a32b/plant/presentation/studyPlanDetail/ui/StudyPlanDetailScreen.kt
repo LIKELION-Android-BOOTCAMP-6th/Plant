@@ -1,6 +1,5 @@
 package com.a32b.plant.presentation.studyPlanDetail.ui
 
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,7 +19,6 @@ import com.a32b.plant.domain.model.StudyLog
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -29,6 +27,7 @@ import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.presentation.theme.fontColorSub
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.a32b.plant.presentation.core.extension.showToast
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,9 +82,9 @@ fun StudyPlanDetailScreen(
                 title = {
                     potInfo?.let {
                         Text("[${it.tagName}] ${it.name}",
-                            style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface)
-                    } ?: Text("로딩 중...", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            style = MaterialTheme.typography.titleMedium, //todo 스타일 변경 or 새로 지정하기
+                        )
+                    } ?: Text("로딩 중...", style = MaterialTheme.typography.titleMedium)
                 },
                 navigationIcon = {
                         //뒤로 가기
@@ -148,7 +147,7 @@ fun StudyPlanDetailScreen(
                     enabled = potInfo?.isCompleted == false,
                     onClick = { viewModel.setCompleteDialogShown(true) },
                 ) {
-                    Text(if (potInfo?.isCompleted == true) "완료된 학습" else "학습 완료하기")
+                    Text(if (potInfo?.isCompleted == true) "완료된 학습" else "학습 완료하기") //todo 스타일 지정하기
                 }
             }
         }
@@ -176,13 +175,12 @@ fun StudyPlanDetailScreen(
                                 checked = isAllSelected,
                                 onCheckedChange = { viewModel.toggleAllSelection(it) }
                             )
-                            Text("전체 선택", style = MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurface)
+                            Text("전체 선택", style = MaterialTheme.typography.bodyMedium)
                         }
                         Spacer(modifier = Modifier.weight(1f))
                         Text(
                             text = "${logs.count { it.isSelected }}개 선택됨",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MaterialTheme.typography.labelMedium, //todo 스타일 변경 혹은 새로 지정하기
                         )
                     }
                 }
@@ -197,8 +195,7 @@ fun StudyPlanDetailScreen(
                     ) {
                         Text(
                             text = "아직 학습 기록이 없습니다.",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface
+                            style = MaterialTheme.typography.bodyLarge,//todo 스타일 변경 혹은 새로 지정하기
                         )
                     }
                 } else {
@@ -265,8 +262,7 @@ fun StudyPlanDetailScreen(
 
                                 // 제목
                                 Text("제목 변경", style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface)
+                                    fontWeight = FontWeight.Bold)
 
                                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -274,8 +270,7 @@ fun StudyPlanDetailScreen(
                                 OutlinedTextField(
                                     value = editNameText,
                                     onValueChange = { editNameText = it },
-                                    placeholder = { Text("화분 이름을 입력하세요", style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                    placeholder = { Text("화분 이름을 입력하세요", style = MaterialTheme.typography.bodyMedium,) },
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true,
                                     shape = RoundedCornerShape(12.dp),
@@ -303,7 +298,7 @@ fun StudyPlanDetailScreen(
                                     ) {
                                         Text("취소", style = MaterialTheme.typography.bodyMedium,
 //                                            color = Color.Gray)
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer)
+                                            color = MaterialTheme.colorScheme.onSecondary)
                                     }
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Button(
@@ -318,7 +313,7 @@ fun StudyPlanDetailScreen(
 //                                            Color(0xFFA5C16C)) // primary 색상
                                         )
                                     ) {
-                                        Text("확인", style = MaterialTheme.typography.bodyMedium, color = Color.White)
+                                        Text("확인", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimary)
                                     }
                                 }
                             }
@@ -345,11 +340,7 @@ fun StudyPlanDetailScreen(
                             viewModel.completeStudyPlan {
                                 val potName = potInfo?.name ?: "화분"
 
-                                Toast.makeText(
-                                    context,
-                                    "\"$potName\"화분의 학습을 완료했어요!",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                context.showToast("\"$potName\"화분의 학습을 완료했어요!")
                                 navController.popBackStack()
                             }
                         }
@@ -445,7 +436,7 @@ fun StudyRecordCard(
                         text = finalContent,
                         style = MaterialTheme.typography.bodySmall,
 //                        color = fontColor,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.fillMaxWidth(),
 
                         // 표시 줄 수
