@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.a32b.plant.presentation.core.component.TagSheet
 import com.a32b.plant.domain.model.Tag
+import com.a32b.plant.presentation.core.extension.showToast
 
 @Composable
 fun NewBornTreeScreen(navController: NavController,
@@ -69,7 +70,6 @@ fun NewBornTreeScreen(navController: NavController,
                 text = "Plant",
                 modifier = Modifier.padding(16.dp),
                 style = MaterialTheme.typography.displayLarge,
-                color = MaterialTheme.colorScheme.primary
             )
           },
         bottomBar = {
@@ -139,7 +139,6 @@ fun NewBornTreeScreen(navController: NavController,
                 ) {
                     Text(
                         "태그 선택", style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
 
@@ -173,8 +172,8 @@ fun NewBornTreeScreen(navController: NavController,
 
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("화분 이름",
-                        style = MaterialTheme.typography.titleSmall,
-                        color=MaterialTheme.colorScheme.onSurface)
+                        style = MaterialTheme.typography.titleSmall
+                    )
                     OutlinedTextField(
                         value = potName,
                         onValueChange = { input ->
@@ -185,14 +184,14 @@ fun NewBornTreeScreen(navController: NavController,
                                     potName = input
                                 } else {
                                     // 15글자를 초과해서 입력하려고 하면 토스트 발생
-                                    Toast.makeText(context, "${maxLength}글자 이하로 입력해주세요.", Toast.LENGTH_SHORT).show()
+                                    context.showToast("${maxLength}글자 이하로 입력해주세요.")
                                 }
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = { Text(
                             text="이름을 입력하세요 (최대 15글자)",
-                                      color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MaterialTheme.typography.bodyMedium
                         )},
 
                         // 한 줄 입력 고정
@@ -204,7 +203,7 @@ fun NewBornTreeScreen(navController: NavController,
                                 text = "${potName.length} / $maxLength",
                                 modifier = Modifier.fillMaxWidth(),
                                 textAlign = TextAlign.End, // 우측 정렬
-                                color = if (potName.length >= maxLength) Color.Red else Color.Gray // 15글자 도달 시 붉은색
+                                color = if (potName.length >= maxLength) Color.Red else MaterialTheme.colorScheme.onTertiary // 15글자 도달 시 붉은색
                             )
                         }
                     )

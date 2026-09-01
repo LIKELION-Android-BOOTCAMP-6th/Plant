@@ -12,14 +12,16 @@ private val DarkColorScheme = darkColorScheme(
     onPrimary = Color(0xFF000000),
 
     background = Color(0xFF2D2D2D),
-    onBackground = Color(0xFFE6E1D6),
+    onBackground = Color(0xFFF1F1F1),
 
     //다이얼로그 백, 커뮤니티 포스트 입력창, 커뮤니티 디테일 내용
     //기본 바탕이 흰 색인 것
     secondaryContainer = Color(0xFF757575),
     onSecondaryContainer = Color.White,
 
-    onSurface = Color(0xFFE6E1E5),
+    onSurface = Color(0xFFF1F1F1), //메인 폰트색
+    onSecondary = Color(0xFFB8B8B8),//서브 폰트색
+    onTertiary = Color(0xFF707070), //라이트 그레이 대체용
 
     //홈의 카드, 개별학습기록 백, 공부중 백
     //기본 바탕이 연한 회색인 것
@@ -29,6 +31,7 @@ private val DarkColorScheme = darkColorScheme(
     secondary = Color(0xFFD8B787),
     tertiary = Color(0xFF44474E),
 
+    surfaceContainerHigh = textFieldBackgroundDark
 
 )
 
@@ -37,24 +40,26 @@ private val LightColorScheme = lightColorScheme(
     onPrimary = Color.White,
 
     background = background,
-    onBackground = Color(0xFF1C1B1F),
+    onBackground = fontColor,
 
     secondaryContainer = Color.White,
     onSecondaryContainer = fontColor,
 
-    onSurface = Color(0xFF1C1B1F),
+//    onSurface = Color(0xFF1C1B1F),
     surfaceVariant = Color(0xFFF8F6F6),
     onSurfaceVariant = Color(0xFF44474E),
 
     secondary = sub1,
-    onSecondary = fontColor,
+//    onSecondary = fontColor,
 
 
     tertiary = sub2,
 
-/*    onSurface = fontColor, //메인 폰트색
+    onSurface = fontColor, //메인 폰트색
     onSecondary = fontColorSub, // 서브 폰트색
-    onTertiary = Color.LightGray*/
+    onTertiary = Color.LightGray,
+
+    surfaceContainerHigh = textFieldBackground
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),
@@ -87,7 +92,7 @@ fun PlantTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography, //todo 여기 선언한 타이포그래피 함수로 변경해주기
+        typography = plantTypography(colorScheme),
         content = content
     )
 }

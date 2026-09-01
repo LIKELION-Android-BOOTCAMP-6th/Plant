@@ -17,7 +17,6 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.a32b.plant.presentation.theme.Typography
 
 @Composable
 fun TagGroup(tags: List<String>, init: List<String> = emptyList(),
@@ -69,8 +68,7 @@ fun TagGroup(tags: List<String>, init: List<String> = emptyList(),
                     onSelectedChanged(selectedTags)
                 }
             ) {
-                Text(tag, Modifier.padding(top = 5.dp, bottom = 5.dp, start = 10.dp, end = 10.dp), style = Typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface)
+                Text(tag, Modifier.padding(top = 5.dp, bottom = 5.dp, start = 10.dp, end = 10.dp), style = MaterialTheme.typography.bodyMedium,)
             }
         }
     }

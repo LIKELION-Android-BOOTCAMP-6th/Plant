@@ -4,14 +4,12 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,36 +17,25 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.a32b.plant.R
@@ -62,8 +49,6 @@ import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.core.type.StudyingGoalCheckMode
 import com.a32b.plant.presentation.studying.viewmodel.StudyingEvent
 import com.a32b.plant.presentation.studying.viewmodel.StudyingViewModel
-import com.a32b.plant.presentation.theme.Typography
-import com.a32b.plant.presentation.theme.sub3
 import java.time.LocalDateTime
 
 @Composable
@@ -127,8 +112,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
             StudyStatusBadge(uiState.tag, uiState.title)
 
             Spacer(modifier = Modifier.height(30.dp))
-            Text("$startTime ~", style = Typography.bodyMedium, fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("$startTime ~", style = MaterialTheme.typography.bodyMedium, fontSize = 13.sp,)
             SetTimer(uiState.timer)
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -144,7 +128,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ){
-                    Text("오늘의 학습 목표", style = Typography.bodyMedium, textDecoration = TextDecoration.Underline )
+                    Text("오늘의 학습 목표", style = MaterialTheme.typography.bodyMedium, textDecoration = TextDecoration.Underline )
 
                     Image(painter = painterResource(R.drawable.ic_right), contentDescription = "goalCheck")
 
@@ -248,8 +232,7 @@ fun SetTimer(time: Long){
             modifier = Modifier.matchParentSize(),
             contentScale = ContentScale.Fit
         )
-        Text(text = "${TimeFormatter.formatToDigitalClock(time)}", style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface)
+        Text(text = "${TimeFormatter.formatToDigitalClock(time)}", style = MaterialTheme.typography.titleLarge,)
     }
 }
 @Composable
@@ -265,8 +248,7 @@ fun StateChangeButton(text: String, backColor: Color, function: () -> Unit){
     ) {
         Box(modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center){
-            Text("$text", style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface)
+            Text("$text", style = MaterialTheme.typography.bodyMedium,)
         }
     }
 }
@@ -279,8 +261,7 @@ fun StudyingUserCard(users: List<StudyingUser>, tag: String){
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
         ) {
         Column(modifier = Modifier.padding(10.dp)) {
-            Text("$tag ${users.size}", style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface)
+            Text("$tag ${users.size}", style = MaterialTheme.typography.titleSmall,)
             users.take(3).forEach { user ->
                 StudyingUserItem(user)
                 Spacer(modifier = Modifier.height(8.dp))
@@ -294,10 +275,9 @@ fun StudyingUserItem(user: StudyingUser){
     Row(Modifier.padding(10.dp),
         verticalAlignment = Alignment.CenterVertically) {
         ProfileImage(user.profileImg, 30)
-        Text(text = user.nickname, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface,
+        Text(text = user.nickname, style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 3.dp, start = 3.dp))
-        Text(text = " ${TimeFormatter.formatToMinute(user.studyingTime)} 째 공부중!", style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface)
+        Text(text = " ${TimeFormatter.formatToMinute(user.studyingTime)} 째 공부중!", style = MaterialTheme.typography.bodyMedium,)
     }
 }
 

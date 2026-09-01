@@ -14,7 +14,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyLog
-import com.a32b.plant.presentation.theme.Typography
 
 @Composable
 fun StudyLogCard(studyLogs: List<StudyLog>) {
@@ -27,12 +26,12 @@ fun StudyLogCard(studyLogs: List<StudyLog>) {
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
                 Text("${log.title} [${TimeFormatter.formatToDigitalClock(log.studyingTime)}]", style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.padding(10.dp),
-                    fontSize = 15.sp,
-                    color = MaterialTheme.colorScheme.onSurface)
+                    fontSize = 15.sp
+                )
                 log.contents.forEach { content ->
-                    Text(content, style = Typography.bodyMedium, fontSize = 13.sp,
-                        modifier = Modifier.padding(10.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(content, style = MaterialTheme.typography.bodyMedium, fontSize = 13.sp,
+                        modifier = Modifier.padding(10.dp)
+                    )
                 }
             }
         }

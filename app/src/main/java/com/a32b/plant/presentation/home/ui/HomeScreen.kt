@@ -208,8 +208,7 @@ fun PotChangeDialog(
         title = {
             Text(
                 text = "화분 변경",
-                style = MaterialTheme.typography.headlineMedium,
-                color = fontColor
+                style = MaterialTheme.typography.headlineMedium, //todo 지정된 스타일로 바꾸거나 스타일 새로 생성하기
             )
         },
         text = {
@@ -221,7 +220,7 @@ fun PotChangeDialog(
                 Text(
                     text = "정원에 있는 다른 공부 화분으로\n변경할 수 있습니다.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = fontColorSub
+                    color = MaterialTheme.colorScheme.onSecondary
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -235,7 +234,7 @@ fun PotChangeDialog(
                         Text(
                             "생성된 다른 화분이 없습니다.",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = fontColorSub
+                            color = MaterialTheme.colorScheme.onSecondary
                         )
                     }
                 } else {
@@ -260,20 +259,18 @@ fun PotChangeDialog(
                                     Column {
                                         Text(
                                             text = pot.name.ifEmpty { "이름 없는 화분" },
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = fontColor
+                                            style = MaterialTheme.typography.bodyLarge, //todo 지정된 스타일로 바꾸거나 스타일 새로 생성하기
                                         )
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
                                             text = "태그: ${pot.tagName.ifEmpty { "없음" }}",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = fontColorSub
                                         )
                                     }
                                     Text(
                                         text = pot.level.ifEmpty { "Lv.0" },
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = if(isSelected) primary else fontColorSub
+                                        style = MaterialTheme.typography.labelMedium, //todo 지정된 스타일로 바꾸거나 스타일 새로 생성하기
+                                        color = if(isSelected) primary else MaterialTheme.colorScheme.onSecondary
                                     )
                                 }
                             }

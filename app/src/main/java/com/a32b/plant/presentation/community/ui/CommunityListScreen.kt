@@ -39,7 +39,6 @@ import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.domain.model.Post
 import com.a32b.plant.presentation.community.viewmodel.CommunityListEvent
 import com.a32b.plant.presentation.community.viewmodel.CommunityListViewModel
-import com.a32b.plant.presentation.theme.Typography
 import com.a32b.plant.presentation.theme.primary
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
@@ -116,7 +115,7 @@ fun CommunityListScreen(navController: NavController, viewModel: CommunityListVi
                                 verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     "태그",
-                                    style = Typography.titleSmall,
+                                    style = MaterialTheme.typography.titleSmall,
                                     modifier = Modifier.padding(start = 16.dp),
                                     color = MaterialTheme.colorScheme.onBackground
                                 )
@@ -134,7 +133,7 @@ fun CommunityListScreen(navController: NavController, viewModel: CommunityListVi
 
                                 Spacer(modifier = Modifier.weight(1f))
 
-                                Text("공유글 보기", style = Typography.titleSmall,
+                                Text("공유글 보기", style = MaterialTheme.typography.titleSmall,
                                     color = MaterialTheme.colorScheme.onBackground,
                                     fontSize = 15.sp)
                                 Switch(uiState.isSharedShown, onCheckedChange = { viewModel.onSharedShownChange() },
@@ -156,10 +155,10 @@ fun CommunityListScreen(navController: NavController, viewModel: CommunityListVi
                                     ) {
                                         Text(
                                             text = tag.name,
-                                            style = Typography.bodyMedium,
+                                            style = MaterialTheme.typography.bodyMedium,
                                             fontSize = 12.sp,
                                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                            color = Color.White
+                                            color = MaterialTheme.colorScheme.onPrimary
                                         )
                                     }
                                 }
@@ -176,7 +175,7 @@ fun CommunityListScreen(navController: NavController, viewModel: CommunityListVi
                             }
                             /**임시 위치*/
                             TextButton(onClick = { navController.navigate(Routes.CommunityActivity) }) {
-                                Text("내 활동", style = Typography.titleSmall)
+                                Text("내 활동", style = MaterialTheme.typography.titleSmall)
                             }
                         }
                     },
@@ -263,8 +262,8 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
         onValueChange = onQueryChange,
         placeholder = {
             Text(
-                "검색어를 입력하세요", style = Typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                "검색어를 입력하세요", style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondary
             )
         },
         modifier = Modifier
@@ -325,8 +324,7 @@ fun PostCard(post: Post, isLiked: Boolean, onClick: () -> Unit) {
                 Text(
                     text = post.title,
                     fontWeight = FontWeight.Bold,
-                    style = Typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
@@ -335,8 +333,8 @@ fun PostCard(post: Post, isLiked: Boolean, onClick: () -> Unit) {
                     text = TimeFormatter.formatTimeAgo(post.createdAt ?: 0) +
                         if (post.updatedAt != null) " (수정됨)" else "",
                     fontSize = 11.sp,
-                    style = Typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSecondary
                 )
             }
             Row {
@@ -350,8 +348,7 @@ fun PostCard(post: Post, isLiked: Boolean, onClick: () -> Unit) {
                 Text(
                     text = "  ${post.author.nickname}",
                     fontSize = 12.sp,
-                    style = Typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    style = MaterialTheme.typography.bodyMedium,
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -384,7 +381,7 @@ fun EmptyStateView(hasQuery: Boolean = false) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(
             text = if (hasQuery) "검색어에 해당하는 게시글이 없어요 😭" else "찾으시는 게시글이 없어요 😭",
-            color = Color.Black
+            style = MaterialTheme.typography.bodyMedium
         )
     }
 }

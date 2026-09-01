@@ -8,6 +8,7 @@ val background = Color(0xFFFFFFFF)
 
 // 입력창 배경색
 val textFieldBackground = Color(0xFFEEEEEE)
+val textFieldBackgroundDark = Color(0xFF18181A)
 
 //메인 색상
 val primary = Color(0xFF97BC62)

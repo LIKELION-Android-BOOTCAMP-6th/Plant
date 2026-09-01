@@ -19,7 +19,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.a32b.plant.presentation.theme.Typography
 import com.a32b.plant.presentation.theme.primary
 import com.a32b.plant.presentation.theme.sub2
 
@@ -40,10 +39,10 @@ fun ConfirmDialog(
                 modifier = Modifier.padding(22.dp)) {
                 Spacer(modifier = Modifier.height(10.dp))
 
-                Text(text, style = Typography.titleSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                Text(text, style = MaterialTheme.typography.titleSmall)
                 semiText?.let {
                     Spacer(modifier = Modifier.height(9.dp))
-                    Text(semiText, style = Typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                    Text(semiText, style = MaterialTheme.typography.bodyMedium)
                 }
 
                 Spacer(modifier = Modifier.height(22.dp))
@@ -54,7 +53,7 @@ fun ConfirmDialog(
                             modifier = Modifier.height(30.dp).weight(1f),
                             shape = RoundedCornerShape(8.dp),
                             colors = ButtonDefaults.buttonColors(sub2)) {
-                            Text("취소", style = Typography.bodyMedium)
+                            Text("취소", style = MaterialTheme.typography.bodyMedium)
                         }
                         Spacer(modifier = Modifier.width(10.dp))
                     }
@@ -63,7 +62,7 @@ fun ConfirmDialog(
                         modifier = Modifier.height(30.dp).weight(1f),
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(primary)) {
-                        Text("예", style = Typography.bodyMedium)
+                        Text("예", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
 
