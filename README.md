@@ -12,7 +12,7 @@
 
 대부분의 학습 보조 앱은 개인의 기록에만 치중하여, 타인과의 소통을 통한 동기부여나 구체적인 학습 계획 공유에는 한계가 있습니다.
 
-Plant는 학습 시간을 바탕으로 나만의 식물을 가꾸는 재미를 부여하고, 게시판을 통해 동료들과 학습 기록을 공유하며 꾸준히 공부할 수 있는 환경을 제공하고자 개발되었습니다.
+Plant는 학습 시간을 바탕으로 나만의 식물을 키우며 학습하는 재미를 부여하고, 게시판을 통해 동료들과 학습 기록을 공유하며 꾸준히 공부할 수 있는 환경을 제공하고자 개발되었습니다.
 
 ---
 
@@ -35,7 +35,8 @@ Plant는 학습 시간을 바탕으로 나만의 식물을 가꾸는 재미를 �
  
 ### 2. 학습 기록 (Study Records)
  
-- **화분 키우기**: 일정 시간 이상 학습을 완료하면 화분이 성장하고, 학습 성과가 내 정원에 식물로 쌓여갑니다.
+- **화분 키우기**: 누적 학습 시간과 성장 아이템(하트·햇빛·물·비료·영양제)을 소비하여 화분을 Lv.0에서 Lv.6까지 성장시킵니다. 학습 성과가 내 정원에 식물로 쌓여갑니다.
+- **학습 보상**: 공부 시간에 따라 성장 아이템과 보너스박스를 획득하고, 상점에서 Gold로 아이템을 구매할 수 있습니다.
 - **개별 학습 기록 확인**: 날짜·과목별 학습 시간과 누적 기록을 시각적으로 확인하여 자신의 성장 과정을 한눈에 파악할 수 있습니다.
  
 ### 3. 공유 (Sharing & Community)
@@ -109,7 +110,7 @@ Plant는 학습 시간을 바탕으로 나만의 식물을 가꾸는 재미를 �
 
 - **기능 명세서**: [기능명세서](docs/FEATURE_SPEC.md)
 - **화면 명세서**: [화면명세서](docs/SCREEN_SPEC.pdf)
-- **ERD**: [ERD](docs/ERD.md)
+- **데이터 모델**: [데이터 모델](docs/DATA_MODEL.md)
 
 ---
 
@@ -120,7 +121,7 @@ Plant는 학습 시간을 바탕으로 나만의 식물을 가꾸는 재미를 �
 | Language | <img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=Kotlin&logoColor=white"> |
 | UI Framework | <img src="https://img.shields.io/badge/Jetpack%20Compose-4285F4?style=flat-square&logo=Android&logoColor=white"> |
 | Async | <img src="https://img.shields.io/badge/Coroutines%20%26%20Flow-7F52FF?style=flat-square&logo=Kotlin&logoColor=white"> |
-| Architecture | <img src="https://img.shields.io/badge/MVVM-3DDC84?style=flat-square&logo=Android&logoColor=white"> <img src="https://img.shields.io/badge/Feature--based-3DDC84?style=flat-square&logo=Android&logoColor=white"> <img src="https://img.shields.io/badge/AppContainer%20%28Manual%20DI%29-3DDC84?style=flat-square&logo=Android&logoColor=white"> |
+| Architecture | <img src="https://img.shields.io/badge/MVVM-3DDC84?style=flat-square&logo=Android&logoColor=white"> <img src="https://img.shields.io/badge/Clean%20Architecture-3DDC84?style=flat-square&logo=Android&logoColor=white"> <img src="https://img.shields.io/badge/Feature--based-3DDC84?style=flat-square&logo=Android&logoColor=white"> <img src="https://img.shields.io/badge/Hilt%20%28DI%29-3DDC84?style=flat-square&logo=Android&logoColor=white"> |
 | Backend | <img src="https://img.shields.io/badge/Firebase%20Auth-FFCA28?style=flat-square&logo=Firebase&logoColor=white"> <img src="https://img.shields.io/badge/Cloud%20Firestore-FFCA28?style=flat-square&logo=Firebase&logoColor=white"> |
 | Local Storage | <img src="https://img.shields.io/badge/Preferences%20DataStore-3DDC84?style=flat-square&logo=Android&logoColor=white"> |
 | Design & Tools | <img src="https://img.shields.io/badge/Figma-F24E1E?style=flat-square&logo=Figma&logoColor=white"> <img src="https://img.shields.io/badge/Android%20Studio-3DDC84?style=flat-square&logo=android&logoColor=white"> <img src="https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=GitHub&logoColor=white"> <img src="https://img.shields.io/badge/Notion-000000?style=flat-square&logo=Notion&logoColor=white"> |
@@ -129,12 +130,13 @@ Plant는 학습 시간을 바탕으로 나만의 식물을 가꾸는 재미를 �
  
 ## 🏗️ 앱 구조 / 아키텍처
  
-Plant 프로젝트는 코드의 구조를 명확하게 나누고 유지보수를 쉽게 하기 위해 **MVVM(Model-View-ViewModel)** 아키텍처 패턴을 기반으로 설계되었습니다.
+Plant 프로젝트는 코드의 구조를 명확하게 나누고 유지보수를 쉽게 하기 위해 **MVVM(Model-View-ViewModel)** 아키텍처 패턴과 **클린 아키텍처(Clean Architecture)** 원칙을 기반으로 설계되었습니다.
  
 - **UI Layer**: Jetpack Compose를 사용해 구성하였으며, 화면에 필요한 데이터는 ViewModel에서 StateFlow를 통해 관리합니다.
 - **ViewModel**: 앱의 상태를 관리하고 비즈니스 로직을 처리하는 역할을 수행하며, UI는 이 상태를 관찰하여 데이터가 변경될 때 자동으로 화면이 갱신되도록 구성하였습니다.
-- **Repository**: Firebase(Firestore, Authentication)와 같은 외부 데이터 소스와의 통신을 담당합니다. 이를 통해 데이터 접근 로직을 분리하고 유지보수성을 향상시켰습니다.
-- **AppContainer (수동 DI)**: 객체 간의 결합도를 낮추기 위해 AppContainer를 사용하여 필요한 객체들을 한 번만 생성하고 필요한 곳에서 사용하는 DI(Dependency Injection) 구조를 적용하여 각 계층에서 재사용할 수 있도록 설계하였습니다.
+- **DataSource**: Firebase(Firestore, Authentication) 등 외부 데이터 소스와의 실제 통신을 담당합니다. Remote/Local 등 원천별로 분리하여 구현하였으며, 각 DataSource는 단일 데이터 출처에 대한 접근만을 책임집니다.
+- **Repository**: 하나 이상의 DataSource를 조합하여 도메인에 필요한 데이터를 제공하는 역할을 수행합니다. 이를 통해 상위 계층(ViewModel)은 데이터가 어디서 오는지 알 필요 없이 Repository 인터페이스에만 의존하게 되어, 데이터 접근 로직과 비즈니스 로직이 분리되고 유지보수성과 테스트 용이성이 향상되었습니다.
+- **Hilt (DI)**: `Hilt`를 사용하여 의존성 주입을 관리합니다. `@HiltViewModel`, `@Inject`, `@Module`/`@InstallIn` 등을 통해 Repository, DataSource 등 각 계층의 객체 생성과 주입을 자동화하였으며, 이를 통해 객체 간 결합도를 낮추고 테스트 용이성과 유지보수성을 향상시켰습니다.
  
 ```
 UI (Composable) → ViewModel → Repository → DataSource (Firebase)

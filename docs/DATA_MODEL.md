@@ -1,4 +1,4 @@
-## 📐 ERD
+## 📐 데이터 모델
  
 ### users
 ```
@@ -8,7 +8,6 @@ users
     ├── profileImg: String?
     ├── lastSelectedPotId: String?
     ├── isFirstLogin: Boolean?
-    ├── isDarkMode: Boolean?
     ├── totalStudyTime: Long?
     ├── completedPotsCount: Int?
     │
@@ -23,6 +22,7 @@ users
             ├── createdAt: Timestamp
             ├── completedAt: Timestamp?
             ├── isCompleted: Boolean
+            ├── lastStudiedAt: Timestamp?
             │
             └── logs
                 └── {logId}
@@ -64,6 +64,8 @@ posts
     ├── commentCount: Int
     ├── likeCount: Int
     ├── likedBy: List<String>
+    ├── bookmarkCount: Int
+    ├── bookmarkedBy: List<String>
     ├── createdAt: Timestamp
     ├── activityId: String
     ├── isShared: Boolean?
