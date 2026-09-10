@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -22,7 +21,7 @@ import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
-import com.a32b.plant.presentation.theme.sub1
+import com.a32b.plant.presentation.theme.bottom
 
 @Composable
 fun BottomBar(navController: NavController){
@@ -34,7 +33,7 @@ fun BottomBar(navController: NavController){
         .fillMaxWidth()
         .navigationBarsPadding(),
         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        color = sub1) {
+        color = bottom) {
         Row(modifier = Modifier.fillMaxWidth().height(68.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically) {
