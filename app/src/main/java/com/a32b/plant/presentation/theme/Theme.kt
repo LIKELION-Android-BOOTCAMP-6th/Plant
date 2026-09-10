@@ -8,30 +8,46 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 private val DarkColorScheme = darkColorScheme(
-    primary = primary,
-    onPrimary = Color(0xFF000000),
+    primary = primary.copy(0.5f),
+    onPrimary = Color.Black,
 
     background = Color(0xFF2D2D2D),
     onBackground = Color(0xFFF1F1F1),
 
-    //다이얼로그 백, 커뮤니티 포스트 입력창, 커뮤니티 디테일 내용
-    //기본 바탕이 흰 색인 것
+    //카드/ 기본 다이얼로그 배경색
+    primaryContainer = Color.Black,
+
+    //하단바 배경색
+    surface = Color(0xFFD8B787),
+
+    //보조 배경
+    surfaceVariant = Color(0xFFEEF0E7),
+
+    //텍스트필드 배경색
+    surfaceContainerHigh = textFieldBackgroundDark,
+
+    //옅은 초록색, 홈 메인 카드 배경
+    secondary = Color(0xFF6E796C),
+
+    //사각형 버튼
     secondaryContainer = Color(0xFF757575),
-    onSecondaryContainer = Color.White,
 
-    onSurface = Color(0xFFF1F1F1), //메인 폰트색
-    onSecondary = Color(0xFFB8B8B8),//서브 폰트색
-    onTertiary = Color(0xFF707070), //라이트 그레이 대체용
+    //진한 초록색
+    tertiary = Color(0xFFEBF7E4),
 
-    //홈의 카드, 개별학습기록 백, 공부중 백
-    //기본 바탕이 연한 회색인 것
-    surfaceVariant = Color(0xFF4A4A4A),
-    onSurfaceVariant = Color(0xFFB0B0B0),
+    //비활성화
+    tertiaryContainer = Color(0xFF4a4a4a),
 
-    secondary = Color(0xFFD8B787),
-    tertiary = Color(0xFF44474E),
+    error = Color(0xFFCF6262),
 
-    surfaceContainerHigh = textFieldBackgroundDark
+    //메인 폰트 색
+    onSurface = Color(0xFFF1F1F1),
+
+    //서브 폰트색, 힌트용
+    onSecondary = Color(0xFFB8B8B8),
+
+    //테두리, 3순위 극소부위 힌트용
+    outline = Color(0xFF707070)
 
 )
 
@@ -42,34 +58,40 @@ private val LightColorScheme = lightColorScheme(
     background = background,
     onBackground = fontColor,
 
+    //카드/ 기본 다이얼로그 배경색
+    primaryContainer = Color.White,
+
+    //하단바 배경색
+    surface = bottom,
+
+    //보조 배경
+    surfaceVariant = sub2,
+
+    //텍스트필드 배경색
+    surfaceContainerHigh = textFieldBackground,
+
+    //옅은 초록색, 홈 메인 카드 배경
+    secondary = sub_green1,
+
+    //사각형 버튼
     secondaryContainer = Color.White,
-    onSecondaryContainer = fontColor,
 
-//    onSurface = Color(0xFF1C1B1F),
-    surfaceVariant = Color(0xFFF8F6F6),
-    onSurfaceVariant = Color(0xFF44474E),
+    //진한 초록색
+    tertiary = sub_green2,
 
-    secondary = sub1,
-//    onSecondary = fontColor,
+    //비활성화
+    tertiaryContainer = Color(0xFFF8F6F6),
 
+    error = Color(0xFFB3261E),
 
-    tertiary = sub2,
+    //메인 폰트 색
+    onSurface = fontColor,
 
-    onSurface = fontColor, //메인 폰트색
-    onSecondary = fontColorSub, // 서브 폰트색
-    onTertiary = Color.LightGray,
+    //서브 폰트색, 힌트용
+    onSecondary = fontColorSub,
 
-    surfaceContainerHigh = textFieldBackground
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    //테두리, 3순위 극소부위 힌트용
+    outline = Color.LightGray
 )
 
 @Composable
