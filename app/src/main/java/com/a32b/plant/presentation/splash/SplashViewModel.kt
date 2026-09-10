@@ -4,38 +4,66 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.domain.model.AutoLoginResult
-import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.auth.CheckAutoLoginUseCase
+import com.a32b.plant.domain.usecase.mypage.ObserveDarkModeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+data class SplashUiState(
+    val isLoading: Boolean = true,
+    val isDarkMode: Boolean = false
+)
+
+sealed class SplashEvent {
+    data class ShowToast(val message: String) : SplashEvent()
+}
 
 @HiltViewModel
 class SplashViewModel @Inject constructor(
     private val checkAutoLoginUseCase: CheckAutoLoginUseCase,
-    private val userRepository: UserRepository
+    private val observeDarkModeUseCase: ObserveDarkModeUseCase
     ) : ViewModel() {
 
 
     private val _destination = MutableStateFlow<Routes?>(null)
     val destination = _destination.asStateFlow()
 
-    // 다크모드 관리용 — 자동로그인/수동 로그인 등 로그인 경로와 무관하게
-    // currentUser 실시간 구독을 그대로 반영한다. (세션이 없으면 false)
-    val isDarkMode: StateFlow<Boolean> = userRepository.currentUser
-        .map { it?.isDarkMode ?: false }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    private val _uiState = MutableStateFlow(SplashUiState())
+    val uiState = _uiState.asStateFlow()
+
+    private val _eventChannel = Channel<SplashEvent>(Channel.BUFFERED)
+    val events = _eventChannel.receiveAsFlow()
 
     init {
+        observeDarkMode()
         checkAuthLogin()
+    }
+
+    private fun observeDarkMode() {
+        viewModelScope.launch {
+            var hasShownReadError = false
+            observeDarkModeUseCase().collect { result ->
+                result.onSuccess { isDarkMode ->
+                    _uiState.update { it.copy(isDarkMode = isDarkMode, isLoading = false) }
+                    hasShownReadError = false
+                }.onFailure { error ->
+                    // 마지막 테마를 유지하고, 최초 읽기 실패여도 시작 화면에서 빠져나온다.
+                    _uiState.update { it.copy(isLoading = false) }
+                    if (!hasShownReadError) {
+                        _eventChannel.send(SplashEvent.ShowToast(error.message))
+                        hasShownReadError = true
+                    }
+                }
+            }
+        }
     }
 
     private fun checkAuthLogin() {

@@ -4,6 +4,7 @@ import android.util.Log
 import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.mapper.toDto
+import com.a32b.plant.data.source.local.SettingsLocalDataSource
 import com.a32b.plant.data.source.remote.user.UserRemoteDataSource
 import com.a32b.plant.di.qualifier.ApplicationScope
 import com.a32b.plant.domain.error.AppError
@@ -17,10 +18,13 @@ import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -29,6 +33,7 @@ import javax.inject.Singleton
 @Singleton
 class UserRepositoryImpl @Inject constructor(
     private val userRemoteDataSource: UserRemoteDataSource,
+    private val settingsLocalDataSource: SettingsLocalDataSource,
     private val db: FirebaseFirestore,
     @param:ApplicationScope private val scope: CoroutineScope
 ) : UserRepository {
@@ -36,6 +41,16 @@ class UserRepositoryImpl @Inject constructor(
     private var sessionJob: Job? = null
 
     override val currentUser: StateFlow<User?> = _currentUser.asStateFlow()
+
+    override fun observeDarkMode(): Flow<Result<Boolean>> =
+        settingsLocalDataSource.isDarkMode
+            // 저장한 적이 없으면 라이트 모드로 본다.
+            .map { isDarkMode -> isDarkMode ?: false }
+            .distinctUntilChanged()
+            .map<Boolean, Result<Boolean>> { Result.Success(it) }
+            .catch { e ->
+                emit(Result.Failure(handleLocalError(e, "다크모드 설정을 불러오지 못했습니다.")))
+            }
 
     override fun startUserSession(user: User) {
         // 초기값을 즉시 세팅해 HomeViewModel 등이 init에서 currentUser.value를
@@ -92,14 +107,11 @@ class UserRepositoryImpl @Inject constructor(
         )
 
     override suspend fun updateDarkMode(user: User): Result<Unit> = safeRunCatching {
-        userRemoteDataSource.updateDarkMode(
-            uid = user.uid,
-            isDarkMode = user.isDarkMode
-        )
+        settingsLocalDataSource.updateDarkMode(user.isDarkMode)
     }.fold(
         onSuccess = { Result.Success(Unit) },
         onFailure = { e ->
-            Result.Failure(handleError(e, "다크모드 설정 변경 실패"))
+            Result.Failure(handleLocalError(e, "다크모드 설정을 저장하지 못했습니다."))
         }
     )
 
@@ -160,6 +172,11 @@ class UserRepositoryImpl @Inject constructor(
         onSuccess = { Result.Success(Unit) },
         onFailure = { e -> Result.Failure(handleError(e, "유저 데이터 삭제 실패")) }
     )
+
+    private fun handleLocalError(e: Throwable, message: String): AppError {
+        Log.e("UserRepository", "$message: ${e.message}", e)
+        return AppError.Local(message)
+    }
 
     private fun handleError(e: Throwable, logMessage: String): AppError {
         if (e is CancellationException) throw e

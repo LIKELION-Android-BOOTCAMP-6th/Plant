@@ -8,6 +8,7 @@ import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.auth.SignOutUseCase
 import com.a32b.plant.domain.usecase.mypage.GetProfileImageLevelListUseCase
+import com.a32b.plant.domain.usecase.mypage.ObserveDarkModeUseCase
 import com.a32b.plant.domain.usecase.mypage.UpdateDarkModeUseCase
 import com.a32b.plant.domain.usecase.mypage.UpdateProfileUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
@@ -32,11 +33,17 @@ data class MyPageUiState(
     val isUpdateSuccess: Boolean = false,
     val levelList: List<String> = emptyList(), // 프로필 편집 - 화분 이미지 띄우기 위해 쓰이는 레벨 리스트
     val isDarkMode: Boolean = false,
+    val isDarkModeLoading: Boolean = true,
+    val darkModeReadError: String? = null,
     val isDarkModeUpdating: Boolean = false,
     val isLoading: Boolean = false,
     val nicknameError: String? = null,
     val totalStudyTime: String = "0시간 0분",
-)
+) {
+    // 스위치 사용 가능 여부. 화면 표시와 저장 요청 검사가 같은 조건을 쓴다.
+    val isDarkModeToggleEnabled: Boolean
+        get() = !isDarkModeLoading && darkModeReadError == null && !isDarkModeUpdating
+}
 
 sealed class MyPageEvent {
     data class ShowToast(val message: String) : MyPageEvent()
@@ -49,7 +56,8 @@ class MyPageViewModel @Inject constructor(
     private val getProfileImageLevelListUseCase: GetProfileImageLevelListUseCase,
     private val signOutUseCase: SignOutUseCase,
     private val updateDarkModeUseCase: UpdateDarkModeUseCase,
-    private val updateProfileUseCase: UpdateProfileUseCase
+    private val updateProfileUseCase: UpdateProfileUseCase,
+    private val observeDarkModeUseCase: ObserveDarkModeUseCase
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow(MyPageUiState())
     val uiState = _uiState.asStateFlow()
@@ -63,12 +71,32 @@ class MyPageViewModel @Inject constructor(
                 it.copy(
                     nickname = user.nickname,
                     profileImg = user.profileImg,
-                    isDarkMode = user.isDarkMode,
                     totalStudyTime = formatToDigitalClock(user.totalStudyTime)
                 )
             }
-            // 빈화면 -> 홈화면
-            loaded()
+            // 사용자가 확인된 경우에만 설정을 읽고, 읽은 뒤 화면을 표시한다.
+            observeDarkMode()
+        }
+    }
+
+    private fun observeDarkMode() {
+        viewModelScope.launch {
+            observeDarkModeUseCase().collect { result ->
+                result.onSuccess { isDarkMode ->
+                    _uiState.update {
+                        it.copy(
+                            isDarkMode = isDarkMode,
+                            isDarkModeLoading = false,
+                            darkModeReadError = null
+                        )
+                    }
+                }.onFailure { error ->
+                    _uiState.update {
+                        it.copy(isDarkModeLoading = false, darkModeReadError = error.message)
+                    }
+                }
+                loaded()
+            }
         }
     }
 
@@ -130,7 +158,7 @@ class MyPageViewModel @Inject constructor(
     }
 
     fun updateDarkMode(isDarkMode: Boolean) {
-        if (uiState.value.isDarkModeUpdating || uiState.value.isDarkMode == isDarkMode) {
+        if (!uiState.value.isDarkModeToggleEnabled || uiState.value.isDarkMode == isDarkMode) {
             return
         }
         _uiState.update { it.copy(isDarkModeUpdating = true) }
@@ -140,7 +168,6 @@ class MyPageViewModel @Inject constructor(
                 .onSuccess {
                     _uiState.update {
                         it.copy(
-                            isDarkMode = isDarkMode,
                             isDarkModeUpdating = false
                         )
                     }

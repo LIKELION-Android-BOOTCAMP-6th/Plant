@@ -111,179 +111,177 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
         }
     }
 
-    PlantTheme(darkTheme = uiState.isDarkMode) {
-        // 로그아웃
-        LaunchedEffect(Unit) {
-            viewModel.events.collect { event ->
-                when (event) {
-                    is MyPageEvent.ShowToast ->
-                        context.showToast(event.message)
+    // 로그아웃
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is MyPageEvent.ShowToast ->
+                    context.showToast(event.message)
 
-                    is MyPageEvent.NavigateToSignIn ->
-                        navController.navigate(Routes.SignIn) {
-                            popUpTo(0) { inclusive = true }
-                        }
-                }
+                is MyPageEvent.NavigateToSignIn ->
+                    navController.navigate(Routes.SignIn) {
+                        popUpTo(0) { inclusive = true }
+                    }
             }
         }
+    }
 
-        // 회원탈퇴 이벤트
-        LaunchedEffect(Unit) {
-            deleteViewModel.events.collect { event ->
-                when (event) {
-                    is DeleteAccountEvent.ShowToast ->
-                        context.showToast(event.message)
+    // 회원탈퇴 이벤트
+    LaunchedEffect(Unit) {
+        deleteViewModel.events.collect { event ->
+            when (event) {
+                is DeleteAccountEvent.ShowToast ->
+                    context.showToast(event.message)
 
-                    is DeleteAccountEvent.NavigateToSignIn ->
-                        navController.navigate(Routes.SignIn) {
-                            popUpTo(0) { inclusive = true }
-                        }
+                is DeleteAccountEvent.NavigateToSignIn ->
+                    navController.navigate(Routes.SignIn) {
+                        popUpTo(0) { inclusive = true }
+                    }
 
-                    is DeleteAccountEvent.RequestGoogleReauth -> {
-                        // 구글 재인증: Credential Manager로 idToken 획득 후 ViewModel에 전달
-                        coroutineScope.launch {
-                            context.showToast(
-                                "보안을 위해 Google 계정을\n다시 확인합니다.",
-                                Toast.LENGTH_LONG
+                is DeleteAccountEvent.RequestGoogleReauth -> {
+                    // 구글 재인증: Credential Manager로 idToken 획득 후 ViewModel에 전달
+                    coroutineScope.launch {
+                        context.showToast(
+                            "보안을 위해 Google 계정을\n다시 확인합니다.",
+                            Toast.LENGTH_LONG
+                        )
+                        val googleIdOption =
+                            GetSignInWithGoogleOption.Builder(webClientId).build()
+                        val request = GetCredentialRequest.Builder()
+                            .addCredentialOption(googleIdOption)
+                            .build()
+                        try {
+                            val result = credentialManager.getCredential(
+                                request = request,
+                                context = context as Activity
                             )
-                            val googleIdOption =
-                                GetSignInWithGoogleOption.Builder(webClientId).build()
-                            val request = GetCredentialRequest.Builder()
-                                .addCredentialOption(googleIdOption)
-                                .build()
-                            try {
-                                val result = credentialManager.getCredential(
-                                    request = request,
-                                    context = context as Activity
-                                )
-                                val idToken = GoogleIdTokenCredential
-                                    .createFrom(result.credential.data).idToken
-                                deleteViewModel.reauthenticateWithGoogleAndDelete(idToken)
-                            } catch (e: GetCredentialCancellationException) {
-                                // 사용자가 취소 — 로딩 해제 후 복귀
-                                deleteViewModel.cancelLoading()
-                            } catch (e: NoCredentialException) {
-                                deleteViewModel.cancelLoading()
-                                context.showToast("기기에 등록된 Google 계정이 없습니다.")
-                                val intent = Intent(Settings.ACTION_ADD_ACCOUNT)
-                                intent.putExtra("account_types", arrayOf("com.google"))
-                                context.startActivity(intent)
-                            } catch (e: CancellationException) {
-                                deleteViewModel.cancelLoading()
-                                throw e
-                            } catch (e: Exception) {
-                                deleteViewModel.cancelLoading()
-                                context.showToast("구글 재인증에 실패했습니다. 다시 시도해주세요.")
-                            }
+                            val idToken = GoogleIdTokenCredential
+                                .createFrom(result.credential.data).idToken
+                            deleteViewModel.reauthenticateWithGoogleAndDelete(idToken)
+                        } catch (e: GetCredentialCancellationException) {
+                            // 사용자가 취소 — 로딩 해제 후 복귀
+                            deleteViewModel.cancelLoading()
+                        } catch (e: NoCredentialException) {
+                            deleteViewModel.cancelLoading()
+                            context.showToast("기기에 등록된 Google 계정이 없습니다.")
+                            val intent = Intent(Settings.ACTION_ADD_ACCOUNT)
+                            intent.putExtra("account_types", arrayOf("com.google"))
+                            context.startActivity(intent)
+                        } catch (e: CancellationException) {
+                            deleteViewModel.cancelLoading()
+                            throw e
+                        } catch (e: Exception) {
+                            deleteViewModel.cancelLoading()
+                            context.showToast("구글 재인증에 실패했습니다. 다시 시도해주세요.")
                         }
                     }
                 }
             }
         }
+    }
 
 
-        // 로그아웃 확인 다이얼로그
-        if (showLogoutDialog) {
-            ConfirmDialog(
-                text = "로그아웃 하시겠습니까?",
-                onDismiss = {
-                    showLogoutDialog = false
-                    viewModel.clearProfileState()
-                },
-                onConfirm = {
-                    showLogoutDialog = false
-                    viewModel.logout()
-                }
-            )
-        }
+    // 로그아웃 확인 다이얼로그
+    if (showLogoutDialog) {
+        ConfirmDialog(
+            text = "로그아웃 하시겠습니까?",
+            onDismiss = {
+                showLogoutDialog = false
+                viewModel.clearProfileState()
+            },
+            onConfirm = {
+                showLogoutDialog = false
+                viewModel.logout()
+            }
+        )
+    }
 
-        if (showProfileDialog) {
-            ProfileDialog(
-                onDismiss = {
-                    viewModel.clearProfileState()
-                    showProfileDialog = false
-                },
-                uiState = uiState,
-                viewModel = viewModel
-            )
-        }
-        // 회원탈퇴 2단계 확인 다이얼로그
-        if (showDeleteDialog) {
-            ConfirmDialog(
-                text = if (isDeleteSecondConfirm) "정말로 탈퇴하시겠습니까?"
-                else "탈퇴 하시겠습니까?",
-                semiText = if (isDeleteSecondConfirm) "탈퇴 시 모든 학습 기록이 삭제되며 복구할 수 없습니다."
-                else "계정을 삭제하시려면 '예'를 눌러주세요.",
-                onDismiss = {
+    if (showProfileDialog) {
+        ProfileDialog(
+            onDismiss = {
+                viewModel.clearProfileState()
+                showProfileDialog = false
+            },
+            uiState = uiState,
+            viewModel = viewModel
+        )
+    }
+    // 회원탈퇴 2단계 확인 다이얼로그
+    if (showDeleteDialog) {
+        ConfirmDialog(
+            text = if (isDeleteSecondConfirm) "정말로 탈퇴하시겠습니까?"
+            else "탈퇴 하시겠습니까?",
+            semiText = if (isDeleteSecondConfirm) "탈퇴 시 모든 학습 기록이 삭제되며 복구할 수 없습니다."
+            else "계정을 삭제하시려면 '예'를 눌러주세요.",
+            onDismiss = {
+                showDeleteDialog = false
+                isDeleteSecondConfirm = false
+            },
+            onConfirm = {
+                if (isDeleteSecondConfirm) {
                     showDeleteDialog = false
                     isDeleteSecondConfirm = false
-                },
-                onConfirm = {
-                    if (isDeleteSecondConfirm) {
-                        showDeleteDialog = false
-                        isDeleteSecondConfirm = false
-                        deleteViewModel.requestDeleteAccount()
-                    } else {
-                        isDeleteSecondConfirm = true
-                    }
+                    deleteViewModel.requestDeleteAccount()
+                } else {
+                    isDeleteSecondConfirm = true
                 }
-            )
-        }
-
-        // 비밀번호 재인증 다이얼로그 (이메일 유저)
-        if (deleteUiState.showPasswordDialog) {
-            PasswordReauthDialog(
-                onDismiss = { deleteViewModel.dismissPasswordDialog() },
-                onConfirm = { password ->
-                    deleteViewModel.reauthenticateWithEmailAndDelete(password)
-                }
-            )
-        }
-
-        // 탈퇴 진행 중 화면 이탈 차단
-        if (deleteUiState.isLoading) {
-            Dialog(
-                onDismissRequest = {},
-                properties = DialogProperties(
-                    dismissOnBackPress = false,
-                    dismissOnClickOutside = false
-                )
-            ) {
-                LoadingBox(modifier = Modifier.size(80.dp))
             }
-        }
-
-        LoadableScreen(viewModel) {
-            MyPageContent(
-                uiState = uiState,
-                onProfileClick = {
-                    viewModel.getImageLevelList()
-                    showProfileDialog = true
-                },
-                onDarkModeToggle = { isDarkMode ->
-                    viewModel.updateDarkMode(isDarkMode)
-                },
-                onGuideClick = {
-                    context.showToast("준비 중입니다.")
-                },
-                onTermsClick = {
-                    context.showToast("준비 중입니다.")
-                },
-                onPrivacyClick = {
-                    context.showToast("준비 중입니다.")
-                },
-                onLogoutClick = {
-                    showLogoutDialog = true
-                },
-                isDeleting = deleteUiState.isLoading,
-                onDeleteAccountClick = {
-                    isDeleteSecondConfirm = false
-                    showDeleteDialog = true
-                }
-            )
-        }
-
+        )
     }
+
+    // 비밀번호 재인증 다이얼로그 (이메일 유저)
+    if (deleteUiState.showPasswordDialog) {
+        PasswordReauthDialog(
+            onDismiss = { deleteViewModel.dismissPasswordDialog() },
+            onConfirm = { password ->
+                deleteViewModel.reauthenticateWithEmailAndDelete(password)
+            }
+        )
+    }
+
+    // 탈퇴 진행 중 화면 이탈 차단
+    if (deleteUiState.isLoading) {
+        Dialog(
+            onDismissRequest = {},
+            properties = DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false
+            )
+        ) {
+            LoadingBox(modifier = Modifier.size(80.dp))
+        }
+    }
+
+    LoadableScreen(viewModel) {
+        MyPageContent(
+            uiState = uiState,
+            onProfileClick = {
+                viewModel.getImageLevelList()
+                showProfileDialog = true
+            },
+            onDarkModeToggle = { isDarkMode ->
+                viewModel.updateDarkMode(isDarkMode)
+            },
+            onGuideClick = {
+                context.showToast("준비 중입니다.")
+            },
+            onTermsClick = {
+                context.showToast("준비 중입니다.")
+            },
+            onPrivacyClick = {
+                context.showToast("준비 중입니다.")
+            },
+            onLogoutClick = {
+                showLogoutDialog = true
+            },
+            isDeleting = deleteUiState.isLoading,
+            onDeleteAccountClick = {
+                isDeleteSecondConfirm = false
+                showDeleteDialog = true
+            }
+        )
+    }
+
 }
 
 
@@ -320,7 +318,7 @@ private fun MyPageContent(
                 DividerImage()
                 DarkModeToggleButton(
                     isDarkMode = uiState.isDarkMode,
-                    isEnabled = !uiState.isDarkModeUpdating,
+                    isEnabled = uiState.isDarkModeToggleEnabled,
                     onToggle = onDarkModeToggle
                 )
                 ButtonTemplate(text = "사용 가이드", onClick = onGuideClick)
@@ -346,6 +344,7 @@ private fun MyPageContentPreview() {
                 nickname = "USER",
                 profileImg = "1",
                 isDarkMode = false,
+                isDarkModeLoading = false,
                 totalStudyTime = "4시간 10분"
             ),
             onProfileClick = {},

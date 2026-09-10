@@ -19,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -32,6 +33,8 @@ import com.a32b.plant.domain.repository.AuthRepository
 import com.a32b.plant.domain.session.SessionExpiredObserver
 import com.a32b.plant.presentation.core.component.BottomBar
 import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.core.extension.showToast
+import com.a32b.plant.presentation.splash.SplashEvent
 import com.a32b.plant.presentation.splash.SplashViewModel
 import com.a32b.plant.presentation.theme.PlantTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -53,16 +56,16 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         splashScreen.setKeepOnScreenCondition {
             //해당 값이 트루일 동안 스플래시 유지
-            viewModel.destination.value == null
+            viewModel.destination.value == null || viewModel.uiState.value.isLoading
         }
 
         super.onCreate(savedInstanceState)
 
         setContent {
-            // 다크모드 관리용
-            // 원하는 페이지에 MaterialTheme.colorScheme.색상 입력한 뒤 화면 이동 -> 마이페이지 다크모드 ON OFF -> 화면 재확인 확인 가능
-            val isDarkMode by viewModel.isDarkMode.collectAsState()
-            PlantTheme(darkTheme = isDarkMode) { // isDarkMode / 비활성화 = false
+            val uiState by viewModel.uiState.collectAsState()
+            if (uiState.isLoading) return@setContent
+
+            PlantTheme(darkTheme = uiState.isDarkMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -77,6 +80,15 @@ class MainActivity : ComponentActivity() {
                      */
                     var isSessionDialogShown by rememberSaveable { mutableStateOf(false) }
                     val lifecycleOwner = LocalLifecycleOwner.current
+                    val context = LocalContext.current
+                    LaunchedEffect(Unit) {
+                        viewModel.events.collect { event ->
+                            when (event) {
+                                is SplashEvent.ShowToast -> context.showToast(event.message)
+                            }
+                        }
+                    }
+
                     LaunchedEffect(Unit) {
                         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                             sessionExpiredObserver.event.collect {
