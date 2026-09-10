@@ -57,7 +57,7 @@ import com.a32b.plant.presentation.theme.fontColorSub
 import com.a32b.plant.presentation.theme.primary
 import com.a32b.plant.presentation.theme.sub2
 import com.a32b.plant.presentation.theme.sub_green1
-import com.a32b.plant.presentation.theme.sub_green3
+import com.a32b.plant.presentation.theme.sub_green2
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -415,7 +415,7 @@ fun MainPlantCard(
                         text = displayPot.tagName,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
                         style = MaterialTheme.typography.labelMedium,
-                        color = sub_green3,
+                        color = sub_green2,
                         fontWeight = FontWeight.Medium
                     )
                 }
