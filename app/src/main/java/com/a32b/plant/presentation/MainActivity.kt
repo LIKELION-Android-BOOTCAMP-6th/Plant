@@ -19,7 +19,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -33,8 +32,6 @@ import com.a32b.plant.domain.repository.AuthRepository
 import com.a32b.plant.domain.session.SessionExpiredObserver
 import com.a32b.plant.presentation.core.component.BottomBar
 import com.a32b.plant.presentation.core.component.ConfirmDialog
-import com.a32b.plant.presentation.core.extension.showToast
-import com.a32b.plant.presentation.splash.SplashEvent
 import com.a32b.plant.presentation.splash.SplashViewModel
 import com.a32b.plant.presentation.theme.PlantTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -80,14 +77,6 @@ class MainActivity : ComponentActivity() {
                      */
                     var isSessionDialogShown by rememberSaveable { mutableStateOf(false) }
                     val lifecycleOwner = LocalLifecycleOwner.current
-                    val context = LocalContext.current
-                    LaunchedEffect(Unit) {
-                        viewModel.events.collect { event ->
-                            when (event) {
-                                is SplashEvent.ShowToast -> context.showToast(event.message)
-                            }
-                        }
-                    }
 
                     LaunchedEffect(Unit) {
                         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {

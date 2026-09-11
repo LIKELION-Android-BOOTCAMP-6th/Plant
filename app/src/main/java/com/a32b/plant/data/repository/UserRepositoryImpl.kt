@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -39,17 +40,21 @@ class UserRepositoryImpl @Inject constructor(
 ) : UserRepository {
     private val _currentUser = MutableStateFlow<User?>(null)
     private var sessionJob: Job? = null
+    // 읽기 실패와 재구독 사이에도 마지막 정상 테마를 유지한다. 영구 저장은 DataStore가 담당한다.
+    private val lastKnownDarkMode = MutableStateFlow(false)
 
     override val currentUser: StateFlow<User?> = _currentUser.asStateFlow()
 
-    override fun observeDarkMode(): Flow<Result<Boolean>> =
+    override fun observeDarkMode(): Flow<Boolean> =
         settingsLocalDataSource.isDarkMode
             // 저장한 적이 없으면 라이트 모드로 본다.
             .map { isDarkMode -> isDarkMode ?: false }
             .distinctUntilChanged()
-            .map<Boolean, Result<Boolean>> { Result.Success(it) }
+            .onEach { isDarkMode -> lastKnownDarkMode.value = isDarkMode }
             .catch { e ->
-                emit(Result.Failure(handleLocalError(e, "다크모드 설정을 불러오지 못했습니다.")))
+                Log.e("UserRepository", "다크모드 설정을 불러오지 못했습니다.", e)
+                // 최초 읽기 실패에도 값을 전달해 화면이 로딩 상태에 머물지 않게 한다.
+                emit(lastKnownDarkMode.value)
             }
 
     override fun startUserSession(user: User) {

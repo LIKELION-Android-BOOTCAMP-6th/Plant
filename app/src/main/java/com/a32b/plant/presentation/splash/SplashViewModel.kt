@@ -9,10 +9,8 @@ import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.auth.CheckAutoLoginUseCase
 import com.a32b.plant.domain.usecase.mypage.ObserveDarkModeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -21,10 +19,6 @@ data class SplashUiState(
     val isLoading: Boolean = true,
     val isDarkMode: Boolean = false
 )
-
-sealed class SplashEvent {
-    data class ShowToast(val message: String) : SplashEvent()
-}
 
 @HiltViewModel
 class SplashViewModel @Inject constructor(
@@ -39,9 +33,6 @@ class SplashViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SplashUiState())
     val uiState = _uiState.asStateFlow()
 
-    private val _eventChannel = Channel<SplashEvent>(Channel.BUFFERED)
-    val events = _eventChannel.receiveAsFlow()
-
     init {
         observeDarkMode()
         checkAuthLogin()
@@ -49,19 +40,8 @@ class SplashViewModel @Inject constructor(
 
     private fun observeDarkMode() {
         viewModelScope.launch {
-            var hasShownReadError = false
-            observeDarkModeUseCase().collect { result ->
-                result.onSuccess { isDarkMode ->
-                    _uiState.update { it.copy(isDarkMode = isDarkMode, isLoading = false) }
-                    hasShownReadError = false
-                }.onFailure { error ->
-                    // 마지막 테마를 유지하고, 최초 읽기 실패여도 시작 화면에서 빠져나온다.
-                    _uiState.update { it.copy(isLoading = false) }
-                    if (!hasShownReadError) {
-                        _eventChannel.send(SplashEvent.ShowToast(error.message))
-                        hasShownReadError = true
-                    }
-                }
+            observeDarkModeUseCase().collect { isDarkMode ->
+                _uiState.update { it.copy(isDarkMode = isDarkMode, isLoading = false) }
             }
         }
     }

@@ -115,9 +115,6 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                is MyPageEvent.ShowToast ->
-                    context.showToast(event.message)
-
                 is MyPageEvent.NavigateToSignIn ->
                     navController.navigate(Routes.SignIn) {
                         popUpTo(0) { inclusive = true }
@@ -318,7 +315,7 @@ private fun MyPageContent(
                 DividerImage()
                 DarkModeToggleButton(
                     isDarkMode = uiState.isDarkMode,
-                    isEnabled = uiState.isDarkModeToggleEnabled,
+                    isEnabled = !uiState.isDarkModeUpdating,
                     onToggle = onDarkModeToggle
                 )
                 ButtonTemplate(text = "사용 가이드", onClick = onGuideClick)
@@ -344,7 +341,6 @@ private fun MyPageContentPreview() {
                 nickname = "USER",
                 profileImg = "1",
                 isDarkMode = false,
-                isDarkModeLoading = false,
                 totalStudyTime = "4시간 10분"
             ),
             onProfileClick = {},

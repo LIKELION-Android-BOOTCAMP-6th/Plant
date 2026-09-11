@@ -10,8 +10,8 @@ interface UserRepository {
 
     val currentUser: StateFlow<User?>
 
-    /** 계정과 무관한 기기 설정을 구독한다. 읽기 실패 시 Failure를 전달하고 구독을 종료한다. */
-    fun observeDarkMode(): Flow<Result<Boolean>>
+    /** 계정과 무관한 기기 설정의 다크모드 여부를 구독한다. */
+    fun observeDarkMode(): Flow<Boolean>
 
     /** 로그인 세션을 시작한다. user를 즉시 반영하고, users/{uid} 문서를 실시간 구독해 계속 최신화한다. */
     fun startUserSession(user: User)
