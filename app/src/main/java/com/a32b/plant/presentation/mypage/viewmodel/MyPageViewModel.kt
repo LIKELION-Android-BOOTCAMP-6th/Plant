@@ -8,6 +8,7 @@ import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.auth.SignOutUseCase
 import com.a32b.plant.domain.usecase.mypage.GetProfileImageLevelListUseCase
+import com.a32b.plant.domain.usecase.mypage.ObserveDarkModeUseCase
 import com.a32b.plant.domain.usecase.mypage.UpdateDarkModeUseCase
 import com.a32b.plant.domain.usecase.mypage.UpdateProfileUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
@@ -39,7 +40,6 @@ data class MyPageUiState(
 )
 
 sealed class MyPageEvent {
-    data class ShowToast(val message: String) : MyPageEvent()
     object NavigateToSignIn : MyPageEvent()// 로그인화면 보내기용 ************
 }
 
@@ -49,7 +49,8 @@ class MyPageViewModel @Inject constructor(
     private val getProfileImageLevelListUseCase: GetProfileImageLevelListUseCase,
     private val signOutUseCase: SignOutUseCase,
     private val updateDarkModeUseCase: UpdateDarkModeUseCase,
-    private val updateProfileUseCase: UpdateProfileUseCase
+    private val updateProfileUseCase: UpdateProfileUseCase,
+    private val observeDarkModeUseCase: ObserveDarkModeUseCase
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow(MyPageUiState())
     val uiState = _uiState.asStateFlow()
@@ -63,12 +64,20 @@ class MyPageViewModel @Inject constructor(
                 it.copy(
                     nickname = user.nickname,
                     profileImg = user.profileImg,
-                    isDarkMode = user.isDarkMode,
                     totalStudyTime = formatToDigitalClock(user.totalStudyTime)
                 )
             }
-            // 빈화면 -> 홈화면
-            loaded()
+            // 사용자가 확인된 경우에만 설정을 읽고, 읽은 뒤 화면을 표시한다.
+            observeDarkMode()
+        }
+    }
+
+    private fun observeDarkMode() {
+        viewModelScope.launch {
+            observeDarkModeUseCase().collect { isDarkMode ->
+                _uiState.update { it.copy(isDarkMode = isDarkMode) }
+                loaded()
+            }
         }
     }
 
@@ -140,16 +149,12 @@ class MyPageViewModel @Inject constructor(
                 .onSuccess {
                     _uiState.update {
                         it.copy(
-                            isDarkMode = isDarkMode,
                             isDarkModeUpdating = false
                         )
                     }
                 }
-                .onFailure { e ->
+                .onFailure {
                     _uiState.update { it.copy(isDarkModeUpdating = false) }
-                    if (e !is AppError.UnknownUser) {
-                        _eventChannel.send(MyPageEvent.ShowToast(e.message))
-                    }
                 }
         }
     }

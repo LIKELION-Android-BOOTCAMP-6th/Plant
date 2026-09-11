@@ -3,11 +3,15 @@ package com.a32b.plant.domain.repository
 import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.User
 import com.a32b.plant.domain.result.Result
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 interface UserRepository {
 
     val currentUser: StateFlow<User?>
+
+    /** 계정과 무관한 기기 설정의 다크모드 여부를 구독한다. */
+    fun observeDarkMode(): Flow<Boolean>
 
     /** 로그인 세션을 시작한다. user를 즉시 반영하고, users/{uid} 문서를 실시간 구독해 계속 최신화한다. */
     fun startUserSession(user: User)
@@ -20,6 +24,8 @@ interface UserRepository {
     suspend fun getUser(uid: String): Result<User?>
     suspend fun createUser(uid: String): Result<User>
     suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit>
+
+    /** 전달받은 다크모드 값을 기기에 저장한다. 기존 UseCase의 User 전달 계약은 유지한다. */
     suspend fun updateDarkMode(user: User): Result<Unit>
     suspend fun updateProfile(user: User): Result<Unit>
     suspend fun isNicknameTaken(nickname: String): Result<Boolean>

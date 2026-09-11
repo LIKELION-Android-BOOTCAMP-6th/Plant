@@ -14,6 +14,8 @@ import com.a32b.plant.data.source.remote.user.UserRemoteDataSource
 import com.a32b.plant.data.source.remote.user.UserRemoteDataSourceImpl
 import com.a32b.plant.data.source.local.StudyingLocalDataSource
 import com.a32b.plant.data.source.local.StudyingLocalDataSourceImpl
+import com.a32b.plant.data.source.local.SettingsLocalDataSource
+import com.a32b.plant.data.source.local.SettingsLocalDataSourceImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -46,6 +48,12 @@ abstract class DataSourceModule {
     @Binds
     @Singleton
     abstract fun bindStudyingLocalDataSource(impl: StudyingLocalDataSourceImpl) : StudyingLocalDataSource
+
+    @Binds
+    @Singleton
+    abstract fun bindSettingsLocalDataSource(
+        impl: SettingsLocalDataSourceImpl
+    ): SettingsLocalDataSource
 
     @Binds
     @Singleton

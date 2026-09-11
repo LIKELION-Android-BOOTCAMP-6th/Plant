@@ -53,16 +53,16 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         splashScreen.setKeepOnScreenCondition {
             //해당 값이 트루일 동안 스플래시 유지
-            viewModel.destination.value == null
+            viewModel.destination.value == null || viewModel.uiState.value.isLoading
         }
 
         super.onCreate(savedInstanceState)
 
         setContent {
-            // 다크모드 관리용
-            // 원하는 페이지에 MaterialTheme.colorScheme.색상 입력한 뒤 화면 이동 -> 마이페이지 다크모드 ON OFF -> 화면 재확인 확인 가능
-            val isDarkMode by viewModel.isDarkMode.collectAsState()
-            PlantTheme(darkTheme = isDarkMode) { // isDarkMode / 비활성화 = false
+            val uiState by viewModel.uiState.collectAsState()
+            if (uiState.isLoading) return@setContent
+
+            PlantTheme(darkTheme = uiState.isDarkMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -77,6 +77,7 @@ class MainActivity : ComponentActivity() {
                      */
                     var isSessionDialogShown by rememberSaveable { mutableStateOf(false) }
                     val lifecycleOwner = LocalLifecycleOwner.current
+
                     LaunchedEffect(Unit) {
                         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                             sessionExpiredObserver.event.collect {

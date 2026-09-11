@@ -58,12 +58,6 @@ class UserRemoteDataSourceImpl @Inject constructor(
             .await()
     }
 
-    override suspend fun updateDarkMode(uid: String, isDarkMode: Boolean) {
-        db.collection("users").document(uid)
-            .update("isDarkMode", isDarkMode)
-            .await()
-    }
-
     override suspend fun updateProfile(
         uid: String,
         nickname: String,

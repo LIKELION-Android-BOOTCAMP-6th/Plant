@@ -41,6 +41,10 @@ class DeleteAccountUseCase @Inject constructor(
         val deleteAuthResult = authRepository.deleteAuthAccount()
         if (deleteAuthResult is Result.Failure) return deleteAuthResult
 
+        // 회원탈퇴가 완료된 뒤에만 기기 테마를 라이트로 초기화한다.
+        // 저장 실패는 Repository에서 로그를 남기며, 완료된 회원탈퇴 결과는 유지한다.
+        userRepository.updateDarkMode(user.copy(isDarkMode = false))
+
         return Result.Success(Unit)
     }
 }

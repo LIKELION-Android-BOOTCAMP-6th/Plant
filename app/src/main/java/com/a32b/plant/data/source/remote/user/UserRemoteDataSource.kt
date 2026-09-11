@@ -10,7 +10,6 @@ interface UserRemoteDataSource {
     fun observeUser(uid: String): Flow<UserDto?>
     suspend fun createUser(uid: String, user: UserDto)
     suspend fun completeFirstLogin(uid: String, nickname: String)
-    suspend fun updateDarkMode(uid: String, isDarkMode: Boolean)
     suspend fun updateProfile(uid: String, nickname: String, profileImg: String)
     suspend fun isNicknameTaken(nickname: String): Boolean
     suspend fun registerNickname(nickname: String)
