@@ -21,8 +21,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.a32b.plant.domain.model.Tag
-import com.a32b.plant.presentation.theme.LocalIsDarkTheme
-import com.a32b.plant.presentation.theme.primary
 
 @Composable
 fun TagSheet(tags: List<Tag>, init : List<Tag> = emptyList(),
@@ -35,7 +33,6 @@ fun TagSheet(tags: List<Tag>, init : List<Tag> = emptyList(),
         selectedTags.addAll(init)
     }
     val order = listOf("중등", "고등", "대학교", "취업준비", "자기계발")
-    val isDarkMode = LocalIsDarkTheme.current
 
     val groupedTags = tags.groupBy { it.parentId }.entries
         .sortedBy { (parent, _) -> order.indexOf(parent) }
@@ -54,8 +51,8 @@ fun TagSheet(tags: List<Tag>, init : List<Tag> = emptyList(),
                         val isLocked = !enable && init.contains(tag)
                         Card(shape = RoundedCornerShape(20.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = if (selectedTags.contains(tag)) primary else MaterialTheme.colorScheme.secondaryContainer,
-                                disabledContainerColor = if(selectedTags.contains(tag)) primary else MaterialTheme.colorScheme.secondaryContainer
+                                containerColor = if (selectedTags.contains(tag)) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
+                                disabledContainerColor = if(selectedTags.contains(tag)) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer
                             ),
                             elevation = CardDefaults.cardElevation(
                                 defaultElevation = 2.dp,
