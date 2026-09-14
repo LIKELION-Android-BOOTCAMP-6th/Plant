@@ -3,6 +3,7 @@ package com.a32b.plant.presentation.core.component
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -18,7 +19,7 @@ fun LoadableScreen(
     val isLoading by viewModel.isLoading.collectAsState()
 
     if (isLoading) {
-        Box(modifier = Modifier.fillMaxSize().background(background))
+        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
     } else {
         content()
     }
