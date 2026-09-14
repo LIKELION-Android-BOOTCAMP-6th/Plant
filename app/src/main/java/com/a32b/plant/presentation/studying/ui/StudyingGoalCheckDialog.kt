@@ -52,7 +52,7 @@ fun StudyingGoalCheckDialog(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(17.dp),
-            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceVariant),
+            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.primaryContainer),
         ) {
             Column(modifier = Modifier.padding(horizontal = 13.dp, vertical = 10.dp).fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -136,7 +136,7 @@ fun StudyLogItem(isInterrupted: Boolean, log: StudyLogUi, onEdit: () -> Unit, on
         Text(
             text = log.log,
             style = MaterialTheme.typography.bodyMedium,
-            color = if (log.isCompleted) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSurface,
+            color = if (log.isCompleted) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface,
             textDecoration = if (log.isCompleted) TextDecoration.LineThrough else TextDecoration.None
         )
         Spacer(Modifier.weight(1f))
