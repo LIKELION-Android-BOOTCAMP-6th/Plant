@@ -21,6 +21,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -82,6 +84,13 @@ fun StudyingGoalCheckDialog(
                                 onEdit = { onEdit(index) },
                                 onCompleted = {onCompleted(index, it)}
                             )
+                            if (index < studyLog.lastIndex){
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(horizontal = 13.dp),
+                                    thickness = 1.dp,
+                                    color = MaterialTheme.colorScheme.outline
+                                )
+                            }
                         }
                     }
                 }
@@ -125,7 +134,6 @@ fun StudyLogItem(isInterrupted: Boolean, log: StudyLogUi, onEdit: () -> Unit, on
     Row(
         modifier = Modifier.fillMaxWidth()
             .clickable{onCompleted(!log.isCompleted)}
-            .background(MaterialTheme.colorScheme.background)
             .padding(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
