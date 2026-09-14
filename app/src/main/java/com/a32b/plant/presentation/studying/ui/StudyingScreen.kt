@@ -63,7 +63,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
 
     val uiState by viewModel.uiState.collectAsState()
     val timerButtonText = if (uiState.isStudying) "일시정지" else "학습하기"
-    val timerButtonBack = if (uiState.isStudying) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
+    val timerButtonBack = if (uiState.isStudying) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary
 
     BackHandler {
         viewModel.onChangeGoalCheckMode(StudyingGoalCheckMode.FINISH)
@@ -101,7 +101,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
 
     val studyingUsers = uiState.studyingUsers
     Surface(modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.surfaceVariant
+        color = MaterialTheme.colorScheme.background
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -121,7 +121,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
                 modifier = Modifier.padding(10.dp)
                     .clickable{ viewModel.onChangeGoalCheckMode(StudyingGoalCheckMode.CHECK)},
                 shape = RoundedCornerShape(10.dp),
-                colors = CardDefaults.cardColors(MaterialTheme.colorScheme.background),
+                colors = CardDefaults.cardColors(MaterialTheme.colorScheme.secondaryContainer),
                 elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
             ) {
                 Row(modifier = Modifier.padding(vertical = 17.dp, horizontal = 13.dp).width(250.dp),
@@ -141,7 +141,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
             Row {
                 //일시정지/학습시작 버튼
                 StateChangeButton(timerButtonText, timerButtonBack){ viewModel.onStudyingStatusChange()}
-                StateChangeButton("학습종료", MaterialTheme.colorScheme.secondary) {
+                StateChangeButton("학습종료", MaterialTheme.colorScheme.surface) {
                     viewModel.onChangeGoalCheckMode(StudyingGoalCheckMode.FINISH)
                 }
             }
@@ -211,7 +211,7 @@ fun StudyStatusBadge(tag: String, title: String){
     Surface(
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(0.7.dp, color = MaterialTheme.colorScheme.primary),
-        color = MaterialTheme.colorScheme.surfaceVariant
+        color = MaterialTheme.colorScheme.background
     ) {
         Text(
             text = "[$tag] $title 공부중",
@@ -258,7 +258,7 @@ fun StudyingUserCard(users: List<StudyingUser>, tag: String){
     Card(
         modifier = Modifier.fillMaxWidth().height(200.dp),
         shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomEnd = 0.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary),
         ) {
         Column(modifier = Modifier.padding(10.dp)) {
             Text("$tag ${users.size}", style = MaterialTheme.typography.titleSmall,)

@@ -22,7 +22,7 @@ private val DarkColorScheme = darkColorScheme(
     surface = Color(0xFFD8B787),
 
     //보조 배경
-    surfaceVariant = Color(0xFFEEF0E7),
+    surfaceVariant = Color(0xFF9BA199),
 
     //텍스트필드 배경색
     surfaceContainerHigh = textFieldBackgroundDark,
