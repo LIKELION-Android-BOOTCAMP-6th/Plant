@@ -67,7 +67,7 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                     Image(painter = painterResource(R.drawable.ic_backbtn),
                         contentDescription = "뒤로가기")
                 }
-                Text("내 활동", style = MaterialTheme.typography.titleLarge)
+                Text("내 활동", style = MaterialTheme.typography.displayLarge)
             }
 
             TagGroup(list, init = listOf(uiState.selected),isMultiSelected = false){ selected ->
@@ -101,7 +101,7 @@ fun ContentList(lists : List<CommunityActivity>, onClick: (String) -> Unit){
             Card(
                 modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 4.dp),
                 shape = RoundedCornerShape(7.dp),
-                colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceVariant),
+                colors = CardDefaults.cardColors(MaterialTheme.colorScheme.secondaryContainer),
                 elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
                 onClick = {onClick(list.targetId)}
             ) {
@@ -116,7 +116,6 @@ fun ContentList(lists : List<CommunityActivity>, onClick: (String) -> Unit){
                         Text(list.title, style = MaterialTheme.typography.titleSmall, maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f),
-                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(TimeFormatter.formatTimeToDate(list.createAt ?: 0), style = MaterialTheme.typography.bodySmall)
                     }
