@@ -17,6 +17,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.a32b.plant.presentation.theme.LocalIsDarkTheme
 
 @Composable
 fun TagGroup(tags: List<String>, init: List<String> = emptyList(),
@@ -36,12 +37,8 @@ fun TagGroup(tags: List<String>, init: List<String> = emptyList(),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = if (selectedTags.contains(tag)) MaterialTheme.colorScheme.primary
-                                     else MaterialTheme.colorScheme.surfaceVariant,
-                    disabledContainerColor = if (selectedTags.contains(tag)) MaterialTheme.colorScheme.primary
-                                            else MaterialTheme.colorScheme.surfaceVariant),
-                elevation = CardDefaults.cardElevation(
-                    defaultElevation = 3.dp,
-                    disabledElevation = 3.dp),
+                                     else MaterialTheme.colorScheme.secondaryContainer),
+                elevation = CardDefaults.cardElevation(defaultElevation = if (LocalIsDarkTheme.current) 0.dp else 3.dp),
                 modifier = Modifier.padding(5.dp),
                 enabled = enable,
                 onClick = {

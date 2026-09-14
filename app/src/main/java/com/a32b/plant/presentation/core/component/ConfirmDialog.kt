@@ -33,7 +33,7 @@ fun ConfirmDialog(
 ) {
     Dialog(onDismissRequest = {if (isCancelable) onDismiss() }) {
         Card(shape = RoundedCornerShape(30.dp),
-            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.secondaryContainer),
+            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.primaryContainer),
             elevation = CardDefaults.cardElevation(3.dp)) {
             Column(horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(22.dp)) {
@@ -52,7 +52,7 @@ fun ConfirmDialog(
                         Button(onClick = onDismiss,
                             modifier = Modifier.height(30.dp).weight(1f),
                             shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(sub2)) {
+                            colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.outline)) {
                             Text("취소", style = MaterialTheme.typography.bodyMedium)
                         }
                         Spacer(modifier = Modifier.width(10.dp))
@@ -61,7 +61,7 @@ fun ConfirmDialog(
                     Button(onClick = onConfirm,
                         modifier = Modifier.height(30.dp).weight(1f),
                         shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(primary)) {
+                        colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.primary)) {
                         Text("예", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
