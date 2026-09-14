@@ -49,6 +49,7 @@ import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.core.type.StudyingGoalCheckMode
 import com.a32b.plant.presentation.studying.viewmodel.StudyingEvent
 import com.a32b.plant.presentation.studying.viewmodel.StudyingViewModel
+import com.a32b.plant.presentation.theme.LocalIsDarkTheme
 import java.time.LocalDateTime
 
 @Composable
@@ -244,7 +245,7 @@ fun StateChangeButton(text: String, backColor: Color, function: () -> Unit){
                 indication = null){function()},
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = backColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = if (LocalIsDarkTheme.current) 0.dp else 3.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center){
