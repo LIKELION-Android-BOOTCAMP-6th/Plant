@@ -18,6 +18,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.presentation.theme.LocalIsDarkTheme
@@ -41,8 +42,7 @@ fun TagSheet(tags: List<Tag>, init : List<Tag> = emptyList(),
 
     Card(modifier = Modifier.padding(horizontal = 10.dp).fillMaxWidth(),
         shape = RoundedCornerShape(5.dp),
-        elevation = CardDefaults.cardElevation(if (isDarkMode) 0.dp else 1.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column {
             Spacer(modifier = Modifier.height(8.dp))
