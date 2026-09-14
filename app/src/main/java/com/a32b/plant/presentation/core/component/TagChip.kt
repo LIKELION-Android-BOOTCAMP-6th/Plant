@@ -17,7 +17,7 @@ import com.a32b.plant.presentation.theme.primary
 fun TagChip(text: String, size: Int, isSelected: Boolean = true) {
     Card(
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer),
+        colors = CardDefaults.cardColors(containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer),
         elevation = CardDefaults.cardElevation(defaultElevation = if (LocalIsDarkTheme.current) 0.dp else 1.5.dp),
         modifier = Modifier.padding(5.dp),
     ) {

@@ -37,7 +37,7 @@ fun TagGroup(tags: List<String>, init: List<String> = emptyList(),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = if (selectedTags.contains(tag)) MaterialTheme.colorScheme.primary
-                                     else MaterialTheme.colorScheme.primaryContainer),
+                                     else MaterialTheme.colorScheme.secondaryContainer),
                 elevation = CardDefaults.cardElevation(defaultElevation = if (LocalIsDarkTheme.current) 0.dp else 3.dp),
                 modifier = Modifier.padding(5.dp),
                 enabled = enable,

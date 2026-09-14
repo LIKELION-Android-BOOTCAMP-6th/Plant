@@ -20,6 +20,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.a32b.plant.domain.model.Tag
+import com.a32b.plant.presentation.theme.LocalIsDarkTheme
 import com.a32b.plant.presentation.theme.primary
 
 @Composable
@@ -33,14 +34,16 @@ fun TagSheet(tags: List<Tag>, init : List<Tag> = emptyList(),
         selectedTags.addAll(init)
     }
     val order = listOf("중등", "고등", "대학교", "취업준비", "자기계발")
+    val isDarkMode = LocalIsDarkTheme.current
 
     val groupedTags = tags.groupBy { it.parentId }.entries
         .sortedBy { (parent, _) -> order.indexOf(parent) }
 
     Card(modifier = Modifier.padding(horizontal = 10.dp).fillMaxWidth(),
         shape = RoundedCornerShape(5.dp),
-        elevation = CardDefaults.cardElevation(1.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+        elevation = CardDefaults.cardElevation(if (isDarkMode) 0.dp else 1.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+    ) {
         Column {
             Spacer(modifier = Modifier.height(8.dp))
             groupedTags.forEach { (parent, group) ->
