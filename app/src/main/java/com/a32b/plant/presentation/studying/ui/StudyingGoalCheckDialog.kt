@@ -114,14 +114,14 @@ fun StudyingGoalCheckDialog(
                         Button(
                             onClick = onDismiss,
                             shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = sub3, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.outline)
                         ) { Text("취소", style = MaterialTheme.typography.bodySmall)}
 
                         Button(
                             onClick = onConfirm,
                             shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(0.7f), contentColor = MaterialTheme.colorScheme.primary)
-                        ) { Text( if(showEditButton) "종료" else "저장", style = MaterialTheme.typography.bodySmall)}
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(0.7f))
+                        ) { Text( if(showEditButton) "종료" else "저장", style = MaterialTheme.typography.bodySmall )}
                     }
                 }
             }
