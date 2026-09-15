@@ -85,8 +85,7 @@ posts
 ### studying
 ```
 studying
-└── {studyingId}
-    ├── uid: String
+└── {uid}
     ├── nickname: String
     ├── tag: String
     ├── studyingTime: Long
