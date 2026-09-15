@@ -1,502 +1,1286 @@
-# 📋 Plant 기능명세서
+# Plant 기능명세서 (Feature Specification)
+
+> **최초 작성일**: 2026-09-11  
+> **최종 수정일**: 2026-09-15
 
 ## 목차
 
-- [인증](#인증)
-- [홈](#홈)
-- [공부중](#공부중)
-- [학습 계획 기록](#학습-계획-기록)
-- [커뮤니티](#커뮤니티)
-- [마이페이지/아카이브](#마이페이지아카이브)
-- [마이페이지](#마이페이지)
-- [마이페이지/세팅](#마이페이지세팅)
+1. [인증 · 계정 관리](#1-인증--계정-관리)
+2. [홈 · 화분 관리](#2-홈--화분-관리)
+3. [학습 (Studying)](#3-학습-studying)
+4. [학습 기록](#4-학습-기록)
+5. [커뮤니티](#5-커뮤니티)
+6. [마이페이지](#6-마이페이지)
+7. [출석체크](#7-출석체크)
+8. [아이템 · 보상 · 상점](#8-아이템--보상--상점)
+9. [리포트 · 통계](#9-리포트--통계)
+10. [알림](#10-알림)
 
 ---
 
-## 인증
+## 1. 인증 · 계정 관리
 
-### F-Auth-01 이메일 인증 회원가입
+### 1-1. 자동 로그인 (세션 복원) ✅
 
-- **기능 설명**: 비회원을 위한 파이어베이스를 활용한 이메일 인증 기반의 회원가입
-- **관련 화면**: `SignUpScreen`
-- **입력 항목**: `SignInScreen`에서 '회원가입' 텍스트 클릭 시 진입 가능
-  - 이메일: String (이메일을 입력하세요.)
-  - 비밀번호: String (\*로 마스킹 처리, 눈 아이콘으로 표시/숨김 토글)
-  - 비밀번호 확인: String (\*로 마스킹 처리, 눈 아이콘으로 표시/숨김 토글)
-  - 회원가입 완료: Button
-- **출력**: 이메일 입력 → 비밀번호 입력 → 비밀번호 확인 입력 → 회원가입 완료 버튼 클릭 → 미입력 항목 체크 → 이메일 형식 검증 + 비밀번호 조건 검증(소문자+숫자+특수문자, 6자 이상) + 비밀번호 일치 검증 3가지 동시 실행 → 에러 없으면 `createUserWithEmailAndPassword`로 Firebase Auth 계정 생성(`suspendCancellableCoroutine` 사용) → 인증 메일 발송 → `auth.signOut()`으로 인증 전 로그인 차단 → '회원가입 완료! 인증 메일을 확인해주세요.' 토스트 → `SignInScreen`으로 전환
-  > ⇒ 회원가입 완료 후 이메일 인증 전까지 로그인 불가, Firestore User 문서는 첫 로그인 시 생성
-- **예외처리**:
-  - 이메일, 비밀번호, 비밀번호 확인 중 미입력 항목이 있을 경우 → '모든 항목을 작성해주세요.' 토스트
-  - 이메일 형식이 올바르지 않을 경우 → 이메일 필드 하단에 '이메일 형식이 올바르지 않습니다.' 에러 텍스트 표시
-  - 비밀번호 조건 미충족 시 (소문자+숫자+특수문자, 6자 이상) → 비밀번호 필드 하단에 '비밀번호 조건을 맞춰주세요.' 에러 텍스트 표시
-  - 비밀번호와 비밀번호 확인 불일치 → 비밀번호 확인 필드 하단에 '비밀번호가 일치하지 않습니다.' 에러 텍스트 표시
-  - 이미 등록된 이메일 (`ERROR_EMAIL_ALREADY_IN_USE`) → '이미 등록된 계정입니다.' 토스트
-  - Firebase 비밀번호 약함 (`ERROR_WEAK_PASSWORD`) → '비밀번호 조건을 맞춰주세요.' 토스트
-  - Firebase 이메일 형식 오류 (`ERROR_INVALID_EMAIL`) → '이메일 형식이 올바르지 않습니다.' 토스트
-  - 기타 오류 → '회원가입 실패. 다시 시도해주세요.' 토스트
-  > 3가지 검증(이메일, 비밀번호 조건, 비밀번호 일치)은 동시 실행되어 해당하는 모든 에러를 한번에 표시
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | AUTH-001 |
+| **진입점** | 앱 실행 → `SplashScreen` |
+| **UseCase** | `CheckAutoLoginUseCase` |
+| **Repository** | `AuthRepository.currentUid()`, `UserRepository.getUser()` |
 
----
+**동작 흐름**
 
-### F-Auth-02 구글 로그인
+1. `SplashScreen` 진입 시 `CheckAutoLoginUseCase` 호출
+2. `AuthRepository.currentUid()`로 Firebase 세션의 uid 확인
+   - uid가 `null` → `AutoLoginResult.NotLoggedIn` 반환 → `SignInScreen`으로 이동
+3. uid가 존재하면 `UserRepository.getUser(uid)`로 Firestore 유저 문서 조회
+   - 유저 문서가 `null`이거나 `isFirstLogin == true` → `authRepository.signOut()` 호출 후 `NotLoggedIn` 반환
+4. 유저 문서가 정상이면:
+   - `UserRepository.startUserSession(user)` → 실시간 구독 시작
+   - `CurrentUser.set(...)` → 전역 싱글톤 세팅 (과도기 브릿지)
+   - `AutoLoginResult.LoggedIn(uid, user)` 반환 → `HomeScreen`으로 이동
 
-- **기능 설명**: Google 계정을 활용한 Credential Manager 기반 소셜 로그인
-- **관련 화면**: `SignInScreen`
-- **입력 항목**: `SignInScreen`에서 구글 로그인 이미지(`ic_auth_google`) 클릭 시 진행
-  - 구글 로그인 이미지: Image (clickable) — 로그인 버튼 아래 '또는' 구분선 하단에 위치
-- **출력**: 구글 로그인 이미지 클릭 → `GetSignInWithGoogleOption`으로 구글 로그인 옵션 생성 (`webClientId` 사용) → `GetCredentialRequest` 생성 → `credentialManager.getCredential()` 호출하여 Google 계정 선택 팝업 표시 → 사용자 계정 선택 → `GoogleIdTokenCredential.createFrom()`으로 idToken 추출 → ViewModel의 `handleGoogleSignIn(idToken)` 호출 → `GoogleAuthProvider.getCredential(idToken, null)`로 Firebase 인증 정보 변환 → `signInWithCredential`로 Firebase Auth 로그인 → `handleLoginSuccess(uid)` 공통 처리 진입 → Firestore `users/{uid}` 문서 조회 → 없으면 `createUser(uid)`로 신규 생성 → `CurrentUser` 싱글톤 세팅 (uid, nickname, profileImg) → `isFirstLogin == true`이면 닉네임 설정 다이얼로그 표시 (닫기 불가, 2~10자 입력, 중복 검사 후 `nicknames` 컬렉션 등록) / `false`이면 '{닉네임}님 환영합니다.' 토스트 후 `HomeScreen`으로 전환 (`popUpTo(0)`)
-  > ⇒ 구글 계정은 이미 인증된 상태이므로 이메일 인증 체크 불필요
-- **예외처리**:
-  - 사용자가 계정 선택을 취소하거나 바깥 터치/뒤로가기로 닫은 경우 (`GetCredentialCancellationException`) → 무시, `SignInScreen` 유지
-  - 기기에 등록된 Google 계정이 없는 경우 (`NoCredentialException`) → '기기에 등록된 Google 계정이 없습니다. 설정에서 계정을 추가해주세요.' 토스트 + 기기 계정 추가 화면(`ACTION_ADD_ACCOUNT`) 자동 이동
-  - 기타 예외 (Screen 레벨) → '구글 로그인에 실패했습니다.\n다시 시도해주세요.' 토스트
-  - Firebase 인증 실패 (ViewModel 레벨) → '구글 로그인 실패: {에러 메시지}' 토스트
-  - Firestore 유저 정보 생성 실패 → '정보 생성에 실패했습니다.\n다시 시도해주세요.' 토스트 후 `auth.signOut()`
-  > Screen과 ViewModel에서 예외를 이중으로 처리
+**에러 처리**
+
+| 에러 상황 | 처리 |
+|-----------|------|
+| Firestore 조회 실패 | `Result.Failure` 반환 → 로그인 화면으로 이동 |
+| 세션은 있으나 유저 문서 없음 | `signOut()` 후 로그인 화면 |
 
 ---
 
-### F-Auth-03 이메일 로그인
+### 1-2. Google 로그인 ✅
 
-- **기능 설명**: 이메일과 비밀번호를 활용한 Firebase Auth 기반 로그인 (세션 지속성으로 자동 로그인 지원)
-- **관련 화면**: `SignInScreen`
-- **입력 항목**: `SignInScreen`에서 직접 입력
-  - 이메일: String (이메일을 입력하세요)
-  - 비밀번호: String (\*로 마스킹 처리, 눈 아이콘으로 표시/숨김 토글)
-  - 로그인: Button
-- **출력**: 이메일, 비밀번호 입력 → 로그인 버튼 클릭 → 빈칸 검증 → 이메일 형식 검증 (정규식) → `signInWithEmailAndPassword` 호출 → 이메일 인증 여부 확인 (`user.isEmailVerified`) → 미인증 시 `auth.signOut()` + 이메일/비밀번호 입력값 초기화 + '이메일을 인증해주세요.' 토스트 → 인증 완료 시 `handleLoginSuccess(uid)` 공통 처리 진입 → Firestore `users/{uid}` 문서 조회 → 없으면 신규 생성 → `CurrentUser` 싱글톤 세팅 → `isFirstLogin == true`이면 닉네임 설정 다이얼로그 / `false`이면 '{닉네임}님 환영합니다.' 토스트 후 `HomeScreen`으로 전환 (`popUpTo(0)`)
-  > ⇒ Firebase SDK가 로그인 성공 시 기기 로컬에 인증 토큰 자동 저장 → 앱 재시작 시 `auth.currentUser`로 자동 로그인
-- **예외처리**:
-  - 이메일 또는 비밀번호가 빈 값인 경우 → '이메일과 비밀번호를 입력해주세요.' 토스트
-  - 이메일 형식이 올바르지 않은 경우 → 이메일 필드 하단에 '이메일 형식이 올바르지 않습니다.' 에러 텍스트 표시
-  - `ERROR_INVALID_EMAIL` → 이메일 입력값 초기화 + '이메일 형식을 확인해주세요' 토스트
-  - `ERROR_USER_NOT_FOUND` 또는 `ERROR_WRONG_PASSWORD` → 비밀번호 입력값 초기화 + '계정 정보가 올바르지 않습니다.' 토스트
-  - `ERROR_INVALID_CREDENTIAL` → 이메일, 비밀번호 모두 초기화 + '로그인에 실패했습니다.\n다시 시도해주세요.' 토스트
-  - 기타 오류 → 이메일, 비밀번호 모두 초기화 + '로그인에 실패했습니다.\n다시 시도해주세요.' 토스트
-  > `ERROR_USER_NOT_FOUND`와 `ERROR_WRONG_PASSWORD`는 보안상 '계정 정보가 올바르지 않습니다.'로 통합 처리
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | AUTH-002 |
+| **진입점** | `SignInScreen` → Google 로그인 버튼 |
+| **UseCase** | `SignInWithGoogleUseCase` → `ResolveUserSessionUseCase` |
+| **Repository** | `AuthRepository.signInWithGoogle()`, `UserRepository.getUser()`, `UserRepository.createUser()` |
 
----
+**동작 흐름**
 
-### F-Auth-04 비밀번호 재설정
+1. 사용자가 Google 로그인 버튼 탭
+2. Android Credential Manager를 통해 Google 계정 선택 → `idToken` 추출
+3. `SignInWithGoogleUseCase(idToken)` 호출
+4. `AuthRepository.signInWithGoogle(idToken)` → Firebase Auth 인증 → uid 반환
+5. `ResolveUserSessionUseCase(uid)` 호출:
+   - `UserRepository.getUser(uid)`로 기존 유저 확인
+   - 기존 유저 없으면 → `UserRepository.createUser(uid)` (신규 문서 생성, `isFirstLogin = true`)
+   - `UserRepository.startUserSession(user)` → 실시간 구독 시작
+   - `CurrentUser.set(...)` → 전역 싱글톤 세팅
+   - `SignInResult(uid, nickname, isFirstLogin)` 반환
+6. 반환된 `isFirstLogin` 값에 따라:
+   - `true` → `SignUpScreen`(닉네임 설정 화면)으로 이동
+   - `false` → `HomeScreen`으로 이동
 
-- **기능 설명**: 비밀번호를 분실한 회원을 위한 Firebase Auth 기반 비밀번호 재설정 메일 발송
-- **관련 화면**: `SignInScreen` (내 다이얼로그로 처리, 별도 화면 없음)
-- **입력 항목**: `SignInScreen`에서 '비밀번호를 잊으셨나요?' 텍스트 클릭 시 다이얼로그 표시
-  - 이메일: String (이메일을 입력하세요)
-  - 취소: Button
-  - 전송: Button
-  > 다이얼로그 타이틀: '비밀번호 재설정', 안내 문구: '가입한 이메일을 입력하면 비밀번호 재설정 메일을 보내드립니다.'
-- **출력**: '비밀번호를 잊으셨나요?' 클릭 → 비밀번호 재설정 다이얼로그 표시 → 이메일 입력 → '전송' 버튼 클릭 → 클라이언트 측 검증 (빈 값 체크 → 이메일 형식 정규식 검증) → 통과 시 ViewModel의 `sendPasswordResetEmail(email)` 호출 → `auth.sendPasswordResetEmail(email)` 실행 → '재설정 메일을 전송했습니다.' 토스트 → 다이얼로그 자동 닫힘
-- **예외처리**:
-  - 이메일이 빈 값인 경우 → 이메일 필드 하단에 '이메일을 입력해주세요.' 에러 텍스트 표시 (다이얼로그 유지)
-  - 이메일 형식이 올바르지 않은 경우 → 이메일 필드 하단에 '이메일 형식이 올바르지 않습니다.' 에러 텍스트 표시 (다이얼로그 유지)
-  - '취소' 버튼 클릭 시 → 다이얼로그 닫기, `SignInScreen` 유지
-  - 다이얼로그 바깥 터치 시 → 다이얼로그 닫기
-  - 메일 전송 실패 시 → '메일 전송에 실패했습니다.\n이메일을 확인해주세요.' 토스트
-  > 클라이언트 측 검증은 Screen에서, Firebase 에러는 ViewModel에서 처리
+**에러 처리**
+
+| 에러 상황 | 처리 |
+|-----------|------|
+| Google 계정 선택 취소 | 로그인 화면 유지 |
+| Firebase Auth 실패 | `AppError.Auth` → 토스트 메시지 |
+| Firestore 문서 생성 실패 | `AppError.Server` → 토스트 메시지 |
 
 ---
 
-### F-Auth-05 로그아웃
+### 1-3. 첫 로그인 닉네임 설정 ✅
 
-- **기능 설명**: 로그인된 회원의 Firebase Auth 세션을 종료하고 로그인 화면으로 전환
-- **관련 화면**: `MyPageScreen`
-- **입력 항목**: `MyPageScreen`에서 로그아웃 버튼 클릭 시 진행
-  - 로그아웃: Button (ButtonTemplate 컴포넌트)
-- **출력**: 로그아웃 버튼 클릭 → `ConfirmDialog` 표시 ('로그아웃 하시겠습니까?') → '예' 클릭 → `firebaseAuth.signOut()` 호출 → `CurrentUser.clear()` → `NavigateToSignIn` 이벤트 발송 → `SignInScreen`으로 전환 (`popUpTo(0) { inclusive = true }`)
-- **예외처리**:
-  - 확인 다이얼로그에서 '아니오' 클릭 시 → 다이얼로그 닫기 + `clearProfileState()` 호출, `MyPageScreen` 유지
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | AUTH-003 |
+| **진입점** | `SignUpScreen` (Google 로그인 후 `isFirstLogin == true`일 때) |
+| **UseCase** | `SetNicknameUseCase` |
+| **Repository** | `UserRepository.isNicknameTaken()`, `UserRepository.registerNickname()`, `UserRepository.completeFirstLogin()` |
 
----
+**동작 흐름**
 
-### F-Auth-06 회원탈퇴
+1. 닉네임 입력 필드에 텍스트 입력
+2. "확인" 버튼 탭 → `SetNicknameUseCase(uid, nickname)` 호출
+3. **중복 검사**: `UserRepository.isNicknameTaken(nickname)` → `nicknames/{nickname}` 문서 존재 여부 확인
+   - 중복이면 → `AppError.Custom("사용 중인 닉네임입니다.")` 반환
+4. **닉네임 등록**: `UserRepository.registerNickname(nickname)` → `nicknames/{nickname}` 문서 생성
+5. **첫 로그인 완료**: `UserRepository.completeFirstLogin(uid, nickname)` → `users/{uid}` 문서의 `isFirstLogin = false`, `nickname` 갱신
+6. `CurrentUser` 전역 싱글톤 동기화
+7. `HomeScreen`으로 이동
 
-- **기능 설명**: 회원 탈퇴 시 Firestore 관련 데이터 정리 후 Firebase Auth 계정 삭제
-- **관련 화면**: `MypageSettingScreen`
-- **입력 항목**: `MyPageScreen` → '앱 설정' 클릭 → `MyPageSettingScreen`에서 회원탈퇴 버튼 클릭 시 진행
-  - 회원탈퇴: Button (ButtonTemplate 컴포넌트)
-- **출력**: 회원탈퇴 버튼 클릭 → 1단계 `ConfirmDialog` → '예' 클릭 → 2단계 `ConfirmDialog` → '예' 클릭 → Firestore 데이터 삭제:
-  1. `users/{uid}/pots/{potId}/logs/{logId}` 문서 삭제
-  2. `users/{uid}/pots/{potId}` 문서 삭제
-  3. `activities` 컬렉션에서 uid 일치 문서 삭제
-  4. 내 게시글(`posts`) + 하위 `comments`, `likes` 서브컬렉션 삭제
-  5. 다른 사람 게시글의 내 댓글 소프트 삭제 (content → '- 삭제된 댓글입니다. -', nickname → '(알 수 없음)', profileImg → '')
-  6. 다른 사람 게시글의 내 좋아요 삭제
-  7. `users/{uid}` 문서 삭제
+**입력 유효성 검증**
 
-  → `nicknameRepository.deleteNickname(nickname)` → `firebaseUser.delete()` → `CurrentUser.clear()` → '회원탈퇴가 완료되었습니다.' 토스트 → `SignInScreen`으로 전환
-  > Firestore 데이터를 먼저 삭제 후 Auth 계정을 맨 마지막에 삭제 (인증 세션 유지 상태에서 Firestore 접근 보장)
-- **예외처리**:
-  - 1단계 또는 2단계 다이얼로그에서 '아니오' 클릭 시 → 다이얼로그 닫기 + 1단계로 리셋
-  - `firebaseAuth.currentUser`가 null인 경우 → '로그인 정보가 없습니다.' 토스트
-  - 재인증 필요 시 (`RECENT_LOGIN_REQUIRED`) → '보안을 위해 재로그인 후 다시 시도해주세요.' 토스트
-  - 기타 오류 → '회원탈퇴에 실패했습니다. 다시 시도해주세요.' 토스트
+| 규칙 | 조건 |
+|------|------|
+| 글자 수 | 2자 이상, 10자 이하 |
+| 중복 불가 | `nicknames` 컬렉션에서 동일 닉네임 존재 시 차단 |
 
 ---
 
-## 홈
+### 1-4. 로그아웃 ✅
 
-### F-Home-01 홈 화면 정보 조회
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | AUTH-004 |
+| **진입점** | `MyPageScreen` → 로그아웃 버튼 |
+| **UseCase** | `SignOutUseCase` |
 
-- **기능 설명**: 로그인을 한 사용자의 현재 학습 현황(식물 성장 단계, 목표, 학습 시간)을 시각적으로 보여주고 학습을 시작하는 메인 기능
-- **관련 화면**: `Home`, `F-Home-02-1`, `F-Home-02-2`
-- **진입 조건**: `SignInScreen`에서 로그인 성공 시, 하단 네비게이션 "홈" 아이콘 클릭 시
-- **입력 항목**:
-  - **DB**: 사용자 닉네임, 화분 이미지 ID, 화분 제목 & 총 공부시간
-  - **디바이스 시스템**: 디바이스의 날짜
-- **출력**: 로그인 완료 후 메인 화면으로 전환 → DB에서 사용자 닉네임, 마지막 사용 화분 이미지 ID, 제목, 총 공부시간 조회 → 디바이스 시스템에서 오늘 날짜 조회 → 화면의 지정된 위치에 맵핑 → 출력
-- **예외처리**:
-  - 공부할 화분의 이미지 로딩 실패 or 생성된 화분이 없을 시 기본 아이콘 출력
-  - 홈 화면에서 홈 탭 클릭 시 새로고침, 스택에는 미 쌓임
-  - 등록 목표가 없을 경우 → "첫 목표를 추가해보세요" 텍스트 출력 & 기본이미지, 기본형식 시간으로 표시
+**동작 흐름**
 
----
+1. 로그아웃 버튼 탭 → 확인 다이얼로그 표시
+2. "확인" 선택 → `SignOutUseCase()` 호출
+3. 처리 순서 (**순서 중요** — 리스너 크래시 방지):
+   1. `UserRepository.endUserSession()` → Firestore 실시간 구독 해제, `currentUser` 비움
+   2. `AuthRepository.signOut()` → Firebase Auth 세션 종료
+   3. `CurrentUser.clear()` → 전역 싱글톤 초기화
+4. `SignInScreen`으로 이동
 
-### F-Home-02 학습 화분 목록 조회
-
-- **기능 설명**: 사용자가 생성한 전체 학습 목표 리스트를 그리드(Grid) 형태로 확인 기능
-- **관련 화면**: `Home`, `F-Home-01`
-- **진입 조건**: `F-Home-01`에서 스크롤 시
-- **입력 항목**:
-  - **DB**: 화분별 이미지 ID, 화분별 이름 & 총 공부시간
-  - **사용자**: 화분 이미지 선택
-- **출력**: `F-Home-01`에서 스크롤 시 → DB에서 화분별 이미지 ID, 화분 이름, 총 공부시간 조회 → Grid 형태에서 지정 형태 맞게 데이터 표출. 사용자 특정 화분 클릭 시 → DB에 메인 화분 이미지 ID, 화분 이름, 총 공부시간 저장 → 현재 공부중 태그 변경
-- **예외처리**:
-  - 키우고 있는 화분들의 이미지 로딩 실패 시 기본 아이콘 출력
+> ⚠️ `signOut()`은 항상 성공하므로 `Result`를 반환하지 않음
 
 ---
 
-### F-Home-03 새로운 학습 기록 생성
+### 1-5. 회원탈퇴 ✅
 
-- **기능 설명**: 새로운 학습 주제를 설정하고, 이를 대표할 나무 종류와 태그를 선택하여 새로운 화분을 생성하는 기능
-- **관련 화면**: `Home`, `MainHomeLow`, `NewBornTree`
-- **진입 조건**: `F-Home-02`의 화분 추가 버튼 클릭 시
-- **입력 항목**:
-  - **DB**: 태그 항목 (String)
-  - **사용자**: 나무 이미지 (Image), 태그 항목값 (Tag_id), 이름 (String), 완료 버튼 (Button)
-- **출력**: 태그 선택, 이름 입력 → 완료 버튼 활성화 → 완료 버튼 클릭 → 사용자 입력 항목들 DB에 저장 → `F-Home-02` 화면으로 이동
-- **예외처리**:
-  - 이름 기입 시 공백만 기입 불가, 최대 글자 수 제한(한/영 15자)
-  - 이미지, 태그, 이름 중 하나라도 미 기입 시 완료 버튼 미 활성화
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | AUTH-005 |
+| **진입점** | `MyPageScreen` → 회원탈퇴 버튼 |
+| **UseCase** | `DeleteAccountUseCase` |
+| **ViewModel** | `DeleteAccountViewModel` |
 
----
+**동작 흐름**
 
-## 공부중
+1. 회원탈퇴 버튼 탭 → **2단계 확인**:
+   - 1단계: "정말 탈퇴하시겠습니까?" 다이얼로그
+   - 2단계: 최종 확인 다이얼로그
+2. "확인" 선택 → `DeleteAccountUseCase()` 호출
+3. `EnsureCurrentUserUseCase()`로 현재 유저 정보 조회
+4. 삭제 순서:
+   1. `UserRepository.deleteUserData(uid)` → Firestore `users/{uid}` 및 하위 문서 삭제
+   2. `UserRepository.deleteNickname(nickname)` → `nicknames/{nickname}` 문서 삭제
+   3. `UserRepository.endUserSession()` → 실시간 구독 해제
+   4. `CurrentUser.clear()` → 전역 싱글톤 초기화
+   5. `AuthRepository.deleteAuthAccount()` → Firebase Auth 계정 삭제 (마지막에 실행)
+5. `SignInScreen`으로 이동
 
-### F-Study-01 학습 시간 측정
+**에러 처리**
 
-- **기능 설명**: 학습을 시작한 회원을 위한 공부 시간 측정 기능
-- **관련 화면**: `Studying`, `StudyingScreen`
-- **입력 항목**: `HomeScreen`의 공부 시작 버튼 클릭 시 진입 가능
-  - uid: String, currentTag: String, profileImg: String, currentTitle: String
-- **출력**: 진입과 동시에 스톱워치 작동 → 일시 정지 버튼 클릭 → 스톱워치 일시 정지 → 학습하기 버튼 클릭 → 스톱워치 재가동 → 학습 종료 버튼 클릭 → `StudyFinishDialog` 표시 → 종료 버튼 클릭 → 스톱워치 중지 → `StudyResultScreen` 진입
-- **예외처리**:
-  - `StudyFinishDialog` 취소 클릭 시 → `StudyScreen` 화면으로 복귀, 스톱워치 재가동
-  - 뒤로가기 시 `StudyFinishDialog` 표출
-
----
-
-### F-Study-02 내 학습 시간 공유
-
-- **기능 설명**: 측정 중인 나의 학습 시간을 DB를 통해 같은 태그로 공부하는 타 사용자와 공유
-- **관련 화면**: `Studying`, `StudyingScreen`
-- **입력 항목**: uid, nickname, currentTag, myStudyTime (Long)
-- **출력**: 5초마다 로컬DB에 내 공부 시간 저장 → 10분마다 서버로 공부 시간 저장 → 학습 종료 시 로컬DB 및 서버 데이터 삭제 → `StudyResultScreen` 진입
-- **예외처리**:
-  - 앱 진입 시 로컬 DB에 저장된 데이터 확인 → 있다면 비정상 종료로 간주
-  - 비정상 종료 후 재진입 시 → 이전 학습 내용 저장 여부 확인 다이얼로그 표출
+| 에러 상황 | 처리 |
+|-----------|------|
+| 유저 정보 없음 | `AppError.UnknownUser` → 세션 만료 이벤트 발송 |
+| Firestore 삭제 실패 | `Result.Failure` → 에러 메시지 표시, Auth 계정은 삭제하지 않음 |
+| Auth 삭제 실패 | 재인증 필요 가능성 → 에러 메시지 표시 |
 
 ---
 
-### F-Study-03 함께 공부하는 사람 조회
+### 1-6. 세션 만료 관리 ✅
 
-- **기능 설명**: 같은 태그로 공부하고 있는 사용자들 중 공부 시간 기준 상위 3명만 앱 하단에 노출
-- **관련 화면**: `Studying`, `StudyingScreen`
-- **입력 항목**: uid, currentTag, StudyUser(uid, nickname, img, studyTime)
-- **출력**: 10분마다 DB에서 같은 태그 사용자 조회 → 상위 3명 화면 하단 출력
-  > "$StudyUser.nickname $StudyUser.studytime분 째 공부중!"
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | AUTH-006 |
+| **관련 클래스** | `SessionExpiredNotifier`, `SessionExpiredObserver`, `SessionExpiredEvent` |
+| **UseCase** | `EnsureCurrentUserUseCase` |
 
----
+**동작 흐름**
 
-### F-Study-04 학습 기록
-
-- **기능 설명**: 학습을 완료한 사용자에게 학습한 내용을 기록할 수 있는 다이얼로그 제공
-- **관련 화면**: `Studying`, `StudyFinishDialog`
-- **입력 항목**: `StudyingScreen` 학습 종료 버튼 클릭 시 진입
-  - 학습 기록: List\<String\>
-- **출력**: 학습 기록 입력 → 종료 버튼 클릭 → 시스템 날짜, 공부 시작/종료 시간, 순공부시간, 제목과 함께 DB 저장 → `StudyResultScreen` 전환
-- **예외처리**:
-  - 취소 버튼 클릭 시 → `StudyingScreen`으로 복귀, 스톱워치 가동
+1. 모든 UseCase는 실행 전 `EnsureCurrentUserUseCase()`를 호출하여 현재 유저 확인
+2. `UserRepository.currentUser.value`가 `null`이면:
+   - `SessionExpiredNotifier.notifySessionExpired()` 호출
+   - `AppError.UnknownUser` 반환
+3. `SessionExpiredObserver`를 구독하고 있는 `MainActivity`에서 이벤트 수신
+4. 세션 만료 다이얼로그 표시 → 로그인 화면으로 이동
 
 ---
 
-### F-Study-05 결과창 이미지 저장
+## 2. 홈 · 화분 관리
 
-- **기능 설명**: 학습 완료한 사용자가 공부한 기록을 한 눈에 보고 갤러리에 저장
-- **관련 화면**: `Studying`, `StudyResultScreen`
-- **입력 항목**: `StudyResultScreen`의 이미지 저장 아이콘 클릭 시
-- **출력**: 저장 아이콘 클릭 → 저장 확인 다이얼로그 → 예 버튼 → 결과창 비트맵 변환 → MediaStore로 /pictures에 저장 → "저장이 완료됐습니다!" 토스트
-- **예외처리**:
-  - 저장 확인 다이얼로그에서 취소 클릭 시 → 다이얼로그 닫힘
+### 2-1. 홈 화면 (대표 화분 표시) ✅
 
----
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | HOME-001 |
+| **화면** | `HomeScreen` |
+| **ViewModel** | `HomeViewModel` |
+| **Repository** | `PotRepository.getPots()`, `UserRepository.currentUser` |
 
-## 학습 계획 기록
+**동작 흐름**
 
-### F-StudyPlanDetails-01 계획 상세보기
+1. `HomeScreen` 진입 시 `PotRepository.getPots(uid)` Flow 구독 → 화분 목록 실시간 수신
+2. `UserRepository.currentUser`에서 `lastSelectedPotId` 확인
+3. `lastSelectedPotId`에 해당하는 화분을 대표 화분으로 표시
+   - 선택된 화분이 없으면 `Pot.EMPTY` (빈 상태, "화분을 추가해주세요" 메시지)
+4. 대표 화분의 성장 이미지(레벨에 따라 변경), 이름, 태그, 누적 학습 시간 표시
 
-- **기능 설명**: 로그인한 사용자에게 기록된 학습 계획의 상세 내역을 제공
-- **관련 화면**: `HomeMainLow`, `StudyPlanDetailsScreen`
-- **입력 항목**: `HomeMainLow` 화분 이름 클릭 시 진입
-  - **DB**: uid (String), 학습 기록 id (String)
-- **출력**: uid, 학습 기록 id를 DB로 전송하여 기록된 학습 계획 상세 데이터 화면에 표시
+**표시 정보**
 
----
-
-### F-StudyPlanDetails-03 계획 제목 수정
-
-- **기능 설명**: 학습 계획의 제목을 변경
-- **관련 화면**: `StudyPlanDetailsScreen`
-- **입력 항목**: 제목 수정 아이콘 클릭
-  - 제목: String
-  - **DB**: uid (String), 학습 기록 id (String)
-- **출력**: 제목 수정 아이콘 클릭 → TextField에 새 제목 입력 → 확인 버튼 클릭 → 서버 전달 → 화면 반영
-- **예외처리**:
-  - TextField 비어있다면 확인 버튼 미 활성화
+| 요소 | 데이터 소스 |
+|------|------------|
+| 화분 이미지 | `tagId` + `level` 조합으로 결정 |
+| 화분 이름 | `Pot.name` |
+| 태그 라벨 | `Pot.tagName` |
+| 누적 학습 시간 | `Pot.potTotalStudyingTime` (밀리초 → 시:분:초 포맷) |
+| 레벨 | `Pot.level` (누적 시간 기반 자동 계산) |
 
 ---
 
-### F-StudyPlanDetails-04 개별 학습 삭제
+### 2-2. 화분 생성 ✅
 
-- **기능 설명**: 학습 기록의 개별 학습 기록을 삭제
-- **관련 화면**: `StudyPlanDetailsScreen`
-- **입력 항목**: **DB** — uid, 학습 기록 id, 선택한 학습 id
-- **출력**: 휴지통 아이콘 클릭 → 삭제 다이얼로그 → 예 클릭 → DB 삭제 → 화면 반영
-- **예외처리**:
-  - 삭제 다이얼로그에서 아니오 클릭 시 → 다이얼로그 닫기
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | POT-001 |
+| **화면** | `NewBornTreeScreen` |
+| **ViewModel** | `NewBornTreeViewModel` |
+| **Repository** | `PotRepository.getAvailableTags()`, `PotRepository.addPot()` |
 
----
+**동작 흐름**
 
-### F-StudyPlanDetails-05 학습 기록 전체 삭제
+1. 홈 화면에서 "화분 추가" 버튼 탭 → `NewBornTreeScreen` 이동
+2. **1단계 — 태그 선택**:
+   - `PotRepository.getAvailableTags()` Flow 구독 → 목표 유형 태그 목록 표시
+   - 태그는 2단계 구조: 상위 카테고리 → 하위 세부 태그
+   - 상위 태그 선택 → 하위 태그 목록 표시 → 하위 태그 선택
+3. **2단계 — 이름 입력**:
+   - 화분 이름 입력 필드 표시
+   - 최대 20자 제한
+4. "생성" 버튼 탭 → `PotRepository.addPot(uid, tag, name)` 호출
+5. Firestore `users/{uid}/pots/{potId}` 문서 생성:
+   - `id`: 자동 생성 문서 ID
+   - `tag_id`, `tag_name`: 선택된 태그 정보
+   - `name`: 입력한 이름
+   - `imageUrl`: 태그 기반 기본 이미지 URL
+   - `potTotalStudyingTime`: 0
+   - `createdAt`: 서버 타임스탬프
+   - `isCompleted`: false
+6. 생성 완료 → 홈 화면으로 복귀, 생성된 화분이 대표 화분으로 설정
 
-- **기능 설명**: `StudyPlanDetailsScreen`에서 삭제 버튼 클릭하여 학습 기록 삭제
-- **관련 화면**: `StudyPlanDetailsScreen`
-- **입력 항목**: **DB** — uid, 화분 id
-- **출력**: '계획 삭제하기' 버튼 클릭 → 삭제 다이얼로그 → DB 삭제 → `HomeMainLow` 표출
-- **예외처리**:
-  - 삭제 다이얼로그에서 아니오 클릭 시 → 다이얼로그 닫기
+**입력 유효성 검증**
 
----
-
-### F-StudyPlanDetails-06 학습 완료
-
-- **기능 설명**: 학습 완료 시 상태를 "다 기른 나무"로 변경
-- **관련 화면**: `StudyPlanDetailsScreen`
-- **진입 조건**: 학습 완료하기 버튼 클릭
-- **출력**: '학습 완료하기' 버튼 클릭 → 다이얼로그 → '완료' 클릭 → DB isCompleted update → `HomeMainHigh` 이동
-- **예외처리**:
-  - 다이얼로그 취소 버튼 클릭 시 닫힘
-
----
-
-### F-StudyPlanDetails-07 학습 계획 공유
-
-- **기능 설명**: 해당 화면의 학습기록을 게시글로 자동 게시, 완료 시 `CommunityPostScreen`으로 이동
-- **관련 화면**: `StudyPlanDetailsScreen`, `CommunityPostScreen`
-- **입력 항목**: **DB** — potId, tag_id, tag_name, title, 학습 기록 id
-- **출력**: 공유할 리스트 선택 & 공유 아이콘 클릭 → 확인 다이얼로그 → 확인 → `CommunityPostScreen` 이동 → 게시물 작성 확인
+| 규칙 | 조건 |
+|------|------|
+| 태그 | 반드시 하위 태그까지 선택 필요 |
+| 이름 | 1자 이상, 20자 이하 |
 
 ---
 
-## 커뮤니티
+### 2-3. 화분 목록 조회 (나의 정원) ✅
 
-### F-Community-01 글 목록 조회
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | POT-002 |
+| **화면** | `PotListScreen` |
+| **UseCase** | `GetPotListUseCase`, `GetActivePotUseCase` |
+| **Repository** | `PotRepository.getPots()`, `PotRepository.getUserPotsByStatus()` |
 
-- **기능 설명**: 사용자가 커뮤니티에 작성된 게시글 목록을 조회
-- **관련 화면**: `CommunityListScreen`
-- **입력 항목**: 하단의 커뮤니티 탭 클릭 시 진입
-- **출력**: 커뮤니티 탭 클릭 → 게시글 화면 진입 → DB에서 모든 게시글 조회 → 리스트 로딩
-- **예외처리**:
-  - 예외 발생 시 Toast로 출력
+**동작 흐름**
 
----
+1. 홈 → "나의 정원" 탭 → `PotListScreen` 이동
+2. **탭 필터** (3종):
+   - **전체**: 모든 화분 표시
+   - **공부 중**: `isCompleted == false`인 화분만 표시
+   - **완료**: `isCompleted == true`인 화분만 표시
+3. `PotRepository.getPots(uid)` Flow 구독 → 실시간 목록 갱신
+4. 각 화분 카드에 표시되는 정보:
+   - 화분 이미지 (레벨 기반)
+   - 화분 이름
+   - 태그명
+   - 누적 학습 시간
+   - 레벨 표시
+5. 화분 카드 탭 → `StudyPlanDetailScreen`으로 이동
 
-### F-Community-02 검색
+**정렬 기준 (5종)** 📋
 
-- **기능 설명**: 검색어 또는 태그를 통해 원하는 게시글을 찾을 수 있는 기능
-- **관련 화면**: `CommunityListScreen`
-- **입력 항목**: 검색 버튼 또는 태그 버튼 클릭 시 진입
-  - 검색: String, 태그: String
-- **출력**: 검색어 입력 → IME 표시 → DB Query 실행 → 결과 리스트 출력
-- **예외처리**:
-  - 검색어가 없을 경우 → Toast: "검색어를 입력해주세요"
-  - 검색 결과가 없을 경우 → Toast: "검색 결과가 없습니다"
-  - 로딩 상태 (Progress), 빈 리스트 상태 (Empty View)
-
----
-
-### F-Community-03 글 작성
-
-- **기능 설명**: 사용자가 커뮤니티 게시판에 새로운 게시글을 작성하고 등록
-- **관련 화면**: `CommunityPostScreen`
-- **입력 항목**: 글쓰기 버튼 클릭 시 진입
-  - 제목 입력: String, 태그 선택: Tag, 본문 입력: Text
-- **출력**: 제목 입력 → 태그 선택 → 본문 입력 → 등록 버튼 클릭 → `CommunityDetailScreen` 진입
-- **예외처리**:
-  - 제목이 비어있는 경우 → Toast: "제목을 입력해주세요"
-  - 본문이 비어있는 경우 → Toast: "내용을 입력해주세요"
-  - 본문 1,000자 초과 시 → "제한된 글자수를 초과했습니다." 토스트 + 입력 불가
-  - 뒤로가기 시 → "게시글 작성을 종료하시겠습니까?" 다이얼로그 표시
+| 정렬 | 필드 | 방향 | 기본값 |
+|------|------|:----:|:------:|
+| 생성일 최신순 | `createdAt` | DESC | 공부 중 탭 기본 |
+| 누적 학습 시간순 | `potTotalStudyingTime` | DESC | 기른 화분 탭 기본 |
+| 레벨순 | `level` | DESC | |
+| 이름순 (가나다) | `name` | ASC | |
+| 최근 학습순 | `lastStudiedAt` | DESC | 신규 필드 추가 필요 |
 
 ---
 
-### F-Community-03-01 학습 기록 공유글 작성
+### 2-4. 대표 화분 선택/변경 ✅
 
-- **기능 설명**: 사용자의 학습 기록을 공유 기능을 통해 커뮤니티에 게시
-- **관련 화면**: `CommunityPostScreen`
-- **입력 항목**: `StudyPlanDetailScreen`에서 공유 버튼 클릭 시 진입
-  - 제목: String
-- **출력**: 학습 기록 내용(제목, 태그, 학습 기록) 화면 표출 → 등록 버튼 클릭 → `CommunityDetailScreen` 전환
-- **예외처리**:
-  - 제목이 비어있는 경우 → Toast: "제목을 입력해주세요"
-  - 뒤로가기 시 → "게시글 작성을 종료하시겠습니까?" 다이얼로그 표시
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | POT-003 |
+| **Repository** | `UserRepository.updateLastSelectedPot()` |
 
----
+**동작 흐름**
 
-### F-Community-04 게시글 상세 조회
-
-- **기능 설명**: 게시글 상세 조회 및 댓글 작성
-- **관련 화면**: `CommunityDetailScreen`
-- **입력 항목**: 글쓰기 완료 후 또는 커뮤니티 탭에서 게시글 클릭 시 진입
-  - 작성글 제목, 닉네임, 작성일자, 본문, 기존 댓글, 좋아요/댓글수, 프로필 이미지
-- **출력**: DB에서 추출 후 내용 출력
-- **예외처리**:
-  - 댓글 입력 없이 등록 시 → Toast: "댓글을 입력해주세요"
-  - 본문 1,000자 초과 시 → "제한된 글자수를 초과했습니다." 토스트 + 입력 불가
+1. 화분 목록 또는 화분 상세에서 "대표 화분 선택" 동작
+2. `UserRepository.updateLastSelectedPot(uid, potId)` 호출
+3. Firestore `users/{uid}.lastSelectedPotId` 필드 갱신
+4. 홈 화면 복귀 시 새 대표 화분이 즉시 반영
 
 ---
 
-### F-Community-05 댓글
+### 2-5. 화분 이름 변경 ✅
 
-- **기능 설명**: 게시글 댓글 작성
-- **관련 화면**: `CommunityListScreen`, `CommunityDetailScreen`
-- **입력 항목**: 커뮤니티 탭에서 게시글 클릭 시 진입
-  - 닉네임, 작성일자, 댓글 본문란, 기존 댓글, 좋아요, 댓글수, 프로필 이미지
-- **출력**: DB에서 추출 후 내용 출력
-- **예외처리**:
-  - 댓글 입력 없이 등록 시 → Toast: "댓글을 입력해주세요"
-  - 댓글 1,500자 초과 시 → "제한된 글자수를 초과했습니다." 토스트 + 입력 불가
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | POT-004 |
+| **UseCase** | `UpdatePotNameUseCase` |
+| **Repository** | `PotRepository.updatePotName()` |
 
----
+**동작 흐름**
 
-### F-Community-06 내 게시글 편집
-
-- **기능 설명**: 게시글 조회 후 편집
-- **관련 화면**: `CommunityDetailScreen`, `CommunityListScreen`
-- **입력 항목**: 커뮤니티 탭에서 게시글 클릭 시 진입
-  - 작성글 제목, 닉네임, 작성일자, 본문, 기존 본문, 프로필 이미지, 수정하기 버튼
-- **출력**: DB에서 추출 후 내용 출력
-- **예외처리**:
-  - 본문 입력 없이 등록 시 → Toast: "본문을 입력해주세요"
+1. `StudyPlanDetailScreen`에서 화분 이름 옆 편집 버튼 탭
+2. 이름 수정 다이얼로그 표시
+3. 새 이름 입력 (최대 20자) → "확인" 탭
+4. `PotRepository.updatePotName(uid, potId, newName)` 호출
+5. Firestore `users/{uid}/pots/{potId}.name` 필드 갱신
 
 ---
 
-### F-Community-07 내 댓글 편집
+### 2-6. 화분 삭제 ✅
 
-- **기능 설명**: 커뮤니티 게시글 상세 화면에서 본인이 작성한 댓글을 인라인 수정 또는 삭제
-- **관련 화면**: `CommunityDetailScreen`
-- **입력 항목**: `CommunityDetailScreen`에서 본인 댓글의 수정/삭제 아이콘 클릭 시 진행
-  - 수정 아이콘 (`ic_edit`): IconButton (28dp) → 인라인 편집 모드 진입
-  - 삭제 아이콘 (`ic_trash`): IconButton (28dp) → 삭제 확인 다이얼로그 표시
-  - 수정 시 댓글 내용: String (최대 100자)
-  > 본인 댓글(`commentData.user.uid == CurrentUser.uid`)이고 편집 중이 아닐 때만 아이콘 노출
-- **출력**:
-  - **[수정]** 수정 아이콘 클릭 → 기존 댓글 내용이 인라인 TextField에 로드 → 내용 수정 (100자 제한, 글자수 카운터 표시) → '저장' 클릭: Firestore `posts/{postId}/comments/{commentId}` 업데이트 → 편집 초기화 → 댓글 새로고침 / '취소' 클릭: 편집 초기화
-  - **[삭제]** 삭제 아이콘 클릭 → `ConfirmDialog` → '예' 클릭 → Firestore 문서 삭제 → 댓글 새로고침
-- **예외처리**:
-  - 삭제 다이얼로그에서 '아니오' 클릭 시 → 기존 화면 유지
-  - 수정 시 빈 내용으로 저장 클릭 → 저장 무시 (`return`)
-  - 100자 초과 입력 시 → '100자 이하로 입력해주세요.' 토스트 + 입력 차단
-  - Firestore 수정/삭제 실패 시 → 로그 출력 후 편집 초기화 + 댓글 새로고침
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | POT-005 |
+| **UseCase** | `DeleteEntirePotUseCase` |
+| **Repository** | `PotRepository.deleteEntirePot()` |
 
----
+**동작 흐름**
 
-## 마이페이지/아카이브
+1. `StudyPlanDetailScreen`에서 삭제 버튼 탭 → 확인 다이얼로그
+2. "확인" 선택 → `DeleteEntirePotUseCase(uid, potId, totalStudyingTime)` 호출
+3. 삭제 처리:
+   1. `users/{uid}/pots/{potId}` 문서 및 하위 `logs` 서브컬렉션 전체 삭제
+   2. `users/{uid}.totalStudyTime`에서 해당 화분의 누적 시간 차감
+4. 화분 목록 화면으로 복귀
 
-### F-Mypage-archive-01 학습 완료 상태의 화분 리스트
+**비즈니스 규칙**
 
-- **기능 설명**: 사용자가 마이페이지 → "기른 나무 수" 클릭하여 이동, 해당 나무의 학습 기록과 날짜별 세부 학습 내역을 조회
-- **관련 화면**: `MypageMain`, `MyPageArchive`
-- **입력 항목**:
-  - **DB**: uid, users/{userId}/pots isCompleted == true
-  - **사용자**: 화분 이미지 선택
-- **출력**: 선택된 나무 ID 기반 데이터 조회 → 날짜별 학습 기록 리스트
-- **예외처리**:
-  - 데이터 응답이 없는 경우 → Toast: "데이터를 불러올 수 없습니다"
-  - 기록이 없는 경우 → Empty View: "기록이 없습니다"
+- 삭제 시 해당 화분의 누적 학습 시간이 유저 총 학습 시간에서 차감됨
+- 삭제된 화분이 대표 화분이었을 경우 → `lastSelectedPotId`가 비워짐 → 홈에서 `Pot.EMPTY` 표시
 
 ---
 
-### F-Mypage-archive-02 기른 나무 상세 조회
+### 2-7. 화분 학습 완료 처리 ✅
 
-- **기능 설명**: 아카이브에서 특정 "기른 나무"를 선택하면 학습 기록(기간, 총 공부시간 등)과 날짜별 세부 내역을 조회
-- **관련 화면**: `MyPageArchiveScreen`, `MyPageArchiveDetailScreen`
-- **입력 항목**: 제목, 공유 버튼, 화분 이미지, 시작일, 종료일, 총 공부시간
-- **출력**: 선택된 나무 ID 기반 데이터 조회 → 날짜별 학습 기록 리스트 (기본 2줄 표시) → 클릭 시 상세 학습기록 다이얼로그 표시
-- **예외처리**:
-  - 데이터 응답이 없는 경우 → Toast: "데이터를 불러올 수 없습니다"
-  - 기록이 없는 경우 → Empty View: "기록이 없습니다"
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | POT-006 |
+| **UseCase** | `CompleteStudyPlanUseCase` |
+| **Repository** | `PotRepository.completeStudyPlan()` |
 
----
+**동작 흐름**
 
-### F-Mypage-archive-03 기른 나무 학습 기록 공유
+1. `StudyPlanDetailScreen`에서 "학습 완료" 버튼 탭 → 확인 다이얼로그
+2. "확인" 선택 → `CompleteStudyPlanUseCase(uid, potId)` 호출
+3. Firestore 갱신:
+   - `users/{uid}/pots/{potId}.isCompleted` → `true`
+   - `users/{uid}/pots/{potId}.completedAt` → 서버 타임스탬프
+   - `users/{uid}.completedPotsCount` → +1 증가
+4. 화분이 "완료" 탭으로 이동
 
-- **기능 설명**: 공유하기 버튼으로 학습 기록을 커뮤니티에 게시, 완료 시 `CommunityPostScreen`으로 이동
-- **관련 화면**: `MyPageArchiveDetailScreen`, `CommunityPostScreen`
-- **입력 항목**: **DB** — postId, potId, tag, title, studyLogIds (List\<String\>)
-- **출력**: 공유할 리스트 선택 → 공유 아이콘 클릭 → 화분 id, 태그, 제목, 학습 기록 id 전달
-- **예외처리**:
-  - 선택한 기록 없을 경우 → Toast: "공유할 기록을 선택해 주세요"
-  - 데이터 응답이 없는 경우 → Toast: "데이터를 불러올 수 없습니다"
-  - 기록이 없는 경우 → Empty View: "기록이 없습니다"
+**비즈니스 규칙**
 
----
-
-## 마이페이지
-
-### F-Mypage-01 프로필 변경
-
-- **기능 설명**: 대표 아이콘, 닉네임 변경
-- **관련 화면**: `MyPageScreen`
-- **입력 항목**: `MyPageScreen`에서 프로필 이미지 클릭 시 다이얼로그 표시
-  - **DB**: uid, nickname, users.pots (각 문서 level), profileImg
-  - **사용자**: 변경하려는 닉네임 입력, 변경하려는 화분 이미지 선택
-- **출력**: 닉네임 TextField 입력 → 저장 클릭 → 글자수 2~10글자 확인 → 서버 전달 → 닉네임 중복 검사 → 중복 아니면 DB update → "수정이 완료되었습니다" 토스트 → 다이얼로그 닫기 → 화면 반영
-- **예외처리**:
-  - 닉네임 중복 → "중복된 닉네임입니다." 토스트
-  - 닉네임 미기재 → "닉네임을 입력해주세요" 토스트
+- 완료 처리 후에도 해당 화분의 학습 기록은 유지됨
+- 완료된 화분에서는 학습 시작 불가
+- "기른 나무 아카이브"에서 조회 가능
 
 ---
 
-### F-Mypage-02 커뮤니티 활동 내역 조회
+### 2-8. 화분 성장 (레벨 시스템) 🚧
 
-- **기능 설명**: 사용자가 작성한 게시글, 댓글을 단 게시글, 좋아요를 누른 게시글 목록을 확인하고 관리
-- **관련 화면**: `MyPageScreen`, `MyCommuntiyFeedScreen`
-- **진입 조건**: `MyPageScreen`에서 내 활동 버튼 클릭 시
-- **입력 항목**: 활동 태그 (List\<String\>), uid, targetId, title, comment, commentId
-- **출력**: 게시글/댓글/좋아요 중 택 1 → 선택한 탭에 따라 Firebase activities 컬렉션에서 목록 표출 → 아이템 클릭 시 해당 게시글로 이동
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | POT-007 |
+| **도메인 타입** | `PlantLevel` (Lv.0 ~ Lv.6, 총 7단계) |
+| **계산 위치** | `Pot.level` (computed property) |
+
+**레벨 판정 로직** (현재 시간 기준만 구현)
+
+```
+val hours = potTotalStudyingTime / 3600000.0
+level = when {
+    hours >= 500.0 → 6
+    hours >= 200.0 → 5
+    hours >= 90.0  → 4
+    hours >= 40.0  → 3
+    hours >= 15.0  → 2
+    hours >= 5.0   → 1
+    else           → 0
+}
+```
+
+**레벨별 요구 조건 (전체)**
+
+| 전환 | 누적 학습 시간 | 아이템 소비 (미구현) |
+|:----:|:-:|------|
+| Lv.0 → Lv.1 | 5h | 🩷 ×1 |
+| Lv.1 → Lv.2 | 15h | ☀️ ×3 + 💧 ×1 + 🩷 ×5 |
+| Lv.2 → Lv.3 | 40h | 💧 ×5 + ☀️ ×15 + 🩷 ×22 |
+| Lv.3 → Lv.4 | 90h | 🌿 ×3 + ☀️ ×13 + 💧 ×4 |
+| Lv.4 → Lv.5 | 200h | 💊 ×1 + 🌿 ×10 + ☀️ ×17 + 🩷 ×30 |
+| Lv.5 → Lv.6 | 500h | 💊 ×5 + 🌿 ×10 + 💧 ×35 + ☀️ ×30 + 🩷 ×50 |
+
+> 🚧 **현재 상태**: 시간 기반 레벨 판정만 구현됨. 아이템 소비 조건은 미구현 상태로, 시간 충족 시 자동 레벨업
 
 ---
 
-## 마이페이지/세팅
+## 3. 학습 (Studying)
 
-### F-MypageSetting-01 앱 테마 설정
+### 3-1. 학습 시작 (스톱워치) ✅
 
-- **기능 설명**: 앱 테마 변경 기능
-- **관련 화면**: `MypageMain`
-- **진입 조건**: `MypageScreen` 화면에서 다크모드 토글버튼 클릭
-- **입력 항목**:
-  - **DB**: uid, isDarkMode (Boolean)
-  - **사용자**: 다크모드 토글 버튼 클릭
-- **출력**: 토글 클릭 → isDarkMode 필드 true/false 변경 → 앱 전체에 변경된 테마 반영
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | STUDY-001 |
+| **화면** | `StudyingScreen` |
+| **ViewModel** | `StudyingViewModel` |
+| **UseCase** | `StartStudyingSessionUseCase` |
+
+**동작 흐름**
+
+1. 홈 화면에서 대표 화분의 "학습 시작" 버튼 탭
+2. `StudyingScreen` 진입 → 즉시 스톱워치 시작
+3. `StartStudyingSessionUseCase(tag, title, potId, time, log)` 호출:
+   - `EnsureCurrentUserUseCase()`로 현재 유저 확인
+   - `StudyingRepository.initStudyingUser(StudyingUser(...))` → Firestore `studying/{uid}` 문서 생성
+   - `StudyingRepository.saveLocalSession(StudyingSession(...))` → DataStore에 세션 백업
+
+**스톱워치 기능**
+
+| 동작 | 설명 |
+|------|------|
+| **시작** | 화면 진입 시 자동 시작 |
+| **일시정지** | 일시정지 버튼 탭 → 타이머 멈춤 |
+| **재개** | 재개 버튼 탭 → 타이머 재시작 |
+| **종료** | 종료 버튼 탭 → 학습 종료 플로우 진입 |
+
+---
+
+### 3-2. 로컬 백업 (비정상 종료 복구) ✅
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | STUDY-002 |
+| **UseCase** | `UpdateLocalStudyingSessionUseCase` |
+| **DataSource** | `StudyingLocalDataSource` (Preferences DataStore) |
+
+**동작 흐름**
+
+1. 학습 진행 중 **5초마다** 로컬 DataStore에 세션 정보 저장
+2. 저장 데이터 (`StudyingSession`):
+   - `userId`: 사용자 uid
+   - `tag`: 학습 태그
+   - `title`: 화분 이름
+   - `potId`: 화분 ID
+   - `time`: 현재까지의 학습 시간 (밀리초)
+   - `log`: 기록 내용 (있을 경우)
+3. 비정상 종료 (강제 종료, 크래시 등) 후 재진입:
+   - `StudyingRepository.readLocalSession()` → 저장된 세션 확인
+   - 세션이 있으면 → 복구 다이얼로그 표시 → "계속" 선택 시 이어서 학습
+
+---
+
+### 3-3. 서버 동기화 (실시간 학습 시간 공유) ✅
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | STUDY-003 |
+| **Repository** | `StudyingRepository.updateStudyingTime()` |
+
+**동작 흐름**
+
+1. 학습 진행 중 **1분마다** Firestore 서버에 학습 시간 동기화
+2. `StudyingRepository.updateStudyingTime(tag, time)` 호출
+3. Firestore `studying/{uid}.studyingTime` 필드 갱신
+4. 이를 통해 다른 사용자가 실시간으로 학습 중인 유저의 시간을 확인 가능
+
+---
+
+### 3-4. 같은 분야 공부 사용자 조회 ✅
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | STUDY-004 |
+| **Repository** | `StudyingRepository.observeStudyingUser()` |
+
+**동작 흐름**
+
+1. 학습 화면 진입 시 `StudyingRepository.observeStudyingUser(tag)` Flow 구독
+2. Firestore `studying` 컬렉션에서 **같은 태그**로 학습 중인 유저를 실시간 수신
+3. 현재 세션의 공부 시간 기준으로 **상위 3명** 표시
+4. 표시 정보: 닉네임, 프로필 이미지, 현재 학습 시간
+
+**구독 방식**
+
+- Firestore `addSnapshotListener`로 실시간 구독
+- 해당 태그의 학습 중인 사용자가 추가/삭제/시간 갱신될 때마다 자동 업데이트
+
+---
+
+### 3-5. 학습 종료 ✅
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | STUDY-005 |
+| **UseCase** | `FinishStudyingUseCase`, `ClearStudyingSessionUseCase` |
+
+**동작 흐름**
+
+1. 학습 화면에서 "종료" 버튼 탭
+2. **학습 내용 입력** (선택사항):
+   - 제목(타임스탬프 자동 생성)
+   - 학습 내용 (여러 줄 입력 가능, `List<String>`)
+3. "저장" 버튼 탭 → `FinishStudyingUseCase(potId, timestamp, log, time)` 호출
+4. **병렬 실행** (async/awaitAll):
+   1. `StudyingRepository.saveStudyLog(potId, StudyLog.write(...))` → `users/{uid}/pots/{potId}/logs/{logId}` 생성
+   2. `StudyingRepository.updateTotalStudyTime(potId, studyTime)` → 화분 누적 시간 갱신
+   3. `StudyingRepository.updateUserTotalStudyTime(time)` → 유저 총 학습 시간 갱신
+5. `ClearStudyingSessionUseCase()` 호출:
+   1. `StudyingRepository.deleteStudyingUserInfo()` → Firestore `studying/{uid}` 문서 삭제
+   2. `StudyingRepository.clearLocalSession()` → DataStore 로컬 세션 삭제
+6. 병렬 작업 중 하나라도 실패하면 → `Result.Failure` 반환
+
+**비정상 종료 시 클리어**
+
+`ClearStudyingSessionUseCase(isInterrupted = true)`:
+- 원격 `studying` 문서만 삭제하고 로컬 세션은 보존 (복구에 사용)
+- 네트워크 에러일 경우에도 원격 삭제 결과를 반환
+
+---
+
+### 3-6. 학습 결과 화면 ✅
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | STUDY-006 |
+| **화면** | `StudyResultScreen` |
+| **ViewModel** | `StudyResultViewModel` |
+
+**표시 정보**
+
+| 요소 | 설명 |
+|------|------|
+| 공부 시간 | 이번 세션의 학습 시간 (시:분:초) |
+| 학습 내용 | 입력한 학습 내용 목록 |
+| 화분 성장 결과 | 레벨 변화 표시 (레벨업 발생 시 축하 애니메이션) |
+
+**추가 기능**
+
+| 기능 | 설명 |
+|------|------|
+| **갤러리 저장** | 결과 화면을 이미지로 캡처하여 기기 갤러리(MediaStore)에 저장 |
+| **커뮤니티 공유** | 토글 켜면 학습 기록을 커뮤니티에 공유 게시글로 작성 |
+
+---
+
+## 4. 학습 기록
+
+### 4-1. 화분별 학습 기록 조회 ✅
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | LOG-001 |
+| **화면** | `StudyPlanDetailScreen` |
+| **ViewModel** | `StudyPlanDetailViewModel` |
+| **UseCase** | `GetStudyLogsUseCase` |
+| **Repository** | `StudyLogRepository.getStudyLogs()` |
+
+**동작 흐름**
+
+1. `StudyPlanDetailScreen` 진입 시 `StudyLogRepository.getStudyLogs(uid, potId)` Flow 구독
+2. Firestore `users/{uid}/pots/{potId}/logs` 서브컬렉션의 전체 문서를 실시간 수신
+3. 각 학습 기록 카드에 표시:
+   - 제목 (타임스탬프)
+   - 학습 시간
+   - 생성일
+4. 기록 카드 탭 → 상세 조회 다이얼로그 (`StudyLogDetailDialog`)
+
+---
+
+### 4-2. 학습 기록 상세 조회 ✅
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | LOG-002 |
+| **UseCase** | `GetSelectedStudyLogUseCase` |
+| **Repository** | `StudyLogRepository.getSelectedStudyLog()` |
+
+**동작 흐름**
+
+1. 학습 기록 카드 탭 → `GetSelectedStudyLogUseCase(uid, potId, logId)` 호출
+2. `StudyLogRepository.getSelectedStudyLog(uid, potId, logId)` → 단건 문서 조회
+3. 상세 다이얼로그에 표시:
+   - 제목
+   - 학습 내용 목록 (`contents: List<String>`)
+   - 학습 시간
+   - 작성 일시
+
+---
+
+### 4-3. 학습 기록 삭제 ✅
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | LOG-003 |
+| **UseCase** | `DeleteStudyLogUseCase` |
+| **Repository** | `StudyLogRepository.deleteStudyLog()` |
+
+**동작 흐름**
+
+1. 학습 기록 상세에서 "삭제" 버튼 탭 → 확인 다이얼로그
+2. "확인" 선택 → `DeleteStudyLogUseCase(uid, potId, logId, studyingTime)` 호출
+3. 삭제 처리:
+   1. `users/{uid}/pots/{potId}/logs/{logId}` 문서 삭제
+   2. `users/{uid}/pots/{potId}.potTotalStudyingTime`에서 해당 기록의 시간 차감
+   3. `users/{uid}.totalStudyTime`에서 해당 기록의 시간 차감
+
+**비즈니스 규칙**
+
+| 규칙 | 설명 |
+|------|------|
+| 누적 시간 차감 | 삭제된 학습 기록의 시간은 화분·유저 양쪽에서 차감 |
+| 레벨 변동 | 시간 차감으로 인해 레벨이 내려갈 수 있음 (시간 기반 재계산) |
+| 보상 유지 | 이미 지급된 학습 완료 보상은 회수하지 않음 |
+
+---
+
+### 4-4. 학습 기록 커뮤니티 공유 ✅
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | LOG-004 |
+| **UseCase** | `CreatePostUseCase` (isShared = true) |
+
+**동작 흐름**
+
+1. 학습 기록 목록에서 공유할 기록 **다중 선택** (체크박스)
+2. "공유" 버튼 탭 → 커뮤니티 공유 게시글 작성 화면으로 이동
+3. 제목 입력 (본문 자동 구성: 선택한 학습 기록 목록)
+4. `CreatePostUseCase(isShared = true, ...)` 호출
+5. `Post.createShared(author, title, studyLogs, tag)` 생성 → Firestore에 저장
+
+**다중 선택 지원**
+
+- `StudyLog.isSelected` 플래그로 선택 상태 관리
+- 선택된 기록들의 `studyLogs` 리스트가 게시글의 `studyLogs` 필드에 포함
+
+---
+
+## 5. 커뮤니티
+
+### 5-1. 게시글 목록 조회 ✅
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | COMM-001 |
+| **화면** | `CommunityListScreen` |
+| **ViewModel** | `CommunityListViewModel` |
+| **Repository** | `CommunityRepository.loadPostPage()` |
+
+**동작 흐름**
+
+1. 커뮤니티 탭 진입 → `CommunityRepository.loadPostPage(cursor, pageSize, tagIds, sharedOnly)` 호출
+2. **커서 기반 페이지네이션**:
+   - `cursor`: 마지막 게시글의 `createdAt` (epoch millis), 첫 페이지는 `null`
+   - `pageSize`: 한 페이지당 불러올 게시글 수
+   - 반환값: `PostPage(items, nextCursor, hasMore)`
+   - `nextCursor`가 `null`이면 더 이상 게시글 없음
+3. 무한 스크롤: 스크롤 끝 도달 시 `nextCursor`로 다음 페이지 로드
+4. **pull-to-refresh**: 당겨서 새로고침 → `cursor = null`로 처음부터 재조회
+5. 각 게시글 카드에 표시:
+   - 작성자 닉네임, 프로필 이미지
+   - 제목
+   - 태그
+   - 좋아요 수, 댓글 수
+   - 작성 시간
+
+---
+
+### 5-2. 게시글 검색 ✅
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | COMM-002 |
+| **Repository** | `CommunityRepository.getAllPosts()` |
+
+**동작 흐름**
+
+1. 검색 아이콘 탭 → 검색 입력 필드 표시
+2. 검색어 입력 시 `CommunityRepository.getAllPosts(tagIds, sharedOnly)` 호출
+3. **클라이언트 측 필터링**:
+   - 전체 게시글을 로드한 후 제목/본문에 대해 `contains` 비교
+   - Firestore의 전문 검색 미지원으로 인한 클라이언트 측 구현
+4. 필터링된 결과 목록 표시
+
+> ⚠️ 전체 게시글 로드 방식이므로, 게시글 수 증가 시 성능 이슈 가능
+
+---
+
+### 5-3. 태그별 필터 ✅
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | COMM-003 |
+| **Repository** | `CommunityRepository.getTags()` |
+
+**필터 유형**
+
+| 필터 | 동작 |
+|------|------|
+| **전체** | 모든 게시글 표시 (`tagIds = []`, `sharedOnly = false`) |
+| **공유** | 학습 기록 공유 게시글만 (`sharedOnly = true`) |
+| **태그별** | 특정 태그의 게시글만 (`tagIds = [선택된 tagId]`) |
+
+---
+
+### 5-4. 일반 게시글 작성 ✅
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | COMM-004 |
+| **화면** | `CommunityPostScreen` |
+| **ViewModel** | `CommunityPostViewModel` |
+| **UseCase** | `CreatePostUseCase` |
+
+**동작 흐름**
+
+1. 게시글 목록에서 "글 작성" FAB 탭 → `CommunityPostScreen` 이동
+2. 입력 필드:
+   - **제목**: 필수, 최대 50자
+   - **본문**: 선택, 최대 1,000자
+   - **태그**: 목록에서 선택
+3. "등록" 버튼 탭 → `CreatePostUseCase(isShared = false, title, content, null, tag)` 호출
+4. `Post.createOriginal(author, title, content, tag)` 생성
+5. `CommunityRepository.savePost(post, CommunityActivity.post(uid, title))`:
+   - Firestore `posts/{postId}` 문서 생성
+   - `activities/{activityId}` 문서 생성 (활동 기록)
+   - `postId`를 반환하여 `activity.targetId`에 저장
+6. 목록 화면으로 복귀
+
+**입력 유효성 검증**
+
+| 규칙 | 조건 |
+|------|------|
+| 제목 | 1자 이상, 50자 이하 |
+| 본문 | 0자 이상, 1,000자 이하 |
+| 태그 | 필수 선택 |
+
+---
+
+### 5-5. 게시글 상세 조회 ✅
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | COMM-005 |
+| **화면** | `CommunityDetailScreen` |
+| **ViewModel** | `CommunityDetailViewModel` |
+| **Repository** | `CommunityRepository.getPostDetail()`, `CommunityRepository.getComments()` |
+
+**동작 흐름**
+
+1. 게시글 카드 탭 → `CommunityDetailScreen(postId)` 이동
+2. `CommunityRepository.getPostDetail(postId)` → 게시글 단건 조회
+3. `CommunityRepository.getComments(postId)` → 댓글 목록 조회
+4. 표시 정보:
+   - 작성자 프로필 (닉네임, 이미지)
+   - 제목, 본문
+   - 태그
+   - 좋아요 수, 좋아요 여부
+   - 댓글 목록
+   - 작성 시간, 수정 시간 (수정된 경우)
+   - 학습 기록 공유 게시글인 경우 → `studyLogs` 목록 표시
+5. pull-to-refresh → 상세 정보 재조회
+
+---
+
+### 5-6. 게시글 수정/삭제 ✅
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | COMM-006 |
+| **Repository** | `CommunityRepository.updatePost()`, `CommunityRepository.deletePost()` |
+
+**수정 동작**
+
+1. 본인 게시글의 "수정" 메뉴 탭 → `CommunityPostScreen`(편집 모드)으로 이동
+2. 기존 내용이 미리 채워진 상태로 수정
+3. "수정" 버튼 탭 → `CommunityRepository.updatePost(isShared, postId, title, content, tag)` 호출
+4. Firestore `posts/{postId}` 문서 갱신
+
+**삭제 동작**
+
+1. 본인 게시글의 "삭제" 메뉴 탭 → 확인 다이얼로그
+2. "확인" 선택 → `CommunityRepository.deletePost(postId, activityId)` 호출
+3. `posts/{postId}` 문서 삭제 + 관련 `activities/{activityId}` 문서 삭제
+
+**권한 제어**
+
+- 수정/삭제 메뉴는 `post.author.id == currentUser.uid`일 때만 표시
+
+---
+
+### 5-7. 좋아요 ✅
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | COMM-007 |
+| **UseCase** | `ToggleLikeUseCase` |
+| **Repository** | `CommunityRepository.toggleLike()` |
+
+**동작 흐름**
+
+1. 게시글의 좋아요 버튼 탭 → `ToggleLikeUseCase(postId, authorId, title)` 호출
+2. `EnsureCurrentUserUseCase()`로 현재 유저 확인
+3. **본인 게시글 체크**: `user.uid == authorId` → `AppError.Custom("본인 게시글은 좋아요할 수 없습니다.")` 반환
+4. `CommunityRepository.toggleLike(postId, uid, title)`:
+   - `likedBy` 배열에 uid 존재 여부 확인
+   - 없으면 → 추가 + `likeCount +1` + 활동 기록 생성
+   - 있으면 → 제거 + `likeCount -1` + 활동 기록 삭제
+5. 반환값: `true`(좋아요 추가) / `false`(좋아요 취소)
+
+---
+
+### 5-8. 댓글 CRUD ✅
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | COMM-008 |
+| **UseCase** | `AddCommentUseCase` |
+| **Repository** | `CommunityRepository.addComment()`, `.updateComment()`, `.deleteComment()` |
+
+**댓글 작성**
+
+1. 게시글 상세 화면의 댓글 입력 필드에 내용 입력 (최대 100자)
+2. "등록" 버튼 탭 → `AddCommentUseCase(postId, title, content)` 호출
+3. 댓글 문서 생성: `posts/{postId}/comments/{commentId}`
+4. 활동 기록 생성: `activities/{activityId}` (type = "댓글")
+5. `posts/{postId}.commentCount` +1 갱신
+
+**댓글 수정**
+
+1. 본인 댓글의 "수정" 메뉴 탭 → 수정 입력 UI
+2. `CommunityRepository.updateComment(postId, commentId, newContent)` 호출
+
+**댓글 삭제**
+
+1. 본인 댓글의 "삭제" 메뉴 탭 → 확인 다이얼로그
+2. `CommunityRepository.deleteComment(postId, commentId)` 호출
+3. `posts/{postId}.commentCount` -1 갱신
+
+---
+
+### 5-9. 커뮤니티 활동 내역 ✅
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | COMM-009 |
+| **화면** | `CommunityActivityScreen` |
+| **ViewModel** | `CommunityActivityViewModel` |
+| **Repository** | `CommunityRepository.observeActivity()` |
+
+**동작 흐름**
+
+1. 마이페이지 → "활동 내역" 탭 → `CommunityActivityScreen` 이동
+2. `CommunityRepository.observeActivity(selected)` Flow 구독
+3. 필터링 기준:
+   - "게시물": `ActivityType.POST` 활동만
+   - "댓글": `ActivityType.COMMENT` 활동만
+   - "좋아요": `ActivityType.LIKE` 활동만
+4. 활동 아이템 탭 → 해당 게시글(`targetId`)로 이동
+   - 이동 전 `CommunityRepository.isPostExist(postId)` 확인
+   - 게시글이 삭제된 경우 → "삭제된 게시글입니다" 메시지
+
+**활동 데이터 (`CommunityActivity`)**
+
+| 필드 | 설명 |
+|------|------|
+| `uid` | 활동한 유저 |
+| `type` | "게시물" / "댓글" / "좋아요" |
+| `title` | 관련 게시글 제목 |
+| `targetId` | 관련 게시글 ID |
+| `comment` | 댓글 내용 (type이 "댓글"인 경우) |
+| `commentId` | 댓글 ID (type이 "댓글"인 경우) |
+| `createAt` | 활동 시간 |
+
+---
+
+### 5-10. 북마크 📋
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | COMM-010 |
+| **데이터 모델** | `Post.bookmarkedBy: List<String>`, `Post.bookmarkCount: Int` |
+
+**기획 내용**
+
+- 좋아요와 별개로 게시글을 개인 목적으로 저장
+- `bookmarkedBy` 배열에 uid 추가/제거로 토글
+- 북마크한 게시글 목록을 마이페이지에서 조회 가능
+- 본인 게시글 북마크 가능 여부: 허용
+
+> 📋 데이터 모델은 정의되어 있으나 UI/로직 미구현
+
+---
+
+## 6. 마이페이지
+
+### 6-1. 프로필 조회 ✅
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | MY-001 |
+| **화면** | `MypageScreen` |
+| **ViewModel** | `MyPageViewModel` |
+| **Repository** | `UserRepository.currentUser` |
+
+**표시 정보**
+
+| 요소 | 데이터 소스 |
+|------|------------|
+| 닉네임 | `User.nickname` |
+| 프로필 이미지 | `User.profileImg` (화분 레벨 이미지 기반) |
+| 총 공부 시간 | `User.totalStudyTime` (밀리초 → 포맷 변환) |
+
+---
+
+### 6-2. 프로필 수정 (닉네임 + 이미지) ✅ / 🚧
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | MY-002 |
+| **UseCase** | `UpdateProfileUseCase` |
+| **Repository** | `UserRepository.isNicknameTaken()`, `.registerNickname()`, `.deleteNickname()`, `.updateProfile()` |
+
+**동작 흐름**
+
+1. 마이페이지에서 프로필 편집 버튼 탭
+2. 닉네임 변경:
+   - 새 닉네임 입력 (2~10자)
+   - `UserRepository.isNicknameTaken(newNickname)` → 중복 검사
+   - 중복 아니면 → `registerNickname(newNickname)` + `deleteNickname(oldNickname)`
+3. 프로필 이미지 변경 (🚧):
+   - `GetProfileImageLevelListUseCase`로 선택 가능한 이미지 목록 조회
+   - 화분 성장 레벨 이미지 중 선택
+4. `UserRepository.updateProfile(updatedUser)` → Firestore 갱신
+
+**닉네임 변경 롤백 로직**
+
+실패 시 닉네임 일관성 유지를 위한 롤백 처리:
+- 프로필 갱신 실패 → `rollbackNicknameChange()`:
+  1. 이전 닉네임 재등록 (`registerNickname(previousNickname)`)
+  2. 새 닉네임 삭제 (`deleteNickname(newNickname)`)
+- 이전 닉네임 삭제 실패 → `rollbackRegisteredNickname()`:
+  1. 새 닉네임 삭제 (`deleteNickname(newNickname)`)
+
+---
+
+### 6-3. 다크모드 ✅
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | MY-003 |
+| **UseCase** | `UpdateDarkModeUseCase` |
+| **Repository** | `UserRepository.updateDarkMode()` |
+
+**동작 흐름**
+
+1. 마이페이지에서 다크모드 토글 스위치 조작
+2. `UpdateDarkModeUseCase(isDarkMode)` 호출
+3. `UserRepository.updateDarkMode()` → 로컬 DataStore에 기기 설정으로 저장
+4. `ObserveDarkModeUseCase`가 DataStore 변경을 구독 → 앱 테마 즉시 전환
+
+**저장 방식**
+
+- 로컬 Preferences DataStore에 기기별 설정으로 저장 (계정과 무관)
+- `SettingsLocalDataSource.isDarkMode: Flow<Boolean?>` 구독으로 실시간 반영
+- 참고: `User.isDarkMode` 필드가 Firestore DTO에 남아 있으나, 실제 다크모드 제어에는 사용되지 않음
+
+---
+
+## 7. 출석체크
+
+### 7-1. 출석판 📋
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | ATT-001 |
+| **화면** | `HomeScreen` → `AttendanceCheckDialog` |
+| **Repository** | `UserRepository.checkAttendance()` |
+| **도메인 모델** | `DailyCheckThisMonth`, `AttendanceDecision`, `AttendanceRewardTable` |
+
+**동작 흐름**
+
+1. 홈 화면에서 출석체크 버튼 탭 → `AttendanceCheckDialog` 표시
+2. 28일 고정 출석판 표시 (윤달/윤년 구분 없이 통일)
+3. "출석하기" 버튼 탭 → `UserRepository.checkAttendance(uid)` 호출
+4. `DailyCheckThisMonth.decideNext(nowKst)` 호출하여 출석 판정:
+
+**출석 판정 로직**
+
+```
+KST 기준 현재 날짜 확인
+├─ 마지막 출석 날짜와 같은 달이고 28회 이상 → MonthCompleted (이달 출석 완료)
+├─ 마지막 출석 날짜와 오늘이 같음 → AlreadyChecked (이미 출석함)
+├─ 같은 달이면 count + 1, 다른 달이면 1로 리셋
+│   └─ newCount > 28 → MonthCompleted
+│   └─ AttendanceDecision.Success(newCount, reward)
+```
+
+**출석 보상 테이블**
+
+| 출석 횟수 | 보상 |
+|:---------:|------|
+| 2일 | 🩷 하트 ×1 |
+| 4일 | ☀️ 햇빛 ×1 |
+| 7일 | 💰 100 Gold |
+| 9일 | 💧 물 ×1 |
+| 12일 | 🩷 하트 ×1 |
+| 14일 | 💰 200 Gold |
+| 17일 | ☀️ 햇빛 ×1 |
+| 20일 | 🌿 비료 ×1 |
+| 21일 | 💰 300 Gold |
+| 23일 | 💧 물 ×1 |
+| 25일 | 💊 영양제 ×1 |
+| 28일 | 💰 500 Gold |
+
+> 보상이 없는 날(1, 3, 5, 6, 8, 10, 11, 13, 15, 16, 18, 19, 22, 24, 26, 27일)에도 출석 카운트는 증가
+
+**비즈니스 규칙**
+
+| 규칙 | 설명 |
+|------|------|
+| 하루 1회 | 서버 시간(KST) 기준, 당일 중복 출석 불가 |
+| 28일 고정 | 달의 실제 일수와 무관하게 28칸 |
+| 누적 방식 | 연속 출석 아닌 누적 출석 (빈 날이 있어도 카운트 이어짐) |
+| 월 리셋 | 다른 달로 넘어가면 카운트 1부터 재시작 |
+| 중복 보상 방지 | Transaction 기반 (`isRewarded` 플래그) |
+
+---
+
+## 8. 아이템 · 보상 · 상점
+
+### 8-1. 성장 아이템 시스템 📋
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | ITEM-001 |
+| **도메인 타입** | `ItemType` |
+| **데이터 모델** | `User.item: Item(heart, sun, water, fertilizer, nutrient, box)` |
+
+**아이템 정의**
+
+| `ItemType` | 한국어명 | 등급 | 상점가격(Gold) | 보너스박스 확률 |
+|:----------:|:-------:|:----:|:-------------:|:-------------:|
+| `HEART` | 정성 | 기본 | 50 | 60% |
+| `SUN` | 햇빛 | 일반 | 100 | 13% |
+| `WATER` | 물 | 일반 | 250 | 9% |
+| `FERTILIZER` | 비료 | 고급 | 450 | 5% |
+| `NUTRIENT` | 영양제 | 최고 등급 | 950 | 2% |
+| `BOX` | 보너스 박스 | — | 250 | 5% |
+| `GOLD_300` | 300골드 | — | — | 3.5% |
+| `GOLD_500` | 500골드 | — | — | 2% |
+| `GOLD_1000` | 1000골드 | — | — | 0.5% |
+
+> 📋 아이템 수급/소비 로직은 기획 완료, UI/기능 미구현
+
+---
+
+### 8-2. 학습 완료 보상 📋
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | ITEM-002 |
+
+**보상 정책** (해당 티어 하나만 적용, 하위 티어 중복 없음)
+
+| 세션 공부 시간 | 아이템 보상 | 보너스박스 |
+|:-------------:|------------|:---------:|
+| ≥ 1h | 🩷 ×1 | 1개 |
+| ≥ 3h | 🩷 ×1, ☀️ ×1 | 2개 |
+| ≥ 5h | 🩷 ×1, ☀️ ×1, 💧 ×1 | 3개 |
+| ≥ 7h | 🩷 ×1, ☀️ ×1, 💧 ×1, 🌿 ×1 | 4개 |
+| ≥ 9h | 🩷 ×1, ☀️ ×1, 💧 ×1, 🌿 ×1, 💊 ×1 | 5개 |
+
+---
+
+### 8-3. 보너스박스 (랜덤박스) 📋
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | ITEM-003 |
+
+**확률 분포** (1개 개봉 시 1가지 보상)
+
+| 보상 | 확률 |
+|------|:----:|
+| 🩷 하트 ×1 | 60% |
+| ☀️ 햇빛 ×1 | 13% |
+| 💧 물 ×1 | 9% |
+| 🌿 비료 ×1 | 5% |
+| 💊 영양제 ×1 | 2% |
+| 💰 300 Gold | 3.5% |
+| 💰 500 Gold | 2% |
+| 💰 1,000 Gold | 0.5% |
+
+> ⚠️ PRD 기준 Gold 합산 확률은 11%이나, 코드 기준(`ItemType`)에서는 보너스 박스(5%) 항목이 추가되어 총합 100%
+
+---
+
+### 8-4. Gold 시스템 📋
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | ITEM-004 |
+| **데이터 모델** | `User.coin: Int` |
+
+**Gold 수급 경로**
+
+| 경로 | 상세 |
+|------|------|
+| 보너스박스 | 300G(3.5%) / 500G(2%) / 1,000G(0.5%) |
+| 출석 보상 | 7일(100G) / 14일(200G) / 21일(300G) / 28일(500G) |
+| 목표 달성 | 기획 미정 |
+
+---
+
+### 8-5. 상점 📋
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | ITEM-005 |
+
+**상점 아이템 가격**
+
+| 아이템 | 가격 (Gold) |
+|--------|:-----------:|
+| 🩷 하트 | 50 |
+| ☀️ 햇빛 | 100 |
+| 💧 물 | 250 |
+| 🌿 비료 | 450 |
+| 💊 영양제 | 950 |
+| 🪴 화분 | 3,000 |
+
+> 📋 모든 기본 기능 완료 후 개발 예정
+
+---
+
+## 9. 리포트 · 통계
+
+### 9-1. 학습 달력 🚧
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | REPORT-001 |
+| **화면** | `ReportScreen` |
+
+**기획 내용**
+
+- 달력 UI에 공부한 날짜를 초록색 원으로 표시
+- 날짜 선택 시 해당 일자의 학습 기록 목록 조회
+- `ReportScreen` 컴포저블은 존재하나 세부 구현 미확인
+
+---
+
+### 9-2. 일간/월간 학습 통계 📋
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | REPORT-002 |
+
+**기획 내용**
+
+| 통계 | 항목 |
+|------|------|
+| 일간 | 총 공부 시간, 최대 공부 시간, 최소 공부 시간, 평균 공부 시간 |
+| 월간 | 월간 학습 시간 그래프, 총/최대/최소/평균 |
+
+---
+
+## 10. 알림
+
+### 10-1. 학습 리마인더 / 학습 목표 알림 📋
+
+| 항목 | 내용 |
+|------|------|
+| **기능 ID** | NOTI-001 |
+| **기술 스택** | FCM (Firebase Cloud Messaging) |
+
+**기획 내용**
+
+| 알림 유형 | 설명 |
+|-----------|------|
+| 학습 리마인더 | 설정한 시간에 공부 시작 알림 발송 |
+| 학습 목표 | 일간/월간 목표 달성 시 알림 |
+
+> 📋 FCM 의존성은 추가되어 있으나 기능 미구현
+
+---
+
+## 부록
+
+### A. UseCase 매핑 테이블
+
+| 패키지 | UseCase | 설명 |
+|--------|---------|------|
+| `auth` | `CheckAutoLoginUseCase` | 자동 로그인 판정 |
+| | `SignInWithGoogleUseCase` | Google 로그인 |
+| | `SignInWithEmailUseCase` | 이메일 로그인 (⛔ 제거 예정) |
+| | `SignUpWithEmailUseCase` | 이메일 회원가입 (⛔ 제거 예정) |
+| | `SetNicknameUseCase` | 닉네임 설정 |
+| | `SignOutUseCase` | 로그아웃 |
+| | `DeleteAccountUseCase` | 회원탈퇴 |
+| | `ResolveUserSessionUseCase` | 로그인 후 유저 세션 초기화 |
+| `pot` | `GetPotListUseCase` | 화분 목록 조회 |
+| | `GetActivePotUseCase` | 활성 화분 조회 |
+| | `GetPotDetailUseCase` | 화분 상세 조회 |
+| | `UpdatePotNameUseCase` | 화분 이름 변경 |
+| | `DeleteEntirePotUseCase` | 화분 삭제 |
+| | `CompleteStudyPlanUseCase` | 화분 학습 완료 |
+| `studying` | `StartStudyingSessionUseCase` | 학습 시작 |
+| | `UpdateLocalStudyingSessionUseCase` | 로컬 세션 갱신 (5초마다) |
+| | `FinishStudyingUseCase` | 학습 종료 |
+| | `ClearStudyingSessionUseCase` | 학습 세션 정리 |
+| `studyLog` | `GetStudyLogsUseCase` | 학습 기록 목록 조회 |
+| | `GetSelectedStudyLogUseCase` | 학습 기록 단건 조회 |
+| | `DeleteStudyLogUseCase` | 학습 기록 삭제 |
+| `community` | `CreatePostUseCase` | 게시글 작성 |
+| | `AddCommentUseCase` | 댓글 작성 |
+| | `ToggleLikeUseCase` | 좋아요 토글 |
+| | `DeleteActivitiesUseCase` | 활동 기록 삭제 |
+| `mypage` | `UpdateProfileUseCase` | 프로필 수정 |
+| | `UpdateDarkModeUseCase` | 다크모드 토글 |
+| | `ObserveDarkModeUseCase` | 다크모드 설정 구독 (DataStore) |
+| | `GetProfileImageLevelListUseCase` | 프로필 이미지 목록 |
+| `session` | `EnsureCurrentUserUseCase` | 현재 유저 확인 (세션 가드) |
+
+### B. Repository 인터페이스 매핑
+
+| Repository | 구현체 | 주요 데이터소스 |
+|------------|--------|----------------|
+| `AuthRepository` | `AuthRepositoryImpl` | Firebase Auth |
+| `UserRepository` | (StateFlow 기반) | Firestore `users/{uid}`, `nicknames` |
+| `PotRepository` | — | Firestore `users/{uid}/pots` |
+| `StudyingRepository` | — | Firestore `studying`, DataStore |
+| `StudyLogRepository` | `StudyLogRepositoryImpl` | Firestore `users/{uid}/pots/{potId}/logs` |
+| `CommunityRepository` | — | Firestore `posts`, `activities` |
+
+### C. 에러 분류 체계
+
+| AppError | 메시지 | 트리거 상황 |
+|----------|--------|------------|
+| `Network` | 인터넷 연결이 원활하지 않습니다 | Firestore 타임아웃, 오프라인 |
+| `Auth` | 인증에 실패했습니다 | Firebase Auth 에러 |
+| `UnknownUser` | 사용자 정보를 가져오지 못했습니다 | `currentUser == null` |
+| `Email` | 이메일 형식이 올바르지 않습니다 | 이메일 유효성 검증 |
+| `Password` | 비밀번호 형식이 올바르지 않습니다 | 비밀번호 유효성 검증 |
+| `Server` | 서버에 오류가 발생했습니다 | Firestore 서버 에러 |
+| `Unknown` | 알 수 없는 오류가 발생했습니다 | 예상 외 예외 |
+| `Upload` | 저장에 실패했습니다 | 문서 저장 실패 |
+| `Local` | 로컬 저장 실패 | DataStore 에러 |
+| `Permission` | 권한이 없습니다 | Firestore 보안 규칙 위반 |
+| `Custom(msg)` | (동적 메시지) | 닉네임 중복, 본인 좋아요 등 |
+
+---
+
+## 관련 문서
+
+| 문서 | 경로 |
+|------|------|
+| PRD | [docs/PRD.md](PRD.md) |
+| User Flow | [docs/USER_FLOW.md](USER_FLOW.md) |
+| System Flow | [docs/SYSTEM_FLOW.md](SYSTEM_FLOW.md) |
+| 화면명세 | docs/SCREEN_SPEC.md (작성 예정) |
+| 데이터 모델 | [docs/DATA_MODEL.md](DATA_MODEL.md) |

@@ -93,7 +93,7 @@
 | **마이페이지** | 프로필 조회 | ✅ | 닉네임, 이미지, 총 공부 시간 |
 | | 닉네임 변경 | ✅ | 2~10자, 중복 불가 |
 | | 프로필 이미지 변경 | 🚧 | 화분 성장 이미지 기반, 변경 가능성 있음 |
-| | 다크모드 | ✅ | DataStore 기반, 유저별 설정 유지 |
+| | 다크모드 | ✅ | DataStore 기반, 기기별 로컬 저장 |
 | **출석체크** | 출석판 (28일 고정) | 📋 | 윤달/윤년 등은 28일 통일 |
 | | 하루 1회 출석 + 누적 보상 | 📋 | Gold·성장 아이템 지급, 서버 시간 기준, Transaction 기반 중복 보상 방지 |
 | **리포트/통계** | 학습 달력 (공부한 날짜 표시) | 🚧 | ReportScreen 존재, 세부 미확인 |
@@ -226,7 +226,7 @@
 | 항목 | 분류 | 설명 | 플로우 | 비고 |
 |------|------|------|--------|------|
 | **학습 완료 보상** | 기능 | 세션 공부 시간에 따라 아이템 + 보너스박스 지급 | — | 해당 티어 하나만 적용, 하위 티어 중복 지급 없음 |
-| **보너스박스** | 기능 | 보너스박스를 열면 확률에 따라 1가지 보상 드롭 | — | 아이템(89%) 또는 Gold(11%) |
+| **보너스박스** | 기능 | 보너스박스를 열면 확률에 따라 1가지 보상 드롭 | — | 아이템(89%) / 보너스박스(5%) / Gold(6%) |
 | **상점** | 기능 | Gold를 사용하여 성장 아이템 구매 | — | 모든 기본 기능 완료 후 개발 |
 | **Gold 수급** | 특징 | 보너스박스, 출석, 목표 달성에서 획득 | — | 목표 달성 보상 구체적 기획 미정 |
 
@@ -249,7 +249,8 @@
 | 💧 물 | 9% |
 | 🌿 비료 | 5% |
 | 💊 영양제 | 2% |
-| 300 Gold | 8.5% |
+| 📦 보너스박스 | 5% |
+| 300 Gold | 3.5% |
 | 500 Gold | 2% |
 | 1,000 Gold | 0.5% |
 
@@ -270,7 +271,7 @@ Gold를 사용하여 성장 아이템을 구매할 수 있다.
 
 | 수급 경로 | 내용 |
 |---------|------|
-| **보너스박스** | 300G(8.5%) / 500G(2%) / 1,000G(0.5%) |
+| **보너스박스** | 300G(3.5%) / 500G(2%) / 1,000G(0.5%) |
 | **출석** | 출석 보상으로 Gold 지급 |
 | **목표 달성** | 일간·월간 목표, 누적 학습 시간, 화분 성장 달성 시 지급 (구체적 기획 미정) |
 
@@ -400,7 +401,7 @@ com.a32b.plant
 | `posts/{postId}` | author{id,nickname,profileImg}, title, content, tag{id,name,parentId,no}, commentCount, likeCount, likedBy[], bookmarkCount, bookmarkedBy[], createdAt, activityId, isShared, studyLogs[] | 게시글 |
 | `posts/{postId}/comments/{commentId}` | user{uid,nickname,profileImg}, content, activityId, createdAt | 댓글 |
 | `activities/{activityId}` | uid, type, title, comment, commentId, targetId, createAt | 커뮤니티 활동 |
-| `studying/{studyingId}` | uid, nickname, tag, studyingTime, profileImg | 실시간 학습 현황 |
+| `studying/{uid}` | nickname, tag, studyingTime, profileImg | 실시간 학습 현황 |
 | `nicknames/{nickname}` | nickname | 닉네임 중복 방지 |
 
 ---
