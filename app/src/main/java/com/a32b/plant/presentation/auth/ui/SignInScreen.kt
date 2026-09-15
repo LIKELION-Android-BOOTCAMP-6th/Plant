@@ -35,9 +35,6 @@ import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.auth.viewmodel.SignInEvent
 import com.a32b.plant.presentation.auth.viewmodel.SignInViewModel
-import com.a32b.plant.presentation.theme.background
-import com.a32b.plant.presentation.theme.primary
-import com.a32b.plant.presentation.theme.sub2
 import androidx.compose.ui.res.stringResource
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
@@ -103,7 +100,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp),
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = background),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
                 elevation = CardDefaults.cardElevation(8.dp)
             ) {
                 Column(
@@ -204,7 +201,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
         Dialog(onDismissRequest = { showFindPasswordDialog = false }) {
             Card(
                 shape = RoundedCornerShape(8.dp),
-                colors = CardDefaults.cardColors(background)
+                colors = CardDefaults.cardColors(MaterialTheme.colorScheme.background)
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -257,7 +254,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                             onClick = { showFindPasswordDialog = false },
                             modifier = Modifier.height(45.dp).weight(1f),
                             shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(sub2)
+                            colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.surfaceVariant)
                         ) { Text("취소", style = MaterialTheme.typography.bodyMedium) }
 
                         Spacer(modifier = Modifier.width(16.dp))
@@ -288,7 +285,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(primary)
+            .background(MaterialTheme.colorScheme.primary)
     ) {
         Column(
             modifier = Modifier
@@ -325,7 +322,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = background),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
                 elevation = CardDefaults.cardElevation(4.dp)
             ) {
                 Column(

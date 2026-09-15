@@ -32,7 +32,6 @@ import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.presentation.community.viewmodel.CommunityDetailEvent
 import com.a32b.plant.presentation.community.viewmodel.CommunityDetailViewModel
-import com.a32b.plant.presentation.theme.*
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.TagChip
 import com.a32b.plant.presentation.core.extension.showToast
@@ -101,7 +100,7 @@ fun CommunityDetailScreen(
                         containerColor = MaterialTheme.colorScheme.secondaryContainer
                 ),
                 shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, Color.LightGray),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                 elevation = CardDefaults.elevatedCardElevation(1.dp)
             ) {
                 LazyColumn(modifier = Modifier.padding(20.dp)) {
@@ -389,7 +388,7 @@ fun CommentInputSection(nickname: String, text: String, isSubmitting: Boolean = 
                 Text(
                     "${text.length} / $maxLength",
                     fontSize = 12.sp,
-                    color = if (text.length >= maxLength) Color.Red else Color.Gray,
+                    color = if (text.length >= maxLength) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSecondary,
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(modifier = Modifier.weight(1f))
@@ -400,11 +399,11 @@ fun CommentInputSection(nickname: String, text: String, isSubmitting: Boolean = 
                     modifier = Modifier
                         .height(32.dp)
                         .padding(top = 4.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = primary),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(4.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
                 ) {
-                    Text(if (isSubmitting) "등록 중" else "등록", fontSize = 12.sp, color = Color.White,style = MaterialTheme.typography.bodyMedium)
+                    Text(if (isSubmitting) "등록 중" else "등록", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }

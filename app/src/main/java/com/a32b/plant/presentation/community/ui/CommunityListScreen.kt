@@ -39,7 +39,6 @@ import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.domain.model.Post
 import com.a32b.plant.presentation.community.viewmodel.CommunityListEvent
 import com.a32b.plant.presentation.community.viewmodel.CommunityListViewModel
-import com.a32b.plant.presentation.theme.primary
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -358,7 +357,7 @@ fun PostCard(post: Post, isLiked: Boolean, onClick: () -> Unit) {
                 IconStat(
                     iconRes = if (isLiked) R.drawable.ic_community_like_selected else R.drawable.ic_community_like_normal,
                     text = post.likeCount.toString(),
-                    tint = if (isLiked) primary else Color.Black
+                    tint = if (isLiked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                 )
             }
         }

@@ -11,7 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.a32b.plant.presentation.theme.LocalIsDarkTheme
-import com.a32b.plant.presentation.theme.primary
 
 @Composable
 fun TagChip(text: String, size: Int, isSelected: Boolean = true) {

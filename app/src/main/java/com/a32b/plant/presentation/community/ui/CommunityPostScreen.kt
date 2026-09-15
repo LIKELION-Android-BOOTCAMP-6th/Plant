@@ -30,7 +30,6 @@ import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.community.viewmodel.CommunityPostEvent
 import com.a32b.plant.presentation.community.viewmodel.CommunityPostViewModel
 import com.a32b.plant.presentation.core.extension.showToast
-import com.a32b.plant.presentation.theme.background
 
 @Composable
 fun CommunityPostScreen(
@@ -207,7 +206,7 @@ fun PostTopBar(isEditMode: Boolean, isSubmitting: Boolean = false, onBackClick: 
         title = { Text(if (isEditMode) "글 수정" else "글쓰기", style = MaterialTheme.typography.titleLarge) },
         navigationIcon = {
             IconButton(onClick = onBackClick) {
-                Icon(Icons.Default.ArrowBack, contentDescription = null, tint = Color.DarkGray)
+                Icon(Icons.Default.ArrowBack, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
             }
         },
         actions = {
@@ -255,7 +254,7 @@ fun PostInputField(
             placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium) },
             modifier = modifier.fillMaxWidth()
                 .shadow(elevation = 1.dp, shape = RoundedCornerShape(8.dp))
-                .background(background),
+                .background(MaterialTheme.colorScheme.background),
             singleLine = singleLine,
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
