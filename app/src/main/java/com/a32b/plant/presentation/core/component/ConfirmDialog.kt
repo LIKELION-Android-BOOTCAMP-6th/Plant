@@ -19,8 +19,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.a32b.plant.presentation.theme.primary
-import com.a32b.plant.presentation.theme.sub2
 
 @Composable
 fun ConfirmDialog(
