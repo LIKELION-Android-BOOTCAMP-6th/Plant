@@ -33,8 +33,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.a32b.plant.presentation.theme.primary
-import com.a32b.plant.presentation.theme.sub2
 
 @Composable
 fun PasswordReauthDialog(
@@ -47,7 +45,7 @@ fun PasswordReauthDialog(
     Dialog(onDismissRequest = onDismiss) {
         Card(
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.secondaryContainer),
+            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.primaryContainer),
             elevation = CardDefaults.cardElevation(3.dp)
         ) {
             Column(
@@ -90,6 +88,8 @@ fun PasswordReauthDialog(
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
+                        focusedTrailingIconColor = MaterialTheme.colorScheme.onSecondary,
+                        unfocusedTrailingIconColor = MaterialTheme.colorScheme.onSecondary,
                         focusedTextColor = MaterialTheme.colorScheme.onSurface,
                         unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                         focusedPlaceholderColor = MaterialTheme.colorScheme.onSecondary,
@@ -97,6 +97,7 @@ fun PasswordReauthDialog(
                     ),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    textStyle = MaterialTheme.typography.bodyMedium,
                     shape = RoundedCornerShape(8.dp)
                 )
 
@@ -109,7 +110,7 @@ fun PasswordReauthDialog(
                             .height(30.dp)
                             .weight(1f),
                         shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(sub2)
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.outline)
                     ) {
                         Text("취소", style = MaterialTheme.typography.bodyMedium)
                     }
@@ -122,7 +123,7 @@ fun PasswordReauthDialog(
                             .height(30.dp)
                             .weight(1f),
                         shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(primary)
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
                         Text("확인", style = MaterialTheme.typography.bodyMedium)
                     }
