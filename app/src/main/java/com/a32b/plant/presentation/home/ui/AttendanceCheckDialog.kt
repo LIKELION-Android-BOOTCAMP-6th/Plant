@@ -158,7 +158,7 @@ private fun AttendanceBoard(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(10.dp)),
             color = MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.secondary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
             gapSize = 0.dp,
             drawStopIndicator = {}
         )

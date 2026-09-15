@@ -389,7 +389,7 @@ fun DarkModeToggleButton(
             // 좌측
             Text(
                 text = "다크모드",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.padding(start = 8.dp),
             )
             // 우측
@@ -430,7 +430,7 @@ fun ButtonTemplate(text: String, enabled: Boolean = true, onClick: () -> Unit) {
             horizontalArrangement = Arrangement.Start
         ) {
             Text(
-                text = text, style = MaterialTheme.typography.titleMedium,
+                text = text, style = MaterialTheme.typography.titleSmall,
             )
         }
     }
