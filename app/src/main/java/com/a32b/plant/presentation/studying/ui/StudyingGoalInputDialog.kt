@@ -68,7 +68,7 @@ fun StudyingGoalInputDialog(
     Dialog(onDismissRequest = {}) {
         Card(
             shape = RoundedCornerShape(21.dp),
-            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceVariant),
+            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.primaryContainer),
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(if(!isEditing)0.5f else 0.3f)
@@ -91,7 +91,6 @@ fun StudyingGoalInputDialog(
                     Text(
                         "${index + 1} / 10 ",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(top = 7.dp)
                     )
                 }
@@ -134,7 +133,7 @@ fun StudyingGoalInputDialog(
                                 Text(
                                     text = "오늘의 학습 목표를 기록해보세요!",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onTertiary
+                                    color = MaterialTheme.colorScheme.outline
                                 )
                             },
                             maxLines = 11,
@@ -145,7 +144,7 @@ fun StudyingGoalInputDialog(
                             "${currentText.length}/$maxLength",
                             style = MaterialTheme.typography.bodySmall,
                             color = if (currentText.length >= maxLength) MaterialTheme.colorScheme.error
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            else MaterialTheme.colorScheme.onSecondary,
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
                                 .padding(end = 12.dp, bottom = 8.dp)
@@ -188,7 +187,7 @@ fun StudyingGoalInputDialog(
                         enabled = localLogs.size < maxLogSize || isEditing,
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.height(33.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = sub3, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.outline)
                     ) { Text(if (isEditing) "취소" else "추가", style = MaterialTheme.typography.bodySmall) }
 
                     Button(
@@ -207,7 +206,7 @@ fun StudyingGoalInputDialog(
                         },
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.height(33.dp).padding(start = 10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error.copy(0.3f), contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error.copy(0.3f))
                     ) { Text("삭제", style = MaterialTheme.typography.bodySmall) }
 
 
@@ -217,7 +216,7 @@ fun StudyingGoalInputDialog(
                         onClick = {if (isEditing) onConfirmEdit(localLogs[index]) else onConfirm(localLogs.toList())},
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.height(33.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(0.7f), contentColor = MaterialTheme.colorScheme.primary)
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(0.7f))
                     ) { Text("완료", style = MaterialTheme.typography.bodySmall)}
 
                 }
@@ -227,7 +226,7 @@ fun StudyingGoalInputDialog(
                         Text(
                             "다음에 입력하기",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onTertiary,
+                            color = MaterialTheme.colorScheme.outline,
                             textDecoration = TextDecoration.Underline
                         )
                         Spacer(Modifier.weight(1f))

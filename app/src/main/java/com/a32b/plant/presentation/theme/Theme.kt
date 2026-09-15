@@ -16,13 +16,13 @@ private val DarkColorScheme = darkColorScheme(
     onBackground = Color(0xFFF1F1F1),
 
     //카드/ 기본 다이얼로그 배경색
-    primaryContainer = Color.Black,
+    primaryContainer = Color(0xFF414141),
 
     //하단바 배경색
     surface = Color(0xFFD8B787),
 
     //보조 배경
-    surfaceVariant = Color(0xFFEEF0E7),
+    surfaceVariant = Color(0xFF9BA199),
 
     //텍스트필드 배경색
     surfaceContainerHigh = textFieldBackgroundDark,

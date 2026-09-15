@@ -21,6 +21,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -52,7 +54,7 @@ fun StudyingGoalCheckDialog(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(17.dp),
-            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceVariant),
+            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.primaryContainer),
         ) {
             Column(modifier = Modifier.padding(horizontal = 13.dp, vertical = 10.dp).fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -82,6 +84,13 @@ fun StudyingGoalCheckDialog(
                                 onEdit = { onEdit(index) },
                                 onCompleted = {onCompleted(index, it)}
                             )
+                            if (index < studyLog.lastIndex){
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(horizontal = 13.dp),
+                                    thickness = 1.dp,
+                                    color = MaterialTheme.colorScheme.outline
+                                )
+                            }
                         }
                     }
                 }
@@ -105,14 +114,14 @@ fun StudyingGoalCheckDialog(
                         Button(
                             onClick = onDismiss,
                             shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = sub3, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.outline)
                         ) { Text("취소", style = MaterialTheme.typography.bodySmall)}
 
                         Button(
                             onClick = onConfirm,
                             shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(0.7f), contentColor = MaterialTheme.colorScheme.primary)
-                        ) { Text( if(showEditButton) "종료" else "저장", style = MaterialTheme.typography.bodySmall)}
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(0.7f))
+                        ) { Text( if(showEditButton) "종료" else "저장", style = MaterialTheme.typography.bodySmall )}
                     }
                 }
             }
@@ -125,7 +134,6 @@ fun StudyLogItem(isInterrupted: Boolean, log: StudyLogUi, onEdit: () -> Unit, on
     Row(
         modifier = Modifier.fillMaxWidth()
             .clickable{onCompleted(!log.isCompleted)}
-            .background(MaterialTheme.colorScheme.background)
             .padding(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -136,7 +144,7 @@ fun StudyLogItem(isInterrupted: Boolean, log: StudyLogUi, onEdit: () -> Unit, on
         Text(
             text = log.log,
             style = MaterialTheme.typography.bodyMedium,
-            color = if (log.isCompleted) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSurface,
+            color = if (log.isCompleted) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface,
             textDecoration = if (log.isCompleted) TextDecoration.LineThrough else TextDecoration.None
         )
         Spacer(Modifier.weight(1f))
