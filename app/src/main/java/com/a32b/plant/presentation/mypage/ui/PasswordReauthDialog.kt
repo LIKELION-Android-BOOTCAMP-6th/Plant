@@ -33,8 +33,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.a32b.plant.presentation.theme.primary
-import com.a32b.plant.presentation.theme.sub2
 
 @Composable
 fun PasswordReauthDialog(
@@ -109,7 +107,7 @@ fun PasswordReauthDialog(
                             .height(30.dp)
                             .weight(1f),
                         shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(sub2)
+                        colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         Text("취소", style = MaterialTheme.typography.bodyMedium)
                     }
@@ -122,7 +120,7 @@ fun PasswordReauthDialog(
                             .height(30.dp)
                             .weight(1f),
                         shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(primary)
+                        colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.primary)
                     ) {
                         Text("확인", style = MaterialTheme.typography.bodyMedium)
                     }

@@ -30,8 +30,6 @@ import androidx.navigation.NavController
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.auth.viewmodel.SignUpEvent
 import com.a32b.plant.presentation.auth.viewmodel.SignUpViewModel
-import com.a32b.plant.presentation.theme.background
-import com.a32b.plant.presentation.theme.primary
 
 @Composable
 fun SignUpScreen(
@@ -62,7 +60,7 @@ fun SignUpScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(primary)
+            .background(MaterialTheme.colorScheme.primary)
     ) {
         Column(
             modifier = Modifier
@@ -89,7 +87,7 @@ fun SignUpScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = background),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
                 elevation = CardDefaults.cardElevation(4.dp)
             ) {
                 Column(
