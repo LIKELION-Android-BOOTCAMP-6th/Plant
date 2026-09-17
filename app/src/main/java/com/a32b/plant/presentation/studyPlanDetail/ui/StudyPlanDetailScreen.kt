@@ -232,7 +232,9 @@ fun StudyPlanDetailScreen(
                         semiText = log.contents.joinToString("\n") { "• $it" } +
                                 "\n\n공부 시간: ${TimeFormatter.formatToDigitalClock(log.studyingTime)}",
                         onDismiss = { viewModel.onDismissLogDialog() },
-                        onConfirm = { viewModel.onDismissLogDialog() }
+                        onConfirm = { viewModel.onDismissLogDialog() },
+                        isSingleBtn = true,
+                        confirmBtnText = "닫기"
                     )
                 }
                 // 삭제 확인 다이얼로그
