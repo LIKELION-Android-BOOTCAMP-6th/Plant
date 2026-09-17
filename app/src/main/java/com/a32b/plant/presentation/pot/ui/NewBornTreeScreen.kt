@@ -69,7 +69,7 @@ fun NewBornTreeScreen(navController: NavController,
             Text(
                 text = "Plant",
                 modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.displayLarge,
+                style = MaterialTheme.typography.headlineMedium,
             )
           },
         bottomBar = {
@@ -90,15 +90,15 @@ fun NewBornTreeScreen(navController: NavController,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
-                    disabledContainerColor = MaterialTheme.colorScheme.outlineVariant,
-                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    disabledContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    disabledContentColor = MaterialTheme.colorScheme.onSurface
                 ),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 if(isUploading){
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
                 }else{
-                    Text("완료", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onPrimary)
+                    Text("완료", style = MaterialTheme.typography.titleSmall)
                 }
             }
         }
@@ -159,7 +159,7 @@ fun NewBornTreeScreen(navController: NavController,
                         Text(
                             text = "선택됨: ${it.name}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = primary,
+                            color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(top = 8.dp, start = 4.dp)
                         )
                     }
@@ -172,10 +172,12 @@ fun NewBornTreeScreen(navController: NavController,
 
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("화분 이름",
-                        style = MaterialTheme.typography.titleSmall
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(bottom = 11.dp)
                     )
                     OutlinedTextField(
                         value = potName,
+                        textStyle = MaterialTheme.typography.bodyMedium,
                         onValueChange = { input ->
                             // 1. 줄바꿈 입력 방지
                             if (!input.contains("\n")) {
@@ -191,7 +193,8 @@ fun NewBornTreeScreen(navController: NavController,
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = { Text(
                             text="이름을 입력하세요 (최대 15글자)",
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondary
                         )},
 
                         // 한 줄 입력 고정
@@ -203,7 +206,8 @@ fun NewBornTreeScreen(navController: NavController,
                                 text = "${potName.length} / $maxLength",
                                 modifier = Modifier.fillMaxWidth(),
                                 textAlign = TextAlign.End, // 우측 정렬
-                                color = if (potName.length >= maxLength) Color.Red else MaterialTheme.colorScheme.onTertiary // 15글자 도달 시 붉은색
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (potName.length >= maxLength) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline // 15글자 도달 시 붉은색
                             )
                         }
                     )
