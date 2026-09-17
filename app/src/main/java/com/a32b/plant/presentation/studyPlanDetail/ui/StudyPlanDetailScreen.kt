@@ -82,7 +82,7 @@ fun StudyPlanDetailScreen(
                 title = {
                     potInfo?.let {
                         Text("[${it.tagName}] ${it.name}",
-                            style = MaterialTheme.typography.titleMedium, //todo 스타일 변경 or 새로 지정하기
+                            style = MaterialTheme.typography.titleMedium,
                         )
                     } ?: Text("로딩 중...", style = MaterialTheme.typography.titleMedium)
                 },
@@ -147,7 +147,7 @@ fun StudyPlanDetailScreen(
                     enabled = potInfo?.isCompleted == false,
                     onClick = { viewModel.setCompleteDialogShown(true) },
                 ) {
-                    Text(if (potInfo?.isCompleted == true) "완료된 학습" else "학습 완료하기") //todo 스타일 지정하기
+                    Text(if (potInfo?.isCompleted == true) "완료된 학습" else "학습 완료하기", style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }
@@ -180,7 +180,7 @@ fun StudyPlanDetailScreen(
                         Spacer(modifier = Modifier.weight(1f))
                         Text(
                             text = "${logs.count { it.isSelected }}개 선택됨",
-                            style = MaterialTheme.typography.labelMedium, //todo 스타일 변경 혹은 새로 지정하기
+                            style = MaterialTheme.typography.bodySmall,
                         )
                     }
                 }
@@ -195,7 +195,7 @@ fun StudyPlanDetailScreen(
                     ) {
                         Text(
                             text = "아직 학습 기록이 없습니다.",
-                            style = MaterialTheme.typography.bodyLarge,//todo 스타일 변경 혹은 새로 지정하기
+                            style = MaterialTheme.typography.titleMedium
                         )
                     }
                 } else {
@@ -251,7 +251,7 @@ fun StudyPlanDetailScreen(
                         Card(
                             shape = RoundedCornerShape(30.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                                containerColor = MaterialTheme.colorScheme.primaryContainer),
                             elevation = CardDefaults.cardElevation(3.dp)
                         ) {
                             Column(
@@ -270,6 +270,7 @@ fun StudyPlanDetailScreen(
                                 OutlinedTextField(
                                     value = editNameText,
                                     onValueChange = { editNameText = it },
+                                    textStyle = MaterialTheme.typography.titleMedium,
                                     placeholder = { Text("화분 이름을 입력하세요", style = MaterialTheme.typography.bodyMedium,) },
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true,
@@ -292,8 +293,7 @@ fun StudyPlanDetailScreen(
                                         shape = RoundedCornerShape(8.dp),
 //                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F3EE)) // sub2 색상 느낌
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                            containerColor = MaterialTheme.colorScheme.outline,
                                         )
                                     ) {
                                         Text("취소", style = MaterialTheme.typography.bodyMedium,
@@ -313,7 +313,7 @@ fun StudyPlanDetailScreen(
 //                                            Color(0xFFA5C16C)) // primary 색상
                                         )
                                     ) {
-                                        Text("확인", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimary)
+                                        Text("확인", style = MaterialTheme.typography.bodyMedium)
                                     }
                                 }
                             }
@@ -364,7 +364,7 @@ fun StudyRecordCard(
         modifier = Modifier.fillMaxWidth()
             .padding(vertical = 2.dp)
             .clickable{ onCardClick()},
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
         shape = RoundedCornerShape(3.dp),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
@@ -391,19 +391,15 @@ fun StudyRecordCard(
                 // 날짜
                 Text(
                     text = if (log.title.isNotEmpty()) log.title else TimeFormatter.formatTimeToDate(log.createAt ?: 0),
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface
             )
                 // 2. 공부시간 (우측 고정)
                 Text(
                     text = "[${TimeFormatter.formatToDigitalClock(log.studyingTime)}]",
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    style = MaterialTheme.typography.titleSmall,
                 )
                 Spacer(modifier = Modifier.width(5.dp))
 
@@ -435,8 +431,6 @@ fun StudyRecordCard(
                     Text(
                         text = finalContent,
                         style = MaterialTheme.typography.bodySmall,
-//                        color = fontColor,
-                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.fillMaxWidth(),
 
                         // 표시 줄 수
