@@ -27,7 +27,8 @@ fun ConfirmDialog(
     isSingleBtn: Boolean = false,
     isCancelable: Boolean = true,
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
+    confirmBtnText: String = "예"
 ) {
     Dialog(onDismissRequest = {if (isCancelable) onDismiss() }) {
         Card(shape = RoundedCornerShape(30.dp),
@@ -60,7 +61,7 @@ fun ConfirmDialog(
                         modifier = Modifier.height(30.dp).weight(1f),
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.primary)) {
-                        Text("예", style = MaterialTheme.typography.bodyMedium)
+                        Text(confirmBtnText, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
 

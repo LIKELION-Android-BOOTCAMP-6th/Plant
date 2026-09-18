@@ -1,9 +1,10 @@
 package com.a32b.plant.data.model
 
+import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 
 data class StudyingUserDto(
-    @get:PropertyName("uid") @set:PropertyName("uid")
+    @DocumentId
     var uid: String = "",
     @get:PropertyName("nickname") @set:PropertyName("nickname")
     var nickname: String = "",

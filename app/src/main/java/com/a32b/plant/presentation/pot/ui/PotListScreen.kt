@@ -32,8 +32,6 @@ fun PotListScreen(
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("공부 중", "기른 화분")
 
-    val backgroundColor = MaterialTheme.colorScheme.background
-
     val currentPots = if (selectedTab == 0) studyingPots else completedPots
 
     Scaffold(
@@ -48,7 +46,7 @@ fun PotListScreen(
             ) {
                 Text(
                     text = "나만의 정원",
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.displayLarge,
                     color = MaterialTheme.colorScheme.primary
                 )
 
@@ -60,7 +58,7 @@ fun PotListScreen(
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "화분 추가",
-                            tint = MaterialTheme.colorScheme.onBackground
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 } else {
@@ -88,11 +86,11 @@ fun PotListScreen(
                         Text(
                             text = title,
                             color = if (selectedTab == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.titleSmall
                         )
                     }
                     if (index < tabs.size - 1) {
-                        Text(text = " | ", color = MaterialTheme.colorScheme.outline)
+                        Text(text = " | ", color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
@@ -138,17 +136,17 @@ fun PotGridItem(
         Box(
             modifier = Modifier
                 .size(80.dp)
-                .background(MaterialTheme.colorScheme.surface, shape = MaterialTheme.shapes.medium),
+                .background(MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.medium),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = if (isCompleted) "🌳" else "🌱",
-                    style = MaterialTheme.typography.headlineMedium //todo 스타일 변경 혹은 새로 지정하기
+                    style = MaterialTheme.typography.headlineMedium //todo 이미지로 변경 예정
                 )
                 Text(
                     text = "Lv.$level",
-                    style = MaterialTheme.typography.labelSmall,//todo 스타일 변경 혹은 새로 지정하기
+                    style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
             }
@@ -157,7 +155,6 @@ fun PotGridItem(
         Text(
             text = potName,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
