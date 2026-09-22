@@ -113,10 +113,10 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                 ) {
                     Text(
                         text = "닉네임 설정",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
                         text = "Plant에서 사용 할 닉네임을 설정해주세요.",

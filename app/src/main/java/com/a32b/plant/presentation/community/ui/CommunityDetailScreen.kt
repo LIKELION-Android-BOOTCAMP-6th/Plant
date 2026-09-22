@@ -151,7 +151,7 @@ fun CommunityDetailScreen(
                                 }
                                 Text(
                                     currentPost.title,
-                                    style = MaterialTheme.typography.titleMedium,
+                                    style = MaterialTheme.typography.titleLarge,
                                     modifier = Modifier.padding(horizontal = 46.dp),
                                     textAlign = TextAlign.Center
                                 )
@@ -164,13 +164,13 @@ fun CommunityDetailScreen(
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
                                     currentPost.author.nickname,
-                                    style = MaterialTheme.typography.bodySmall // bodyMedium 보다 bodySmall이 더 잘 어울림
+                                    style = MaterialTheme.typography.titleSmall // bodyMedium 보다 bodySmall이 더 잘 어울림
                                 )
                                 Spacer(modifier = Modifier.weight(1f))
                                 Text(
                                     TimeFormatter.formatTimeWithClock(currentPost.createdAt ?: 0) +
                                             if (currentPost.updatedAt != null) " (수정됨)" else "",
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = MaterialTheme.typography.labelMedium,
 //                                fontSize = 12.sp
                                 )
                             }
@@ -331,7 +331,7 @@ fun CommentRow(
                 Spacer(Modifier.width(6.dp))
                 Text(
                     text = comment.createdAt?.let { TimeFormatter.formatTimeWithClock(it) } ?: "",
-                    style = MaterialTheme.typography.titleSmall
+                    style = MaterialTheme.typography.labelMedium
                 )
             }
             Spacer(modifier = Modifier.height(7.dp))
@@ -494,7 +494,8 @@ fun CommentInputSection(
                     Text(
                         if (isSubmitting) "등록 중" else "등록",
 //                        fontSize = 12.sp,
-                        style = MaterialTheme.typography.labelLarge
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        style = MaterialTheme.typography.titleMedium
                     )
                 }
             }
