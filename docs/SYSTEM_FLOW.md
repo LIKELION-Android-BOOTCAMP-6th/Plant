@@ -1,7 +1,7 @@
 # Plant System Flow (아키텍처 · 데이터 흐름 · 기술 스택 근거)
 
 > **최초 작성일**: 2026-09-11  
-> **최종 수정일**: 2026-09-15
+> **최종 수정일**: 2026-09-22
 
 ## 목차
 
@@ -517,63 +517,67 @@ SingletonComponent (앱 전역)
 ```
 @HiltViewModel
 ├── SplashViewModel
-│   ├── CheckAutoLoginUseCase
-│   └── ObserveDarkModeUseCase (DataStore 구독)
+│   ├── CheckAutoLoginUseCase ─ 자동 로그인 판정
+│   └── ObserveDarkModeUseCase ─ 다크모드 설정 구독 (DataStore)
 │
 ├── SignInViewModel
-│   └── SignInWithGoogleUseCase
-│       └── ResolveUserSessionUseCase
+│   ├── SignInWithGoogleUseCase ─ Google 로그인
+│   └── ResolveUserSessionUseCase ─ 로그인 후 유저 세션 초기화
 │
 ├── SignUpViewModel
-│   └── SetNicknameUseCase
+│   └── SetNicknameUseCase ─ 닉네임 설정
 │
 ├── HomeViewModel
 │   ├── PotRepository (getPots)
 │   └── UserRepository (currentUser)
 │
 ├── StudyingViewModel
-│   ├── StartStudyingSessionUseCase
-│   ├── UpdateLocalStudyingSessionUseCase
-│   ├── ClearStudyingSessionUseCase
+│   ├── StartStudyingSessionUseCase ─ 학습 시작
+│   ├── UpdateLocalStudyingSessionUseCase ─ 로컬 세션 갱신 (5초)
+│   ├── ClearStudyingSessionUseCase ─ 학습 세션 정리
 │   └── StudyingRepository (observeStudyingUser)
 │
 ├── StudyResultViewModel
-│   └── FinishStudyingUseCase
+│   └── FinishStudyingUseCase ─ 학습 종료 (시간 기록 + 보상 정산)
 │
 ├── CommunityListViewModel
 │   └── CommunityRepository (loadPostPage, getTags)
 │
 ├── CommunityPostViewModel
-│   └── CreatePostUseCase
+│   └── CreatePostUseCase ─ 게시글 작성
 │
 ├── CommunityDetailViewModel
 │   ├── CommunityRepository (getPostDetail, getComments)
-│   ├── ToggleLikeUseCase
-│   └── AddCommentUseCase
+│   ├── ToggleLikeUseCase ─ 좋아요 토글
+│   └── AddCommentUseCase ─ 댓글 작성
 │
 ├── CommunityActivityViewModel
 │   └── CommunityRepository (observeActivity)
 │
 ├── StudyPlanDetailViewModel
-│   ├── GetStudyLogsUseCase / GetSelectedStudyLogUseCase
-│   ├── DeleteStudyLogUseCase
-│   ├── UpdatePotNameUseCase
-│   ├── DeleteEntirePotUseCase
-│   └── CompleteStudyPlanUseCase
+│   ├── GetStudyLogsUseCase ─ 학습 기록 목록 조회
+│   ├── GetSelectedStudyLogUseCase ─ 학습 기록 단건 조회
+│   ├── DeleteStudyLogUseCase ─ 학습 기록 삭제
+│   ├── UpdatePotNameUseCase ─ 화분 이름 변경
+│   ├── DeleteEntirePotUseCase ─ 화분 삭제
+│   └── CompleteStudyPlanUseCase ─ 화분 학습 완료
 │
 ├── NewBornTreeViewModel
 │   └── PotRepository (getAvailableTags, addPot)
 │
 ├── MyPageViewModel
-│   ├── UpdateProfileUseCase
-│   ├── UpdateDarkModeUseCase
-│   ├── ObserveDarkModeUseCase
-│   ├── GetProfileImageLevelListUseCase
-│   └── SignOutUseCase
+│   ├── UpdateProfileUseCase ─ 프로필 수정
+│   ├── UpdateDarkModeUseCase ─ 다크모드 토글
+│   ├── ObserveDarkModeUseCase ─ 다크모드 설정 구독
+│   ├── GetProfileImageLevelListUseCase ─ 프로필 이미지 목록
+│   └── SignOutUseCase ─ 로그아웃
 │
 └── DeleteAccountViewModel
-    └── DeleteAccountUseCase
+    └── DeleteAccountUseCase ─ 회원탈퇴
 ```
+
+> `EnsureCurrentUserUseCase`(세션 가드)는 현재 유저 정보가 필요한 UseCase가 내부 호출 → 8-2 참조.
+> `SignInWithEmailUseCase`, `SignUpWithEmailUseCase`는 ⛔ 제거 예정.
 
 ---
 
@@ -630,7 +634,7 @@ SingletonComponent (앱 전역)
 
 ---
 
-## 7. 에러 처리 아키텍처
+## 7. 예외 처리 아키텍처
 
 ### 7-1. Result<T> 패턴
 
@@ -646,7 +650,7 @@ sealed class Result<out T>
 └── getOrNull()                   // T? 반환
 ```
 
-### 7-2. 에러 전파 경로
+### 7-2. 예외 전파 경로
 
 ```
 DataSource (Firebase 호출)
@@ -673,15 +677,19 @@ UI
 
 ### 7-3. AppError 분류 및 대응
 
-| 에러 타입 | 사용자 대응 | 시스템 대응 |
-|-----------|-----------|-----------|
-| `Network` | "네트워크 확인" 안내 | 재시도 가능 |
-| `Auth` | "다시 로그인" 안내 | 세션 클리어 |
-| `UnknownUser` | 세션 만료 다이얼로그 | 로그인 화면 이동 |
-| `Server` | "잠시 후 다시 시도" | 재시도 가능 |
-| `Permission` | 권한 안내 | Firestore 규칙 확인 |
-| `Custom(msg)` | 동적 메시지 표시 | 비즈니스 로직별 분기 |
-| `Local` | 무시 또는 재시도 | DataStore 에러 로깅 |
+| 에러 타입 | 메시지 | 트리거 상황 | 대응 |
+|-----------|--------|------------|------|
+| `Network` | 인터넷 연결이 원활하지 않습니다 | Firestore 타임아웃, 오프라인 | 재시도 가능 |
+| `Auth` | 인증에 실패했습니다 | Firebase Auth 에러 | 세션 클리어 |
+| `UnknownUser` | 사용자 정보를 가져오지 못했습니다 | `currentUser == null` | 세션 만료 → 로그인 화면 이동 |
+| `Email` | 이메일 형식이 올바르지 않습니다 | 이메일 유효성 검증 | 입력 재요청 |
+| `Password` | 비밀번호 형식이 올바르지 않습니다 | 비밀번호 유효성 검증 | 입력 재요청 |
+| `Server` | 서버에 오류가 발생했습니다 | Firestore 서버 에러 | 재시도 가능 |
+| `Unknown` | 알 수 없는 오류가 발생했습니다 | 예상 외 예외 | 토스트 표시 |
+| `Upload` | 저장에 실패했습니다 | 문서 저장 실패 | 재시도 가능 |
+| `Local` | 로컬 저장 실패 | DataStore 에러 | 에러 로깅, 무시 또는 재시도 |
+| `Permission` | 권한이 없습니다 | Firestore 보안 규칙 위반 | 권한 안내 |
+| `Custom(msg)` | (동적 메시지) | 닉네임 중복, 본인 좋아요 등 | 비즈니스 로직별 분기 |
 
 ---
 
@@ -700,8 +708,7 @@ SplashViewModel.checkAuthLogin()
   └─ 세션 있음 → UserRepository.startUserSession(user)
                    │
                    ├─ currentUser StateFlow 세팅
-                   ├─ Firestore users/{uid} 실시간 구독 시작
-                   └─ CurrentUser 전역 싱글톤 동기화 (브릿지)
+                   └─ Firestore users/{uid} 실시간 구독 시작
                         │
                         ▼
                    앱 사용 중 (currentUser 실시간 반영)
@@ -713,18 +720,17 @@ SplashViewModel.checkAuthLogin()
      │                  │                  │
      ▼                  ▼                  ▼
   endUserSession()   endUserSession()   notifySessionExpired()
-  signOut()          deleteUserData()   → MainActivity 감지
-  CurrentUser.clear() deleteAuthAccount()→ signOut()
-     │               CurrentUser.clear()  → SignInScreen
-     ▼                  │
-  SignInScreen          ▼
+  signOut()          deleteUserData()   → MainActivity 이벤트 수신
+     │               deleteAuthAccount()→ signOut()
+     ▼                  │               → SignInScreen 이동
+  SignInScreen          ▼               → 세션 만료 다이얼로그 표시
                      SignInScreen
 ```
 
 ### 8-2. EnsureCurrentUser 가드 패턴
 
 ```
-모든 쓰기 UseCase
+현재 유저 정보가 필요한 UseCase
   │
   ▼
 EnsureCurrentUserUseCase()
@@ -735,7 +741,9 @@ EnsureCurrentUserUseCase()
                            → Result.Failure(UnknownUser)
                            → UseCase 즉시 종료
                            → MainActivity에서 이벤트 수신
-                           → 로그인 화면으로 이동
+                           → signOut() 호출
+                           → SignInScreen 이동
+                           → 세션 만료 다이얼로그 표시
 ```
 
 ### 8-3. SessionExpiredEvent 구조
@@ -756,25 +764,6 @@ SessionExpiredEvent 하나의 인스턴스가
 두 인터페이스를 모두 구현 (같은 @Singleton)
 ```
 
-### 8-4. CurrentUser 전역 싱글톤 (과도기 브릿지)
-
-```
-현재 구조 (과도기):
-┌──────────────────┐     ┌──────────────────┐
-│  UserRepository  │     │   CurrentUser    │
-│  .currentUser    │     │   (전역 싱글톤)   │
-│  (StateFlow)     │     │   object         │
-│                  │     │   uid, nickname, │
-│  ◀── 정석 경로    │     │   profileImg     │
-│                  │     │                  │
-│                  │     │   ◀── 레거시 경로 │
-└──────────────────┘     └──────────────────┘
-
-로그인/닉네임/프로필 변경 시 양쪽 모두 동기화.
-TODO: 모든 화면이 UserRepository로 전환 완료 시
-      CurrentUser.kt 삭제 + 관련 .set()/.clear() 호출 제거
-```
-
 ---
 
 ## 관련 문서
@@ -782,7 +771,6 @@ TODO: 모든 화면이 UserRepository로 전환 완료 시
 | 문서 | 경로 |
 |------|------|
 | PRD | [docs/PRD.md](PRD.md) |
-| 기능명세서 | [docs/FEATURE_SPEC.md](FEATURE_SPEC.md) |
 | User Flow | [docs/USER_FLOW.md](USER_FLOW.md) |
 | 화면명세 | docs/SCREEN_SPEC.md (작성 예정) |
 | 데이터 모델 | [docs/DATA_MODEL.md](DATA_MODEL.md) |

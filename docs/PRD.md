@@ -372,7 +372,7 @@ com.a32b.plant
 │   └── usecase/       # 유스케이스
 │       ├── auth/      # 인증 관련 (8개)
 │       ├── community/ # 커뮤니티 관련 (4개)
-│       ├── mypage/    # 마이페이지 관련 (3개)
+│       ├── mypage/    # 마이페이지 관련 (4개)
 │       ├── pot/       # 화분 관련 (6개)
 │       ├── session/   # 세션 관련 (1개)
 │       ├── studyLog/  # 학습 기록 관련 (3개)
@@ -458,8 +458,9 @@ SplashScreen (자동 로그인 판단)
 
 | 문서 | 경로 |
 |------|------|
-| 기능명세서 | [docs/FEATURE_SPEC.md](FEATURE_SPEC.md) |
-| 화면명세서 | [docs/SCREEN_SPEC.pdf](SCREEN_SPEC.pdf) |
+| User Flow | [docs/USER_FLOW.md](USER_FLOW.md) |
+| System Flow | [docs/SYSTEM_FLOW.md](SYSTEM_FLOW.md) |
+| 화면명세 | docs/SCREEN_SPEC.md (작성 예정) |
 | 데이터 모델 | [docs/DATA_MODEL.md](DATA_MODEL.md) |
 | 발표자료 | [Google Drive](https://drive.google.com/file/d/1Mwvug51RlhaJiB6CjpF8rBXy9hWRgweU/view?usp=drive_link) |
 | 시연 영상 | [YouTube](https://youtu.be/ipBhhjw6aRo) |

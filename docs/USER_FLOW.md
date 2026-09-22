@@ -1,7 +1,7 @@
 # Plant User Flow (화면 이동 흐름)
 
 > **최초 작성일**: 2026-09-11  
-> **최종 수정일**: 2026-09-15
+> **최종 수정일**: 2026-09-22
 
 ## 목차
 
@@ -531,7 +531,6 @@ HomeMain                                                          HomeMain
 | 문서 | 경로 |
 |------|------|
 | PRD | [docs/PRD.md](PRD.md) |
-| 기능명세서 | [docs/FEATURE_SPEC.md](FEATURE_SPEC.md) |
 | System Flow | [docs/SYSTEM_FLOW.md](SYSTEM_FLOW.md) |
 | 화면명세 | docs/SCREEN_SPEC.md (작성 예정) |
 | 데이터 모델 | [docs/DATA_MODEL.md](DATA_MODEL.md) |
