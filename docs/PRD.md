@@ -426,12 +426,12 @@ SplashScreen (자동 로그인 판단)
     │
     ├── [커뮤니티 탭] CommunityListScreen
     │   ├── CommunityPostScreen (글 작성/수정)
-    │   └── CommunityDetailScreen (글 상세)
+    │   ├── CommunityDetailScreen (글 상세)
+    │   └── CommunityActivityScreen (활동 내역)
     │
     ├── [리포트 탭] ReportScreen
     │
     └── [마이페이지 탭] MyPageScreen
-        └── CommunityActivityScreen (활동 내역)
 ```
 
 ---
