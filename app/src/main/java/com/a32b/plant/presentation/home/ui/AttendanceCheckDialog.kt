@@ -63,7 +63,7 @@ private fun AttendanceDialogContent(
             .fillMaxWidth(0.92f)
             .padding(vertical = 24.dp),
         shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.background
+        color = MaterialTheme.colorScheme.primaryContainer
     ) {
         Box {
             Column(
@@ -72,14 +72,13 @@ private fun AttendanceDialogContent(
             ) {
                 Text(
                     text = "출석체크",
-                    style = MaterialTheme.typography.displayLarge,
-                    color = MaterialTheme.colorScheme.primary
+                    style = MaterialTheme.typography.titleSmall
                 )
                 Text(
                     text = "출석할수록 보상이 자라나요",
                     modifier = Modifier.padding(top = 8.dp),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSecondary
                 )
 
                 AttendanceBoard(
@@ -94,7 +93,7 @@ private fun AttendanceDialogContent(
                         .fillMaxWidth()
                         .padding(top = 24.dp)
                 ) {
-                    Text(uiState.buttonText)
+                    Text(uiState.buttonText, style = MaterialTheme.typography.bodyMedium)
                 }
             }
             if (uiState.isChecking) {
@@ -131,10 +130,9 @@ private fun AttendanceBoard(
             .fillMaxWidth()
             .padding(top = 24.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
             .border(
                 width = 1.dp,
-                color = MaterialTheme.colorScheme.tertiary,
+                color = MaterialTheme.colorScheme.outline,
                 shape = RoundedCornerShape(20.dp)
             )
             .padding(horizontal = 16.dp, vertical = 24.dp),
@@ -150,7 +148,7 @@ private fun AttendanceBoard(
                 text = "${rewards.size}칸 중 ${checkedCount}칸 완료",
                 modifier = Modifier.padding(top = 4.dp),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSecondary
             )
         }
 
@@ -160,7 +158,7 @@ private fun AttendanceBoard(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(10.dp)),
             color = MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.secondary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
             gapSize = 0.dp,
             drawStopIndicator = {}
         )
@@ -188,7 +186,7 @@ private fun AttendanceBoard(
             text = "다음 출석 보상: ${rewards.getOrNull(checkedCount)?.label?.ifBlank { "기본 보상" } ?: "기본 보상"}",
             modifier = Modifier.fillMaxWidth(),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSecondary,
             textAlign = TextAlign.Center
         )
     }
@@ -209,13 +207,13 @@ private fun AttendanceRewardItem(
     val borderColor = when {
         isChecked -> MaterialTheme.colorScheme.primary
         isNext -> MaterialTheme.colorScheme.primary
-        else -> MaterialTheme.colorScheme.tertiary
+        else -> MaterialTheme.colorScheme.outline
     }
 
     val textColor = when {
         isChecked -> MaterialTheme.colorScheme.onPrimary
-        isNext -> MaterialTheme.colorScheme.onSecondaryContainer
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
+        isNext -> MaterialTheme.colorScheme.onSurface
+        else -> MaterialTheme.colorScheme.onSecondary
     }
 
     Column(

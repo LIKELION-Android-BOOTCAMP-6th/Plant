@@ -35,7 +35,7 @@ fun plantTypography(colorScheme: ColorScheme): Typography{
         ),
         //앱바 타이틀(헤더)용
         displayLarge = TextStyle(
-            fontFamily = bold,
+            fontFamily = title,
             fontSize = 22.sp,
             lineHeight = 36.sp,
             color = colorScheme.onSurface

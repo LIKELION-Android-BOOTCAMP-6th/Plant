@@ -41,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -49,11 +50,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -77,6 +78,7 @@ import com.a32b.plant.presentation.mypage.viewmodel.DeleteAccountViewModel
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageEvent
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageUiState
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageViewModel
+import com.a32b.plant.presentation.theme.LocalIsDarkTheme
 import com.a32b.plant.presentation.theme.PlantTheme
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -313,11 +315,14 @@ private fun MyPageContent(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 DividerImage()
-                DarkModeToggleButton(
-                    isDarkMode = uiState.isDarkMode,
-                    isEnabled = !uiState.isDarkModeUpdating,
-                    onToggle = onDarkModeToggle
-                )
+                // 클릭 없는 Card는 처음 그림자 값을 기억하므로, 테마가 바뀌면 새로 그려야 그림자가 갱신된다
+                key(LocalIsDarkTheme.current) {
+                    DarkModeToggleButton(
+                        isDarkMode = uiState.isDarkMode,
+                        isEnabled = !uiState.isDarkModeUpdating,
+                        onToggle = onDarkModeToggle
+                    )
+                }
                 ButtonTemplate(text = "사용 가이드", onClick = onGuideClick)
                 ButtonTemplate(text = "서비스 이용약관", onClick = onTermsClick)
                 ButtonTemplate(text = "개인정보처리방침", onClick = onPrivacyClick)
@@ -369,7 +374,9 @@ fun DarkModeToggleButton(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.secondaryContainer
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (LocalIsDarkTheme.current) 0.dp else 2.dp
+        )
     ) {
         Row(
             modifier = Modifier
@@ -382,7 +389,7 @@ fun DarkModeToggleButton(
             // 좌측
             Text(
                 text = "다크모드",
-                style = MaterialTheme.typography.bodyLarge, //todo 스타일 변경하거나 새로 지정하기
+                style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.padding(start = 8.dp),
             )
             // 우측
@@ -392,10 +399,9 @@ fun DarkModeToggleButton(
                 enabled = isEnabled,
                 onCheckedChange = onToggle,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
                     checkedTrackColor = MaterialTheme.colorScheme.primary,
-                    uncheckedThumbColor = Color.White,
-                    uncheckedTrackColor = MaterialTheme.colorScheme.tertiary,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    uncheckedBorderColor = MaterialTheme.colorScheme.outline,
                 ),
             )
         }
@@ -414,10 +420,9 @@ fun ButtonTemplate(text: String, enabled: Boolean = true, onClick: () -> Unit) {
         colors = ButtonDefaults.buttonColors(
 //            containerColor = MaterialTheme.colorScheme.surface,
             containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSurface
         ),
         elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 2.dp,
+            defaultElevation = if (LocalIsDarkTheme.current) 0.dp else 2.dp,
         )
     ) {
         Row(
@@ -425,7 +430,7 @@ fun ButtonTemplate(text: String, enabled: Boolean = true, onClick: () -> Unit) {
             horizontalArrangement = Arrangement.Start
         ) {
             Text(
-                text = text, style = MaterialTheme.typography.bodyLarge,
+                text = text, style = MaterialTheme.typography.titleSmall,
             )
         }
     }
@@ -471,8 +476,9 @@ fun ProfileRow(
             ) {
                 Text(
                     text = "${uiState.nickname} 님",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.displayLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -562,7 +568,7 @@ fun ProfileDialog(
                 .fillMaxWidth()
                 .wrapContentHeight(),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer
+                containerColor = MaterialTheme.colorScheme.primaryContainer
             ),
         ) {
             Column(
@@ -574,6 +580,7 @@ fun ProfileDialog(
                     TextField(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyMedium,
                         value = newUserName,
                         onValueChange = {
                             if (it.length <= 10)
@@ -581,18 +588,20 @@ fun ProfileDialog(
                             viewModel.resetNicknameError()
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.secondaryContainer
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            errorContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            unfocusedIndicatorColor = MaterialTheme.colorScheme.outline
                         ),
-                        label = { Text("닉네임 변경 (2~10자)", style = MaterialTheme.typography.labelSmall) }, //todo 스타일 변경하거나 새로 지정하기
+                        label = { Text("닉네임 변경 (2~10자)", style = MaterialTheme.typography.labelMedium) },
                         isError = uiState.nicknameError != null
                     )
 
                     if (uiState.nicknameError != null) {
                         Text(
                             text = uiState.nicknameError,
-                            color = Color.Red,
-                            style = MaterialTheme.typography.labelSmall, //todo 스타일 변경하거나 새로 지정하기
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.labelMedium,
                             modifier = Modifier.padding(start = 8.dp, top = 4.dp)
                         )
                     }
@@ -618,8 +627,7 @@ fun ProfileDialog(
                             .weight(1f),
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            containerColor = MaterialTheme.colorScheme.outline,
                         )
                     ) {
                         Text(
@@ -639,7 +647,6 @@ fun ProfileDialog(
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     ) { Text("저장", style = MaterialTheme.typography.bodyMedium) }
                 }
