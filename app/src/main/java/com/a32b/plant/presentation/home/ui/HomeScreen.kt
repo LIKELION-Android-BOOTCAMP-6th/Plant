@@ -346,10 +346,9 @@ fun HomeTopBar(
             Text(
                 text = "${displayName}의 Garden",
                 modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.displayLarge,
+                style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
+                fontSize = 30.sp,
                 textAlign = TextAlign.Start
             )
             IconButton(
@@ -374,7 +373,6 @@ fun HomeTopBar(
             text = dateString,
             modifier = Modifier.fillMaxWidth(),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center
         )
     }
@@ -394,7 +392,7 @@ fun MainPlantCard(
             .wrapContentHeight(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = sub_green1
+            containerColor = MaterialTheme.colorScheme.secondary
         ),
         //border = BorderStroke(1.dp, primary)
     ) {
@@ -408,24 +406,21 @@ fun MainPlantCard(
             if(!hasNoPot && displayPot.tagName.isNotEmpty()){
                 Surface(
                     shape = RoundedCornerShape(16.dp),
-                    color = sub_green1,
-                    border = BorderStroke(1.dp, primary)
+                    color = MaterialTheme.colorScheme.secondary,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
                 ) {
                     Text(
                         text = displayPot.tagName,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = sub_green2,
-                        fontWeight = FontWeight.Medium
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary,
                     )
                 }
                 Spacer(modifier = Modifier.height(6.dp))
             }
             Text(
                 text = if(hasNoPot) "공부 화분이 없습니다" else displayPot.name.ifEmpty { "실험용" },
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = fontColor
+                style = MaterialTheme.typography.titleLarge,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -447,14 +442,12 @@ fun MainPlantCard(
             Text(
                 text = "오늘 학습 시간",
                 style = MaterialTheme.typography.bodySmall,
-                color = fontColorSub
+                color = MaterialTheme.colorScheme.onSecondary
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = "00:00", // 나중에 DB에서 가져오기
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                color = fontColor,
+                style = MaterialTheme.typography.titleMedium,
                 fontSize = 26.sp
             )
             Spacer(modifier = Modifier.height(5.dp))
@@ -472,13 +465,12 @@ fun MainPlantCard(
                         Text(
                             text = "업그레이드 진행도",
                             style = MaterialTheme.typography.bodySmall,
-                            color = fontColorSub
+                            color = MaterialTheme.colorScheme.onSecondary
                         )
                         Text(
                             text = "60% (30분/50분)", // 예시 텍스트 (추후 뷰모델 데이터와 연결)
-                            style = MaterialTheme.typography.labelMedium,
-                            color = primary,
-                            fontWeight = FontWeight.Bold
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
                         )
                     }
                     Spacer(modifier = Modifier.height(4.dp))
@@ -488,8 +480,8 @@ fun MainPlantCard(
                             .fillMaxWidth()
                             .height(8.dp)
                             .clip(RoundedCornerShape(4.dp)),
-                        color = primary,
-                        trackColor = sub2,
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
                         drawStopIndicator = {}
                     )
                 }
@@ -504,7 +496,7 @@ fun MainPlantCard(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !hasNoPot
             ) {
-                Text("공부 시작")
+                Text("공부 시작", style = MaterialTheme.typography.titleMedium)
             }
 
             Spacer(modifier = Modifier.height(5.dp))
@@ -518,14 +510,14 @@ fun MainPlantCard(
                     onClick = onChangeOrMakeClick,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(if(hasNoPot) "화분 생성" else "화분 변경")
+                    Text(if(hasNoPot) "화분 생성" else "화분 변경", style = MaterialTheme.typography.bodyMedium)
                 }
                 OutlinedButton(
                     onClick = onRecordClick,
                     modifier = Modifier.weight(1f),
                     enabled = !hasNoPot
                 ) {
-                    Text("공부 기록")
+                    Text("공부 기록", style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }
@@ -544,9 +536,7 @@ fun HomeItemBoxSection(){
 
         Text(
             text = "아이템 : ${itemNumber}개",
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Bold,
-            color = fontColor,
+            style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.padding(start = 10.dp)
         )
 
@@ -568,13 +558,12 @@ fun HomeItemBoxSection(){
                             .width(60.dp)
                             .height(95.dp)
                             .clip(RoundedCornerShape(0.dp))
-                            .background(sub_green1),
+                            .background(MaterialTheme.colorScheme.secondary),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "",
                             style = MaterialTheme.typography.bodySmall,
-                            color = fontColor
                         )
                     }
                 }
