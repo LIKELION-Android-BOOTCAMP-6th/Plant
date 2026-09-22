@@ -39,6 +39,7 @@ data class CommunityDetailUiState(
     val studyLogs: List<StudyLog>? = emptyList(),
     val currentUid: String = "",
     val currentNickname: String = "",
+    val currentProfileImg: String = "",
     val isCommentSubmitting: Boolean = false,
     val isRefreshing: Boolean = false,
 
@@ -85,7 +86,7 @@ class CommunityDetailViewModel @Inject constructor(
     private var likeDebounceJob: Job? = null
 
     init {
-        ensureCurrentUserUseCase { user -> _uiState.update { it.copy(currentUid = user.uid, currentNickname = user.nickname) } }
+        ensureCurrentUserUseCase { user -> _uiState.update { it.copy(currentUid = user.uid, currentNickname = user.nickname, currentProfileImg = user.profileImg) } }
         loadInitial()
     }
 

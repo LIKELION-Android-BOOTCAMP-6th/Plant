@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -119,7 +120,7 @@ fun CommunityDetailScreen(
                 modifier = Modifier
                     .padding(innerPadding)
                     .fillMaxSize()
-                    .padding(horizontal = 20.dp)
+                    .padding(horizontal = 10.dp)
                     .background(MaterialTheme.colorScheme.background)
             ) {
                 Card(
@@ -131,7 +132,7 @@ fun CommunityDetailScreen(
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     elevation = CardDefaults.elevatedCardElevation(if (isDark) 0.dp else 1.dp)
                 ) {
-                    LazyColumn(modifier = Modifier.padding(20.dp)) {
+                    LazyColumn(modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp)) {
 
                         item {
                             Box(
@@ -160,8 +161,8 @@ fun CommunityDetailScreen(
                             Spacer(modifier = Modifier.height(10.dp))
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                ProfileImage(currentPost.author.profileImg, 36)
-                                Spacer(modifier = Modifier.width(10.dp))
+                                ProfileImage(currentPost.author.profileImg, 24)
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     currentPost.author.nickname,
                                     style = MaterialTheme.typography.titleSmall // bodyMedium 보다 bodySmall이 더 잘 어울림
@@ -176,10 +177,11 @@ fun CommunityDetailScreen(
                             }
                         }
                         item {
-                            Row(modifier = Modifier.padding(start = 7.dp)) {
-                                if (currentPost.isShared ?: false) TagChip("공유", 15)
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(modifier = Modifier.offset(x = (-3).dp)) {
+                                if (currentPost.isShared ?: false) TagChip("공유", 12)
 
-                                TagChip(currentPost.tag.name, 15)
+                                TagChip(currentPost.tag.name, 12)
                             }
                             Spacer(modifier = Modifier.height(20.dp))
 
@@ -200,7 +202,7 @@ fun CommunityDetailScreen(
                         }
 
                         item {
-                            Spacer(modifier = Modifier.height(30.dp))
+                            Spacer(modifier = Modifier.height(28.dp))
 
                             HorizontalDivider(
                                 color =
@@ -211,7 +213,7 @@ fun CommunityDetailScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 12.dp)
+                                    .padding(vertical = 1.dp)
                             ) {
                                 Icon(
                                     painterResource(id = R.drawable.ic_community_comment), null,
@@ -272,6 +274,7 @@ fun CommunityDetailScreen(
                         item {
                             CommentInputSection(
                                 nickname = uiState.currentNickname,
+                                profileImg = uiState.currentProfileImg,
                                 text = uiState.comment,
                                 isSubmitting = uiState.isCommentSubmitting,
                                 onTextChange = { viewModel.onCommentChange(it) },
@@ -320,7 +323,7 @@ fun CommentRow(
 
     Row(verticalAlignment = Alignment.Top) {
         ProfileImage(comment.user.profileImg, 24)
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(5.dp))
         Column(modifier = Modifier.weight(1f)) {
             // 닉네임 + 작성 시간을 한 줄에 표시
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -417,6 +420,7 @@ fun CommentRow(
 @Composable
 fun CommentInputSection(
     nickname: String,
+    profileImg: String,
     text: String,
     isSubmitting: Boolean = false,
     onTextChange: (String) -> Unit,
@@ -434,12 +438,16 @@ fun CommentInputSection(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.elevatedCardElevation(if (isDark) 0.dp else 1.dp)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                nickname,
+        Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                ProfileImage(level = profileImg, size = 24)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    nickname,
 //                fontSize = 13.sp,
-                style = MaterialTheme.typography.titleSmall
-            )
+                    style = MaterialTheme.typography.titleSmall
+                )
+            }
             TextField(
                 value = text,
                 onValueChange = { input ->
@@ -467,13 +475,14 @@ fun CommentInputSection(
                 ),
                 shape = RoundedCornerShape(8.dp)
             )
+            Spacer(modifier = Modifier.height(4.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     "${text.length} / $maxLength",
-//                    fontSize = 12.sp,
+                    modifier = Modifier.padding(start = 4.dp),
                     color = if (text.length >= maxLength) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSecondary,
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -485,7 +494,7 @@ fun CommentInputSection(
                     },
                     enabled = !isSubmitting,
                     modifier = Modifier
-                        .height(32.dp)
+                        .height(28.dp)
                         .padding(top = 4.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(4.dp),
@@ -495,7 +504,7 @@ fun CommentInputSection(
                         if (isSubmitting) "등록 중" else "등록",
 //                        fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onPrimary,
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.labelMedium
                     )
                 }
             }
