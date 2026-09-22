@@ -48,11 +48,13 @@ import android.content.Intent
 import android.provider.Settings
 import android.util.Log
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.a32b.plant.presentation.theme.LocalIsDarkTheme
 
 @Composable
 fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val isDark = LocalIsDarkTheme.current
 
     var passwordVisible by remember { mutableStateOf(false) }
 
@@ -101,7 +103,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                     .padding(horizontal = 8.dp),
                 shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
-                elevation = CardDefaults.cardElevation(8.dp)
+                elevation = CardDefaults.cardElevation(if (isDark) 0.dp else 8.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -111,9 +113,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                 ) {
                     Text(
                         text = "닉네임 설정",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
+                        style = MaterialTheme.typography.titleMedium,
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -129,10 +129,11 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                     TextField(
                         value = uiState.nicknameInput,
                         onValueChange = viewModel::onNicknameChange,
+                        textStyle = MaterialTheme.typography.bodyMedium,
                         placeholder = {
                             Text(
                                 text = "2~10자 닉네임 입력",
-                                style = MaterialTheme.typography.bodySmall
+                                style = MaterialTheme.typography.labelMedium
                             )
                         },
                         colors = TextFieldDefaults.colors(
@@ -167,8 +168,8 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                         ),
                         shape = RoundedCornerShape(12.dp),
                         elevation = ButtonDefaults.buttonElevation(
-                            defaultElevation = 4.dp,
-                            pressedElevation = 2.dp,
+                            defaultElevation = if (isDark) 0.dp else 4.dp,
+                            pressedElevation = if (isDark) 0.dp else 2.dp,
                             disabledElevation = 0.dp
                         )
                     ) {
@@ -181,9 +182,8 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                         } else {
                             Text(
                                 "설정 완료",
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.background,
-                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -227,7 +227,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                             findPwEmailError = null
                         },
                         placeholder = {
-                            Text("이메일을 입력하세요", style = MaterialTheme.typography.bodySmall)
+                            Text("이메일을 입력하세요", style = MaterialTheme.typography.labelMedium)
                         },
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -255,7 +255,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                             modifier = Modifier.height(45.dp).weight(1f),
                             shape = RoundedCornerShape(8.dp),
                             colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.surfaceVariant)
-                        ) { Text("취소", style = MaterialTheme.typography.bodyMedium) }
+                        ) { Text("취소", style = MaterialTheme.typography.labelLarge) }
 
                         Spacer(modifier = Modifier.width(16.dp))
 
@@ -273,7 +273,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                             },
                             modifier = Modifier.height(45.dp).weight(1f),
                             shape = RoundedCornerShape(8.dp)
-                        ) { Text("전송", style = MaterialTheme.typography.titleSmall) }
+                        ) { Text("전송", style = MaterialTheme.typography.labelLarge) }
                     }
                 }
             }
@@ -300,7 +300,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
             // Plant 로고 타이틀
             Text(
                 text = "Plant",
-                style = MaterialTheme.typography.displayLarge,
+                style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.background,
                 fontSize = 40.sp
@@ -323,7 +323,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
-                elevation = CardDefaults.cardElevation(4.dp)
+                elevation = CardDefaults.cardElevation(if (isDark) 0.dp else 4.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -345,7 +345,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                         placeholder = {
                             Text(
                                 text = "이메일을 입력하세요",
-                                style = MaterialTheme.typography.bodySmall
+                                style = MaterialTheme.typography.labelMedium
                             )
                         },
                         colors = TextFieldDefaults.colors(
@@ -380,7 +380,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                         placeholder = {
                             Text(
                                 text = "비밀번호를 입력하세요",
-                                style = MaterialTheme.typography.bodySmall
+                                style = MaterialTheme.typography.labelMedium
                             )
                         },
                         colors = TextFieldDefaults.colors(
@@ -418,8 +418,8 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                     ) {
                         Text(
                             text = "비밀번호를 잊으셨나요?",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontSize = 13.sp,
+                            style = MaterialTheme.typography.labelMedium,
+                            textDecoration = TextDecoration.Underline,
                             modifier = Modifier.clickable {
                                 showFindPasswordDialog = true
                             }
@@ -441,8 +441,8 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                         ),
                         shape = RoundedCornerShape(12.dp),
                         elevation = ButtonDefaults.buttonElevation(
-                            defaultElevation = 6.dp,
-                            pressedElevation = 2.dp,
+                            defaultElevation = if (isDark) 0.dp else 6.dp,
+                            pressedElevation = if (isDark) 0.dp else 2.dp,
                             disabledElevation = 0.dp
                         )
                     ) {
@@ -455,9 +455,8 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                         } else {
                             Text(
                                 "로그인",
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.background,
-                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -479,7 +478,6 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                         Text(
                             text = "또는",
                             style = MaterialTheme.typography.bodySmall,
-                            fontSize = 13.sp,
                             modifier = Modifier.padding(horizontal = 12.dp)
                         )
                         Image(
@@ -631,14 +629,11 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                             Text(
                                 text = "계정이 없으신가요? ",
                                 style = MaterialTheme.typography.bodyMedium,
-                                fontSize = 15.sp,
                             )
                             Text(
                                 text = "회원가입",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontSize = 15.sp,
+                                style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold,
                                 textDecoration = TextDecoration.Underline,
                                 modifier = Modifier.clickable {
                                     navController.navigate(Routes.SignUp)
