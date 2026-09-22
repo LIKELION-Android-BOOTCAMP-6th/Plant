@@ -348,7 +348,7 @@ fun HomeTopBar(
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary,
-//                fontSize = 28.sp,
+                fontSize = 30.sp,
                 textAlign = TextAlign.Start
             )
             IconButton(
