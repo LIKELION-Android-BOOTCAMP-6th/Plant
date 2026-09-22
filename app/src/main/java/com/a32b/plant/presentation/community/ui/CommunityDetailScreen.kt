@@ -6,36 +6,61 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.a32b.plant.R
-import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.presentation.community.viewmodel.CommunityDetailEvent
 import com.a32b.plant.presentation.community.viewmodel.CommunityDetailViewModel
 import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.component.TagChip
 import com.a32b.plant.presentation.core.extension.showToast
-import com.a32b.plant.domain.model.Comment
+import com.a32b.plant.presentation.theme.LocalIsDarkTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,6 +69,7 @@ fun CommunityDetailScreen(
 ) {
 
     val context = LocalContext.current
+    val isDark = LocalIsDarkTheme.current
     val uiState by viewModel.uiState.collectAsState()
 
     val postState by viewModel.post.collectAsStateWithLifecycle()
@@ -84,161 +110,195 @@ fun CommunityDetailScreen(
         onRefresh = { viewModel.refresh() },
         modifier = Modifier.fillMaxSize()
     ) {
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-    ) { innerPadding ->
-        val currentPost = postState ?: return@Scaffold
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.background,
+        ) { innerPadding ->
+            val currentPost = postState ?: return@Scaffold
 
-        Column(modifier = Modifier
-            .padding(innerPadding)
-            .fillMaxSize()
-            .padding(horizontal = 20.dp)
-            .background(MaterialTheme.colorScheme.background)) {
-            Card(
-                modifier = Modifier.fillMaxSize(),
-                colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
-                ),
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                elevation = CardDefaults.elevatedCardElevation(1.dp)
+            Column(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp)
+                    .background(MaterialTheme.colorScheme.background)
             ) {
-                LazyColumn(modifier = Modifier.padding(20.dp)) {
+                Card(
+                    modifier = Modifier.fillMaxSize(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    elevation = CardDefaults.elevatedCardElevation(if (isDark) 0.dp else 1.dp)
+                ) {
+                    LazyColumn(modifier = Modifier.padding(20.dp)) {
 
-                    item {
-                        Box(modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center){
-                            IconButton(onClick = {navController.popBackStack()},
-                                modifier = Modifier.size(30.dp).align(Alignment.CenterStart)
+                        item {
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Image(painter = painterResource(R.drawable.ic_backbtn),
-                                    contentDescription = "뒤로가기")
+                                IconButton(
+                                    onClick = { navController.popBackStack() },
+                                    modifier = Modifier
+                                        .size(30.dp)
+                                        .align(Alignment.CenterStart)
+                                ) {
+                                    Image(
+                                        painter = painterResource(R.drawable.ic_backbtn),
+                                        contentDescription = "뒤로가기"
+                                    )
+                                }
+                                Text(
+                                    currentPost.title,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.padding(horizontal = 46.dp),
+                                    textAlign = TextAlign.Center
+                                )
+
                             }
-                            Text(currentPost.title, fontSize = 24.sp, style = MaterialTheme.typography.titleSmall,
-                                modifier = Modifier.padding(horizontal = 46.dp),
-                                textAlign = TextAlign.Center)
+                            Spacer(modifier = Modifier.height(10.dp))
 
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                ProfileImage(currentPost.author.profileImg, 36)
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    currentPost.author.nickname,
+                                    style = MaterialTheme.typography.bodySmall // bodyMedium 보다 bodySmall이 더 잘 어울림
+                                )
+                                Spacer(modifier = Modifier.weight(1f))
+                                Text(
+                                    TimeFormatter.formatTimeWithClock(currentPost.createdAt ?: 0) +
+                                            if (currentPost.updatedAt != null) " (수정됨)" else "",
+                                    style = MaterialTheme.typography.bodySmall,
+//                                fontSize = 12.sp
+                                )
+                            }
                         }
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            ProfileImage(currentPost.author.profileImg, 36)
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(currentPost.author.nickname,  style = MaterialTheme.typography.bodyMedium)
-                            Spacer(modifier = Modifier.weight(1f))
-                            Text(
-                                TimeFormatter.formatTimeWithClock(currentPost.createdAt ?: 0) +
-                                    if (currentPost.updatedAt != null) " (수정됨)" else "",
-                                style = MaterialTheme.typography.bodyMedium, fontSize = 12.sp)
-                        }
-                    }
-                    item{
-                        Row(modifier = Modifier.padding(start = 7.dp)) {
-                            if (currentPost.isShared?:false) TagChip("공유", 15)
-
-                            TagChip(currentPost.tag.name, 15 )
-                        }
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                    }
-
-                    if(!currentPost.studyLogs.isNullOrEmpty()){
                         item {
-                            StudyLogCard(currentPost.studyLogs)
+                            Row(modifier = Modifier.padding(start = 7.dp)) {
+                                if (currentPost.isShared ?: false) TagChip("공유", 15)
+
+                                TagChip(currentPost.tag.name, 15)
+                            }
+                            Spacer(modifier = Modifier.height(20.dp))
+
                         }
-                    }else{
+
+                        if (!currentPost.studyLogs.isNullOrEmpty()) {
+                            item {
+                                StudyLogCard(currentPost.studyLogs)
+                            }
+                        } else {
+                            item {
+                                Text(
+                                    currentPost.content ?: "",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+
+                            }
+                        }
+
                         item {
-                            Text(currentPost.content?:"", style = MaterialTheme.typography.bodyMedium)
+                            Spacer(modifier = Modifier.height(30.dp))
 
-                        }
-                    }
-
-                    item {
-                        Spacer(modifier = Modifier.height(30.dp))
-
-                        HorizontalDivider(color =
-                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            HorizontalDivider(
+                                color =
+                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                            )
 //                            sub3.copy(alpha = 0.5f))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 12.dp)
-                        ) {
-                            Icon(painterResource(id = R.drawable.ic_community_comment), null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-//                                tint = Color.Gray
-                                modifier = Modifier.size(18.dp))
-                            Text(" ${currentPost.commentCount}", style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.padding(end = 16.dp))
-
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.clickable { viewModel.toggleLike() }
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp)
                             ) {
                                 Icon(
-                                    painterResource(id = if (isLikedByMe) R.drawable.ic_community_like_selected else R.drawable.ic_community_like_normal),
-//                                    tint = if (isLikedByMe) primary else Color.Gray,
-                                    tint = if (isLikedByMe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp),
-                                    contentDescription = null
+                                    painterResource(id = R.drawable.ic_community_comment), null,
+                                    tint = MaterialTheme.colorScheme.onSurface,
+//                                tint = Color.Gray
+                                    modifier = Modifier.size(18.dp)
                                 )
-                                Text(" ${currentPost.likeCount}", style = MaterialTheme.typography.bodyMedium)
-                            }
+                                Text(
+                                    " ${currentPost.commentCount}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(end = 16.dp)
+                                )
 
-                            Spacer(modifier = Modifier.weight(1f))
-
-
-                            if (currentPost.author.id == uiState.currentUid) {
-                                IconButton(onClick = {
-                                    navController.navigate(Routes.CommunityPost(postId = currentPost.postId))
-                                }) {
-                                    Icon(painterResource(id = R.drawable.ic_edit), null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-//                                        tint = Color.DarkGray,
-                                        modifier = Modifier.size(18.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.clickable { viewModel.toggleLike() }
+                                ) {
+                                    Icon(
+                                        painterResource(id = if (isLikedByMe) R.drawable.ic_community_like_selected else R.drawable.ic_community_like_normal),
+//                                    tint = if (isLikedByMe) primary else Color.Gray,
+                                        tint = if (isLikedByMe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(18.dp),
+                                        contentDescription = null
+                                    )
+                                    Text(
+                                        " ${currentPost.likeCount}",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
                                 }
-                                IconButton(onClick = { viewModel.openDeleteDialog() }) {
-                                    Icon(painterResource(id = R.drawable.ic_trash), null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+
+                                Spacer(modifier = Modifier.weight(1f))
+
+
+                                if (currentPost.author.id == uiState.currentUid) {
+                                    IconButton(onClick = {
+                                        navController.navigate(Routes.CommunityPost(postId = currentPost.postId))
+                                    }) {
+                                        Icon(
+                                            painterResource(id = R.drawable.ic_edit), null,
+                                            tint = MaterialTheme.colorScheme.onSurface,
 //                                        tint = Color.DarkGray,
-                                        modifier = Modifier.size(22.dp))
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    IconButton(onClick = { viewModel.openDeleteDialog() }) {
+                                        Icon(
+                                            painterResource(id = R.drawable.ic_trash), null,
+                                            tint = MaterialTheme.colorScheme.onSurface,
+//                                        tint = Color.DarkGray,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
-                    }
 
 
-                    item {
-                        CommentInputSection(
-                            nickname = uiState.currentNickname,
-                            text = uiState.comment,
-                            isSubmitting = uiState.isCommentSubmitting,
-                            onTextChange = { viewModel.onCommentChange(it) },
-                            onSend = { viewModel.addComment() }
-                        )
-                        Spacer(modifier = Modifier.height(20.dp))
-                    }
+                        item {
+                            CommentInputSection(
+                                nickname = uiState.currentNickname,
+                                text = uiState.comment,
+                                isSubmitting = uiState.isCommentSubmitting,
+                                onTextChange = { viewModel.onCommentChange(it) },
+                                onSend = { viewModel.addComment() }
+                            )
+                            Spacer(modifier = Modifier.height(20.dp))
+                        }
 
-                    // CommentRow에 수정/삭제 기능 파라미터 전달
-                    items(uiState.commentList) { commentData ->
-                        CommentRow(
-                            comment = commentData,
-                            isOwner = commentData.user.uid == uiState.currentUid,
-                            isEditing = uiState.editingCommentId == commentData.commentId,
-                            editingText = uiState.editingCommentText,
-                            onEditTextChange = { viewModel.onEditCommentTextChange(it) },
-                            onEditStart = { viewModel.startEditComment(commentData) },
-                            onEditSubmit = { viewModel.submitEditComment() },
-                            onEditCancel = { viewModel.cancelEditComment() },
-                            onDeleteClick = { viewModel.openCommentDeleteDialog(commentData.commentId) }
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        // CommentRow에 수정/삭제 기능 파라미터 전달
+                        items(uiState.commentList) { commentData ->
+                            CommentRow(
+                                comment = commentData,
+                                isOwner = commentData.user.uid == uiState.currentUid,
+                                isEditing = uiState.editingCommentId == commentData.commentId,
+                                editingText = uiState.editingCommentText,
+                                onEditTextChange = { viewModel.onEditCommentTextChange(it) },
+                                onEditStart = { viewModel.startEditComment(commentData) },
+                                onEditSubmit = { viewModel.submitEditComment() },
+                                onEditCancel = { viewModel.cancelEditComment() },
+                                onDeleteClick = { viewModel.openCommentDeleteDialog(commentData.commentId) }
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
                     }
                 }
             }
         }
-    }
     }
 }
 
@@ -264,12 +324,14 @@ fun CommentRow(
         Column(modifier = Modifier.weight(1f)) {
             // 닉네임 + 작성 시간을 한 줄에 표시
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(comment.user.nickname, fontWeight = FontWeight.Bold, fontSize = 13.sp, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    comment.user.nickname,
+                    style = MaterialTheme.typography.titleSmall
+                )
                 Spacer(Modifier.width(6.dp))
                 Text(
                     text = comment.createdAt?.let { TimeFormatter.formatTimeWithClock(it) } ?: "",
-                    fontSize = 11.sp,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.titleSmall
                 )
             }
             Spacer(modifier = Modifier.height(7.dp))
@@ -298,28 +360,37 @@ fun CommentRow(
                 )
                 Row {
                     TextButton(onClick = onEditSubmit) {
-                        Text("저장",
-                              color = MaterialTheme.colorScheme.primary,
-                            fontSize = 12.sp,style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "저장",
+                            color = MaterialTheme.colorScheme.primary,
+//                            fontSize = 12.sp,
+                            style = MaterialTheme.typography.labelLarge
+                        )
                     }
                     TextButton(onClick = onEditCancel) {
-                        Text("취소",
-                            fontSize = 12.sp,style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "취소",
+//                            fontSize = 12.sp,
+                            style = MaterialTheme.typography.labelLarge
+                        )
                     }
                     Spacer(modifier = Modifier.weight(1f))
                     Text(
                         "${editingText.length} / $maxLength",
-                        fontSize = 12.sp,
+//                        fontSize = 12.sp,
                         color = if (editingText.length >= maxLength)
                             MaterialTheme.colorScheme.error
                         else
                             MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(end = 20.dp)
                     )
                 }
             } else {
-                Text(comment.content, fontSize = 14.sp, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    comment.content,
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
         }
 
@@ -328,14 +399,14 @@ fun CommentRow(
             IconButton(onClick = onEditStart, modifier = Modifier.size(28.dp)) {
                 Icon(
                     painterResource(id = R.drawable.ic_edit), null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(14.dp)
                 )
             }
             IconButton(onClick = onDeleteClick, modifier = Modifier.size(28.dp)) {
                 Icon(
                     painterResource(id = R.drawable.ic_trash), null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(14.dp)
                 )
             }
@@ -344,19 +415,31 @@ fun CommentRow(
 }
 
 @Composable
-fun CommentInputSection(nickname: String, text: String, isSubmitting: Boolean = false, onTextChange: (String) -> Unit, onSend: () -> Unit) {
+fun CommentInputSection(
+    nickname: String,
+    text: String,
+    isSubmitting: Boolean = false,
+    onTextChange: (String) -> Unit,
+    onSend: () -> Unit
+) {
     val context = LocalContext.current
+    val isDark = LocalIsDarkTheme.current
     val maxLength = 100
     val focus = LocalFocusManager.current
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.elevatedCardElevation(1.dp)
+        elevation = CardDefaults.elevatedCardElevation(if (isDark) 0.dp else 1.dp)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text(nickname, fontSize = 13.sp, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                nickname,
+//                fontSize = 13.sp,
+                style = MaterialTheme.typography.titleSmall
+            )
             TextField(
                 value = text,
                 onValueChange = { input ->
@@ -366,9 +449,12 @@ fun CommentInputSection(nickname: String, text: String, isSubmitting: Boolean = 
                     .fillMaxWidth()
                     .height(70.dp)
                     .padding(top = 8.dp),
-                placeholder = { Text("댓글을 남겨보세요...", fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSecondary,
-                    style = MaterialTheme.typography.bodyMedium) },
+                placeholder = {
+                    Text(
+                        "댓글을 남겨보세요...",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
                     unfocusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -387,14 +473,16 @@ fun CommentInputSection(nickname: String, text: String, isSubmitting: Boolean = 
             ) {
                 Text(
                     "${text.length} / $maxLength",
-                    fontSize = 12.sp,
+//                    fontSize = 12.sp,
                     color = if (text.length >= maxLength) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSecondary,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodySmall
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 Button(
-                    onClick = {onSend()
-                        focus.clearFocus()},
+                    onClick = {
+                        onSend()
+                        focus.clearFocus()
+                    },
                     enabled = !isSubmitting,
                     modifier = Modifier
                         .height(32.dp)
@@ -403,14 +491,18 @@ fun CommentInputSection(nickname: String, text: String, isSubmitting: Boolean = 
                     shape = RoundedCornerShape(4.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
                 ) {
-                    Text(if (isSubmitting) "등록 중" else "등록", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        if (isSubmitting) "등록 중" else "등록",
+//                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.labelLarge
+                    )
                 }
             }
         }
     }
 }
 
-fun limitLength(input: String, maxLength: Int, context: Context, onValueChange: (String) -> Unit){
+fun limitLength(input: String, maxLength: Int, context: Context, onValueChange: (String) -> Unit) {
     if (input.length <= maxLength) {
         onValueChange(input)
     } else {
