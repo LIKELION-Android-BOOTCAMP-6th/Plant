@@ -11,7 +11,7 @@
 4. [핵심 시스템 플로우](#4-핵심-시스템-플로우)
 5. [DI 의존성 그래프](#5-di-의존성-그래프)
 6. [데이터 동기화 전략](#6-데이터-동기화-전략)
-7. [에러 처리 아키텍처](#7-에러-처리-아키텍처)
+7. [예외 처리 아키텍처](#7-예외-처리-아키텍처)
 8. [세션 관리 아키텍처](#8-세션-관리-아키텍처)
 
 ---
@@ -20,19 +20,19 @@
 
 ### 1-1. 기술 스택 총괄
 
-| 분류 | 기술 | 버전/비고 |
-|------|------|-----------|
-| **Language** | Kotlin | — |
-| **UI Framework** | Jetpack Compose + Material 3 | 선언형 UI |
-| **Architecture** | MVVM + Clean Architecture | Feature-based 패키지 구조 |
+| 분류 | 기술 | 버전/비고                                   |
+|------|------|-----------------------------------------|
+| **Language** | Kotlin | —                                       |
+| **UI Framework** | Jetpack Compose + Material 3 | 선언형 UI                                  |
+| **Architecture** | MVVM + Clean Architecture | Feature-based 패키지 구조                    |
 | **DI** | Hilt | `@HiltViewModel`, `@Module`/`@InstallIn` |
-| **Async** | Coroutines & Flow | StateFlow, SharedFlow |
+| **Async** | Coroutines & Flow | StateFlow, SharedFlow                   |
 | **Navigation** | Jetpack Navigation Compose | Type-safe Route (kotlinx.serialization) |
-| **Backend** | Firebase (Auth, Firestore, FCM, Functions) | Serverless |
-| **Local Storage** | Preferences DataStore | 학습 세션 백업 |
-| **Image Loading** | Coil | — |
-| **Serialization** | kotlinx.serialization | Navigation Route 직렬화 |
-| **Build** | Gradle KTS, KSP | — |
+| **Backend** | Firebase (Auth, Firestore, FCM, Functions) | Serverless                              |
+| **Local Storage** | Preferences DataStore | —                                        |
+| **Image Loading** | Coil | —                                       |
+| **Serialization** | kotlinx.serialization | Navigation Route 직렬화                    |
+| **Build** | Gradle KTS, KSP | —                                       |
 
 ### 1-2. 기술 선정 근거
 
@@ -150,8 +150,8 @@ com.a32b.plant
 │   └── util/                     # TimeFormatter, RunCatchingUtils
 │
 ├── data/                          # 데이터 레이어
-│   ├── mapper/                   # DTO ↔ Domain (6개 매퍼)
-│   ├── model/                    # Firestore DTO (7개)
+│   ├── mapper/                   # DTO ↔ Domain (7개 매퍼)
+│   ├── model/                    # Firestore DTO (8개)
 │   ├── repository/               # Repository 구현체 (6개)
 │   ├── session/                  # SessionExpiredEvent
 │   └── source/
@@ -167,16 +167,15 @@ com.a32b.plant
 ├── di/                            # Hilt DI
 │   ├── data/
 │   │   ├── FirebaseModule.kt     # FirebaseAuth, Firestore, Functions
-│   │   ├── DataSourceModule.kt   # DataSource 바인딩 (7개)
+│   │   ├── DataSourceModule.kt   # DataSource 바인딩 (8개)
 │   │   ├── RepositoryModule.kt   # Repository 바인딩 (6개)
 │   │   ├── SessionModule.kt      # SessionExpiredEvent 바인딩
 │   │   └── CoroutineModule.kt    # ApplicationScope (SupervisorJob + IO)
-│   ├── qualifier/
-│   └── CurrentUser.kt            # 전역 싱글톤 (제거 예정 브릿지)
+│   └── qualifier/
 │
 ├── domain/                        # 도메인 레이어
 │   ├── error/AppError.kt         # sealed class (11종)
-│   ├── model/                    # 순수 도메인 모델 (10개)
+│   ├── model/                    # 순수 도메인 모델 (11개)
 │   ├── repository/               # Repository 인터페이스 (6개)
 │   ├── result/Result.kt          # Success<T> / Failure(AppError)
 │   ├── session/                  # Notifier / Observer 인터페이스
@@ -350,19 +349,19 @@ UI (자동 리컴포지션)
 │       ├── 시작 ──▶ studying/{uid} 문서 생성 (Firestore)                   │
 │       │            + DataStore 세션 저장                                 │
 │       │                                                                 │
-│       │         ┌──────── 5초마다 ────────┐                              │
-│       ├── 진행 ─┤                         │                              │
-│       │         └──────── 1분마다 ────────┤                              │
-│       │                                   │                             │
-│       │              DataStore             Firestore                    │
-│       │              (로컬 백업)           studying/{uid}                │
-│       │              userId, potId,       .studyingTime 갱신            │
-│       │              tag, title,                                        │
-│       │              time, log                   ┌────────────────┐     │
-│       │                                          │ 다른 유저가     │     │
-│       │                                          │ 실시간 구독     │     │
-│       │                                          │ (같은 태그)     │     │
-│       │                                          └────────────────┘     │
+│       │                                                                 │
+│       ├── 진행                                                          │
+│       │     │                                                           │
+│       │     ├─ 5초마다 ──▶ DataStore (로컬 백업)                          │
+│       │     │              저장: userId, potId, tag, title, time, log    │
+│       │     │              용도: 비정상 종료 시 복구용                      │
+│       │     │                                                           │
+│       │     └─ 1분마다 ──▶ Firestore studying/{uid}.studyingTime 갱신    │
+│       │                    용도: 같은 태그 학습자에게 실시간 시간 공유       │
+│       │                         │                                       │
+│       │                         ▼                                       │
+│       │                    다른 유저가 observeStudyingUser(tag)로         │
+│       │                    실시간 구독 (같은 태그)                         │
 │       │                                                                 │
 │       └── 종료 ──▶ 병렬 실행 (async/awaitAll)                             │
 │                    ├─ logs/{logId} 생성                                  │
@@ -522,45 +521,56 @@ SingletonComponent (앱 전역)
 │
 ├── SignInViewModel
 │   ├── SignInWithGoogleUseCase ─ Google 로그인
-│   └── ResolveUserSessionUseCase ─ 로그인 후 유저 세션 초기화
+│   ├── SignInWithEmailUseCase ─ 이메일 로그인 (⛔ 제거 예정)
+│   ├── SetNicknameUseCase ─ 닉네임 설정
+│   └── AuthRepository (currentUid)
 │
 ├── SignUpViewModel
-│   └── SetNicknameUseCase ─ 닉네임 설정
+│   └── SignUpWithEmailUseCase ─ 이메일 회원가입 (⛔ 제거 예정)
 │
 ├── HomeViewModel
-│   ├── PotRepository (getPots)
-│   └── UserRepository (currentUser)
+│   ├── GetActivePotUseCase ─ 활성 화분 조회
+│   ├── GetPotListUseCase ─ 화분 목록 조회
+│   ├── EnsureCurrentUserUseCase ─ 현재 유저 확인
+│   └── UserRepository (updateLastSelectedPot, checkAttendance)
 │
 ├── StudyingViewModel
 │   ├── StartStudyingSessionUseCase ─ 학습 시작
 │   ├── UpdateLocalStudyingSessionUseCase ─ 로컬 세션 갱신 (5초)
 │   ├── ClearStudyingSessionUseCase ─ 학습 세션 정리
+│   ├── FinishStudyingUseCase ─ 학습 종료 (시간 기록 + 보상 정산)
+│   ├── EnsureCurrentUserUseCase ─ 현재 유저 확인
 │   └── StudyingRepository (observeStudyingUser)
 │
 ├── StudyResultViewModel
-│   └── FinishStudyingUseCase ─ 학습 종료 (시간 기록 + 보상 정산)
+│   └── (의존성 없음)
 │
 ├── CommunityListViewModel
 │   └── CommunityRepository (loadPostPage, getTags)
 │
 ├── CommunityPostViewModel
-│   └── CreatePostUseCase ─ 게시글 작성
+│   ├── CreatePostUseCase ─ 게시글 작성
+│   ├── GetSelectedStudyLogUseCase ─ 학습 기록 단건 조회
+│   ├── EnsureCurrentUserUseCase ─ 현재 유저 확인
+│   └── CommunityRepository (loadPostPage)
 │
 ├── CommunityDetailViewModel
-│   ├── CommunityRepository (getPostDetail, getComments)
 │   ├── ToggleLikeUseCase ─ 좋아요 토글
-│   └── AddCommentUseCase ─ 댓글 작성
+│   ├── AddCommentUseCase ─ 댓글 작성
+│   ├── EnsureCurrentUserUseCase ─ 현재 유저 확인
+│   └── CommunityRepository (getPostDetail, getComments)
 │
 ├── CommunityActivityViewModel
 │   └── CommunityRepository (observeActivity)
 │
 ├── StudyPlanDetailViewModel
+│   ├── GetPotDetailUseCase ─ 화분 상세 조회
 │   ├── GetStudyLogsUseCase ─ 학습 기록 목록 조회
-│   ├── GetSelectedStudyLogUseCase ─ 학습 기록 단건 조회
 │   ├── DeleteStudyLogUseCase ─ 학습 기록 삭제
 │   ├── UpdatePotNameUseCase ─ 화분 이름 변경
 │   ├── DeleteEntirePotUseCase ─ 화분 삭제
-│   └── CompleteStudyPlanUseCase ─ 화분 학습 완료
+│   ├── CompleteStudyPlanUseCase ─ 화분 학습 완료
+│   └── EnsureCurrentUserUseCase ─ 현재 유저 확인
 │
 ├── NewBornTreeViewModel
 │   └── PotRepository (getAvailableTags, addPot)
@@ -570,13 +580,15 @@ SingletonComponent (앱 전역)
 │   ├── UpdateDarkModeUseCase ─ 다크모드 토글
 │   ├── ObserveDarkModeUseCase ─ 다크모드 설정 구독
 │   ├── GetProfileImageLevelListUseCase ─ 프로필 이미지 목록
-│   └── SignOutUseCase ─ 로그아웃
+│   ├── SignOutUseCase ─ 로그아웃
+│   └── EnsureCurrentUserUseCase ─ 현재 유저 확인
 │
 └── DeleteAccountViewModel
-    └── DeleteAccountUseCase ─ 회원탈퇴
+    ├── DeleteAccountUseCase ─ 회원탈퇴
+    └── AuthRepository (currentUid)
 ```
 
-> `EnsureCurrentUserUseCase`(세션 가드)는 현재 유저 정보가 필요한 UseCase가 내부 호출 → 8-2 참조.
+> `EnsureCurrentUserUseCase`(세션 가드)는 ViewModel 직접 주입 외에 다수 UseCase 내부에서도 호출됨 → 8-2 참조.
 > `SignInWithEmailUseCase`, `SignUpWithEmailUseCase`는 ⛔ 제거 예정.
 
 ---
