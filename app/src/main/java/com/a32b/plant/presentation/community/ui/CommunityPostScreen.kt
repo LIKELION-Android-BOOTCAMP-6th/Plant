@@ -129,7 +129,7 @@ fun CommunityPostScreen(
             item {
                 Text(
                     "제목",
-                    style = MaterialTheme.typography.titleSmall
+                    style = MaterialTheme.typography.titleMedium
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 PostInputField(
@@ -152,7 +152,7 @@ fun CommunityPostScreen(
                 ) {
                     Text(
                         "태그",
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(top = 4.dp)
                     )
 
@@ -207,7 +207,7 @@ fun CommunityPostScreen(
                 item {
                     Text(
                         "본문",
-                        style = MaterialTheme.typography.titleSmall
+                        style = MaterialTheme.typography.titleMedium
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     PostInputField(
@@ -272,7 +272,7 @@ fun PostTopBar(
                     text = if (isSubmitting) "처리 중" else if (isEditMode) "수정" else "등록",
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     color = MaterialTheme.colorScheme.onPrimary,
-                    style = MaterialTheme.typography.labelLarge
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
         },
@@ -321,14 +321,14 @@ fun PostInputField(
                 unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
             ),
             shape = RoundedCornerShape(8.dp),
-            textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
+            textStyle = MaterialTheme.typography.bodyMedium
         )
 
         Text(
             "${value?.length ?: 0} / $maxLength",
             style = MaterialTheme.typography.bodySmall,
             color = if ((value?.length ?: 0) >= maxLength)
-                MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
             modifier = Modifier
                 .align(Alignment.End)
                 .padding(end = 8.dp, top = 4.dp)
