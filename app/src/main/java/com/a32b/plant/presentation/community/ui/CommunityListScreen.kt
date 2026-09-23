@@ -2,16 +2,48 @@ package com.a32b.plant.presentation.community.ui
 
 import android.util.Log
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -20,7 +52,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -28,22 +59,26 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.a32b.plant.R
+import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.domain.model.Post
+import com.a32b.plant.presentation.community.viewmodel.CommunityListEvent
+import com.a32b.plant.presentation.community.viewmodel.CommunityListViewModel
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.component.TagChip
 import com.a32b.plant.presentation.core.component.TagSheet
-import com.a32b.plant.core.navigation.Routes
-import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.presentation.core.extension.showToast
-import com.a32b.plant.domain.model.Post
-import com.a32b.plant.presentation.community.viewmodel.CommunityListEvent
-import com.a32b.plant.presentation.community.viewmodel.CommunityListViewModel
-import com.a32b.plant.presentation.theme.primary
+import com.a32b.plant.presentation.theme.LocalIsDarkTheme
+import androidx.compose.material3.SwitchDefaults
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun CommunityListScreen(navController: NavController, viewModel: CommunityListViewModel = hiltViewModel()) {
+fun CommunityListScreen(
+    navController: NavController,
+    viewModel: CommunityListViewModel = hiltViewModel()
+) {
 
     val context = LocalContext.current
 
@@ -111,13 +146,14 @@ fun CommunityListScreen(navController: NavController, viewModel: CommunityListVi
                                 query = searchQuery,
                                 onQueryChange = { viewModel.onSearchQueryChanged(it) }
                             )
-                            Row(modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Text(
                                     "태그",
-                                    style = MaterialTheme.typography.titleSmall,
+                                    style = MaterialTheme.typography.titleMedium,
                                     modifier = Modifier.padding(start = 16.dp),
-                                    color = MaterialTheme.colorScheme.onBackground
                                 )
                                 Icon(
                                     painter = painterResource(id = if (uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
@@ -133,11 +169,22 @@ fun CommunityListScreen(navController: NavController, viewModel: CommunityListVi
 
                                 Spacer(modifier = Modifier.weight(1f))
 
-                                Text("공유글 보기", style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.onBackground,
-                                    fontSize = 15.sp)
-                                Switch(uiState.isSharedShown, onCheckedChange = { viewModel.onSharedShownChange() },
-                                    modifier = Modifier.scale(0.7f).padding(end = 10.dp))
+                                Text(
+                                    "공유글 보기",
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                                Switch(
+                                    uiState.isSharedShown,
+                                    onCheckedChange = { viewModel.onSharedShownChange() },
+                                    modifier = Modifier
+                                        .scale(0.7f)
+                                        .padding(end = 10.dp),
+                                    colors = SwitchDefaults.colors( // 마이페이지 다크모드 토글과 색상 맞추기
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        uncheckedBorderColor = MaterialTheme.colorScheme.outline
+                                    )
+                                )
                             }
                             FlowRow(
                                 modifier = Modifier
@@ -155,10 +202,12 @@ fun CommunityListScreen(navController: NavController, viewModel: CommunityListVi
                                     ) {
                                         Text(
                                             text = tag.name,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontSize = 12.sp,
-                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                            color = MaterialTheme.colorScheme.onPrimary
+                                            style = MaterialTheme.typography.bodySmall,
+                                            modifier = Modifier.padding(
+                                                horizontal = 10.dp,
+                                                vertical = 4.dp
+                                            ),
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
                                     }
                                 }
@@ -175,7 +224,10 @@ fun CommunityListScreen(navController: NavController, viewModel: CommunityListVi
                             }
                             /**임시 위치*/
                             TextButton(onClick = { navController.navigate(Routes.CommunityActivity) }) {
-                                Text("내 활동", style = MaterialTheme.typography.titleSmall)
+                                Text(
+                                    "내 활동",
+                                    style = MaterialTheme.typography.titleSmall
+                                )
                             }
                         }
                     },
@@ -183,7 +235,8 @@ fun CommunityListScreen(navController: NavController, viewModel: CommunityListVi
                         FloatingActionButton(
                             onClick = { navController.navigate(Routes.CommunityPost()) },
                             containerColor = MaterialTheme.colorScheme.secondary,
-                            shape = CircleShape
+                            shape = CircleShape,
+                            modifier = Modifier.offset(y = 32.dp)
                         ) {
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_edit),
@@ -215,7 +268,13 @@ fun CommunityListScreen(navController: NavController, viewModel: CommunityListVi
                                         PostCard(
                                             post = post,
                                             isLiked = post.isLiked,
-                                            onClick = { navController.navigate(Routes.CommunityDetail(postId = post.postId)) }
+                                            onClick = {
+                                                navController.navigate(
+                                                    Routes.CommunityDetail(
+                                                        postId = post.postId
+                                                    )
+                                                )
+                                            }
                                         )
                                     }
                                     // 하단 로딩 인디케이터 (loadMore 중, 데이터 있을 때만)
@@ -262,8 +321,9 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
         onValueChange = onQueryChange,
         placeholder = {
             Text(
-                "검색어를 입력하세요", style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSecondary
+                "검색어를 입력하세요",
+                style = MaterialTheme.typography.labelMedium,
+                fontSize = 15.sp
             )
         },
         modifier = Modifier
@@ -290,8 +350,8 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
             }
         },
         colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-            unfocusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             focusedTextColor = MaterialTheme.colorScheme.onSurface,
             unfocusedTextColor = MaterialTheme.colorScheme.onSurface
         ),
@@ -308,7 +368,7 @@ fun PostCard(post: Post, isLiked: Boolean, onClick: () -> Unit) {
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.secondaryContainer
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation =  1.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(
@@ -323,23 +383,23 @@ fun PostCard(post: Post, isLiked: Boolean, onClick: () -> Unit) {
 
                 Text(
                     text = post.title,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
                 Text(
                     text = TimeFormatter.formatTimeAgo(post.createdAt ?: 0) +
-                        if (post.updatedAt != null) " (수정됨)" else "",
-                    fontSize = 11.sp,
-                    style = MaterialTheme.typography.bodyMedium,
+                            if (post.updatedAt != null) " (수정됨)" else "",
+//                    fontSize = 11.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSecondary
                 )
             }
-            Row {
-                if (post.isShared ?: false) TagChip("공유", 10)
-                TagChip(post.tag.name, 10)
+            Spacer(modifier = Modifier.height(3.dp))
+            Row(modifier = Modifier.offset(x = (-5).dp).padding(vertical = 3.dp)) {
+                if (post.isShared ?: false) TagChip("공유", 12)
+                TagChip(post.tag.name, 12)
             }
 
             Spacer(modifier = Modifier.height(3.dp))
@@ -347,18 +407,21 @@ fun PostCard(post: Post, isLiked: Boolean, onClick: () -> Unit) {
                 ProfileImage(level = post.author.profileImg, 16)
                 Text(
                     text = "  ${post.author.nickname}",
-                    fontSize = 12.sp,
-                    style = MaterialTheme.typography.bodyMedium,
+//                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
             Row {
-                IconStat(R.drawable.ic_community_comment, post.commentCount.toString())
+                IconStat(R.drawable.ic_community_comment,
+                    post.commentCount.toString(),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
                 Spacer(modifier = Modifier.width(12.dp))
                 IconStat(
                     iconRes = if (isLiked) R.drawable.ic_community_like_selected else R.drawable.ic_community_like_normal,
                     text = post.likeCount.toString(),
-                    tint = if (isLiked) primary else Color.Black
+                    tint = if (isLiked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -372,7 +435,11 @@ fun IconStat(iconRes: Any, text: String, tint: Color = Color.Black) {
             is Int -> Icon(painterResource(iconRes), null, Modifier.size(14.dp), tint)
             is ImageVector -> Icon(iconRes, null, Modifier.size(14.dp), tint)
         }
-        Text(text = " $text", fontSize = 11.sp, color = tint)
+        Text(
+            text = " $text",
+            style = MaterialTheme.typography.bodySmall,
+            color = tint
+        )
     }
 }
 

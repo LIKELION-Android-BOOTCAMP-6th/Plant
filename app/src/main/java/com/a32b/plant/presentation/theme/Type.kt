@@ -43,13 +43,13 @@ fun plantTypography(colorScheme: ColorScheme): Typography{
         //타이틀 부분 - 커뮤니티 디테일의 제목, 학습계획창의 제목, 마이페이지(닉네임, 버튼들, 창 제목) 등
         titleLarge = TextStyle(
             fontFamily = title,
-            fontSize = 30.sp,
+            fontSize = 22.sp, // 30sp -> 22sp 2026.9.22 zickk-kth
             color = colorScheme.onSurface
         ),
         //기본 글씨 볼드용
         titleMedium = TextStyle(
             fontFamily = bold,
-            fontSize = 17.sp,
+            fontSize = 15.sp,
             lineHeight = 23.sp,
             color = colorScheme.onSurface
         ),
@@ -57,7 +57,7 @@ fun plantTypography(colorScheme: ColorScheme): Typography{
         //작은 글씨 강조용 - 홈의 날짜, 커뮤니티 리스트의 글제목, 다이얼로그 제목 등
         titleSmall = TextStyle(
             fontFamily = bold,
-            fontSize = 15.sp,
+            fontSize = 12.sp,
             lineHeight = 20.sp,
             color = colorScheme.onSurface
         ),
@@ -69,14 +69,14 @@ fun plantTypography(colorScheme: ColorScheme): Typography{
         //기본 글씨 - 커뮤니티의 게시글 본문 등 기타 모든 일반 글씨 작성 시
         bodyMedium = TextStyle(
             fontFamily = basic,
-            fontSize = 17.sp,
+            fontSize = 15.sp,
             lineHeight = 23.sp,
             color = colorScheme.onSurface
         ),
         //작은 글씨
         bodySmall = TextStyle(
             fontFamily = basic,
-            fontSize = 15.sp,
+            fontSize = 12.sp, // 15sp -> 12sp 2026.9.22 zickk-kth
             lineHeight = 20.sp,
             color = colorScheme.onSurface
         ),
@@ -90,7 +90,7 @@ fun plantTypography(colorScheme: ColorScheme): Typography{
         //힌트용
         labelMedium = TextStyle(
             fontFamily = basic,
-            fontSize = 15.sp,
+            fontSize = 13.sp, // 15sp -> 13sp 2026.9.22 zickk-kth
             lineHeight = 20.sp,
             color = colorScheme.onSecondary
         ),

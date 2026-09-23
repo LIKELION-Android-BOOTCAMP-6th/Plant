@@ -69,8 +69,8 @@ fun TagSheet(tags: List<Tag>, init : List<Tag> = emptyList(),
                                 }
                                 onSelectedChange(selectedTags)
                             }) {
-                            Text(tag.name, modifier = Modifier.padding(top = 5.dp, bottom = 5.dp, start = 10.dp, end = 10.dp),
-                                style = MaterialTheme.typography.bodyMedium
+                            Text(tag.name, modifier = Modifier.padding(top = 3.dp, bottom = 3.dp, start = 10.dp, end = 10.dp),
+                                style = MaterialTheme.typography.bodySmall
                             )
                         }
 
