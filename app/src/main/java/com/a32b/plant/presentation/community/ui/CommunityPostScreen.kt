@@ -4,33 +4,54 @@ import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.toRoute
 import com.a32b.plant.R
-import com.a32b.plant.presentation.core.component.ConfirmDialog
-import com.a32b.plant.presentation.core.component.TagSheet
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.community.viewmodel.CommunityPostEvent
 import com.a32b.plant.presentation.community.viewmodel.CommunityPostViewModel
+import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.core.component.TagSheet
 import com.a32b.plant.presentation.core.extension.showToast
-import com.a32b.plant.presentation.theme.background
+import com.a32b.plant.presentation.theme.LocalIsDarkTheme
 
 @Composable
 fun CommunityPostScreen(
@@ -47,17 +68,18 @@ fun CommunityPostScreen(
 
     val uiState by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(postId,  Unit) {
+    LaunchedEffect(postId, Unit) {
         postId?.let { viewModel.getPost(postId) }
 
         viewModel.event.collect { event ->
-            when(event){
+            when (event) {
                 is CommunityPostEvent.NavigateToDetail -> {
                     navController.navigate(Routes.CommunityList)
-                    navController.navigate(Routes.CommunityDetail(event.postId)){
+                    navController.navigate(Routes.CommunityDetail(event.postId)) {
                         popUpTo<Routes.CommunityPost> { inclusive = true }
                     }
                 }
+
                 is CommunityPostEvent.ShowToast -> context.showToast(event.message)
             }
         }
@@ -105,7 +127,10 @@ fun CommunityPostScreen(
             item { Spacer(modifier = Modifier.height(10.dp)) }
 
             item {
-                Text("제목", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    "제목",
+                    style = MaterialTheme.typography.titleSmall
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 PostInputField(
                     value = uiState.title,
@@ -124,14 +149,20 @@ fun CommunityPostScreen(
                             viewModel.onIsTagSheetShownChange()
                         },
                     verticalAlignment = Alignment.CenterVertically
-                ){
-                    Text("태그", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
+                ) {
+                    Text(
+                        "태그",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
 
                     if (!uiState.isShared) {
                         Icon(
-                            painter = painterResource(id = if(uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
+                            painter = painterResource(id = if (uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
                             contentDescription = "태그박스",
-                            modifier = Modifier.size(24.dp).padding(start = 4.dp)
+                            modifier = Modifier
+                                .size(24.dp)
+                                .padding(start = 4.dp)
                         )
                     }
 
@@ -139,8 +170,7 @@ fun CommunityPostScreen(
 
                     Text(
                         text = "${uiState.selected?.name ?: "태그를 선택하세요"}${(if (uiState.isShared) ", 공유" else "")}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.labelMedium,
                         modifier = Modifier.padding(top = 4.dp),
                         // 공유 모드일 때는 텍스트 색상을 흐리게 하여 수정 불가임을 알림
                         color = if (uiState.isShared) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface
@@ -148,9 +178,10 @@ fun CommunityPostScreen(
 
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                if (uiState.isTagSheetShown){
+                if (uiState.isTagSheetShown) {
                     Spacer(modifier = Modifier.height(2.dp))
-                    TagSheet(uiState.tags,
+                    TagSheet(
+                        uiState.tags,
                         enable = !uiState.isShared,
                         init = when {
                             uiState.isShared || !postId.isNullOrEmpty() -> listOf(uiState.selected!!)
@@ -167,14 +198,17 @@ fun CommunityPostScreen(
 
             }
 
-            if (uiState.isShared){
+            if (uiState.isShared) {
                 val studyLogs = uiState.studyLogs ?: emptyList()
                 item {
                     StudyLogCard(studyLogs)
                 }
-            }else{
+            } else {
                 item {
-                    Text("본문", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        "본문",
+                        style = MaterialTheme.typography.titleSmall
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
                     PostInputField(
                         value = uiState.content,
@@ -191,10 +225,12 @@ fun CommunityPostScreen(
     }
 
     if (uiState.isDismissDialogShow)
-        ConfirmDialog("게시글 작성을 종료하시겠습니까?",
+        ConfirmDialog(
+            "게시글 작성을 종료하시겠습니까?",
             semiText = "작성된 게시글은 저장되지 않습니다.",
-            onDismiss = {viewModel.onIsDismissDialogShowChange()},
-            onConfirm = {navController.popBackStack()
+            onDismiss = { viewModel.onIsDismissDialogShowChange() },
+            onConfirm = {
+                navController.popBackStack()
             }
         )
 }
@@ -202,12 +238,26 @@ fun CommunityPostScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PostTopBar(isEditMode: Boolean, isSubmitting: Boolean = false, onBackClick: () -> Unit, onRegisterClick: () -> Unit) {
+fun PostTopBar(
+    isEditMode: Boolean,
+    isSubmitting: Boolean = false,
+    onBackClick: () -> Unit,
+    onRegisterClick: () -> Unit
+) {
     CenterAlignedTopAppBar(
-        title = { Text(if (isEditMode) "글 수정" else "글쓰기", style = MaterialTheme.typography.titleLarge) },
+        title = {
+            Text(
+                if (isEditMode) "글 수정" else "글쓰기",
+                style = MaterialTheme.typography.displayLarge
+            )
+        },
         navigationIcon = {
             IconButton(onClick = onBackClick) {
-                Icon(Icons.Default.ArrowBack, contentDescription = null, tint = Color.DarkGray)
+                Icon(
+                    Icons.Default.ArrowBack,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
             }
         },
         actions = {
@@ -221,15 +271,15 @@ fun PostTopBar(isEditMode: Boolean, isSubmitting: Boolean = false, onBackClick: 
                 Text(
                     text = if (isSubmitting) "처리 중" else if (isEditMode) "수정" else "등록",
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimary,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.labelLarge
                 )
             }
         },
-        colors = TopAppBarDefaults. centerAlignedTopAppBarColors(containerColor = Color.Transparent)
+        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
     )
 }
+
 @Composable
 fun PostInputField(
     value: String?,
@@ -240,6 +290,7 @@ fun PostInputField(
     maxLength: Int = Int.MAX_VALUE
 ) {
     val context = LocalContext.current
+    val isDark = LocalIsDarkTheme.current
 
     Column {
         TextField(
@@ -252,10 +303,16 @@ fun PostInputField(
                 }
             },
 
-            placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium) },
-            modifier = modifier.fillMaxWidth()
-                .shadow(elevation = 1.dp, shape = RoundedCornerShape(8.dp))
-                .background(background),
+            placeholder = {
+                Text(
+                    placeholder,
+                    style = MaterialTheme.typography.labelMedium
+                )
+            },
+            modifier = modifier
+                .fillMaxWidth()
+                .shadow(elevation = if (isDark) 0.dp else 1.dp, shape = RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.background),
             singleLine = singleLine,
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -269,7 +326,7 @@ fun PostInputField(
 
         Text(
             "${value?.length ?: 0} / $maxLength",
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodySmall,
             color = if ((value?.length ?: 0) >= maxLength)
                 MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
             modifier = Modifier

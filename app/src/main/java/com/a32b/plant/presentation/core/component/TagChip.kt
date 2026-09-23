@@ -11,7 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.a32b.plant.presentation.theme.LocalIsDarkTheme
-import com.a32b.plant.presentation.theme.primary
 
 @Composable
 fun TagChip(text: String, size: Int, isSelected: Boolean = true) {
@@ -19,8 +18,14 @@ fun TagChip(text: String, size: Int, isSelected: Boolean = true) {
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer),
         elevation = CardDefaults.cardElevation(defaultElevation = if (LocalIsDarkTheme.current) 0.dp else 1.5.dp),
-        modifier = Modifier.padding(5.dp),
+        modifier = Modifier.padding(2.dp),
     ) {
-        Text(text, Modifier.padding(top = 5.dp, bottom = 5.dp, start = 10.dp, end = 10.dp), style = MaterialTheme.typography.bodyMedium, fontSize = size.sp)
+        Text(
+            text,
+            Modifier.padding(top = 3.dp, bottom = 3.dp, start = 10.dp, end = 10.dp),
+            style = MaterialTheme.typography.bodySmall,
+            fontSize = size.sp,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
