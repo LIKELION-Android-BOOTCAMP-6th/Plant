@@ -165,7 +165,7 @@ fun CommunityDetailScreen(
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     currentPost.author.nickname,
-                                    style = MaterialTheme.typography.titleSmall // bodyMedium 보다 bodySmall이 더 잘 어울림
+                                    style = MaterialTheme.typography.titleMedium
                                 )
                                 Spacer(modifier = Modifier.weight(1f))
                                 Text(
