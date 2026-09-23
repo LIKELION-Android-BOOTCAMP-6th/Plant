@@ -152,9 +152,8 @@ fun CommunityListScreen(
                             ) {
                                 Text(
                                     "태그",
-                                    style = MaterialTheme.typography.titleSmall,
+                                    style = MaterialTheme.typography.titleMedium,
                                     modifier = Modifier.padding(start = 16.dp),
-                                    color = MaterialTheme.colorScheme.onBackground
                                 )
                                 Icon(
                                     painter = painterResource(id = if (uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
@@ -172,8 +171,7 @@ fun CommunityListScreen(
 
                                 Text(
                                     "공유글 보기",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.onBackground
+                                    style = MaterialTheme.typography.titleMedium,
                                 )
                                 Switch(
                                     uiState.isSharedShown,
@@ -363,7 +361,6 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
 
 @Composable
 fun PostCard(post: Post, isLiked: Boolean, onClick: () -> Unit) {
-    val isDark = LocalIsDarkTheme.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -371,7 +368,7 @@ fun PostCard(post: Post, isLiked: Boolean, onClick: () -> Unit) {
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.secondaryContainer
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 0.dp else 1.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation =  1.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(
@@ -386,7 +383,7 @@ fun PostCard(post: Post, isLiked: Boolean, onClick: () -> Unit) {
 
                 Text(
                     text = post.title,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
