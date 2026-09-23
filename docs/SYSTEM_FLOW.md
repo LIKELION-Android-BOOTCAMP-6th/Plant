@@ -1,7 +1,7 @@
 # Plant System Flow (아키텍처 · 데이터 흐름 · 기술 스택 근거)
 
 > **최초 작성일**: 2026-09-11  
-> **최종 수정일**: 2026-09-22
+> **최종 수정일**: 2026-09-23
 
 ## 목차
 
@@ -456,9 +456,9 @@ UI (자동 리컴포지션)
 ┌──────────────────────────────────────────────────────────────────┐
 │                    출석체크 데이터 흐름                            │
 │                                                                  │
-│   HomeScreen → "출석하기" 탭                                      │
+│   HomeScreen → 출석체크 아이콘 탭 → AttendanceCheckDialog           │
 │       │                                                          │
-│       ▼                                                          │
+│       ▼ [출석하기] 버튼 탭                                         │
 │   UserRepository.checkAttendance(uid)                            │
 │       │                                                          │
 │       ▼                                                          │
@@ -466,17 +466,16 @@ UI (자동 리컴포지션)
 │       │                                                          │
 │       ├─ lastCheckedAt == today → AlreadyChecked                 │
 │       ├─ count >= 28 (같은 달) → MonthCompleted                   │
-│       └─ Success(newCount, reward)                               │
+│       ├─ 달 바뀜 (isSameMonth == false) → count = 1 재시작        │
+│       └─ 같은 달 → count + 1                                     │
 │              │                                                   │
-│              ├─ Firestore Transaction:                           │
-│              │   users/{uid}.monthCheck.count = newCount         │
-│              │   users/{uid}.monthCheck.lastCheckedAt = now      │
-│              │                                                   │
-│              └─ reward != null → 보상 지급                        │
-│                  AttendanceRewardTable.of(count)                 │
-│                  ├─ Coin(amount) → users/{uid}.coin += amount    │
-│                  └─ ItemReward(type, amt)                        │
-│                      → users/{uid}.item.{fieldKey} += amount     │
+│              ▼ Firestore Transaction (출석 기록 + 보상 원자적 저장) │
+│              ├─ users/{uid}.dailyCheckThisMonth.count = newCount │
+│              ├─ users/{uid}.dailyCheckThisMonth.lastCheckedAt    │
+│              │   = FieldValue.serverTimestamp()                  │
+│              ├─ reward: Coin → users/{uid}.coin += amount        │
+│              └─ reward: ItemReward                               │
+│                  → users/{uid}.item.{fieldKey} += amount         │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -656,7 +655,7 @@ SingletonComponent (앱 전역)
 │
 └── DeleteAccountViewModel
     ├── DeleteAccountUseCase ─ 회원탈퇴
-    └── AuthRepository (currentUid)
+    └── AuthRepository (getSignInProvider, reauthenticateWithGoogle)
 ```
 
 > `EnsureCurrentUserUseCase`(세션 가드)는 ViewModel 직접 주입 외에 다수 UseCase 내부에서도 호출됨 → 8-2 참조.
@@ -799,15 +798,16 @@ SplashViewModel.checkAuthLogin()
      ┌──────────────────┼──────────────────┐
      │                  │                  │
      ▼                  ▼                  ▼
-  로그아웃           회원탈퇴          세션 만료
-     │                  │                  │
-     ▼                  ▼                  ▼
-  endUserSession()   endUserSession()   notifySessionExpired()
-  signOut()          deleteUserData()   → MainActivity 이벤트 수신
-     │               deleteAuthAccount()→ signOut()
-     ▼                  │               → SignInScreen 이동
-  SignInScreen          ▼               → 세션 만료 다이얼로그 표시
-                     SignInScreen
+  로그아웃           회원탈퇴                  세션 만료
+     │                  │                        │
+     ▼                  ▼                        ▼
+  endUserSession()   getSignInProvider()       notifySessionExpired()
+  signOut()          → Google 재인증            → MainActivity 이벤트 수신
+     │               (reauthenticateWithGoogle) → signOut()
+     ▼               → endUserSession()        → SignInScreen 이동
+  SignInScreen       → deleteUserData()        → 세션 만료 다이얼로그 표시
+                     → deleteAuthAccount()
+                     → SignInScreen
 ```
 
 ### 8-2. EnsureCurrentUser 가드 패턴

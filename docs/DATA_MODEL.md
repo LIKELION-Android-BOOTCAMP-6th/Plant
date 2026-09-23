@@ -1,5 +1,8 @@
 ## 📐 데이터 모델
- 
+
+> **최초 작성일**: 2026-09-09
+> **최종 수정일**: 2026-09-23
+
 ### users
 ```
 users
@@ -10,6 +13,17 @@ users
     ├── isFirstLogin: Boolean?
     ├── totalStudyTime: Long?
     ├── completedPotsCount: Int?
+    ├── coin: Int
+    ├── dailyCheckThisMonth
+    │   ├── count: Int
+    │   └── lastCheckedAt: Timestamp?
+    ├── item
+    │   ├── heart: Int
+    │   ├── sun: Int
+    │   ├── water: Int
+    │   ├── fertilizer: Int
+    │   ├── nutrient: Int
+    │   └── box: Int
     │
     └── pots
         └── {potsId}
