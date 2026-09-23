@@ -49,7 +49,7 @@ fun plantTypography(colorScheme: ColorScheme): Typography{
         //기본 글씨 볼드용
         titleMedium = TextStyle(
             fontFamily = bold,
-            fontSize = 17.sp,
+            fontSize = 15.sp,
             lineHeight = 23.sp,
             color = colorScheme.onSurface
         ),
@@ -69,7 +69,7 @@ fun plantTypography(colorScheme: ColorScheme): Typography{
         //기본 글씨 - 커뮤니티의 게시글 본문 등 기타 모든 일반 글씨 작성 시
         bodyMedium = TextStyle(
             fontFamily = basic,
-            fontSize = 17.sp,
+            fontSize = 15.sp,
             lineHeight = 23.sp,
             color = colorScheme.onSurface
         ),
