@@ -1,6 +1,9 @@
 # Plant PRD (Product Requirements Document)
 
 
+> **최초 작성일**: 2026-09-09
+> **최종 수정일**: 2026-09-23
+
 ## 1. 배경 및 문제 정의
 
 ### 1-1. 문제
@@ -93,9 +96,9 @@
 | **마이페이지** | 프로필 조회 | ✅ | 닉네임, 이미지, 총 공부 시간 |
 | | 닉네임 변경 | ✅ | 2~10자, 중복 불가 |
 | | 프로필 이미지 변경 | 🚧 | 화분 성장 이미지 기반, 변경 가능성 있음 |
-| | 다크모드 | ✅ | DataStore 기반, 유저별 설정 유지 |
-| **출석체크** | 출석판 (28일 고정) | 📋 | 윤달/윤년 등은 28일 통일 |
-| | 하루 1회 출석 + 누적 보상 | 📋 | Gold·성장 아이템 지급, 서버 시간 기준, Transaction 기반 중복 보상 방지 |
+| | 다크모드 | ✅ | DataStore 기반, 기기별 로컬 저장 |
+| **출석체크** | 출석판 (28일 고정) | 🚧 | 윤달/윤년 등은 28일 통일 |
+| | 하루 1회 출석 + 누적 보상 | 🚧 | Gold·성장 아이템 지급, Transaction 기반, 서버 시간 판정은 미적용 (클라이언트 KST) |
 | **리포트/통계** | 학습 달력 (공부한 날짜 표시) | 🚧 | ReportScreen 존재, 세부 미확인 |
 | | 일간 학습 통계 (총/최대/최소/평균) | 📋 | |
 | | 월간 학습 통계 (그래프 포함) | 📋 | |
@@ -215,7 +218,7 @@
 | **출석판** | 특징 | 28일 고정, 월간 출석 현황 표시 | — | 윤달/윤년 등 날짜 차이 무시 |
 | **출석 방식** | 특징 | 하루 1회, 당일 중복 불가 | — | 서버 시간 기준 판정 |
 | **출석 기록** | 특징 | 누적 방식 | 5일과 12일에 출석하면 두 번째 칸까지 체크 | — |
-| **보상** | 기능 | 출석 칸별 Gold/성장 아이템 지급 | — | Transaction 기반 중복 보상 방지(`isRewarded`) |
+| **보상** | 기능 | 출석 칸별 Gold/성장 아이템 지급 | — | Transaction 기반, `lastCheckedAt` 날짜로 중복 출석 방지 |
 
 #### G. 보상 · Gold · 상점 (신규)
 
@@ -226,7 +229,7 @@
 | 항목 | 분류 | 설명 | 플로우 | 비고 |
 |------|------|------|--------|------|
 | **학습 완료 보상** | 기능 | 세션 공부 시간에 따라 아이템 + 보너스박스 지급 | — | 해당 티어 하나만 적용, 하위 티어 중복 지급 없음 |
-| **보너스박스** | 기능 | 보너스박스를 열면 확률에 따라 1가지 보상 드롭 | — | 아이템(89%) 또는 Gold(11%) |
+| **보너스박스** | 기능 | 보너스박스를 열면 확률에 따라 1가지 보상 드롭 | — | 아이템(89%) / 보너스박스(5%) / Gold(6%) |
 | **상점** | 기능 | Gold를 사용하여 성장 아이템 구매 | — | 모든 기본 기능 완료 후 개발 |
 | **Gold 수급** | 특징 | 보너스박스, 출석, 목표 달성에서 획득 | — | 목표 달성 보상 구체적 기획 미정 |
 
@@ -249,7 +252,8 @@
 | 💧 물 | 9% |
 | 🌿 비료 | 5% |
 | 💊 영양제 | 2% |
-| 300 Gold | 8.5% |
+| 📦 보너스박스 | 5% |
+| 300 Gold | 3.5% |
 | 500 Gold | 2% |
 | 1,000 Gold | 0.5% |
 
@@ -270,7 +274,7 @@ Gold를 사용하여 성장 아이템을 구매할 수 있다.
 
 | 수급 경로 | 내용 |
 |---------|------|
-| **보너스박스** | 300G(8.5%) / 500G(2%) / 1,000G(0.5%) |
+| **보너스박스** | 300G(3.5%) / 500G(2%) / 1,000G(0.5%) |
 | **출석** | 출석 보상으로 Gold 지급 |
 | **목표 달성** | 일간·월간 목표, 누적 학습 시간, 화분 성장 달성 시 지급 (구체적 기획 미정) |
 
@@ -371,7 +375,7 @@ com.a32b.plant
 │   └── usecase/       # 유스케이스
 │       ├── auth/      # 인증 관련 (8개)
 │       ├── community/ # 커뮤니티 관련 (4개)
-│       ├── mypage/    # 마이페이지 관련 (3개)
+│       ├── mypage/    # 마이페이지 관련 (4개)
 │       ├── pot/       # 화분 관련 (6개)
 │       ├── session/   # 세션 관련 (1개)
 │       ├── studyLog/  # 학습 기록 관련 (3개)
@@ -400,7 +404,7 @@ com.a32b.plant
 | `posts/{postId}` | author{id,nickname,profileImg}, title, content, tag{id,name,parentId,no}, commentCount, likeCount, likedBy[], bookmarkCount, bookmarkedBy[], createdAt, activityId, isShared, studyLogs[] | 게시글 |
 | `posts/{postId}/comments/{commentId}` | user{uid,nickname,profileImg}, content, activityId, createdAt | 댓글 |
 | `activities/{activityId}` | uid, type, title, comment, commentId, targetId, createAt | 커뮤니티 활동 |
-| `studying/{studyingId}` | uid, nickname, tag, studyingTime, profileImg | 실시간 학습 현황 |
+| `studying/{uid}` | nickname, tag, studyingTime, profileImg | 실시간 학습 현황 |
 | `nicknames/{nickname}` | nickname | 닉네임 중복 방지 |
 
 ---
@@ -425,12 +429,12 @@ SplashScreen (자동 로그인 판단)
     │
     ├── [커뮤니티 탭] CommunityListScreen
     │   ├── CommunityPostScreen (글 작성/수정)
-    │   └── CommunityDetailScreen (글 상세)
+    │   ├── CommunityDetailScreen (글 상세)
+    │   └── CommunityActivityScreen (활동 내역)
     │
     ├── [리포트 탭] ReportScreen
     │
     └── [마이페이지 탭] MyPageScreen
-        └── CommunityActivityScreen (활동 내역)
 ```
 
 ---
@@ -457,8 +461,9 @@ SplashScreen (자동 로그인 판단)
 
 | 문서 | 경로 |
 |------|------|
-| 기능명세서 | [docs/FEATURE_SPEC.md](FEATURE_SPEC.md) |
-| 화면명세서 | [docs/SCREEN_SPEC.pdf](SCREEN_SPEC.pdf) |
+| User Flow | [docs/USER_FLOW.md](USER_FLOW.md) |
+| System Flow | [docs/SYSTEM_FLOW.md](SYSTEM_FLOW.md) |
+| 화면명세 | docs/SCREEN_SPEC.md (작성 예정) |
 | 데이터 모델 | [docs/DATA_MODEL.md](DATA_MODEL.md) |
 | 발표자료 | [Google Drive](https://drive.google.com/file/d/1Mwvug51RlhaJiB6CjpF8rBXy9hWRgweU/view?usp=drive_link) |
 | 시연 영상 | [YouTube](https://youtu.be/ipBhhjw6aRo) |
