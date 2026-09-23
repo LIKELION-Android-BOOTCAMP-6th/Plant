@@ -57,7 +57,7 @@ fun plantTypography(colorScheme: ColorScheme): Typography{
         //작은 글씨 강조용 - 홈의 날짜, 커뮤니티 리스트의 글제목, 다이얼로그 제목 등
         titleSmall = TextStyle(
             fontFamily = bold,
-            fontSize = 15.sp, // bodySmall == 12sp, 크기 다름
+            fontSize = 12.sp,
             lineHeight = 20.sp,
             color = colorScheme.onSurface
         ),
