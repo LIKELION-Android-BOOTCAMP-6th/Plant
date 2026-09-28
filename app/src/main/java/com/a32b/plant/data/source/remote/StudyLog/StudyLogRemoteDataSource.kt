@@ -1,6 +1,7 @@
 package com.a32b.plant.data.datasource
 
 import com.a32b.plant.data.model.StudyLogDto
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
 
 interface StudyLogRemoteDataSource {
@@ -8,4 +9,10 @@ interface StudyLogRemoteDataSource {
     suspend fun getPotLogs(uid: String, potId: String): List<StudyLogDto>
     suspend fun getSelectedStudyLog(uid: String, potId: String, logId: String): StudyLogDto?
     suspend fun executeDeleteBatch(uid: String, potId: String, logId: String, decreaseAmount: Long)
+    suspend fun getPotLogsInPeriod(
+        uid: String,
+        potId: String,
+        startInclusive: Timestamp,
+        endExclusive: Timestamp
+    ): List<StudyLogDto>
 }
