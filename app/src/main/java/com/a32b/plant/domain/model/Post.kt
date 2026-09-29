@@ -48,11 +48,11 @@ data class Post(
             isShared = false
         )
 
-        fun createShared(author: PostAuthor, title: String, studyLogs: List<StudyLog>, tag: Tag) = Post(
+        fun createShared(author: PostAuthor, title: String, studyLogs: List<StudyLog>, tag: Tag, content: String? = null) = Post(
             postId = "",
             author = author,
             title = title,
-            content = null,
+            content = content,
             tag = tag,
             commentCount = 0,
             likeCount = 0,

@@ -51,7 +51,7 @@ import com.a32b.plant.presentation.community.viewmodel.CommunityPostViewModel
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.TagSheet
 import com.a32b.plant.presentation.core.extension.showToast
-import com.a32b.plant.presentation.theme.LocalIsDarkTheme
+import androidx.compose.foundation.isSystemInDarkTheme
 
 @Composable
 fun CommunityPostScreen(
@@ -107,7 +107,6 @@ fun CommunityPostScreen(
                             if (isSuccess) {
                                 val msg = if (postId != null) "수정되었습니다!" else "성공적으로 등록되었습니다!"
                                 context.showToast(msg)
-                                navController.popBackStack()
                             } else {
                                 context.showToast("등록에 실패했습니다.")
                             }
@@ -184,8 +183,8 @@ fun CommunityPostScreen(
                         uiState.tags,
                         enable = !uiState.isShared,
                         init = when {
-                            uiState.isShared || !postId.isNullOrEmpty() -> listOf(uiState.selected!!)
-                            uiState.selected?.id?.isNotEmpty() == true -> listOf(uiState.selected!!)
+                            uiState.isShared || !postId.isNullOrEmpty() -> listOfNotNull(uiState.selected)
+                            uiState.selected?.id?.isNotEmpty() == true -> listOfNotNull(uiState.selected)
                             else -> emptyList()
                         }
                     ) { selected ->
@@ -201,7 +200,20 @@ fun CommunityPostScreen(
             if (uiState.isShared) {
                 val studyLogs = uiState.studyLogs ?: emptyList()
                 item {
+                    Text("공유 기록", style = MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
                     StudyLogCard(studyLogs)
+                }
+                item {
+                    Text("추가 내용", style = MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    PostInputField(
+                        value = uiState.extraContent,
+                        onValueChange = { viewModel.onExtraContentChange(it) },
+                        placeholder = "공부 기록에 대해 자유롭게 작성해주세요. (선택)",
+                        modifier = Modifier.heightIn(min = 200.dp),
+                        maxLength = 1000
+                    )
                 }
             } else {
                 item {
@@ -290,7 +302,7 @@ fun PostInputField(
     maxLength: Int = Int.MAX_VALUE
 ) {
     val context = LocalContext.current
-    val isDark = LocalIsDarkTheme.current
+    val isDark = isSystemInDarkTheme()
 
     Column {
         TextField(
