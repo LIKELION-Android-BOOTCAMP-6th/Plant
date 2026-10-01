@@ -213,11 +213,32 @@ class UserRemoteDataSourceImpl @Inject constructor(
     }
 
     override suspend fun addDrawItems(uid: String, items: List<ItemType>) {
+        val updates = buildUpdates(items)
+
+        if (updates.isEmpty()) return
+
+        db.collection("users").document(uid)
+            .update(updates)
+            .await()
+    }
+
+    override suspend fun openBonusBoxes(uid: String, items: List<ItemType>) {
+        val ref = db.collection("users").document(uid)
+        val boxCount = items.size.toLong()
+
+        db.runTransaction {
+            val box = it.get(ref).getLong("item.box") ?: 0
+            check( box >= boxCount) {"보너스 박스의 개수가 부족합니다."}
+
+            it.update(ref, buildUpdates(items) + ("item.box" to FieldValue.increment(-boxCount)))
+        }.await()
+    }
+
+    private fun buildUpdates(items: List<ItemType>) : Map<String, Any>{
         val updates = mutableMapOf<String, Any>()
 
         val (coinItems, normalItems) = items.partition { it.fieldKey == "coin" }
 
-        // 일반
         normalItems
             .groupingBy { it.fieldKey }
             .eachCount()
@@ -225,16 +246,11 @@ class UserRemoteDataSourceImpl @Inject constructor(
                 updates["item.$key"] = FieldValue.increment(count.toLong())
             }
 
-        // 코인
         val totalCoin = coinItems.sumOf { it.price }
         if (totalCoin > 0) {
             updates["coin"] = FieldValue.increment(totalCoin.toLong())
         }
 
-        if (updates.isEmpty()) return
-
-        db.collection("users").document(uid)
-            .update(updates)
-            .await()
+        return updates
     }
 }

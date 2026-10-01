@@ -37,4 +37,5 @@ interface UserRepository {
 
     /** 학습 완료 후 획득한 아이템 저장용*/
     suspend fun addDrawItems(uid: String, items: List<ItemType>) : Result<Unit>
+    suspend fun openBonusBoxes(uid: String, items: List<ItemType>) : Result<Unit>
 }

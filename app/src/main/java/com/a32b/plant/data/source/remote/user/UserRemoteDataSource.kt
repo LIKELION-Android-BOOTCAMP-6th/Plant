@@ -18,4 +18,5 @@ interface UserRemoteDataSource {
     suspend fun checkAttendance(uid: String): AttendanceDecision
     suspend fun deleteUserData(uid: String)
     suspend fun addDrawItems(uid: String, items: List<ItemType>)
+    suspend fun openBonusBoxes(uid: String, items: List<ItemType>)
 }
