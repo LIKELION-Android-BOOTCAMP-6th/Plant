@@ -98,6 +98,13 @@ class ReportViewModel @Inject constructor(
         loadMonth(next, if (next == YearMonth.from(today)) today else next.atDay(1))
     }
 
+    // 한국 날짜가 바뀌었으면 보고 있던 달·선택 날짜 그대로 다시 조회한다(오늘·하루 평균·다음 달 버튼 갱신).
+    fun refreshIfDateChanged() {
+        val state = _uiState.value
+        if (LocalDate.now(REPORT_ZONE) == state.today) return
+        loadMonth(state.month, state.selectedDate)
+    }
+
     fun retry() {
         val state = _uiState.value
         if (state.loadError) loadMonth(state.month, state.selectedDate)
