@@ -7,12 +7,11 @@
 ```
 users
 └── {uid}
-    ├── nickname: String?
-    ├── profileImg: String?
-    ├── lastSelectedPotId: String?
+    ├── nickname: String
+    ├── profileImg: String
+    ├── lastSelectedPotId: String
     ├── isFirstLogin: Boolean?
-    ├── totalStudyTime: Long?
-    ├── completedPotsCount: Int?
+    ├── totalStudyTime: Long
     ├── coin: Int
     ├── dailyCheckThisMonth
     │   ├── count: Int
@@ -27,16 +26,15 @@ users
     │
     └── pots
         └── {potsId}
-            ├── id: String?
-            ├── tag_id: String?
-            ├── tag_name: String?
-            ├── name: String?
-            ├── imageUrl: String?
-            ├── potTotalStudyingTime: Long?
-            ├── createdAt: Timestamp
+            ├── id: String
+            ├── tag_id: String
+            ├── tag_name: String
+            ├── name: String
+            ├── imageUrl: String
+            ├── potTotalStudyingTime: Long
+            ├── createdAt: Timestamp?
             ├── completedAt: Timestamp?
             ├── isCompleted: Boolean
-            ├── lastStudiedAt: Timestamp?
             │
             └── logs
                 └── {logId}
