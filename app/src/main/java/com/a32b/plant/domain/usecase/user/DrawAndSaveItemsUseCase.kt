@@ -12,11 +12,17 @@ import kotlin.random.Random
 class DrawAndSaveItemsUseCase @Inject constructor(
     private val repository: UserRepository
 ) {
-    suspend operator fun invoke(uid: String, count: Int): Result<List<ItemType>>{
+    suspend operator fun invoke(uid: String, count: Int, isBoxOpened: Boolean = false): Result<List<ItemType>>{
         if (count <= 0) return Result.Failure(AppError.Debug("아이템 count 오류"))
 
         val drawItems = Random.drawItems(count)
 
-        return repository.addDrawItems(uid, drawItems).map { drawItems }
+        val result = if (isBoxOpened) {
+            repository.openBonusBoxes(uid, drawItems)
+        } else {
+            repository.addDrawItems(uid, drawItems)
+        }
+
+        return result.map { drawItems }
     }
 }
