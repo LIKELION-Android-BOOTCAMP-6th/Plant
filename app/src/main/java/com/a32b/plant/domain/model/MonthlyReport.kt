@@ -10,8 +10,7 @@ data class MonthlyReport(
     val averageDayCount: Int,
     val averageBasisDate: LocalDate,
     val dailyTotals: List<ReportDailyTotal>,
-    val potComparison: ReportPotComparison,
-    val calendarDates: Set<LocalDate>
+    val potComparison: ReportPotComparison
 )
 
 data class ReportDailyTotal(

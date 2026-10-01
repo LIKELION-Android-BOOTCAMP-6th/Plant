@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.DateTimeException
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
@@ -34,7 +33,6 @@ data class ReportUiState(
     val month: YearMonth = YearMonth.from(today),
     val selectedDate: LocalDate = today,
     val tab: ReportTab = ReportTab.DAILY,
-    val canGoPrevious: Boolean = true,
     val canGoNext: Boolean = false,
     val isLoading: Boolean = true,
     val loadError: Boolean = false,
@@ -65,7 +63,6 @@ class ReportViewModel @Inject constructor(
     private var preparedMonth: PreparedReportMonth.Valid? = null
     private var requestJob: Job? = null
     private var requestId = 0
-    private var initialLoadFinished = false
 
     init {
         loadMonth(_uiState.value.month, _uiState.value.selectedDate)
@@ -88,7 +85,6 @@ class ReportViewModel @Inject constructor(
 
     fun previousMonth() {
         val state = _uiState.value
-        if (!state.canGoPrevious) return
         val previous = state.month.minusMonths(1)
         val today = LocalDate.now(REPORT_ZONE)
         loadMonth(previous, if (previous == YearMonth.from(today)) today else previous.atDay(1))
@@ -118,7 +114,6 @@ class ReportViewModel @Inject constructor(
                 month = month,
                 selectedDate = selectedDate,
                 // 달 이동 가능 여부는 여기서만 계산한다(화면은 이 값만 읽는다). 미래 달은 이동 불가.
-                canGoPrevious = hasPreviousMonth(month),
                 canGoNext = month < YearMonth.from(today),
                 isLoading = true,
                 loadError = false,
@@ -154,11 +149,11 @@ class ReportViewModel @Inject constructor(
                                 isLoading = false
                             )
                         }
-                        finishInitialLoad()
+                        loaded()
                     }
                     PreparedReportMonth.CalculationError -> {
                         _uiState.update { it.copy(calculationError = true, isLoading = false) }
-                        finishInitialLoad()
+                        loaded()
                     }
                 }
             }
@@ -186,23 +181,8 @@ class ReportViewModel @Inject constructor(
                 monthlyReport = null
             )
         }
-        finishInitialLoad()
-    }
-
-    private fun finishInitialLoad() {
-        if (!initialLoadFinished) {
-            initialLoadFinished = true
-            loaded()
-        }
+        loaded()
     }
 }
 
 private val REPORT_ZONE = ZoneId.of("Asia/Seoul")
-
-// YearMonth 최소값(-999999999년 1월)이면 이전 달을 만들 수 없다.
-private fun hasPreviousMonth(month: YearMonth): Boolean = try {
-    month.minusMonths(1)
-    true
-} catch (_: DateTimeException) {
-    false
-}

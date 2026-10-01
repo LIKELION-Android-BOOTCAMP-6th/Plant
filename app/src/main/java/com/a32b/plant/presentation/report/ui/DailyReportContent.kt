@@ -68,27 +68,22 @@ internal fun DailyReportContent(report: DailyReport) {
 internal fun SavedReportRecord(record: ReportRecord, date: LocalDate) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text("${record.potName} · ${reportDuration(record.studyingTime)}", style = MaterialTheme.typography.titleMedium)
-        if (record.allSegments.isNotEmpty()) {
-            record.allSegments.forEach { segment ->
+        when (record.timelineStatus) {
+            ReportTimelineStatus.SHOWN -> record.allSegments.forEach { segment ->
                 Text(reportRecordSegmentLine(segment, date), style = MaterialTheme.typography.bodyMedium)
             }
-        } else {
-            when (record.timelineStatus) {
-                ReportTimelineStatus.TITLE_UNPARSABLE -> {
-                    Text("기록 시각을 확인할 수 없어요.", style = MaterialTheme.typography.bodyMedium)
-                    if (record.title.isNotBlank()) {
-                        Text("원본 제목 · ${record.title}", style = MaterialTheme.typography.labelMedium)
-                    }
+            ReportTimelineStatus.TITLE_UNPARSABLE -> {
+                Text("기록 시각을 확인할 수 없어요.", style = MaterialTheme.typography.bodyMedium)
+                if (record.title.isNotBlank()) {
+                    Text("원본 제목 · ${record.title}", style = MaterialTheme.typography.labelMedium)
                 }
-                ReportTimelineStatus.TOO_LONG -> {
-                    Text("공부 시간이 24시간 이상이라 시각을 표시할 수 없어요.", style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        "저장 · ${TimeFormatter.formatToKoreanDate(record.savedAt)} ${TimeFormatter.formatToTimeOnly(record.savedAt)}",
-                        style = MaterialTheme.typography.labelMedium
-                    )
-                }
-                // SHOWN이면 조각이 항상 1개 이상이라 여기 오지 않는다. when이 모든 경우를 다뤄야 해서 둔다.
-                ReportTimelineStatus.SHOWN -> Text("표시할 기록 시각이 없어요.", style = MaterialTheme.typography.bodyMedium)
+            }
+            ReportTimelineStatus.TOO_LONG -> {
+                Text("공부 시간이 24시간 이상이라 시각을 표시할 수 없어요.", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    "저장 · ${TimeFormatter.formatToKoreanDate(record.savedAt)} ${TimeFormatter.formatToTimeOnly(record.savedAt)}",
+                    style = MaterialTheme.typography.labelMedium
+                )
             }
         }
     }

@@ -30,8 +30,7 @@ class CalculateMonthlyReportUseCase @Inject constructor(
             averageDayCount = averageDayCount,
             averageBasisDate = averageBasisDate,
             dailyTotals = dailyTotals,
-            potComparison = calculatePotComparison(prepared.records),
-            calendarDates = prepared.calendarDates
+            potComparison = calculatePotComparison(prepared.records)
         )
     }
 }
