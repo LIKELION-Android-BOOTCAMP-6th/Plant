@@ -12,6 +12,7 @@ import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.User
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
+import com.a32b.plant.domain.type.ItemType
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
@@ -176,6 +177,13 @@ class UserRepositoryImpl @Inject constructor(
     }.fold(
         onSuccess = { Result.Success(Unit) },
         onFailure = { e -> Result.Failure(handleError(e, "유저 데이터 삭제 실패")) }
+    )
+
+    override suspend fun addDrawItems(uid: String, items: List<ItemType>): Result<Unit> = safeRunCatching {
+        userRemoteDataSource.addDrawItems(uid, items)
+    }.fold(
+        onSuccess = { Result.Success(Unit)},
+        onFailure = { e -> Result.Failure(handleError(e, "알 수 없는 오류가 발생했습니다."))}
     )
 
     private fun handleLocalError(e: Throwable, message: String): AppError {

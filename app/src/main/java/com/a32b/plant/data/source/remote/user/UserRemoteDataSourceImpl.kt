@@ -211,4 +211,30 @@ class UserRemoteDataSourceImpl @Inject constructor(
         db.collection("users").document(uid).delete().await()
         Log.d("UserRemoteDataSource", "deleteUserData 완료")
     }
+
+    override suspend fun addDrawItems(uid: String, items: List<ItemType>) {
+        val updates = mutableMapOf<String, Any>()
+
+        val (coinItems, normalItems) = items.partition { it.fieldKey == "coin" }
+
+        // 일반
+        normalItems
+            .groupingBy { it.fieldKey }
+            .eachCount()
+            .forEach { (key, count) ->
+                updates["item.$key"] = FieldValue.increment(count.toLong())
+            }
+
+        // 코인
+        val totalCoin = coinItems.sumOf { it.price }
+        if (totalCoin > 0) {
+            updates["coin"] = FieldValue.increment(totalCoin.toLong())
+        }
+
+        if (updates.isEmpty()) return
+
+        db.collection("users").document(uid)
+            .update(updates)
+            .await()
+    }
 }

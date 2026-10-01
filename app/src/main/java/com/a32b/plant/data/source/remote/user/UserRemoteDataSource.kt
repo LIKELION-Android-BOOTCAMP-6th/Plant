@@ -2,6 +2,7 @@ package com.a32b.plant.data.source.remote.user
 
 import com.a32b.plant.data.model.UserDto
 import com.a32b.plant.domain.model.AttendanceDecision
+import com.a32b.plant.domain.type.ItemType
 import kotlinx.coroutines.flow.Flow
 
 interface UserRemoteDataSource {
@@ -16,4 +17,5 @@ interface UserRemoteDataSource {
     suspend fun deleteNickname(nickname: String)
     suspend fun checkAttendance(uid: String): AttendanceDecision
     suspend fun deleteUserData(uid: String)
+    suspend fun addDrawItems(uid: String, items: List<ItemType>)
 }
