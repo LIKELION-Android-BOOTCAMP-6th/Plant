@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -43,6 +44,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
@@ -61,7 +66,7 @@ import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.component.TagChip
 import com.a32b.plant.presentation.core.extension.showToast
-import com.a32b.plant.presentation.theme.LocalIsDarkTheme
+import androidx.compose.foundation.isSystemInDarkTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,7 +75,7 @@ fun CommunityDetailScreen(
 ) {
 
     val context = LocalContext.current
-    val isDark = LocalIsDarkTheme.current
+    val isDark = isSystemInDarkTheme()
     val uiState by viewModel.uiState.collectAsState()
 
     val postState by viewModel.post.collectAsStateWithLifecycle()
@@ -132,7 +137,7 @@ fun CommunityDetailScreen(
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     elevation = CardDefaults.elevatedCardElevation(if (isDark) 0.dp else 1.dp)
                 ) {
-                    LazyColumn(modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp)) {
+                    LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 24.dp)) {
 
                         item {
                             Box(
@@ -147,7 +152,8 @@ fun CommunityDetailScreen(
                                 ) {
                                     Image(
                                         painter = painterResource(R.drawable.ic_backbtn),
-                                        contentDescription = "뒤로가기"
+                                        contentDescription = "뒤로가기",
+                                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onBackground)
                                     )
                                 }
                                 Text(
@@ -191,14 +197,15 @@ fun CommunityDetailScreen(
                             item {
                                 StudyLogCard(currentPost.studyLogs)
                             }
-                        } else {
-                            item {
-                                Text(
-                                    currentPost.content ?: "",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-
+                        }
+                        item {
+                            if (!currentPost.studyLogs.isNullOrEmpty() && !currentPost.content.isNullOrBlank()) {
+                                Spacer(modifier = Modifier.height(16.dp))
                             }
+                            Text(
+                                currentPost.content ?: "",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
                         }
 
                         item {
@@ -213,6 +220,7 @@ fun CommunityDetailScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .heightIn(min = 48.dp)
                                     .padding(vertical = 1.dp)
                             ) {
                                 Icon(
@@ -427,7 +435,7 @@ fun CommentInputSection(
     onSend: () -> Unit
 ) {
     val context = LocalContext.current
-    val isDark = LocalIsDarkTheme.current
+    val isDark = isSystemInDarkTheme()
     val maxLength = 100
     val focus = LocalFocusManager.current
     Card(
@@ -455,7 +463,6 @@ fun CommentInputSection(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(70.dp)
                     .padding(top = 8.dp),
                 placeholder = {
                     Text(
@@ -471,9 +478,14 @@ fun CommentInputSection(
                     focusedTextColor = MaterialTheme.colorScheme.onSurface,
                     unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                     cursorColor = MaterialTheme.colorScheme.primary
-
                 ),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(8.dp),
+                maxLines = 4,
+                minLines = 1,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Default
+                )
             )
             Spacer(modifier = Modifier.height(4.dp))
             Row(
@@ -483,7 +495,7 @@ fun CommentInputSection(
                 Text(
                     "${text.length} / $maxLength",
                     modifier = Modifier.padding(start = 4.dp),
-                    color = if (text.length >= maxLength) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSecondary,
+                    color = if (text.length >= maxLength) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
                 Spacer(modifier = Modifier.weight(1f))
