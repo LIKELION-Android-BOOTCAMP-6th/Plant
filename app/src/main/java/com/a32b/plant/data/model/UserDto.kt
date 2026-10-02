@@ -22,8 +22,8 @@ data class UserDto(
     var isDarkMode: Boolean = false,
     @get:PropertyName("totalStudyTime") @set:PropertyName("totalStudyTime")
     var totalStudyTime: Long = 0L,
-    @get:PropertyName("coin") @set:PropertyName("coin")
-    var coin: Int = 0,
+    @get:PropertyName("gold") @set:PropertyName("gold")
+    var gold: Int = 0,
     @get:PropertyName("dailyCheckThisMonth") @set:PropertyName("dailyCheckThisMonth")
     var monthCheck: DailyCheckThisMonthDto = DailyCheckThisMonthDto(),
     @get:PropertyName("item") @set:PropertyName("item")

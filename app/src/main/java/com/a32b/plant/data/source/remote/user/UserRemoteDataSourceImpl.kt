@@ -107,7 +107,7 @@ class UserRemoteDataSourceImpl @Inject constructor(
 
                 when (val reward = decision.reward) {
                     is AttendanceReward.Coin ->
-                        updates["coin"] = FieldValue.increment(reward.amount.toLong())
+                        updates[ItemType.GOLD_300.fieldKey] = FieldValue.increment(reward.amount.toLong())
 
                     is AttendanceReward.ItemReward -> {
                         val type = reward.type

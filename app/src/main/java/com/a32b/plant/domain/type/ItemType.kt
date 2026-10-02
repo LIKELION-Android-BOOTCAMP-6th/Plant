@@ -12,7 +12,7 @@ enum class ItemType(
     FERTILIZER("비료", 450, 5.0, "fertilizer"),
     NUTRIENT("영양제", 950, 2.0, "nutrient"),
     BOX("보너스 박스", 250, 5.0, "box"),
-    GOLD_300("300골드", 300, 3.5, "coin"),
-    GOLD_500("500골드", 500, 2.0, "coin"),
-    GOLD_1000("1000골드", 1000, 0.5, "coin")
+    GOLD_300("300골드", 300, 3.5, "gold"),
+    GOLD_500("500골드", 500, 2.0, "gold"),
+    GOLD_1000("1000골드", 1000, 0.5, "gold")
 }

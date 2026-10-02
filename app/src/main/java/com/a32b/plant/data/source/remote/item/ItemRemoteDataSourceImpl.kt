@@ -37,7 +37,7 @@ class ItemRemoteDataSourceImpl @Inject constructor(
     private fun buildUpdates(items: List<ItemType>) : Map<String, Any>{
         val updates = mutableMapOf<String, Any>()
 
-        val (coinItems, normalItems) = items.partition { it.fieldKey == "coin" }
+        val (coinItems, normalItems) = items.partition { it.fieldKey == ItemType.GOLD_300.fieldKey }
 
         normalItems
             .groupingBy { it.fieldKey }
@@ -48,7 +48,7 @@ class ItemRemoteDataSourceImpl @Inject constructor(
 
         val totalCoin = coinItems.sumOf { it.price }
         if (totalCoin > 0) {
-            updates["coin"] = FieldValue.increment(totalCoin.toLong())
+            updates[ItemType.GOLD_300.fieldKey] = FieldValue.increment(totalCoin.toLong())
         }
 
         return updates
