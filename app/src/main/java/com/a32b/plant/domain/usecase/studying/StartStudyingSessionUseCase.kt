@@ -12,7 +12,7 @@ class StartStudyingSessionUseCase @Inject constructor(
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     private val repository: StudyingRepository
 ) {
-    suspend operator fun invoke(tag: String, title: String, potId: String, time: Long, log: List<String>?) : Result<Unit> {
+    suspend operator fun invoke(tag: String, title: String, potId: String, time: Long, log: List<String>?, startedAt: Long) : Result<Unit> {
         return ensureCurrentUserUseCase {
             val result = repository.initStudyingUser(
                 StudyingUser(it.uid, it.nickname, it.profileImg, tag, time)
@@ -21,7 +21,7 @@ class StartStudyingSessionUseCase @Inject constructor(
                 result
             } else {
                 repository.saveLocalSession(
-                    StudyingSession(it.uid, tag, title, potId, time, log)
+                    StudyingSession(it.uid, tag, title, potId, time, log, startedAt)
                 )
             }
         } ?: Result.Failure(AppError.UnknownUser())

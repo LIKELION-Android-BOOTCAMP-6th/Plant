@@ -31,6 +31,7 @@ class StudyingLocalDataSourceImpl @Inject constructor(
     private val TITLE = stringPreferencesKey("title")
     private val TIME = longPreferencesKey("time")
     private val LOG = stringPreferencesKey("log")
+    private val STARTEDAT = longPreferencesKey("startedAt")
 
     override suspend fun save(studying: StudyingSession) {
         context.dataStore.edit { preferences ->
@@ -39,6 +40,7 @@ class StudyingLocalDataSourceImpl @Inject constructor(
             preferences[TAG] = studying.tag
             preferences[TITLE] = studying.title
             preferences[TIME] = studying.time
+            preferences[STARTEDAT] = studying.startedAt
             studying.log?.let {
                 preferences[LOG] = Json.encodeToString(it)
             }
@@ -55,6 +57,7 @@ class StudyingLocalDataSourceImpl @Inject constructor(
         val tag = preferences[TAG] ?: return null
         val title = preferences[TITLE] ?: return null
         val time = preferences[TIME] ?: return null
+        val startedAt = preferences[STARTEDAT] ?: return null
         val log = preferences[LOG]?.let {
             runCatching { Json.decodeFromString<List<String>>(it) }.getOrNull()
         } //log를 나중에 작성한 경우일 수 있으니 nullable
@@ -65,7 +68,8 @@ class StudyingLocalDataSourceImpl @Inject constructor(
             tag = tag,
             title = title,
             time = time,
-            log = log
+            log = log,
+            startedAt = startedAt
         )
     }
 

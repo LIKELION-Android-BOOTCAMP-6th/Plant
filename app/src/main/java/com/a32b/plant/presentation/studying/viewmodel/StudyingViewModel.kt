@@ -46,7 +46,7 @@ data class StudyingUiState(
     val studyingUsers: List<StudyingUser> = emptyList(),
     val studyLog: List<StudyLogUi> = emptyList(),
     val isLocalSaved: Boolean = true, // 로컬 저장 성공 여부 체크
-    val startTime: String = "",
+    val startedAt: Long = 0L,
     val isLoading: Boolean = false,
     val error: String? = null,
     val isGoalInputDialogShown: Boolean = true, //학습 목표 입력
@@ -102,11 +102,11 @@ class StudyingViewModel @Inject constructor(
     }
 
     /** 현재 시간 기록 */
-    fun onStartTimeChange(value : String) = _uiState.update { it.copy(startTime = value) }
+    fun onStartedAtChange(value : Long) = _uiState.update { it.copy(startedAt = value) }
 
     /** 비정상 종료 대비 로컬 디비에 데이터 저장   */
     private suspend fun saveSession(){
-        updateLocalStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title, potId,_uiState.value.timer)
+        updateLocalStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title, potId,_uiState.value.timer, startedAt = _uiState.value.startedAt)
             .onSuccess { _uiState.update { it.copy(isLocalSaved = true) } }
             .onFailure { e ->
                 if (e is AppError.Custom) _uiState.update { it.copy(isLocalSaved = false) }
@@ -116,7 +116,7 @@ class StudyingViewModel @Inject constructor(
     /** 최초 시작 시 로컬 + 원격 db에 현재 사용자 정보 저장 */
     suspend fun initStudyingUser(){
         withContext(Dispatchers.IO){
-            startStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title,potId,_uiState.value.timer, _uiState.value.studyLog.map { it.log })
+            startStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title,potId,_uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt)
                 .onFailure { e ->
                     when (e){
                         is AppError.UnknownUser -> Unit //유즈케이스에서 호출했으므로 따로 호출 x
@@ -189,7 +189,7 @@ class StudyingViewModel @Inject constructor(
         }
         Log.d("입력값 확인", "$studyLog")
         viewModelScope.launch {
-            updateLocalStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title, potId, _uiState.value.timer, _uiState.value.studyLog.map { it.log })
+            updateLocalStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title, potId, _uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt)
         }
     }
 
@@ -268,14 +268,15 @@ class StudyingViewModel @Inject constructor(
     /** 학습 내역 저장 및 결과창으로 이동 */
     private fun onFinishStudyingClick() {
         var isLogSaved = true
+        val startTime = TimeFormatter.formatToTimeOnly(_uiState.value.startedAt)
         //개별 학습 기록의 제목
-        val timestamp = "${TimeFormatter.formatToKoreanDate(LocalDateTime.now())} ${_uiState.value.startTime} ~ ${getCurrentTime()}"
-        val resultTimestamp = "${TimeFormatter.formatWithDayOfWeek(LocalDateTime.now())} ${_uiState.value.startTime} ~ ${getCurrentTime()}"
+        val timestamp = "${TimeFormatter.formatToKoreanDate(LocalDateTime.now())} ${startTime} ~ ${getCurrentTime()}"
+        val resultTimestamp = "${TimeFormatter.formatWithDayOfWeek(LocalDateTime.now())} ${startTime} ~ ${getCurrentTime()}"
 
         viewModelScope.launch(Dispatchers.IO){
 
             val result = withTimeoutOrNull(5.seconds){
-                finishStudyingUseCase(potId, timestamp, _uiState.value.studyLog.map { it.log }, _uiState.value.timer)
+                finishStudyingUseCase(potId, timestamp, _uiState.value.studyLog.map { it.log }, _uiState.value.timer, _uiState.value.startedAt)
                     .onSuccess { clearSession() }
                     .onFailure { e ->
                         when (e){
