@@ -212,45 +212,4 @@ class UserRemoteDataSourceImpl @Inject constructor(
         Log.d("UserRemoteDataSource", "deleteUserData 완료")
     }
 
-    override suspend fun addDrawItems(uid: String, items: List<ItemType>) {
-        val updates = buildUpdates(items)
-
-        if (updates.isEmpty()) return
-
-        db.collection("users").document(uid)
-            .update(updates)
-            .await()
-    }
-
-    override suspend fun openBonusBoxes(uid: String, items: List<ItemType>) {
-        val ref = db.collection("users").document(uid)
-        val boxCount = items.size.toLong()
-
-        db.runTransaction {
-            val box = it.get(ref).getLong("item.box") ?: 0
-            check( box >= boxCount) {"보너스 박스의 개수가 부족합니다."}
-
-            it.update(ref, buildUpdates(items) + ("item.box" to FieldValue.increment(-boxCount)))
-        }.await()
-    }
-
-    private fun buildUpdates(items: List<ItemType>) : Map<String, Any>{
-        val updates = mutableMapOf<String, Any>()
-
-        val (coinItems, normalItems) = items.partition { it.fieldKey == "coin" }
-
-        normalItems
-            .groupingBy { it.fieldKey }
-            .eachCount()
-            .forEach { (key, count) ->
-                updates["item.$key"] = FieldValue.increment(count.toLong())
-            }
-
-        val totalCoin = coinItems.sumOf { it.price }
-        if (totalCoin > 0) {
-            updates["coin"] = FieldValue.increment(totalCoin.toLong())
-        }
-
-        return updates
-    }
 }

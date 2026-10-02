@@ -12,7 +12,6 @@ import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.User
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
-import com.a32b.plant.domain.type.ItemType
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
@@ -179,19 +178,7 @@ class UserRepositoryImpl @Inject constructor(
         onFailure = { e -> Result.Failure(handleError(e, "유저 데이터 삭제 실패")) }
     )
 
-    override suspend fun addDrawItems(uid: String, items: List<ItemType>): Result<Unit> = safeRunCatching {
-        userRemoteDataSource.addDrawItems(uid, items)
-    }.fold(
-        onSuccess = { Result.Success(Unit)},
-        onFailure = { e -> Result.Failure(handleError(e, "알 수 없는 오류가 발생했습니다."))}
-    )
 
-    override suspend fun openBonusBoxes(uid: String, items: List<ItemType>): Result<Unit> = safeRunCatching {
-        userRemoteDataSource.openBonusBoxes(uid, items)
-    }.fold(
-        onSuccess = { Result.Success(Unit)},
-        onFailure = { e -> Result.Failure(handleError(e, "알 수 없는 오류가 발생했습니다."))}
-    )
     private fun handleLocalError(e: Throwable, message: String): AppError {
         Log.e("UserRepository", "$message: ${e.message}", e)
         return AppError.Local(message)
@@ -204,7 +191,6 @@ class UserRepositoryImpl @Inject constructor(
 
         return when (e) {
             is FirebaseNetworkException -> AppError.Network()
-            is IllegalStateException -> AppError.Custom(e.message ?: logMessage) //FirebaseFirestoreException 내부로 들어가진 않는지 확인 필요
             else -> AppError.Custom(logMessage)
         }
     }
