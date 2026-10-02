@@ -10,6 +10,7 @@ fun StudyLogDto.toDomain() : StudyLog = StudyLog(
     contents = contents,
     studyingTime = studyingTime,
     createAt = createAt.toLong(),
+    startedAt = startedAt.toLong(),
     id = id,
     isSelected = false
 )
@@ -19,5 +20,6 @@ fun StudyLog.toDto() : StudyLogDto = StudyLogDto(
     contents = contents,
     studyingTime = studyingTime,
     createAt = createAt.toTimestamp(),
+    startedAt = startedAt.toTimestamp(),
     id = id,
 )

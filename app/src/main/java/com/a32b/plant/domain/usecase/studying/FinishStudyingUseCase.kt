@@ -12,10 +12,10 @@ import javax.inject.Inject
 class FinishStudyingUseCase @Inject constructor(
     private val repository: StudyingRepository
 ) {
-    suspend operator fun invoke(potId : String, timestamp: String, log: List<String>, time: Long ) : Result<Unit> {
+    suspend operator fun invoke(potId : String, timestamp: String, log: List<String>, time: Long, startedAt: Long ) : Result<Unit> {
         return coroutineScope {
             val results = awaitAll(
-                async { repository.saveStudyLog(potId, StudyLog.write(timestamp, log, time)) },
+                async { repository.saveStudyLog(potId, StudyLog.write(timestamp, log, time, startedAt)) },
                 async { repository.updateTotalStudyTime(potId, time) },
                 async { repository.updateUserTotalStudyTime(time) },
             )
