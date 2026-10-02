@@ -2,12 +2,14 @@ package com.a32b.plant.di.data
 
 import com.a32b.plant.data.repository.AuthRepositoryImpl
 import com.a32b.plant.data.repository.CommunityRepositoryImpl
+import com.a32b.plant.data.repository.ItemRepositoryImpl
 import com.a32b.plant.data.repository.PotRepositoryImpl
 import com.a32b.plant.data.repository.StudyLogRepositoryImpl
 import com.a32b.plant.data.repository.StudyingRepositoryImpl
 import com.a32b.plant.data.repository.UserRepositoryImpl
 import com.a32b.plant.domain.repository.AuthRepository
 import com.a32b.plant.domain.repository.CommunityRepository
+import com.a32b.plant.domain.repository.ItemRepository
 import com.a32b.plant.domain.repository.PotRepository
 import com.a32b.plant.domain.repository.StudyLogRepository
 import com.a32b.plant.domain.repository.StudyingRepository
@@ -48,4 +50,7 @@ abstract class RepositoryModule {
         studyLogRepositoryImpl: StudyLogRepositoryImpl
     ): StudyLogRepository
 
+    @Binds
+    @Singleton
+    abstract fun bindItemRepository(impl: ItemRepositoryImpl) : ItemRepository
 }
