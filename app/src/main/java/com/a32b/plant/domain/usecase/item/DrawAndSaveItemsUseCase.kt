@@ -5,7 +5,7 @@ import com.a32b.plant.domain.repository.ItemRepository
 import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.result.map
 import com.a32b.plant.domain.type.ItemType
-import com.a32b.plant.presentation.core.extension.drawItems
+import com.a32b.plant.domain.util.drawItems
 import javax.inject.Inject
 import kotlin.random.Random
 

@@ -1,4 +1,4 @@
-package com.a32b.plant.presentation.core.extension
+package com.a32b.plant.domain.util
 
 import com.a32b.plant.domain.type.ItemType
 import kotlin.random.Random
