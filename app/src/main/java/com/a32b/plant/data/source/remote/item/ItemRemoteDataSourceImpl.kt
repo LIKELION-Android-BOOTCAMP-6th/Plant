@@ -10,7 +10,7 @@ import javax.inject.Singleton
 @Singleton
 class ItemRemoteDataSourceImpl @Inject constructor(
     private val db : FirebaseFirestore
-): ItemRemoteDateSource {
+): ItemRemoteDataSource {
 
     override suspend fun addDrawItems(uid: String, items: List<ItemType>) {
         val updates = buildUpdates(items)

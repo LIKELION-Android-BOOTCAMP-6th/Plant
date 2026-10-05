@@ -2,7 +2,7 @@ package com.a32b.plant.data.repository
 
 import android.util.Log
 import com.a32b.plant.core.util.safeRunCatching
-import com.a32b.plant.data.source.remote.item.ItemRemoteDateSource
+import com.a32b.plant.data.source.remote.item.ItemRemoteDataSource
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.repository.ItemRepository
 import com.a32b.plant.domain.result.Result
@@ -14,18 +14,18 @@ import javax.inject.Singleton
 
 @Singleton
 class ItemRepositoryImpl @Inject constructor(
-    private val itemRemoteDateSource: ItemRemoteDateSource
+    private val itemRemoteDataSource: ItemRemoteDataSource
 ): ItemRepository {
 
     override suspend fun addDrawItems(uid: String, items: List<ItemType>): Result<Unit> = safeRunCatching {
-        itemRemoteDateSource.addDrawItems(uid, items)
+        itemRemoteDataSource.addDrawItems(uid, items)
     }.fold(
         onSuccess = { Result.Success(Unit)},
         onFailure = { e -> Result.Failure(handleError(e, "알 수 없는 오류가 발생했습니다."))}
     )
 
     override suspend fun openBonusBoxes(uid: String, items: List<ItemType>): Result<Unit> = safeRunCatching {
-        itemRemoteDateSource.openBonusBoxes(uid, items)
+        itemRemoteDataSource.openBonusBoxes(uid, items)
     }.fold(
         onSuccess = { Result.Success(Unit)},
         onFailure = { e -> Result.Failure(handleError(e, "알 수 없는 오류가 발생했습니다."))}
