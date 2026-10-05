@@ -113,8 +113,7 @@ fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewMo
 @Composable
 fun StudyResultContent(timestamp: String, tag: String, title: String, log: List<String>, level: String, time: Long){
     Surface(modifier = Modifier.fillMaxSize(),
-//        color = MaterialTheme.colorScheme.background
-        color = Color(0x00000000)
+        color = MaterialTheme.colorScheme.background
     ) {
         Column(modifier = Modifier.fillMaxSize().padding(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally) {
@@ -125,8 +124,7 @@ fun StudyResultContent(timestamp: String, tag: String, title: String, log: List<
 
             Card(modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(7.dp),
                 colors = CardDefaults.cardColors(
-//                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    containerColor = Color(0x00000000)
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
                 ),
                 shape = RoundedCornerShape(20.dp)
 
