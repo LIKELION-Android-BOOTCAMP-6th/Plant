@@ -34,7 +34,7 @@ class ItemRepositoryImpl @Inject constructor(
     private fun handleError(e: Throwable, logMessage: String): AppError {
         if (e is CancellationException) throw e
 
-        Log.e("UserRepository", "$logMessage: ${e.message}", e)
+        Log.e("ItemRepository", "$logMessage: ${e.message}", e)
 
         return when (e) {
             is FirebaseNetworkException -> AppError.Network()
