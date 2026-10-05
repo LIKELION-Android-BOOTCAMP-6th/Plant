@@ -2,7 +2,6 @@ package com.a32b.plant.data.source.remote.user
 
 import com.a32b.plant.data.model.UserDto
 import com.a32b.plant.domain.model.AttendanceDecision
-import com.a32b.plant.domain.type.ItemType
 import kotlinx.coroutines.flow.Flow
 
 interface UserRemoteDataSource {

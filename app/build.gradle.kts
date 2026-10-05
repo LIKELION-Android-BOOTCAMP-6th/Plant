@@ -103,5 +103,5 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
     implementation(libs.hilt.navigation.compose)
-    implementation("nl.dionsegijn:konfetti-compose:2.0.5")
+    implementation(libs.konfetti.compose)
 }
