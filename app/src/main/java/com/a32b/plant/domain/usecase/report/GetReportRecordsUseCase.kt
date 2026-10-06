@@ -25,10 +25,8 @@ class GetReportRecordsUseCase @Inject constructor(
                 potLogs.logs.mapNotNull { log ->
                     val endMillis = log.createAt ?: return@mapNotNull null
                     ReportRecord(
-                        potId = potLogs.pot.id,
                         potName = potLogs.pot.name,
                         tagName = potLogs.pot.tagName,
-                        logId = log.id,
                         studyingTime = log.studyingTime,
                         startedAt = Instant.ofEpochMilli(log.startedAt).atZone(REPORT_ZONE).toLocalDateTime(),
                         endedAt = Instant.ofEpochMilli(endMillis).atZone(REPORT_ZONE).toLocalDateTime()
