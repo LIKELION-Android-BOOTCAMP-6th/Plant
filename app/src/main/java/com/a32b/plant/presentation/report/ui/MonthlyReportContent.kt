@@ -54,7 +54,7 @@ fun MonthlyReportContent(report: MonthlyReport) {
 
 @Composable
 private fun MonthlyDailyGraph(report: MonthlyReport) {
-    val upper = reportAxisUpperMillis(report.dailyTotals.maxOfOrNull { it.totalMillis } ?: 0L)
+    val upper = reportAxisUpperMillis(report.dailyTotals.maxOf { it.totalMillis })
     val gridColor = MaterialTheme.colorScheme.outline
     val barColor = MaterialTheme.colorScheme.tertiary
     // 눈금은 상한의 4등분이라 항상 분 단위다. 0 눈금만 "0초" 대신 "0"으로 둔다.
@@ -76,8 +76,7 @@ private fun MonthlyDailyGraph(report: MonthlyReport) {
     val voiceDescription = report.dailyTotals.joinToString(", ", prefix = "날짜별 공부 시간. ") {
         "${it.date.dayOfMonth}일 ${TimeFormatter.formatToKoreanDuration(it.totalMillis)}"
     }
-    val labels = (listOf(1, 5, 10, 15, 20, 25, report.month.lengthOfMonth())
-        .filter { it <= report.month.lengthOfMonth() }).distinct()
+    val labels = listOf(1, 5, 10, 15, 20, 25, report.month.lengthOfMonth())
     val dayLabelWidth = with(density) {
         labels.maxOf { textMeasurer.measure(it.toString(), labelStyle).size.width }.toDp()
     } + 2.dp

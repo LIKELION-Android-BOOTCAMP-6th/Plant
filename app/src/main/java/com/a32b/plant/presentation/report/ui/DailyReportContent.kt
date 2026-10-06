@@ -6,7 +6,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.key
 import androidx.compose.ui.unit.dp
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.DailyReport
@@ -40,9 +39,7 @@ fun DailyReportContent(report: DailyReport) {
                 }
                 report.records.forEachIndexed { index, record ->
                     if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-                    key(date, record.potId, record.logId) {
-                        ReportRecordRow(record)
-                    }
+                    ReportRecordRow(record)
                 }
             }
         }

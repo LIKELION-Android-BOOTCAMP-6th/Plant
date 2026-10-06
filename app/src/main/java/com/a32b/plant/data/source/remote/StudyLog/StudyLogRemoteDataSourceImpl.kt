@@ -64,7 +64,6 @@ class StudyLogRemoteDataSourceImpl @Inject constructor(
             .collection("logs")
             .whereGreaterThanOrEqualTo("startedAt", startInclusive)
             .whereLessThan("startedAt", endExclusive)
-            .orderBy("startedAt", Query.Direction.ASCENDING)
             .get(Source.SERVER)
             .await()
         return snapshot.documents.mapNotNull { it.toObject(StudyLogDto::class.java) }
