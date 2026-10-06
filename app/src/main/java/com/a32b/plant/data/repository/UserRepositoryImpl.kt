@@ -178,6 +178,7 @@ class UserRepositoryImpl @Inject constructor(
         onFailure = { e -> Result.Failure(handleError(e, "유저 데이터 삭제 실패")) }
     )
 
+
     private fun handleLocalError(e: Throwable, message: String): AppError {
         Log.e("UserRepository", "$message: ${e.message}", e)
         return AppError.Local(message)
