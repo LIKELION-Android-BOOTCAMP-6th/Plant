@@ -62,9 +62,9 @@ class StudyLogRemoteDataSourceImpl @Inject constructor(
         val snapshot = db.collection("users").document(uid)
             .collection("pots").document(potId)
             .collection("logs")
-            .whereGreaterThanOrEqualTo("createAt", startInclusive)
-            .whereLessThan("createAt", endExclusive)
-            .orderBy("createAt", Query.Direction.ASCENDING)
+            .whereGreaterThanOrEqualTo("startedAt", startInclusive)
+            .whereLessThan("startedAt", endExclusive)
+            .orderBy("startedAt", Query.Direction.ASCENDING)
             .get(Source.SERVER)
             .await()
         return snapshot.documents.mapNotNull { it.toObject(StudyLogDto::class.java) }

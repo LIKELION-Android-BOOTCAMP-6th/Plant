@@ -25,6 +25,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -45,7 +46,7 @@ import com.a32b.plant.presentation.report.viewmodel.ReportUiState
 import java.time.LocalDate
 
 @Composable
-internal fun ReportContent(
+fun ReportContent(
     state: ReportUiState,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
@@ -53,34 +54,43 @@ internal fun ReportContent(
     onTabSelected: (ReportTab) -> Unit,
     onRetry: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text("리포트", style = MaterialTheme.typography.displayLarge)
-        ReportCalendar(
-            state = state,
-            onPreviousMonth = onPreviousMonth,
-            onNextMonth = onNextMonth,
-            onDateSelected = onDateSelected
-        )
-        ReportTabs(state.tab, onTabSelected)
+    Scaffold(
+        topBar = {
+            Text(
+                "리포트",
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 16.dp, end = 16.dp),
+                style = MaterialTheme.typography.displayLarge
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            ReportCalendar(
+                state = state,
+                onPreviousMonth = onPreviousMonth,
+                onNextMonth = onNextMonth,
+                onDateSelected = onDateSelected
+            )
+            ReportTabs(state.tab, onTabSelected)
 
-        when {
-            state.isLoading -> LoadingBox(Modifier.fillMaxWidth().height(200.dp))
-            state.loadError -> ReportFailure("기록을 불러오지 못했어요", onRetry)
-            state.calculationError -> ReportFailure("기록의 공부 시간이 올바르지 않아 통계를 계산할 수 없어요")
-            state.tab == ReportTab.DAILY -> {
-                val report = state.dailyReport
-                if (report != null) DailyReportContent(report)
-            }
-            else -> {
-                val report = state.monthlyReport
-                if (report != null) MonthlyReportContent(report)
+            when {
+                state.isLoading -> LoadingBox(Modifier.fillMaxWidth().height(200.dp))
+                state.loadError -> ReportFailure("기록을 불러오지 못했어요", onRetry)
+                state.tab == ReportTab.DAILY -> {
+                    val report = state.dailyReport
+                    if (report != null) DailyReportContent(report)
+                }
+                else -> {
+                    val report = state.monthlyReport
+                    if (report != null) MonthlyReportContent(report)
+                }
             }
         }
     }
@@ -145,7 +155,7 @@ private fun ReportCalendar(
                                 date = date,
                                 isToday = date == state.today,
                                 isSelected = date == state.selectedDate,
-                                hasRecord = date in state.calendarDates,
+                                hasRecord = state.monthlyReport?.recordDates?.contains(date) == true,
                                 onClick = { onDateSelected(date) }
                             )
                         }
@@ -223,19 +233,17 @@ private fun ReportTabButton(text: String, selected: Boolean, modifier: Modifier,
 }
 
 @Composable
-private fun ReportFailure(message: String, onRetry: (() -> Unit)? = null) {
+private fun ReportFailure(message: String, onRetry: () -> Unit) {
     ReportCard {
         Text(message, style = MaterialTheme.typography.bodyMedium)
-        if (onRetry != null) {
-            Button(onClick = onRetry, modifier = Modifier.height(48.dp)) {
-                Text("다시 시도", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimary)
-            }
+        Button(onClick = onRetry, modifier = Modifier.height(48.dp)) {
+            Text("다시 시도", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimary)
         }
     }
 }
 
 @Composable
-internal fun ReportField(label: String, value: String, emphasized: Boolean = false, caption: String? = null) {
+fun ReportField(label: String, value: String, emphasized: Boolean = false, caption: String? = null) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label, style = MaterialTheme.typography.titleMedium)
         Text(value, style = if (emphasized) MaterialTheme.typography.titleLarge else MaterialTheme.typography.bodyMedium)
@@ -244,7 +252,7 @@ internal fun ReportField(label: String, value: String, emphasized: Boolean = fal
 }
 
 @Composable
-internal fun ReportCard(
+fun ReportCard(
     spacing: Dp = 8.dp,
     padding: Dp = 16.dp,
     content: @Composable ColumnScope.() -> Unit
@@ -260,6 +268,6 @@ internal fun ReportCard(
 }
 
 @Composable
-internal fun ReportPeriodTitle(date: LocalDate) {
+fun ReportPeriodTitle(date: LocalDate) {
     Text(TimeFormatter.formatWithDayOfWeek(date.atStartOfDay()), style = MaterialTheme.typography.titleLarge)
 }

@@ -5,8 +5,8 @@ import java.time.LocalDate
 data class DailyReport(
     val date: LocalDate,
     val totalMillis: Long,
-    val potComparison: ReportPotComparison,
-    val savedRecords: List<ReportRecord>,
-    // 선택한 날에 걸치지만 다른 날 저장된 기록의 조각(그래프 없는 목록형 화면의 별도 영역용)
-    val otherDaySegments: List<ReportTimelineSegment>
+    val highest: ReportRecord?,
+    // 기록이 1개면 최고 기록만 보여주므로 null
+    val lowest: ReportRecord?,
+    val records: List<ReportRecord>
 )

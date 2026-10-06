@@ -12,6 +12,8 @@ object TimeFormatter {
      -> ~분
      시분초 표시 : fun formatToDigitalClock(time: Long): String
      -> HH:mm:ss
+     시간 길이 표시 : fun formatToKoreanDuration(millis: Long): String
+     -> ~시간 ~분 ~초 (0인 단위는 생략, 1초 미만은 0초)
 
      로컬 시간 날짜만 표시 : fun formatToKoreanDate(dateTime: LocalDateTime): String
      -> yyyy년 MM월 dd일
@@ -30,6 +32,19 @@ object TimeFormatter {
 
         return if (hours > 0) String.format("%02d:%02d:%02d", hours, minute, secs)
         else String.format("%02d:%02d", minute, secs)
+    }
+
+    fun formatToKoreanDuration(millis: Long): String{
+        val totalSec = millis / 1000
+        val hours = totalSec / 3600
+        val minute = (totalSec % 3600) / 60
+        val secs = totalSec % 60
+
+        val units = mutableListOf<String>()
+        if (hours > 0) units.add("${hours}시간")
+        if (minute > 0) units.add("${minute}분")
+        if (secs > 0) units.add("${secs}초")
+        return if (units.isEmpty()) "0초" else units.joinToString(" ")
     }
     fun formatToDateOnly(dateTime: LocalDateTime): String
         = dateTime.format(DateTimeFormatter.ofPattern("yyyyMMdd"))

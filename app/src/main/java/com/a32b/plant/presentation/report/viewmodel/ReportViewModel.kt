@@ -5,13 +5,10 @@ import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.DailyReport
 import com.a32b.plant.domain.model.MonthlyReport
-import com.a32b.plant.domain.model.PreparedReportMonth
-import com.a32b.plant.domain.repository.ReportRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
-import com.a32b.plant.domain.usecase.report.CalculateDailyReportUseCase
-import com.a32b.plant.domain.usecase.report.CalculateMonthlyReportUseCase
-import com.a32b.plant.domain.usecase.report.PrepareReportMonthUseCase
+import com.a32b.plant.domain.usecase.report.GetDailyReportUseCase
+import com.a32b.plant.domain.usecase.report.GetMonthlyReportUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -36,8 +33,6 @@ data class ReportUiState(
     val canGoNext: Boolean = false,
     val isLoading: Boolean = true,
     val loadError: Boolean = false,
-    val calculationError: Boolean = false,
-    val calendarDates: Set<LocalDate> = emptySet(),
     val dailyReport: DailyReport? = null,
     val monthlyReport: MonthlyReport? = null
 )
@@ -48,11 +43,9 @@ sealed class ReportEvent {
 
 @HiltViewModel
 class ReportViewModel @Inject constructor(
-    private val reportRepository: ReportRepository,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
-    private val prepareReportMonthUseCase: PrepareReportMonthUseCase,
-    private val calculateDailyReportUseCase: CalculateDailyReportUseCase,
-    private val calculateMonthlyReportUseCase: CalculateMonthlyReportUseCase
+    private val getDailyReportUseCase: GetDailyReportUseCase,
+    private val getMonthlyReportUseCase: GetMonthlyReportUseCase
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow(ReportUiState())
     val uiState = _uiState.asStateFlow()
@@ -60,23 +53,26 @@ class ReportViewModel @Inject constructor(
     private val _eventChannel = Channel<ReportEvent>(Channel.BUFFERED)
     val event = _eventChannel.receiveAsFlow()
 
-    private var preparedMonth: PreparedReportMonth.Valid? = null
-    private var requestJob: Job? = null
-    private var requestId = 0
+    private var monthJob: Job? = null
+    private var dailyJob: Job? = null
 
     init {
         loadMonth(_uiState.value.month, _uiState.value.selectedDate)
     }
 
     fun selectDate(date: LocalDate) {
-        if (YearMonth.from(date) != _uiState.value.month) return
-        _uiState.update { state ->
-            state.copy(
-                selectedDate = date,
-                tab = ReportTab.DAILY,
-                dailyReport = preparedMonth?.let { calculateDailyReportUseCase(it, date) }
-            )
+        val state = _uiState.value
+        if (YearMonth.from(date) != state.month) return
+        // 실패 상태에서는 날짜만 바꾸고, 다시 시도 때 달·선택 날짜를 함께 조회한다.
+        if (state.loadError) {
+            _uiState.update { it.copy(selectedDate = date, tab = ReportTab.DAILY) }
+            return
         }
+        dailyJob?.cancel()
+        _uiState.update { it.copy(selectedDate = date, tab = ReportTab.DAILY, isLoading = true, dailyReport = null) }
+        ensureCurrentUserUseCase.invoke()
+            .onSuccess { user -> dailyJob = viewModelScope.launch { fetchDailyReport(user.uid, date) } }
+            .onFailure { finishWithLoadError() }
     }
 
     fun selectTab(tab: ReportTab) {
@@ -98,7 +94,7 @@ class ReportViewModel @Inject constructor(
         loadMonth(next, if (next == YearMonth.from(today)) today else next.atDay(1))
     }
 
-    // 한국 날짜가 바뀌었으면 보고 있던 달·선택 날짜 그대로 다시 조회한다(오늘·하루 평균·다음 달 버튼 갱신).
+    // 한국 날짜가 바뀌었으면 보고 있던 달·선택 날짜 그대로 다시 조회한다(오늘·다음 달 버튼 갱신).
     fun refreshIfDateChanged() {
         val state = _uiState.value
         if (LocalDate.now(REPORT_ZONE) == state.today) return
@@ -111,9 +107,8 @@ class ReportViewModel @Inject constructor(
     }
 
     private fun loadMonth(month: YearMonth, selectedDate: LocalDate) {
-        requestJob?.cancel()
-        val currentRequest = ++requestId
-        preparedMonth = null
+        monthJob?.cancel()
+        dailyJob?.cancel()
         val today = LocalDate.now(REPORT_ZONE)
         _uiState.update {
             it.copy(
@@ -124,66 +119,66 @@ class ReportViewModel @Inject constructor(
                 canGoNext = month < YearMonth.from(today),
                 isLoading = true,
                 loadError = false,
-                calculationError = false,
-                calendarDates = emptySet(),
                 dailyReport = null,
                 monthlyReport = null
             )
         }
 
-        requestJob = viewModelScope.launch {
-            ensureCurrentUserUseCase.invoke()
-                .onSuccess { user -> fetchMonth(user.uid, month, currentRequest) }
-                .onFailure {
-                    if (currentRequest == requestId) finishWithLoadError()
-                }
-        }
+        ensureCurrentUserUseCase.invoke()
+            .onSuccess { user ->
+                monthJob = viewModelScope.launch { fetchMonthlyReport(user.uid, month) }
+                // 월간 조회가 곧바로 실패했으면 일간 조회를 새로 시작하지 않는다.
+                if (_uiState.value.loadError) return@onSuccess
+                dailyJob = viewModelScope.launch { fetchDailyReport(user.uid, selectedDate) }
+            }
+            .onFailure { finishWithLoadError() }
     }
 
-    private suspend fun fetchMonth(uid: String, month: YearMonth, currentRequest: Int) {
-        reportRepository.getMonthData(uid, month)
-            .onSuccess { monthData ->
-                if (currentRequest != requestId) return@onSuccess
-                when (val result = prepareReportMonthUseCase(month, monthData)) {
-                    is PreparedReportMonth.Valid -> {
-                        preparedMonth = result
-                        val state = _uiState.value
-                        _uiState.update {
-                            it.copy(
-                                calendarDates = result.calendarDates,
-                                dailyReport = calculateDailyReportUseCase(result, state.selectedDate),
-                                monthlyReport = calculateMonthlyReportUseCase(result, state.today),
-                                isLoading = false
-                            )
-                        }
-                        loaded()
-                    }
-                    PreparedReportMonth.CalculationError -> {
-                        _uiState.update { it.copy(calculationError = true, isLoading = false) }
-                        loaded()
-                    }
+    private suspend fun fetchMonthlyReport(uid: String, month: YearMonth) {
+        getMonthlyReportUseCase(uid, month)
+            .onSuccess { report ->
+                // 다른 조회가 먼저 실패했으면 결과를 반영하지 않는다(실패 화면 유지).
+                _uiState.update {
+                    if (it.loadError) it
+                    else it.copy(monthlyReport = report, isLoading = it.dailyReport == null)
                 }
+                loaded()
             }
-            .onFailure { error ->
-                if (currentRequest != requestId) return@onFailure
-                // UnknownUser는 공용 세션 만료 처리에 맡기고, 그 외 조회 실패만 원인을 토스트로 안내한다.
-                if (error is AppError.UnknownUser) ensureCurrentUserUseCase.invoke()
-                else sendToast(error.message)
-                finishWithLoadError()
+            .onFailure { error -> failLoading(error) }
+    }
+
+    private suspend fun fetchDailyReport(uid: String, date: LocalDate) {
+        getDailyReportUseCase(uid, date)
+            .onSuccess { report ->
+                // 다른 조회가 먼저 실패했으면 결과를 반영하지 않는다(실패 화면 유지).
+                _uiState.update {
+                    if (it.loadError) it
+                    else it.copy(dailyReport = report, isLoading = it.monthlyReport == null)
+                }
+                loaded()
             }
+            .onFailure { error -> failLoading(error) }
+    }
+
+    private fun failLoading(error: AppError) {
+        // UnknownUser는 공용 세션 만료 처리에 맡기고, 그 외 조회 실패만 원인을 토스트로 안내한다.
+        if (error is AppError.UnknownUser) ensureCurrentUserUseCase.invoke()
+        else sendToast(error.message)
+        finishWithLoadError()
     }
 
     private fun sendToast(message: String) {
         viewModelScope.launch { _eventChannel.send(ReportEvent.ShowToast(message)) }
     }
 
+    // 달·날짜 중 하나만 실패해도 같은 실패 영역을 보여 주고, 남은 조회는 취소한다(다시 시도 때 둘 다 조회).
     private fun finishWithLoadError() {
-        preparedMonth = null
+        monthJob?.cancel()
+        dailyJob?.cancel()
         _uiState.update {
             it.copy(
                 isLoading = false,
                 loadError = true,
-                calendarDates = emptySet(),
                 dailyReport = null,
                 monthlyReport = null
             )
