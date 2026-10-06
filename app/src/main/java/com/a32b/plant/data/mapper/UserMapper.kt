@@ -38,7 +38,7 @@ fun UserDto.toDomain() : User = User(
     isFirstLogin = isFirstLogin,
     isDarkMode = isDarkMode,
     totalStudyTime = totalStudyTime,
-    coin = coin,
+    gold = gold,
     monthCheck = monthCheck.toDomain(),
     item = item.toDomain()
 )
@@ -51,7 +51,7 @@ fun User.toDto(): UserDto = UserDto(
     isFirstLogin = isFirstLogin,
     isDarkMode = isDarkMode,
     totalStudyTime = totalStudyTime,
-    coin = coin,
+    gold = gold,
     monthCheck = monthCheck.toDto(),
     item = item.toDto()
 )
