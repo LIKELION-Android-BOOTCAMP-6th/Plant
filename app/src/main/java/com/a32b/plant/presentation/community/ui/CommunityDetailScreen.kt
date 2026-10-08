@@ -66,7 +66,6 @@ import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.component.TagChip
 import com.a32b.plant.presentation.core.extension.showToast
-import androidx.compose.foundation.isSystemInDarkTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,7 +74,6 @@ fun CommunityDetailScreen(
 ) {
 
     val context = LocalContext.current
-    val isDark = isSystemInDarkTheme()
     val uiState by viewModel.uiState.collectAsState()
 
     val postState by viewModel.post.collectAsStateWithLifecycle()
@@ -135,7 +133,7 @@ fun CommunityDetailScreen(
                     ),
                     shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    elevation = CardDefaults.elevatedCardElevation(if (isDark) 0.dp else 1.dp)
+                    elevation = CardDefaults.elevatedCardElevation(1.dp)
                 ) {
                     LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 24.dp)) {
 
@@ -435,7 +433,6 @@ fun CommentInputSection(
     onSend: () -> Unit
 ) {
     val context = LocalContext.current
-    val isDark = isSystemInDarkTheme()
     val maxLength = 100
     val focus = LocalFocusManager.current
     Card(
@@ -444,7 +441,7 @@ fun CommentInputSection(
         ),
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.elevatedCardElevation(if (isDark) 0.dp else 1.dp)
+        elevation = CardDefaults.elevatedCardElevation(1.dp)
     ) {
         Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -480,6 +477,7 @@ fun CommentInputSection(
                     cursorColor = MaterialTheme.colorScheme.primary
                 ),
                 shape = RoundedCornerShape(8.dp),
+                textStyle = MaterialTheme.typography.bodyMedium,
                 maxLines = 4,
                 minLines = 1,
                 keyboardOptions = KeyboardOptions(
@@ -495,7 +493,7 @@ fun CommentInputSection(
                 Text(
                     "${text.length} / $maxLength",
                     modifier = Modifier.padding(start = 4.dp),
-                    color = if (text.length >= maxLength) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (text.length >= maxLength) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSecondary,
                     style = MaterialTheme.typography.bodySmall
                 )
                 Spacer(modifier = Modifier.weight(1f))

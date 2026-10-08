@@ -2,7 +2,6 @@ package com.a32b.plant.presentation.community.ui
 
 import android.util.Log
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,13 +17,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,6 +46,7 @@ import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.domain.type.ActivityType
 import com.a32b.plant.presentation.community.viewmodel.CommunityActivityEvent
 import com.a32b.plant.presentation.community.viewmodel.CommunityActivityViewModel
+import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.core.component.TagGroup
 import com.a32b.plant.presentation.core.extension.showToast
 
@@ -100,10 +97,7 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                     ) {
                         if (uiState.selectedIds.isNotEmpty()) {
                             if (uiState.isDeletingActivities) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp
-                                )
+                                LoadingBox()
                             } else {
                                 TextButton(
                                     onClick = { viewModel.deleteSelected() },
@@ -136,7 +130,7 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                         modifier = Modifier.align(Alignment.CenterEnd)
                     ) {
                         Icon(
-                            Icons.Default.Check,
+                            painterResource(id = R.drawable.ic_edit),
                             contentDescription = "편집",
                             tint = MaterialTheme.colorScheme.primary
                         )
@@ -148,7 +142,9 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                 viewModel.onSelectedChange(selected.get(0))
             }
 
-            if (uiState.activities.isEmpty()) {
+            if (uiState.isLoading) {
+                LoadingBox()
+            } else if (uiState.activities.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -201,14 +197,12 @@ fun ContentList(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (isSelectionMode) {
-                        val isDark = isSystemInDarkTheme()
                         Checkbox(
                             checked = list.id in selectedIds,
                             onCheckedChange = { onToggleSelection(list.id) },
                             modifier = Modifier.size(24.dp),
                             colors = CheckboxDefaults.colors(
-                                uncheckedColor = if (isDark) MaterialTheme.colorScheme.onSecondary
-                                                 else MaterialTheme.colorScheme.outline
+                                uncheckedColor = MaterialTheme.colorScheme.outline
                             )
                         )
                         Spacer(modifier = Modifier.width(8.dp))
