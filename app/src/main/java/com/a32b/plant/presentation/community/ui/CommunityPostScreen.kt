@@ -1,6 +1,5 @@
 package com.a32b.plant.presentation.community.ui
 
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -51,7 +50,6 @@ import com.a32b.plant.presentation.community.viewmodel.CommunityPostViewModel
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.TagSheet
 import com.a32b.plant.presentation.core.extension.showToast
-import androidx.compose.foundation.isSystemInDarkTheme
 
 @Composable
 fun CommunityPostScreen(
@@ -189,7 +187,6 @@ fun CommunityPostScreen(
                         }
                     ) { selected ->
                         if (selected.isNotEmpty()) {
-                            Log.d("선택된 거 ", selected[0].name)
                             viewModel.onSelectedTagChange(selected[0])
                         }
                     }
@@ -302,8 +299,6 @@ fun PostInputField(
     maxLength: Int = Int.MAX_VALUE
 ) {
     val context = LocalContext.current
-    val isDark = isSystemInDarkTheme()
-
     Column {
         TextField(
             value = value ?: "",
@@ -323,7 +318,7 @@ fun PostInputField(
             },
             modifier = modifier
                 .fillMaxWidth()
-                .shadow(elevation = if (isDark) 0.dp else 1.dp, shape = RoundedCornerShape(8.dp))
+                .shadow(elevation = 1.dp, shape = RoundedCornerShape(8.dp))
                 .background(MaterialTheme.colorScheme.background),
             singleLine = singleLine,
             colors = TextFieldDefaults.colors(

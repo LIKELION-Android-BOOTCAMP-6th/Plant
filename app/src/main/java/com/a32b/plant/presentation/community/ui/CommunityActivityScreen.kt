@@ -1,6 +1,5 @@
 package com.a32b.plant.presentation.community.ui
 
-import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -161,7 +160,6 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                     selectedIds = uiState.selectedIds,
                     onToggleSelection = { id -> viewModel.toggleItemSelection(id) },
                     onClick = { targetId ->
-                        Log.d("타겟 아이디", targetId)
                         viewModel.moveToCommunityDetail(targetId)
                     }
                 )
