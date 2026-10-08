@@ -3,7 +3,6 @@ package com.a32b.plant.presentation.community.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,7 +26,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -150,8 +148,7 @@ fun CommunityListScreen(
                             ) {
                                 Text(
                                     "커뮤니티",
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    color = MaterialTheme.colorScheme.onBackground,
+                                    style = MaterialTheme.typography.displayLarge,
                                     modifier = Modifier.align(Alignment.Center)
                                 )
                                 TextButton(
@@ -291,17 +288,7 @@ fun CommunityListScreen(
                                         // 하단 로딩 인디케이터 (loadMore 중, 데이터 있을 때만)
                                         if (uiState.hasMore && uiState.isLoadingMore && uiState.posts.isNotEmpty()) {
                                             item(key = "loading_indicator") {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .padding(16.dp),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    CircularProgressIndicator(
-                                                        strokeWidth = 2.dp,
-                                                        modifier = Modifier.size(24.dp)
-                                                    )
-                                                }
+                                                LoadingBox(modifier = Modifier.fillMaxWidth().padding(16.dp))
                                             }
                                         }
                                     }
@@ -444,7 +431,6 @@ fun PostCard(post: Post, isLiked: Boolean, onClick: () -> Unit) {
                             if (post.updatedAt != null) " (수정됨)" else "",
 //                    fontSize = 11.sp,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Spacer(modifier = Modifier.height(3.dp))

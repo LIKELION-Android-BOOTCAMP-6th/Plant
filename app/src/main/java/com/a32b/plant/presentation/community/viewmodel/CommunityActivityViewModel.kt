@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class CommunityActivityUiState(
+    val isLoading: Boolean = false,
     val selected: String = ActivityType.POST,
     val activities: List<CommunityActivity> = emptyList(),
     val isSelectionMode: Boolean = false,
@@ -50,11 +51,12 @@ class CommunityActivityViewModel @Inject constructor(
     }
 
     fun loadActivity(selected: String) {
-        collectJob?.cancel() // 이전 구독 취소
+        collectJob?.cancel()
         collectJob = viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
             repository.observeActivity(selected)
                 .collect { list ->
-                    _uiState.update { it.copy(activities = list) }
+                    _uiState.update { it.copy(isLoading = false, activities = list) }
                 }
         }
     }
