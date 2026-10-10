@@ -4,6 +4,7 @@ import com.a32b.plant.data.repository.AuthRepositoryImpl
 import com.a32b.plant.data.repository.CommunityRepositoryImpl
 import com.a32b.plant.data.repository.ItemRepositoryImpl
 import com.a32b.plant.data.repository.PotRepositoryImpl
+import com.a32b.plant.data.repository.ReportRepositoryImpl
 import com.a32b.plant.data.repository.StudyLogRepositoryImpl
 import com.a32b.plant.data.repository.StudyingRepositoryImpl
 import com.a32b.plant.data.repository.UserRepositoryImpl
@@ -11,6 +12,7 @@ import com.a32b.plant.domain.repository.AuthRepository
 import com.a32b.plant.domain.repository.CommunityRepository
 import com.a32b.plant.domain.repository.ItemRepository
 import com.a32b.plant.domain.repository.PotRepository
+import com.a32b.plant.domain.repository.ReportRepository
 import com.a32b.plant.domain.repository.StudyLogRepository
 import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.repository.UserRepository
@@ -35,6 +37,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindPotRepository(impl: PotRepositoryImpl) : PotRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindReportRepository(impl: ReportRepositoryImpl): ReportRepository
 
     @Binds
     @Singleton

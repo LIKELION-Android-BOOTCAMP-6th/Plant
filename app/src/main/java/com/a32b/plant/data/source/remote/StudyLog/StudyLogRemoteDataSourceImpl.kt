@@ -1,9 +1,11 @@
 package com.a32b.plant.data.datasource
 
 import com.a32b.plant.data.model.StudyLogDto
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -49,6 +51,22 @@ class StudyLogRemoteDataSourceImpl @Inject constructor(
             .collection("logs").document(logId)
             .get().await()
         return doc.toObject(StudyLogDto::class.java)
+    }
+
+    override suspend fun getPotLogsInPeriod(
+        uid: String,
+        potId: String,
+        startInclusive: Timestamp,
+        endExclusive: Timestamp
+    ): List<StudyLogDto> {
+        val snapshot = db.collection("users").document(uid)
+            .collection("pots").document(potId)
+            .collection("logs")
+            .whereGreaterThanOrEqualTo("startedAt", startInclusive)
+            .whereLessThan("startedAt", endExclusive)
+            .get(Source.SERVER)
+            .await()
+        return snapshot.documents.mapNotNull { it.toObject(StudyLogDto::class.java) }
     }
 
     override suspend fun executeDeleteBatch(uid: String, potId: String, logId: String, decreaseAmount: Long) {

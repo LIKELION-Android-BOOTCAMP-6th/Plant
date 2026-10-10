@@ -8,4 +8,5 @@ interface PotRemoteDataSource {
     fun getPots(uid: String): Flow<List<PotDto>>
     suspend fun addPot(uid: String, tag: Tag, name: String): Result<Unit>
     suspend fun updatePotLevel(uid: String, potId: String, newLevel: String): Result<Unit>
+    suspend fun getPotsOnce(uid: String): List<PotDto>
 }
