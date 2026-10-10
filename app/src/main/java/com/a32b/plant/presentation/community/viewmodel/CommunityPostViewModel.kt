@@ -30,6 +30,7 @@ data class CommunityPostUiState(
     val postId: String? = null,
     val title: String = "",
     val content: String? = null,
+    val extraContent: String? = null,
     val selected: Tag? = null,
     val potId: String? = null,
     val studyLogs: List<StudyLog>? = null,
@@ -62,7 +63,7 @@ class CommunityPostViewModel @Inject constructor(
     private var postId: String? = savedStateHandle["postId"]
     private val potId: String? = savedStateHandle["potId"]
     private val title: String? = savedStateHandle["title"]
-    private val studyLogIds: List<String>? = savedStateHandle["studyLogIds"]
+    private val studyLogIds: List<String>? = savedStateHandle.get<Array<String>>("studyLogIds")?.toList()
     private val tagId: String? = savedStateHandle["tagId"]
 
     init {
@@ -102,8 +103,7 @@ class CommunityPostViewModel @Inject constructor(
                 .onSuccess { post ->
                     post ?: return@onSuccess
                     if (post.isShared?:false){
-                        _uiState.update { it.copy(isShared = true,postId = post.postId,title = post.title, studyLogs = post.studyLogs, selected = post.tag) }
-
+                        _uiState.update { it.copy(isShared = true, postId = post.postId, title = post.title, studyLogs = post.studyLogs, selected = post.tag, extraContent = post.content) }
                     }
                     else{
                         _uiState.update { it.copy( postId = post.postId,title = post.title, content = post.content, selected = post.tag) }
@@ -131,6 +131,7 @@ class CommunityPostViewModel @Inject constructor(
     fun getTags(list: List<Tag>) = _uiState.update { it.copy(tags = list) }
     fun onTitleChange(title: String) = _uiState.update { it.copy(title = title) }
     fun onContentChange(content: String) = _uiState.update { it.copy(content = content) }
+    fun onExtraContentChange(content: String) = _uiState.update { it.copy(extraContent = content) }
 
     fun onSelectedTagChange(tag:Tag) {
         if (!_uiState.value.isShared) {
@@ -167,7 +168,7 @@ class CommunityPostViewModel @Inject constructor(
                         isShared = isShared,
                         postId = postId!!,
                         title = _uiState.value.title,
-                        content = if (isShared) null else _uiState.value.content,
+                        content = if (isShared) _uiState.value.extraContent else _uiState.value.content,
                         tag = if (isShared) null else selectedTag
                     )
                 }.onSuccess {
@@ -183,7 +184,7 @@ class CommunityPostViewModel @Inject constructor(
                     createPostUseCase(
                         isShared = isShared,
                         title = _uiState.value.title,
-                        content = _uiState.value.content,
+                        content = if (isShared) _uiState.value.extraContent else _uiState.value.content,
                         studyLogs = _uiState.value.studyLogs,
                         tag = selectedTag
                     )

@@ -28,7 +28,7 @@ class CreatePostUseCase @Inject constructor(
 
         val author = PostAuthor(user.uid, user.nickname, user.profileImg)
         val newPost = if (isShared) {
-            Post.createShared(author = author, title = title, studyLogs = studyLogs ?: emptyList(), tag = tag)
+            Post.createShared(author = author, title = title, studyLogs = studyLogs ?: emptyList(), tag = tag, content = content)
         } else {
             Post.createOriginal(author = author, title = title, content = content ?: "", tag = tag)
         }

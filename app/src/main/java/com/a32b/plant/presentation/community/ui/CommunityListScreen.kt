@@ -1,8 +1,8 @@
 package com.a32b.plant.presentation.community.ui
 
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,7 +26,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -53,6 +52,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -70,7 +70,6 @@ import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.component.TagChip
 import com.a32b.plant.presentation.core.component.TagSheet
 import com.a32b.plant.presentation.core.extension.showToast
-import com.a32b.plant.presentation.theme.LocalIsDarkTheme
 import androidx.compose.material3.SwitchDefaults
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
@@ -142,6 +141,27 @@ fun CommunityListScreen(
                                 .background(MaterialTheme.colorScheme.background)
                                 .padding(horizontal = 10.dp)
                         ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 6.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    "커뮤니티",
+                                    style = MaterialTheme.typography.displayLarge,
+                                    modifier = Modifier.align(Alignment.Center)
+                                )
+                                TextButton(
+                                    onClick = { navController.navigate(Routes.CommunityActivity) },
+                                    modifier = Modifier.align(Alignment.CenterEnd)
+                                ) {
+                                    Text(
+                                        "내 활동",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
                             SearchBarSection(
                                 query = searchQuery,
                                 onQueryChange = { viewModel.onSearchQueryChanged(it) }
@@ -158,9 +178,10 @@ fun CommunityListScreen(
                                 Icon(
                                     painter = painterResource(id = if (uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
                                     contentDescription = "태그박스",
-                                    modifier = Modifier.clickable {
-                                        viewModel.onIsTagSheetShownChange()
-                                    })
+                                    modifier = Modifier
+                                        .size(18.dp)
+                                        .clickable { viewModel.onIsTagSheetShownChange() }
+                                )
                                 Box(modifier = Modifier.clickable {
                                     viewModel.onSelectedChanged(emptyList())
                                 }) {
@@ -171,7 +192,9 @@ fun CommunityListScreen(
 
                                 Text(
                                     "공유글 보기",
-                                    style = MaterialTheme.typography.titleMedium,
+                                    style =
+                                        MaterialTheme.typography.titleMedium,
+                                        fontSize = 14.sp,
                                 )
                                 Switch(
                                     uiState.isSharedShown,
@@ -212,23 +235,6 @@ fun CommunityListScreen(
                                     }
                                 }
                             }
-                            if (uiState.isTagSheetShown) {
-                                TagSheet(
-                                    uiState.tags,
-                                    isMultiSelected = true,
-                                    init = uiState.selected
-                                ) { selected ->
-                                    viewModel.onSelectedChanged(selected.toList())
-                                    Log.d("선택된 거 ", selected.toList().toString())
-                                }
-                            }
-                            /**임시 위치*/
-                            TextButton(onClick = { navController.navigate(Routes.CommunityActivity) }) {
-                                Text(
-                                    "내 활동",
-                                    style = MaterialTheme.typography.titleSmall
-                                )
-                            }
                         }
                     },
                     floatingActionButton = {
@@ -247,64 +253,89 @@ fun CommunityListScreen(
                         }
                     }
                 ) { innerPadding ->
-                    Column(
-                        modifier = Modifier
-                            .padding(innerPadding)
-                            .background(MaterialTheme.colorScheme.background)
-                    ) {
-                        if (uiState.posts.isEmpty() && !uiState.isLoadingMore) {
-                            EmptyStateView()
-                        } else {
-                            if (filteredPosts.isEmpty() && !uiState.isLoadingMore) {
-                                EmptyStateView(hasQuery = searchQuery.isNotBlank())
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding)
+                                .background(MaterialTheme.colorScheme.background)
+                        ) {
+                            if (uiState.posts.isEmpty() && !uiState.isLoadingMore) {
+                                EmptyStateView()
                             } else {
-                                LazyColumn(
-                                    state = listState,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentPadding = PaddingValues(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    items(filteredPosts, key = { it.postId }) { post ->
-                                        PostCard(
-                                            post = post,
-                                            isLiked = post.isLiked,
-                                            onClick = {
-                                                navController.navigate(
-                                                    Routes.CommunityDetail(
-                                                        postId = post.postId
+                                if (filteredPosts.isEmpty() && !uiState.isLoadingMore) {
+                                    EmptyStateView(hasQuery = searchQuery.isNotBlank())
+                                } else {
+                                    LazyColumn(
+                                        state = listState,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentPadding = PaddingValues(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        items(filteredPosts, key = { it.postId }) { post ->
+                                            PostCard(
+                                                post = post,
+                                                isLiked = post.isLiked,
+                                                onClick = {
+                                                    navController.navigate(
+                                                        Routes.CommunityDetail(
+                                                            postId = post.postId
+                                                        )
                                                     )
-                                                )
-                                            }
-                                        )
-                                    }
-                                    // 하단 로딩 인디케이터 (loadMore 중, 데이터 있을 때만)
-                                    if (uiState.hasMore && uiState.isLoadingMore && uiState.posts.isNotEmpty()) {
-                                        item(key = "loading_indicator") {
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(16.dp),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                CircularProgressIndicator(
-                                                    strokeWidth = 2.dp,
-                                                    modifier = Modifier.size(24.dp)
-                                                )
+                                                }
+                                            )
+                                        }
+                                        // 하단 로딩 인디케이터 (loadMore 중, 데이터 있을 때만)
+                                        if (uiState.hasMore && uiState.isLoadingMore && uiState.posts.isNotEmpty()) {
+                                            item(key = "loading_indicator") {
+                                                LoadingBox(modifier = Modifier.fillMaxWidth().padding(16.dp))
                                             }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
 
-                    // 필터 변경 재쿼리 로딩 오버레이
-                    if (uiState.hasLoadedOnce && uiState.isLoadingMore && uiState.posts.isEmpty()) {
-                        LoadingBox()
-                    }
-                    // 검색 전체 로드 중 오버레이
-                    if (uiState.isSearchLoading) {
-                        LoadingBox()
+                        // 태그 선택 창 오버레이 (게시글 목록을 밀지 않고 위에 덮음)
+                        if (uiState.isTagSheetShown) {
+                            // 바깥 클릭 시 닫기용 투명 레이어
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .zIndex(0.5f)
+                                    .clickable { viewModel.onIsTagSheetShownChange() }
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .padding(top = innerPadding.calculateTopPadding())
+                                    .padding(horizontal = 20.dp)
+                                    .fillMaxWidth()
+                                    .zIndex(1f)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.background,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                                ) {
+                                    TagSheet(
+                                        uiState.tags,
+                                        isMultiSelected = true,
+                                        init = uiState.selected
+                                    ) { selected ->
+                                        viewModel.onSelectedChanged(selected.toList())
+                                    }
+                                }
+                            }
+                        }
+
+                        // 필터 변경 재쿼리 로딩 오버레이
+                        if (uiState.hasLoadedOnce && uiState.isLoadingMore && uiState.posts.isEmpty()) {
+                            LoadingBox()
+                        }
+                        // 검색 전체 로드 중 오버레이
+                        if (uiState.isSearchLoading) {
+                            LoadingBox()
+                        }
                     }
                 }
             }
@@ -322,8 +353,7 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
         placeholder = {
             Text(
                 "검색어를 입력하세요",
-                style = MaterialTheme.typography.labelMedium,
-                fontSize = 15.sp
+                style = MaterialTheme.typography.labelMedium
             )
         },
         modifier = Modifier
@@ -331,20 +361,28 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
             .padding(horizontal = 10.dp, vertical = 8.dp)
             .height(56.dp),
         shape = RoundedCornerShape(12.dp),
+        textStyle = MaterialTheme.typography.bodyMedium,
         trailingIcon = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(end = 8.dp)
-            ) {
+            if (query.isNotEmpty()) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_community_clear),
                     contentDescription = "초기화",
                     modifier = Modifier
-                        .size(24.dp)
+                        .padding(end = 8.dp)
+                        .size(18.dp)
                         .clickable {
                             onQueryChange("")
                             focus.clearFocus()
                         },
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
+            } else {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_search),
+                    contentDescription = "검색",
+                    modifier = Modifier
+                        .padding(end = 8.dp)
+                        .size(20.dp),
                     tint = MaterialTheme.colorScheme.onBackground
                 )
             }
@@ -393,7 +431,6 @@ fun PostCard(post: Post, isLiked: Boolean, onClick: () -> Unit) {
                             if (post.updatedAt != null) " (수정됨)" else "",
 //                    fontSize = 11.sp,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSecondary
                 )
             }
             Spacer(modifier = Modifier.height(3.dp))
