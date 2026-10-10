@@ -23,8 +23,7 @@ data class CommunityActivityUiState(
     val selected: String = ActivityType.POST,
     val activities: List<CommunityActivity> = emptyList(),
     val isSelectionMode: Boolean = false,
-    val selectedIds: Set<String> = emptySet(),
-    val isDeletingActivities: Boolean = false
+    val selectedIds: Set<String> = emptySet()
 )
 sealed class CommunityActivityEvent {
     data class NavigateToCommunityDetail(val postId: String) : CommunityActivityEvent()
@@ -84,16 +83,16 @@ class CommunityActivityViewModel @Inject constructor(
         if (toDelete.isEmpty()) return
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isDeletingActivities = true) }
+            _uiState.update { it.copy(isLoading = true) }
             deleteActivitiesUseCase(toDelete)
                 .onSuccess {
                     _uiState.update { it.copy(isSelectionMode = false, selectedIds = emptySet()) }
                     sendToast("삭제되었습니다.")
                 }
                 .onFailure { e ->
+                    _uiState.update { it.copy(isLoading = false) }
                     sendToast(e.message ?: "삭제에 실패했습니다.")
                 }
-            _uiState.update { it.copy(isDeletingActivities = false) }
         }
     }
 

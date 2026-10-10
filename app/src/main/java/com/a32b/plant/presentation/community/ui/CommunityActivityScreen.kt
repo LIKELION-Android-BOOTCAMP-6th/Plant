@@ -20,7 +20,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -95,22 +94,18 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         if (uiState.selectedIds.isNotEmpty()) {
-                            if (uiState.isDeletingActivities) {
-                                LoadingBox()
-                            } else {
-                                TextButton(
-                                    onClick = { viewModel.deleteSelected() },
-                                    contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
-                                ) {
-                                    Text(
-                                        if (uiState.selected == ActivityType.LIKE)
-                                            "좋아요 취소(${uiState.selectedIds.size})"
-                                        else
-                                            "삭제(${uiState.selectedIds.size})",
-                                        color = MaterialTheme.colorScheme.error,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                }
+                            TextButton(
+                                onClick = { viewModel.deleteSelected() },
+                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    if (uiState.selected == ActivityType.LIKE)
+                                        "좋아요 취소(${uiState.selectedIds.size})"
+                                    else
+                                        "삭제(${uiState.selectedIds.size})",
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
                             }
                         }
                         TextButton(
@@ -124,14 +119,15 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                         }
                     }
                 } else {
-                    IconButton(
+                    TextButton(
                         onClick = { viewModel.toggleSelectionMode() },
-                        modifier = Modifier.align(Alignment.CenterEnd)
+                        modifier = Modifier.align(Alignment.CenterEnd),
+                        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
                     ) {
-                        Icon(
-                            painterResource(id = R.drawable.ic_edit),
-                            contentDescription = "편집",
-                            tint = MaterialTheme.colorScheme.primary
+                        Text(
+                            "선택",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
