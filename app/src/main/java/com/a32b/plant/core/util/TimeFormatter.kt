@@ -42,6 +42,7 @@ object TimeFormatter {
 
     fun formatToTimeOnly(dateTime: LocalDateTime): String
         = dateTime.format(DateTimeFormatter.ofPattern("HH:mm"))
+    fun formatToTimeOnly(time: Long) : String = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(time))
 
     fun formatTimeToDate(time: Long): String{
         if (time == 0L) return "-" // 또는 "미설정" 등

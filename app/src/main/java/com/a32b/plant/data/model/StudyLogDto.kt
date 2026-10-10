@@ -13,6 +13,8 @@ data class StudyLogDto(
     var studyingTime: Long = 0L,
     @get:PropertyName("createAt") @set:PropertyName("createAt")
     var createAt: Timestamp = Timestamp.now(),
+    @get:PropertyName("startedAt") @set:PropertyName("startedAt")
+    var startedAt: Timestamp = Timestamp.now(),
     @DocumentId
     var id: String = ""
 )

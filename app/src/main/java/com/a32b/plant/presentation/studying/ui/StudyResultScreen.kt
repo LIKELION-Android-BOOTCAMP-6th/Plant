@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,9 +24,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -41,6 +45,7 @@ import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.presentation.core.component.ConfettiOverlay
 import com.a32b.plant.presentation.studying.viewmodel.StudyResultViewModel
 
 @Composable
@@ -59,29 +64,39 @@ fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewMo
     val capture = CaptureBitmap {
         StudyResultContent(timestamp, tag, title, log, level, time)
     }
-    Surface(modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        Column(modifier = Modifier.fillMaxSize().padding(10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = {navController.popBackStack()}) {
-                    Image(painter = painterResource(R.drawable.ic_study_result_close),
-                        contentDescription = "닫기")
+    var showConfetti by remember { mutableStateOf(true) }
+
+    Box(modifier = Modifier.fillMaxSize()){
+        Surface(modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            Column(modifier = Modifier.fillMaxSize().padding(10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = {navController.popBackStack()}) {
+                        Image(painter = painterResource(R.drawable.ic_study_result_close),
+                            contentDescription = "닫기")
+                    }
+                    IconButton(onClick = {
+                        viewModel.onDialogShow()
+                    }) {
+                        Image(painter = painterResource(R.drawable.ic_study_result_download),
+                            contentDescription = "이미지 저장하기")
+                    }
                 }
-                IconButton(onClick = {
-                    viewModel.onDialogShow()
-                }) {
-                    Image(painter = painterResource(R.drawable.ic_study_result_download),
-                        contentDescription = "이미지 저장하기")
-                }
+
+                StudyResultContent(timestamp, tag, title, log, level, time)
+
             }
 
-            StudyResultContent(timestamp, tag, title, log, level, time)
         }
+
+        if (showConfetti) ConfettiOverlay(onFinished = {showConfetti = false})
+
     }
+
 
     if (uiState.isDialogShow){
         ConfirmDialog("결과를 이미지로 저장하시겠습니까?",

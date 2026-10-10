@@ -3,6 +3,7 @@ package com.a32b.plant.domain.repository
 import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.User
 import com.a32b.plant.domain.result.Result
+import com.a32b.plant.domain.type.ItemType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -33,4 +34,5 @@ interface UserRepository {
     suspend fun deleteNickname(nickname: String): Result<Unit>
     suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success>
     suspend fun deleteUserData(uid: String): Result<Unit>
+
 }
