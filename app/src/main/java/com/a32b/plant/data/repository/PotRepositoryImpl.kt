@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -106,5 +108,33 @@ class PotRepositoryImpl @Inject constructor(
                 )
             )
         }.await()
+    }
+
+    override suspend fun getTodayTotalStudyTime(uid: String, potId: String): Long {
+        return try {
+            val startOfToday = LocalDate.now(ZoneId.of("Asia/Seoul"))
+                .atStartOfDay(ZoneId.of("Asia/Seoul"))
+                .toInstant()
+                .let { java.util.Date.from(it) }
+
+            val snapshot = db.collection("users")
+                .document(uid)
+                .collection("pots")
+                .document(potId)
+                .collection("logs")
+                .whereGreaterThanOrEqualTo("startedAt", startOfToday)
+                .get()
+                .await()
+
+            var totalMillis = 0L
+            for (document in snapshot.documents) {
+                val studyingTimeMillis = document.getLong("studyingTime") ?: 0L
+                totalMillis += studyingTimeMillis
+            }
+            totalMillis
+        } catch (e: Exception) {
+            Log.e("PotRepository", "오늘 학습 시간 조회 실패: ${e.message}", e)
+            0L
+        }
     }
 }

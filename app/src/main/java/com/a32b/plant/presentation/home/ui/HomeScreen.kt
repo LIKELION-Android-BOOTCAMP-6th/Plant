@@ -72,6 +72,8 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
     val attendanceUiState by viewModel.attendanceUiState.collectAsState()
     val context = LocalContext.current
 
+    val todayStudyTime by viewModel.todayStudyTime.collectAsState()
+
     val hasNoPot = displayPot.id.isEmpty() || displayPot == Pot.EMPTY
 
     var showAttendanceDialog by remember { mutableStateOf(false) }
@@ -129,6 +131,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                     MainPlantCard(
                         displayPot = displayPot,
                         hasNoPot = hasNoPot,
+                        todayStudyTime = todayStudyTime,
                         onStartClick = {
                             if (!hasNoPot) {
                                 navController.navigate(
@@ -383,6 +386,7 @@ fun HomeTopBar(
 fun MainPlantCard(
     displayPot: Pot,
     hasNoPot: Boolean,
+    todayStudyTime: String,
     onStartClick: () -> Unit,
     onChangeOrMakeClick: () -> Unit,
     onRecordClick: () -> Unit
@@ -448,7 +452,7 @@ fun MainPlantCard(
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = "00:00", // 나중에 DB에서 가져오기
+                text = if(hasNoPot) "00:00:00" else todayStudyTime,
                 style = MaterialTheme.typography.headlineLarge,
                 color = fontColor,
                 fontSize = 26.sp
