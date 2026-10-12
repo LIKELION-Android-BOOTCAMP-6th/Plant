@@ -1,28 +1,40 @@
 ## 📐 데이터 모델
- 
+
+> **최초 작성일**: 2026-09-09
+> **최종 수정일**: 2026-09-23
+
 ### users
 ```
 users
 └── {uid}
-    ├── nickname: String?
-    ├── profileImg: String?
-    ├── lastSelectedPotId: String?
+    ├── nickname: String
+    ├── profileImg: String
+    ├── lastSelectedPotId: String
     ├── isFirstLogin: Boolean?
-    ├── totalStudyTime: Long?
-    ├── completedPotsCount: Int?
+    ├── totalStudyTime: Long
+    ├── coin: Int
+    ├── dailyCheckThisMonth
+    │   ├── count: Int
+    │   └── lastCheckedAt: Timestamp?
+    ├── item
+    │   ├── heart: Int
+    │   ├── sun: Int
+    │   ├── water: Int
+    │   ├── fertilizer: Int
+    │   ├── nutrient: Int
+    │   └── box: Int
     │
     └── pots
         └── {potsId}
-            ├── id: String?
-            ├── tag_id: String?
-            ├── tag_name: String?
-            ├── name: String?
-            ├── imageUrl: String?
-            ├── potTotalStudyingTime: Long?
-            ├── createdAt: Timestamp
+            ├── id: String
+            ├── tag_id: String
+            ├── tag_name: String
+            ├── name: String
+            ├── imageUrl: String
+            ├── potTotalStudyingTime: Long
+            ├── createdAt: Timestamp?
             ├── completedAt: Timestamp?
             ├── isCompleted: Boolean
-            ├── lastStudiedAt: Timestamp?
             │
             └── logs
                 └── {logId}
@@ -85,8 +97,7 @@ posts
 ### studying
 ```
 studying
-└── {studyingId}
-    ├── uid: String
+└── {uid}
     ├── nickname: String
     ├── tag: String
     ├── studyingTime: Long
