@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,7 +30,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -41,11 +41,15 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.toRoute
 import com.a32b.plant.R
-import com.a32b.plant.presentation.core.component.ConfirmDialog
-import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.domain.model.StudyReward
 import com.a32b.plant.presentation.core.component.ConfettiOverlay
+import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.core.component.LoadingBox
+import com.a32b.plant.presentation.core.component.ProfileImage
+import com.a32b.plant.presentation.core.extension.showToast
+import com.a32b.plant.presentation.studying.viewmodel.StudyResultEvent
 import com.a32b.plant.presentation.studying.viewmodel.StudyResultViewModel
 
 @Composable
@@ -61,10 +65,19 @@ fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewMo
 
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    val capture = CaptureBitmap {
-        StudyResultContent(timestamp, tag, title, log, level, time)
+    val capture = captureBitmap {
+        StudyResultContent(timestamp, tag, title, log, level, time, reward = null)
     }
     var showConfetti by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        viewModel.loadReward(time)
+        viewModel.event.collect { event ->
+            when (event) {
+                is StudyResultEvent.ShowToast -> context.showToast(event.message)
+            }
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()){
         Surface(modifier = Modifier.fillMaxSize(),
@@ -87,13 +100,14 @@ fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewMo
                     }
                 }
 
-                StudyResultContent(timestamp, tag, title, log, level, time)
+                StudyResultContent(timestamp, tag, title, log, level, time, uiState.reward)
 
             }
 
         }
 
         if (showConfetti) ConfettiOverlay(onFinished = {showConfetti = false})
+        if (uiState.isLoading) LoadingBox()
 
     }
 
@@ -111,7 +125,15 @@ fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewMo
 }
 
 @Composable
-fun StudyResultContent(timestamp: String, tag: String, title: String, log: List<String>, level: String, time: Long){
+fun StudyResultContent(
+    timestamp: String,
+    tag: String,
+    title: String,
+    log: List<String>,
+    level: String,
+    time: Long,
+    reward: StudyReward?
+) {
     Surface(modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
@@ -144,6 +166,11 @@ fun StudyResultContent(timestamp: String, tag: String, title: String, log: List<
 
                     Text(TimeFormatter.formatToDigitalClock(time), style = MaterialTheme.typography.titleLarge, fontSize = 50.sp,)
 
+                    if (reward != null) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        StudyRewardSection(reward)
+                    }
+
                     Spacer(modifier = Modifier.weight(1f))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(painter = painterResource(id = R.drawable.logo_plant),
@@ -165,7 +192,44 @@ fun StudyResultContent(timestamp: String, tag: String, title: String, log: List<
 }
 
 @Composable
-fun CaptureBitmap(content: @Composable () -> Unit): () -> Bitmap{
+private fun StudyRewardSection(reward: StudyReward) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "획득 보상",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            reward.items.forEach { item ->
+                Text(
+                    text = "${item.kor} ×1",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+            Text(
+                text = "보너스 박스 ×${reward.boxCount}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+    }
+}
+
+@Composable
+fun captureBitmap(content: @Composable () -> Unit): () -> Bitmap{
     val context = LocalContext.current
     val composeView = remember { ComposeView(context) }
 
