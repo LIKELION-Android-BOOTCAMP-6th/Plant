@@ -46,6 +46,7 @@ import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyReward
 import com.a32b.plant.presentation.core.component.ConfettiOverlay
 import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.studying.viewmodel.StudyResultEvent
@@ -106,6 +107,7 @@ fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewMo
         }
 
         if (showConfetti) ConfettiOverlay(onFinished = {showConfetti = false})
+        if (uiState.isLoading) LoadingBox()
 
     }
 

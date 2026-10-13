@@ -8,6 +8,7 @@ import android.provider.MediaStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.StudyReward
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
@@ -23,6 +24,7 @@ import java.time.LocalDateTime
 import javax.inject.Inject
 
 data class StudyResultUiState(
+    val isLoading: Boolean = false,
     val isDialogShow: Boolean = false,
     val reward: StudyReward? = null,
     val isRewardLoaded: Boolean = false
@@ -49,13 +51,17 @@ class StudyResultViewModel @Inject constructor(
     fun loadReward(sessionTimeMs: Long) {
         if (_uiState.value.isRewardLoaded) return
         viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
             giveStudyRewardUseCase(sessionTimeMs)
                 .onSuccess { reward ->
-                    _uiState.update { it.copy(reward = reward, isRewardLoaded = true) }
+                    _uiState.update { it.copy(isLoading = false, reward = reward, isRewardLoaded = true) }
                 }
                 .onFailure { error ->
-                    _uiState.update { it.copy(isRewardLoaded = true) }
-                    _event.send(StudyResultEvent.ShowToast(error.message))
+                    _uiState.update { it.copy(isLoading = false, isRewardLoaded = true) }
+                    when (error) {
+                        is AppError.UnknownUser -> Unit
+                        else -> _event.send(StudyResultEvent.ShowToast(error.message))
+                    }
                 }
         }
     }
