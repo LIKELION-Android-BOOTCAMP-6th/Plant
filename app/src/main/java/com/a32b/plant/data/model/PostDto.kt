@@ -57,6 +57,10 @@ data class PostDto(
     var activityId: String = "",
     @get:PropertyName("likedBy") @set:PropertyName("likedBy")
     var likedBy: List<String> = emptyList(),
+    @get:PropertyName("bookmarkedBy") @set:PropertyName("bookmarkedBy")
+    var bookmarkedBy: List<String> = emptyList(),
+    @get:PropertyName("bookmarkCount") @set:PropertyName("bookmarkCount")
+    var bookmarkCount: Int = 0,
     @get:PropertyName("studyLogs") @set:PropertyName("studyLogs")
     var studyLogs: List<StudyLog>? = null,
     @get:PropertyName("isShared") @set:PropertyName("isShared")

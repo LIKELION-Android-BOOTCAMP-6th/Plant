@@ -45,5 +45,16 @@ data class CommunityActivity(
             commentId = null,
             createAt = null
         )
+
+        fun bookmark(uid: String, title: String, targetId: String) = CommunityActivity(
+            id = "",
+            uid = uid,
+            type = ActivityType.BOOKMARK,
+            title = title,
+            targetId = targetId,
+            comment = null,
+            commentId = null,
+            createAt = null
+        )
     }
 }

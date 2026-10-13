@@ -53,7 +53,7 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
 
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
-    val list = listOf(ActivityType.POST, ActivityType.COMMENT, ActivityType.LIKE)
+    val list = listOf(ActivityType.POST, ActivityType.COMMENT, ActivityType.LIKE, ActivityType.BOOKMARK)
 
     LaunchedEffect(Unit) {
         viewModel.event.collect { event ->
@@ -99,10 +99,11 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                                 contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
                             ) {
                                 Text(
-                                    if (uiState.selected == ActivityType.LIKE)
-                                        "좋아요 취소(${uiState.selectedIds.size})"
-                                    else
-                                        "삭제(${uiState.selectedIds.size})",
+                                    when (uiState.selected) {
+                                        ActivityType.LIKE -> "좋아요 취소(${uiState.selectedIds.size})"
+                                        ActivityType.BOOKMARK -> "북마크 취소(${uiState.selectedIds.size})"
+                                        else -> "삭제(${uiState.selectedIds.size})"
+                                    },
                                     color = MaterialTheme.colorScheme.error,
                                     style = MaterialTheme.typography.bodyMedium
                                 )

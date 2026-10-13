@@ -24,9 +24,11 @@ data class Post(
     val tag: Tag,
     val commentCount: Int,
     val likeCount: Int,
+    val bookmarkCount: Int = 0,
     val createdAt: Long?,
     val activityId: String,
-    val isLiked: Boolean, // likes 서브컬렉션에서 조회 후 설정
+    val isLiked: Boolean,
+    val isBookmarked: Boolean = false,
     val studyLogs: List<StudyLog>?,
     var isShared: Boolean?,
     val comments: List<Comment> = emptyList(),   // comments 서브컬렉션에서 조회 후 설정
