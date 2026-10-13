@@ -2,7 +2,7 @@
 
 
 > **최초 작성일**: 2026-09-09
-> **최종 수정일**: 2026-09-23
+> **최종 수정일**: 2026-10-12
 
 ## 1. 배경 및 문제 정의
 
@@ -71,6 +71,8 @@
 | | Gold 시스템 | | 랜덤박스, 연속 출석, 목표 달성에서 획득 |
 | | 상점 | | Gold로 아이템·화분 구매 (모든 기능 완료 후) |
 | **학습 (Studying)** | 스톱워치 (시작/일시정지/재개/종료) | ✅ | |
+| | 학습 목표 입력 (시작 시 다이얼로그) | ✅ | 최대 10개, 각 100자, 선택 입력 |
+| | 학습 목표 체크/관리 (진행 중) | ✅ | CHECK/INTERRUPTED/FINISH 모드 |
 | | 실시간 학습 시간 공유 | ✅ | 5초마다 로컬 저장, 1분마다 서버 동기화 |
 | | 같은 분야 공부 사용자 조회 | ✅ | 상위 3명, 구독 방식 자동 갱신 |
 | | 비정상 종료 복구 | ✅ | 로컬 DB에 세션 백업 |
@@ -92,7 +94,7 @@
 | | 좋아요 | ✅ | 본인 게시글 불가 |
 | | 댓글 CRUD | ✅ | 최대 100자 |
 | | 북마크 | | 좋아요와 별개, 개인 저장 목적 |
-| | 커뮤니티 활동 내역 | ✅ | 게시글/댓글/좋아요 |
+| | 커뮤니티 활동 내역 | ✅ | 게시글/댓글/좋아요/북마크 |
 | **마이페이지** | 프로필 조회 | ✅ | 닉네임, 이미지, 총 공부 시간 |
 | | 닉네임 변경 | ✅ | 2~10자, 중복 불가 |
 | | 프로필 이미지 변경 | 🚧 | 화분 성장 이미지 기반, 변경 가능성 있음 |
@@ -182,10 +184,11 @@
 | 항목 | 분류 | 설명 | 플로우 | 비고 |
 |------|------|------|--------|------|
 | **스톱워치** | 기능 | 진입 즉시 타이머 시작, 일시정지/재개/종료 지원 | — | — |
-| **로컬 백업** | 기능 | 비정상 종료 대비 세션 저장 | 5초마다 `StudyingLocalDataSource`(DataStore)에 저장 | — |
+| **학습 목표** | 기능 | 학습 시작 시 목표 입력 다이얼로그 (선택), 진행 중 체크/관리 | 시작 → 목표 입력(선택, 최대 10개×100자) → 진행 중 체크 → 종료 시 확인 | StudyingGoalCheckMode: CHECK/INTERRUPTED/FINISH |
+| **로컬 백업** | 기능 | 비정상 종료 대비 세션 저장 | 5초마다 `StudyingLocalDataSource`(DataStore)에 저장 | 학습 목표도 로컬 백업에 포함 |
 | **서버 동기화** | 기능 | Firestore `studying` 컬렉션에 학습 시간 업데이트 | 1분마다 동기화 | — |
 | **함께 공부하는 사용자** | 기능 | 같은 태그로 학습 중인 유저를 실시간 구독 | `observeStudyingUser`로 Firestore 구독 | 현재 세션 공부 시간 기준 상위 3명 표시 |
-| **학습 종료** | 기능 | 학습 내용 입력 후 DB 저장 | 학습 내용 입력(선택) → DB 저장(화분·유저 시간 반영) → 커뮤니티 공유 토글 → 결과 화면 | — |
+| **학습 종료** | 기능 | 학습 목표 확인 후 DB 저장 | 종료 → 목표 확인 다이얼로그 → DB 저장(화분·유저 시간 반영) → 커뮤니티 공유 토글 → 결과 화면 | — |
 | **결과 화면** | 기능 | 공부 시간, 학습 내용, 화분 성장 결과 확인 | — | 갤러리 이미지 저장 가능 |
 
 #### D. 커뮤니티
@@ -199,7 +202,7 @@
 | **좋아요** | 기능 | 게시글에 좋아요 표시 | — | `likedBy` 배열 기반, 본인 게시글 불가 |
 | **댓글** | 기능 | 댓글 작성/수정/삭제 | — | `comments` 서브컬렉션, 최대 100자 |
 | **북마크** | 기능 | 게시글 개인 저장 (좋아요와 별개) | — | `bookmarkedBy` 배열 기반 |
-| **활동 내역** | 기능 | 게시글/댓글/좋아요 활동 기록 조회 | 아이템 클릭 시 해당 게시글로 이동 | `activities` 컬렉션 |
+| **활동 내역** | 기능 | 게시글/댓글/좋아요/북마크 활동 기록 조회 | 아이템 클릭 시 해당 게시글로 이동 | `activities` 컬렉션 (북마크도 활동 기록 추가 필요) |
 
 #### E. 마이페이지
 
@@ -398,13 +401,14 @@ com.a32b.plant
 
 | 컬렉션 | 구조 | 용도 |
 |--------|------|------|
-| `users/{uid}` | nickname, profileImg, lastSelectedPotId, isFirstLogin, totalStudyTime, completedPotsCount | 사용자 프로필 |
+| `users/{uid}` | nickname, profileImg, lastSelectedPotId, isFirstLogin, totalStudyTime, gold, completedPotsCount, dailyCheckThisMonth{count,lastCheckedAt}, item{heart,sun,water,fertilizer,nutrient,box} | 사용자 프로필 |
 | `users/{uid}/pots/{potId}` | id, tag_id, tag_name, name, imageUrl, potTotalStudyingTime, createdAt, completedAt, isCompleted, **lastStudiedAt** (신규) | 화분 정보 |
 | `users/{uid}/pots/{potId}/logs/{logId}` | id, title, contents[], studyingTime, createAt | 학습 기록 |
 | `posts/{postId}` | author{id,nickname,profileImg}, title, content, tag{id,name,parentId,no}, commentCount, likeCount, likedBy[], bookmarkCount, bookmarkedBy[], createdAt, activityId, isShared, studyLogs[] | 게시글 |
 | `posts/{postId}/comments/{commentId}` | user{uid,nickname,profileImg}, content, activityId, createdAt | 댓글 |
-| `activities/{activityId}` | uid, type, title, comment, commentId, targetId, createAt | 커뮤니티 활동 |
+| `activities/{activityId}` | uid, type(게시물/댓글/좋아요/북마크), title, comment, commentId, targetId, createAt | 커뮤니티 활동 |
 | `studying/{uid}` | nickname, tag, studyingTime, profileImg | 실시간 학습 현황 |
+| `Tags/{tagId}` | id, name, parentId, no | 화분·커뮤니티 태그 |
 | `nicknames/{nickname}` | nickname | 닉네임 중복 방지 |
 
 ---
@@ -416,21 +420,21 @@ SplashScreen (자동 로그인 판단)
 ├── SignInScreen
 │   └── SignUpScreen
 │
-└── HomeScreen (BottomNavigation)
-    ├── [홈 탭] HomeScreen
-    │   ├── NewBornTreeScreen (화분 생성)
-    │   ├── PotListScreen (나의 정원)
-    │   │   └── PotDetailScreen
-    │   ├── StudyPlanDetailScreen (화분 상세/학습 기록)
-    │   │   └── StudyLogDetailDialog
-    │   └── Studying Flow
-    │       ├── StudyingScreen (스톱워치)
-    │       └── StudyResultScreen (결과)
-    │
+└── HomeScreen (BottomNavigation — 5탭)
     ├── [커뮤니티 탭] CommunityListScreen
     │   ├── CommunityPostScreen (글 작성/수정)
     │   ├── CommunityDetailScreen (글 상세)
     │   └── CommunityActivityScreen (활동 내역)
+    │
+    ├── [나의 정원 탭] PotListScreen
+    │   ├── NewBornTreeScreen (화분 생성)
+    │   └── StudyPlanDetailScreen (화분 상세/학습 기록)
+    │       └── StudyLogDetailDialog
+    │
+    ├── [홈 탭 (중앙)] HomeScreen
+    │   └── Studying Flow
+    │       ├── StudyingScreen (스톱워치 + 학습 목표)
+    │       └── StudyResultScreen (결과)
     │
     ├── [리포트 탭] ReportScreen
     │

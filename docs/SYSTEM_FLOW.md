@@ -1,7 +1,7 @@
 # Plant System Flow (아키텍처 · 데이터 흐름)
 
 > **최초 작성일**: 2026-09-11  
-> **최종 수정일**: 2026-10-09
+> **최종 수정일**: 2026-10-12
 
 ## 목차
 
@@ -174,13 +174,16 @@ SplashViewModel.checkAuthLogin()
 │       │                                                                 │
 │       ├── 시작 ──▶ studying/{uid} 학습 세션 문서 생성                      │
 │       │            + 로컬 DataStore에 세션 백업 저장                       │
+│       │            + 학습 목표 입력 다이얼로그 (선택, 최대 10개×100자)        │
 │       │                                                                 │
 │       ├── 진행                                                           │
-│       │     ├─ 5초마다 ──▶ 로컬 백업 갱신 (비정상 종료 복구용)               │
-│       │     └─ 1분마다 ──▶ 서버 학습 시간 동기화 (같은 태그 학습자에게 공유)   │
+│       │     ├─ 5초마다 ──▶ 로컬 백업 갱신 (학습 목표 포함, 복구용)           │
+│       │     ├─ 1분마다 ──▶ 서버 학습 시간 동기화 (같은 태그 학습자에게 공유)   │
+│       │     └─ 학습 목표 체크/관리 (StudyingGoalCheckMode: CHECK)          │
 │       │                                                                 │
-│       └── 종료 ──▶ 병렬 실행:                                             │
-│                    ├─ 학습 기록 저장                                      │
+│       └── 종료 ──▶ 학습 목표 확인 다이얼로그 (FINISH 모드)                  │
+│                    ──▶ 병렬 실행:                                         │
+│                    ├─ 학습 기록 저장 (목표 = logs 필드로 저장)              │
 │                    ├─ 화분 누적 학습 시간 갱신                             │
 │                    └─ 유저 총 학습 시간 갱신                               │
 │                                                                         │
@@ -214,6 +217,7 @@ SplashViewModel.checkAuthLogin()
 │                                                                  │
 │   북마크 토글                                                     │
 │   ├─ posts/{postId} 북마크 목록 추가/제거 + 카운트 갱신              │
+│   └─ activities/{activityId} 활동 기록 생성/삭제 (type="북마크")    │
 │                                                                  │
 │   검색 (클라이언트 측)                                             │
 │   ├─ 전체 게시글 로드 후 제목/본문 키워드 필터링                      │
@@ -316,11 +320,12 @@ sealed class Result<out T>
 
 ```
 DataSource (Firebase 호출)
-  │ try-catch → AppError 변환
+  │ 순수 통신 — 예외를 그대로 throw (AppError 변환하지 않음)
   │
   ▼
 Repository
-  │ Result<T> 반환
+  │ safeRunCatching { } → 외부 예외를 AppError로 변환
+  │ .fold(onSuccess → Result.Success, onFailure → Result.Failure)
   │
   ▼
 UseCase
@@ -329,7 +334,7 @@ UseCase
   │
   ▼
 ViewModel
-  │ onFailure → UiState.error 갱신
+  │ onFailure → 토스트 이벤트 발송 (error.message)
   │
   ▼
 UI
