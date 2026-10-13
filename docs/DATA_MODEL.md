@@ -1,7 +1,7 @@
 ## 📐 데이터 모델
 
 > **최초 작성일**: 2026-09-09
-> **최종 수정일**: 2026-09-23
+> **최종 수정일**: 2026-10-12
 
 ### users
 ```
@@ -12,7 +12,8 @@ users
     ├── lastSelectedPotId: String
     ├── isFirstLogin: Boolean?
     ├── totalStudyTime: Long
-    ├── coin: Int
+    ├── gold: Int
+    ├── completedPotsCount: Int          ← write-only (학습 완료 시 increment)
     ├── dailyCheckThisMonth
     │   ├── count: Int
     │   └── lastCheckedAt: Timestamp?
@@ -35,6 +36,7 @@ users
             ├── createdAt: Timestamp?
             ├── completedAt: Timestamp?
             ├── isCompleted: Boolean
+            ├── lastStudiedAt: Timestamp?     ← 신규 예정 (최근 학습순 정렬용)
             │
             └── logs
                 └── {logId}
@@ -50,7 +52,7 @@ users
 activities
 └── {activityId}
     ├── uid: String
-    ├── type: String
+    ├── type: String              ← "게시물" | "댓글" | "좋아요" | "북마크"
     ├── title: String
     ├── comment: String?
     ├── commentId: String?
@@ -104,10 +106,19 @@ studying
     └── profileImg: String
 ```
  
+### Tags
+```
+Tags
+└── {tagId}
+    ├── id: String
+    ├── name: String
+    ├── parentId: String
+    └── no: Int
+```
+
 ### nicknames
 ```
 nicknames
 └── {nickname}
     └── nickname: String
 ```
- 
