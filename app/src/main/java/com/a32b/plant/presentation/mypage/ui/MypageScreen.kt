@@ -555,6 +555,8 @@ fun ProfileDialog(
     uiState: MyPageUiState,
     viewModel: MyPageViewModel
 ) {
+    val maxLength = 10
+
     // 다이얼로그 안에서만 임시로 쓸 상태들 (입력 중인 값)
     var newUserName by remember { mutableStateOf(uiState.nickname) }
     var selectedImageLevel by remember { mutableStateOf(uiState.profileImg) }
@@ -573,17 +575,23 @@ fun ProfileDialog(
         ) {
             Column(
                 modifier = Modifier
+                    .verticalScroll(rememberScrollState())
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "닉네임",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+
                     TextField(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         textStyle = MaterialTheme.typography.bodyMedium,
                         value = newUserName,
                         onValueChange = {
-                            if (it.length <= 10)
+                            if (it.length <= maxLength)
                                 newUserName = it
                             viewModel.resetNicknameError()
                         },
@@ -593,25 +601,43 @@ fun ProfileDialog(
                             errorContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                             unfocusedIndicatorColor = MaterialTheme.colorScheme.outline
                         ),
-                        label = { Text("닉네임 변경 (2~10자)", style = MaterialTheme.typography.labelMedium) },
                         isError = uiState.nicknameError != null
                     )
 
-                    if (uiState.nicknameError != null) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
                         Text(
-                            text = uiState.nicknameError,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.labelMedium,
-                            modifier = Modifier.padding(start = 8.dp, top = 4.dp)
+                            text = uiState.nicknameError ?: "2~10자",
+                            color = if (uiState.nicknameError != null) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.onSecondary,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = "${newUserName.length}/$maxLength",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondary,
+                            maxLines = 1
                         )
                     }
                 }
 
-                SetImages(
-                    levelList = uiState.levelList,
-                    selectedImageLevel = selectedImageLevel,
-                    onImageClick = { selectedImageLevel = it }
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "프로필 이미지",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    SetImages(
+                        levelList = uiState.levelList,
+                        selectedImageLevel = selectedImageLevel,
+                        onImageClick = { selectedImageLevel = it }
+                    )
+                }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
