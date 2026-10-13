@@ -276,6 +276,7 @@ fun CommunityListScreen(
                                             PostCard(
                                                 post = post,
                                                 isLiked = post.isLiked,
+                                                isBookmarked = post.isBookmarked,
                                                 onClick = {
                                                     navController.navigate(
                                                         Routes.CommunityDetail(
@@ -398,7 +399,7 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
 }
 
 @Composable
-fun PostCard(post: Post, isLiked: Boolean, onClick: () -> Unit) {
+fun PostCard(post: Post, isLiked: Boolean, isBookmarked: Boolean = false, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -459,6 +460,12 @@ fun PostCard(post: Post, isLiked: Boolean, onClick: () -> Unit) {
                     iconRes = if (isLiked) R.drawable.ic_community_like_selected else R.drawable.ic_community_like_normal,
                     text = post.likeCount.toString(),
                     tint = if (isLiked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                IconStat(
+                    iconRes = if (isBookmarked) R.drawable.ic_bookmark_selected else R.drawable.ic_bookmark_normal,
+                    text = post.bookmarkCount.toString(),
+                    tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                 )
             }
         }

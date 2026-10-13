@@ -1,7 +1,6 @@
 package com.a32b.plant.data.source.remote.community
 
 import android.util.Log
-import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.data.mapper.toDto
 import com.a32b.plant.data.model.CommentDto
 import com.a32b.plant.data.model.CommunityActivityDto
@@ -10,17 +9,13 @@ import com.a32b.plant.data.model.TagDto
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.CommunityActivity
-import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.type.ActivityType
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
@@ -298,6 +293,7 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
     sealed interface DeleteActivityRequest{
         data class ById(val id: String) : DeleteActivityRequest
         data class ByLike(val uid: String, val targetId: String) : DeleteActivityRequest
+        data class ByBookmark(val uid: String, val targetId: String) : DeleteActivityRequest
     }
 
     private suspend fun deleteActivity(request: DeleteActivityRequest){
@@ -318,7 +314,50 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
                     .documents
                     .forEach { it.reference.delete().await() }
             }
+            is DeleteActivityRequest.ByBookmark -> {
+                db.collection("activities")
+                    .whereEqualTo("uid", request.uid)
+                    .whereEqualTo("targetId", request.targetId)
+                    .whereEqualTo("type", ActivityType.BOOKMARK)
+                    .get()
+                    .await()
+                    .documents
+                    .forEach { it.reference.delete().await() }
+            }
         }
+    }
+
+    override suspend fun toggleBookmark(postId: String, uid: String, title: String): Boolean {
+        val postRef = db.collection("posts").document(postId)
+
+        val wasBookmarked = db.runTransaction { txn ->
+            val snapshot = txn.get(postRef)
+            val current = snapshot.getLong("bookmarkCount") ?: 0L
+            @Suppress("UNCHECKED_CAST")
+            val bookmarkedBy = (snapshot.get("bookmarkedBy") as? List<String>) ?: emptyList()
+            val already = uid in bookmarkedBy
+
+            if (already) {
+                txn.update(postRef, mapOf(
+                    "bookmarkedBy" to FieldValue.arrayRemove(uid),
+                    "bookmarkCount" to (current - 1).coerceAtLeast(0)
+                ))
+            } else {
+                txn.update(postRef, mapOf(
+                    "bookmarkedBy" to FieldValue.arrayUnion(uid),
+                    "bookmarkCount" to current + 1
+                ))
+            }
+            already
+        }.await()
+
+        if (wasBookmarked) deleteActivity(DeleteActivityRequest.ByBookmark(uid, postId))
+        else {
+            val data = CommunityActivity.bookmark(uid = uid, title = title, targetId = postId).toDto()
+            db.collection("activities").add(data).await()
+        }
+
+        return wasBookmarked
     }
 
     override suspend fun findCommentIdByActivityId(postId: String, activityId: String): String? {

@@ -81,6 +81,7 @@ fun CommunityDetailScreen(
 
 
     val isLikedByMe = postState?.isLiked == true
+    val isBookmarkedByMe = postState?.isBookmarked == true
 
     LaunchedEffect(Unit) {
         viewModel.event.collect { event ->
@@ -239,13 +240,30 @@ fun CommunityDetailScreen(
                                 ) {
                                     Icon(
                                         painterResource(id = if (isLikedByMe) R.drawable.ic_community_like_selected else R.drawable.ic_community_like_normal),
-//                                    tint = if (isLikedByMe) primary else Color.Gray,
                                         tint = if (isLikedByMe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                                         modifier = Modifier.size(18.dp),
                                         contentDescription = null
                                     )
                                     Text(
                                         " ${currentPost.likeCount}",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(12.dp))
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.clickable { viewModel.toggleBookmark() }
+                                ) {
+                                    Icon(
+                                        painterResource(id = if (isBookmarkedByMe) R.drawable.ic_bookmark_selected else R.drawable.ic_bookmark_normal),
+                                        tint = if (isBookmarkedByMe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(18.dp),
+                                        contentDescription = null
+                                    )
+                                    Text(
+                                        " ${currentPost.bookmarkCount}",
                                         style = MaterialTheme.typography.bodySmall
                                     )
                                 }
