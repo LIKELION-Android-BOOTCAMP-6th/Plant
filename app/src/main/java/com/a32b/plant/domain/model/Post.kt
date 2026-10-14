@@ -24,9 +24,11 @@ data class Post(
     val tag: Tag,
     val commentCount: Int,
     val likeCount: Int,
+    val bookmarkCount: Int = 0,
     val createdAt: Long?,
     val activityId: String,
-    val isLiked: Boolean, // likes 서브컬렉션에서 조회 후 설정
+    val isLiked: Boolean,
+    val isBookmarked: Boolean = false,
     val studyLogs: List<StudyLog>?,
     var isShared: Boolean?,
     val comments: List<Comment> = emptyList(),   // comments 서브컬렉션에서 조회 후 설정
@@ -48,11 +50,11 @@ data class Post(
             isShared = false
         )
 
-        fun createShared(author: PostAuthor, title: String, studyLogs: List<StudyLog>, tag: Tag) = Post(
+        fun createShared(author: PostAuthor, title: String, studyLogs: List<StudyLog>, tag: Tag, content: String? = null) = Post(
             postId = "",
             author = author,
             title = title,
-            content = null,
+            content = content,
             tag = tag,
             commentCount = 0,
             likeCount = 0,

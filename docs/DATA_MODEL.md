@@ -1,28 +1,42 @@
 ## 📐 데이터 모델
- 
+
+> **최초 작성일**: 2026-09-09
+> **최종 수정일**: 2026-10-12
+
 ### users
 ```
 users
 └── {uid}
-    ├── nickname: String?
-    ├── profileImg: String?
-    ├── lastSelectedPotId: String?
+    ├── nickname: String
+    ├── profileImg: String
+    ├── lastSelectedPotId: String
     ├── isFirstLogin: Boolean?
-    ├── totalStudyTime: Long?
-    ├── completedPotsCount: Int?
+    ├── totalStudyTime: Long
+    ├── gold: Int
+    ├── completedPotsCount: Int          ← write-only (학습 완료 시 increment)
+    ├── dailyCheckThisMonth
+    │   ├── count: Int
+    │   └── lastCheckedAt: Timestamp?
+    ├── item
+    │   ├── heart: Int
+    │   ├── sun: Int
+    │   ├── water: Int
+    │   ├── fertilizer: Int
+    │   ├── nutrient: Int
+    │   └── box: Int
     │
     └── pots
         └── {potsId}
-            ├── id: String?
-            ├── tag_id: String?
-            ├── tag_name: String?
-            ├── name: String?
-            ├── imageUrl: String?
-            ├── potTotalStudyingTime: Long?
-            ├── createdAt: Timestamp
+            ├── id: String
+            ├── tag_id: String
+            ├── tag_name: String
+            ├── name: String
+            ├── imageUrl: String
+            ├── potTotalStudyingTime: Long
+            ├── createdAt: Timestamp?
             ├── completedAt: Timestamp?
             ├── isCompleted: Boolean
-            ├── lastStudiedAt: Timestamp?
+            ├── lastStudiedAt: Timestamp?     ← 신규 예정 (최근 학습순 정렬용)
             │
             └── logs
                 └── {logId}
@@ -38,7 +52,7 @@ users
 activities
 └── {activityId}
     ├── uid: String
-    ├── type: String
+    ├── type: String              ← "게시물" | "댓글" | "좋아요" | "북마크"
     ├── title: String
     ├── comment: String?
     ├── commentId: String?
@@ -85,18 +99,26 @@ posts
 ### studying
 ```
 studying
-└── {studyingId}
-    ├── uid: String
+└── {uid}
     ├── nickname: String
     ├── tag: String
     ├── studyingTime: Long
     └── profileImg: String
 ```
  
+### Tags
+```
+Tags
+└── {tagId}
+    ├── id: String
+    ├── name: String
+    ├── parentId: String
+    └── no: Int
+```
+
 ### nicknames
 ```
 nicknames
 └── {nickname}
     └── nickname: String
 ```
- 

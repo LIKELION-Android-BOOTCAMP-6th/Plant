@@ -33,6 +33,7 @@ interface CommunityRemoteDataSource {
     suspend fun deletePost(postId: String, activityId: String)
 
     suspend fun toggleLike(postId: String, uid: String, title: String): Boolean
+    suspend fun toggleBookmark(postId: String, uid: String, title: String): Boolean
 
     suspend fun addComment(postId : String, comment: Comment, activity: CommunityActivity)
     suspend fun updateComment(postId: String, commentId: String, newContent: String)

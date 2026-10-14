@@ -6,27 +6,67 @@ import android.graphics.Bitmap
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.domain.error.AppError
+import com.a32b.plant.domain.model.StudyReward
+import com.a32b.plant.domain.result.onFailure
+import com.a32b.plant.domain.result.onSuccess
+import com.a32b.plant.domain.usecase.item.GiveStudyRewardUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import javax.inject.Inject
 
 data class StudyResultUiState(
-    val isDialogShow : Boolean = false
+    val isLoading: Boolean = false,
+    val isDialogShow: Boolean = false,
+    val reward: StudyReward? = null,
+    val isRewardLoaded: Boolean = false
 )
+
+sealed class StudyResultEvent {
+    data class ShowToast(val message: String) : StudyResultEvent()
+}
+
 @HiltViewModel
-class StudyResultViewModel @Inject constructor() : ViewModel(){
+class StudyResultViewModel @Inject constructor(
+    private val giveStudyRewardUseCase: GiveStudyRewardUseCase
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(StudyResultUiState())
     val uiState = _uiState.asStateFlow()
 
+    private val _event = Channel<StudyResultEvent>(Channel.BUFFERED)
+    val event = _event.receiveAsFlow()
+
     fun onDialogShow() = _uiState.update { it.copy(isDialogShow = true) }
     fun onDialogDismiss() = _uiState.update { it.copy(isDialogShow = false) }
 
-    fun saveBitmapToGallery(context: Context, bitmap: Bitmap){
+    fun loadReward(sessionTimeMs: Long) {
+        if (_uiState.value.isRewardLoaded) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            giveStudyRewardUseCase(sessionTimeMs)
+                .onSuccess { reward ->
+                    _uiState.update { it.copy(isLoading = false, reward = reward, isRewardLoaded = true) }
+                }
+                .onFailure { error ->
+                    _uiState.update { it.copy(isLoading = false, isRewardLoaded = true) }
+                    when (error) {
+                        is AppError.UnknownUser -> Unit
+                        else -> _event.send(StudyResultEvent.ShowToast(error.message))
+                    }
+                }
+        }
+    }
+
+    fun saveBitmapToGallery(context: Context, bitmap: Bitmap) {
         val fileName = "plant_${TimeFormatter.formatToDateOnly(LocalDateTime.now())}.png"
         val contentValues = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
@@ -41,5 +81,4 @@ class StudyResultViewModel @Inject constructor() : ViewModel(){
             }
         }
     }
-
 }

@@ -15,6 +15,7 @@ import com.a32b.plant.domain.repository.CommunityRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.community.AddCommentUseCase
+import com.a32b.plant.domain.usecase.community.ToggleBookmarkUseCase
 import com.a32b.plant.domain.usecase.community.ToggleLikeUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -61,12 +62,14 @@ class CommunityDetailViewModel @Inject constructor(
     private val repository: CommunityRepository,
     private val addCommentUseCase: AddCommentUseCase,
     private val toggleLikeUseCase: ToggleLikeUseCase,
+    private val toggleBookmarkUseCase: ToggleBookmarkUseCase,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     companion object {
         private val LIKE_DEBOUNCE = 500.milliseconds
+        private val BOOKMARK_DEBOUNCE = 500.milliseconds
     }
 
     private val _uiState = MutableStateFlow(CommunityDetailUiState())
@@ -82,8 +85,9 @@ class CommunityDetailViewModel @Inject constructor(
     private val _post = MutableStateFlow<Post?>(null)
     val post: StateFlow<Post?> = _post.asStateFlow()
 
-    // 좋아요 디바운스 상태
+    // 좋아요/북마크 디바운스 상태
     private var likeDebounceJob: Job? = null
+    private var bookmarkDebounceJob: Job? = null
 
     init {
         ensureCurrentUserUseCase { user -> _uiState.update { it.copy(currentUid = user.uid, currentNickname = user.nickname, currentProfileImg = user.profileImg) } }
@@ -198,6 +202,38 @@ class CommunityDetailViewModel @Inject constructor(
             delay(LIKE_DEBOUNCE)
             commitLike()
         }
+    }
+
+    fun toggleBookmark() {
+        val currentPost = _post.value ?: return
+
+        val newIsBookmarked = !currentPost.isBookmarked
+        val delta = if (newIsBookmarked) 1 else -1
+        _post.value = currentPost.copy(
+            isBookmarked = newIsBookmarked,
+            bookmarkCount = (currentPost.bookmarkCount + delta).coerceAtLeast(0)
+        )
+
+        bookmarkDebounceJob?.cancel()
+        bookmarkDebounceJob = viewModelScope.launch {
+            delay(BOOKMARK_DEBOUNCE)
+            commitBookmark()
+        }
+    }
+
+    private suspend fun commitBookmark() {
+        val post = _post.value ?: return
+        toggleBookmarkUseCase(postId, post.title)
+            .onSuccess { wasBookmarked ->
+                val serverFinal = !wasBookmarked
+                if (_post.value?.isBookmarked != serverFinal) {
+                    _post.value = _post.value?.copy(isBookmarked = serverFinal)
+                }
+            }
+            .onFailure { e ->
+                sendToast(e.message)
+                refresh()
+            }
     }
 
     private suspend fun commitLike() {
