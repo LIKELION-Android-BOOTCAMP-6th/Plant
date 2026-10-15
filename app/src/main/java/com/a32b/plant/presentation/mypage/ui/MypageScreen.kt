@@ -595,6 +595,12 @@ fun ProfileDialog(
                                 newUserName = it
                             viewModel.resetNicknameError()
                         },
+                        placeholder = {
+                            Text(
+                                text = "2~10자 닉네임을 입력해주세요",
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        },
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -612,14 +618,13 @@ fun ProfileDialog(
                         verticalAlignment = Alignment.Top
                     ) {
                         Text(
-                            text = uiState.nicknameError ?: "2~10자",
-                            color = if (uiState.nicknameError != null) MaterialTheme.colorScheme.error
-                            else MaterialTheme.colorScheme.onSecondary,
+                            text = uiState.nicknameError ?: "",
+                            color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.weight(1f)
                         )
                         Text(
-                            text = "${newUserName.length}/$maxLength",
+                            text = "글자 수 ${newUserName.length}/$maxLength",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSecondary,
                             maxLines = 1
@@ -658,7 +663,7 @@ fun ProfileDialog(
                     ) {
                         Text(
                             "취소",
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.labelLarge
                         )
                     }
 
@@ -674,7 +679,7 @@ fun ProfileDialog(
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                         )
-                    ) { Text("저장", style = MaterialTheme.typography.bodyMedium) }
+                    ) { Text("저장", style = MaterialTheme.typography.labelLarge) }
                 }
             }
         }
