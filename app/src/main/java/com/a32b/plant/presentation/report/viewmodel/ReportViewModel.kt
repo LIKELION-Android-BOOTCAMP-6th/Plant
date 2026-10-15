@@ -2,6 +2,7 @@ package com.a32b.plant.presentation.report.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
+import com.a32b.plant.core.util.KST_ZONE_ID
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.DailyReport
 import com.a32b.plant.domain.model.MonthlyReport
@@ -20,18 +21,17 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.ZoneId
 import javax.inject.Inject
 
 enum class ReportTab { DAILY, MONTHLY }
 
 data class ReportUiState(
-    val today: LocalDate = LocalDate.now(REPORT_ZONE),
+    val today: LocalDate = LocalDate.now(KST_ZONE_ID),
     val month: YearMonth = YearMonth.from(today),
     val selectedDate: LocalDate = today,
     val tab: ReportTab = ReportTab.DAILY,
     val canGoNext: Boolean = false,
-    val isLoading: Boolean = true,
+    val isLoading: Boolean = false,
     val loadError: Boolean = false,
     val dailyReport: DailyReport? = null,
     val monthlyReport: MonthlyReport? = null
@@ -82,7 +82,7 @@ class ReportViewModel @Inject constructor(
     fun previousMonth() {
         val state = _uiState.value
         val previous = state.month.minusMonths(1)
-        val today = LocalDate.now(REPORT_ZONE)
+        val today = LocalDate.now(KST_ZONE_ID)
         loadMonth(previous, if (previous == YearMonth.from(today)) today else previous.atDay(1))
     }
 
@@ -90,14 +90,14 @@ class ReportViewModel @Inject constructor(
         val state = _uiState.value
         if (!state.canGoNext) return
         val next = state.month.plusMonths(1)
-        val today = LocalDate.now(REPORT_ZONE)
+        val today = LocalDate.now(KST_ZONE_ID)
         loadMonth(next, if (next == YearMonth.from(today)) today else next.atDay(1))
     }
 
     // 한국 날짜가 바뀌었으면 보고 있던 달·선택 날짜 그대로 다시 조회한다(오늘·다음 달 버튼 갱신).
     fun refreshIfDateChanged() {
         val state = _uiState.value
-        if (LocalDate.now(REPORT_ZONE) == state.today) return
+        if (LocalDate.now(KST_ZONE_ID) == state.today) return
         loadMonth(state.month, state.selectedDate)
     }
 
@@ -109,7 +109,7 @@ class ReportViewModel @Inject constructor(
     private fun loadMonth(month: YearMonth, selectedDate: LocalDate) {
         monthJob?.cancel()
         dailyJob?.cancel()
-        val today = LocalDate.now(REPORT_ZONE)
+        val today = LocalDate.now(KST_ZONE_ID)
         _uiState.update {
             it.copy(
                 today = today,
@@ -186,5 +186,3 @@ class ReportViewModel @Inject constructor(
         loaded()
     }
 }
-
-private val REPORT_ZONE = ZoneId.of("Asia/Seoul")

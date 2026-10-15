@@ -34,7 +34,7 @@ object TimeFormatter {
         else String.format("%02d:%02d", minute, secs)
     }
 
-    fun formatToKoreanDuration(millis: Long): String{
+    fun formatToKoreanDuration(millis: Long): String {
         val totalSec = millis / 1000
         val hours = totalSec / 3600
         val minute = (totalSec % 3600) / 60
@@ -46,6 +46,7 @@ object TimeFormatter {
         if (secs > 0) units.add("${secs}초")
         return if (units.isEmpty()) "0초" else units.joinToString(" ")
     }
+
     fun formatToDateOnly(dateTime: LocalDateTime): String
         = dateTime.format(DateTimeFormatter.ofPattern("yyyyMMdd"))
 

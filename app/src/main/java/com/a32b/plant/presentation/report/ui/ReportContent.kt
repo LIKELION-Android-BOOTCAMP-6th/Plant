@@ -25,7 +25,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -47,6 +46,7 @@ import java.time.LocalDate
 
 @Composable
 fun ReportContent(
+    modifier: Modifier = Modifier,
     state: ReportUiState,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
@@ -54,43 +54,31 @@ fun ReportContent(
     onTabSelected: (ReportTab) -> Unit,
     onRetry: () -> Unit
 ) {
-    Scaffold(
-        topBar = {
-            Text(
-                "리포트",
-                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 16.dp, end = 16.dp),
-                style = MaterialTheme.typography.displayLarge
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            ReportCalendar(
-                state = state,
-                onPreviousMonth = onPreviousMonth,
-                onNextMonth = onNextMonth,
-                onDateSelected = onDateSelected
-            )
-            ReportTabs(state.tab, onTabSelected)
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        ReportCalendar(
+            state = state,
+            onPreviousMonth = onPreviousMonth,
+            onNextMonth = onNextMonth,
+            onDateSelected = onDateSelected
+        )
+        ReportTabs(state.tab, onTabSelected)
 
-            when {
-                state.isLoading -> LoadingBox(Modifier.fillMaxWidth().height(200.dp))
-                state.loadError -> ReportFailure("기록을 불러오지 못했어요", onRetry)
-                state.tab == ReportTab.DAILY -> {
-                    val report = state.dailyReport
-                    if (report != null) DailyReportContent(report)
-                }
-                else -> {
-                    val report = state.monthlyReport
-                    if (report != null) MonthlyReportContent(report)
-                }
+        when {
+            state.isLoading -> LoadingBox(Modifier.fillMaxWidth().height(200.dp))
+            state.loadError -> ReportFailure("기록을 불러오지 못했어요", onRetry)
+            state.tab == ReportTab.DAILY -> {
+                val report = state.dailyReport
+                if (report != null) DailyReportContent(report)
+            }
+            else -> {
+                val report = state.monthlyReport
+                if (report != null) MonthlyReportContent(report)
             }
         }
     }
