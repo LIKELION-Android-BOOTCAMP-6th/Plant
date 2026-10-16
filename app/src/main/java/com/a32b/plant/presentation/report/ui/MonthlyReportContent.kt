@@ -25,23 +25,24 @@ import com.a32b.plant.domain.model.MonthlyReport
 
 @Composable
 fun MonthlyReportContent(report: MonthlyReport) {
+    val containerColor = reportCardContainerColor()
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("${report.month.year}년 ${report.month.monthValue}월", style = MaterialTheme.typography.titleLarge)
-        ReportCard(spacing = 12.dp) {
+        ReportCard(spacing = 12.dp, containerColor = containerColor) {
             ReportField("총 공부 시간", TimeFormatter.formatToKoreanDuration(report.totalMillis), emphasized = true, caption = "시작일 기준")
             ReportField(
                 "하루 평균", TimeFormatter.formatToKoreanDuration(report.averageMillis), emphasized = true,
                 caption = reportAverageCaption(report)
             )
         }
-        ReportCard {
+        ReportCard(containerColor = containerColor) {
             Text("날짜별 공부 시간", style = MaterialTheme.typography.titleMedium)
             if (report.recordDates.isEmpty()) Text("이 달에 시작한 기록 없음", style = MaterialTheme.typography.bodyMedium)
             MonthlyDailyGraph(report)
         }
         // 이 달에 시작한 기록이 없으면 최다·최소 날 카드는 숨긴다(일간과 같은 규칙, "기록 없음"은 그래프 카드에서 한 번만).
         report.highestDay?.let { highestDay ->
-            ReportCard(spacing = 12.dp) {
+            ReportCard(spacing = 12.dp, containerColor = containerColor) {
                 ReportField("가장 많이 공부한 날", reportDayTotal(highestDay))
                 report.lowestDay?.let { lowestDay ->
                     HorizontalDivider(color = MaterialTheme.colorScheme.outline)

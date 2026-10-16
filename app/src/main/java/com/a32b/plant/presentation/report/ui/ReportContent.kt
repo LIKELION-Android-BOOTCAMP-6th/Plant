@@ -42,6 +42,7 @@ import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.report.viewmodel.ReportTab
 import com.a32b.plant.presentation.report.viewmodel.ReportUiState
+import com.a32b.plant.presentation.theme.LocalIsDarkTheme
 import java.time.LocalDate
 
 @Composable
@@ -240,15 +241,22 @@ fun ReportField(label: String, value: String, emphasized: Boolean = false, capti
 }
 
 @Composable
+fun reportCardContainerColor(): Color {
+    return if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.primaryContainer
+        else MaterialTheme.colorScheme.secondary
+}
+
+@Composable
 fun ReportCard(
     spacing: Dp = 8.dp,
     padding: Dp = 16.dp,
+    containerColor: Color = MaterialTheme.colorScheme.primaryContainer,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(Modifier.fillMaxWidth().padding(padding), verticalArrangement = Arrangement.spacedBy(spacing), content = content)
