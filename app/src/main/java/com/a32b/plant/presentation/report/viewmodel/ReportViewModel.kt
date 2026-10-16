@@ -161,9 +161,7 @@ class ReportViewModel @Inject constructor(
     }
 
     private fun failLoading(error: AppError) {
-        // UnknownUser는 공용 세션 만료 처리에 맡기고, 그 외 조회 실패만 원인을 토스트로 안내한다.
-        if (error is AppError.UnknownUser) ensureCurrentUserUseCase.invoke()
-        else sendToast(error.message)
+        sendToast(error.message)
         finishWithLoadError()
     }
 
