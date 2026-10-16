@@ -61,54 +61,30 @@ class PotRepositoryImpl @Inject constructor(
     }
 
     //특정 화분 정보 조회
-    override suspend fun getUserPotById(uid: String, potId: String): Result<Pot?> {
-        return safeRunCatching {
-            val document = db.collection("users").document(uid)
-                .collection("pots").document(potId)
-                .get().await()
-            document?.toObject(com.a32b.plant.data.model.PotDto::class.java)?.toDomain()
-        }.fold(
-            onSuccess = { Result.Success(it) },
-            onFailure = { e ->
-                Log.e("PotRepository", "특정 화분 조회 실패", e)
-                Result.Failure(handleError(e, "화분 정보를 불러오는데 실패했습니다."))
-            }
-        )
+    override suspend fun getUserPotById(uid: String, potId: String): Pot? {
+        val document = db.collection("users").document(uid)
+            .collection("pots").document(potId)
+            .get().await()
+        return document?.toObject(com.a32b.plant.data.model.PotDto::class.java)?.toDomain()
     }
 
     //중복 제거된 레벨 리스트 조회
-    override suspend fun getDuplicationLevelList(uid: String): Result<List<String>> {
-        return safeRunCatching {
-            val result = db.collection("users").document(uid).collection("pots")
-                .get().await()
-            result.documents
-                .mapNotNull { it.getString("level") }
-                .distinct()
-                .sorted()
-        }.fold(
-            onSuccess = { Result.Success(it) },
-            onFailure = { e ->
-                Log.e("PotRepository", "레벨 리스트 조회 실패", e)
-                Result.Failure(handleError(e, "레벨 목록을 불러오는데 실패했습니다."))
-            }
-        )
+    override suspend fun getDuplicationLevelList(uid: String): List<String> {
+        val result = db.collection("users").document(uid).collection("pots")
+            .get().await()
+        return result.documents
+            .mapNotNull { it.getString("level") }
+            .distinct()
+            .sorted()
     }
 
-    override suspend fun getUserPotsByStatus(uid: String, isCompleted: Boolean): Result<List<Pot>> {
-        return safeRunCatching {
-            val snapshot = db.collection("users").document(uid)
-                .collection("pots")
-                .whereEqualTo("isCompleted", isCompleted)
-                .get()
-                .await()
-            snapshot.toObjects(com.a32b.plant.data.model.PotDto::class.java).map { it.toDomain() }
-        }.fold(
-            onSuccess = { Result.Success(it) },
-            onFailure = { e ->
-                Log.e("PotRepository", "상태별 화분 목록 조회 실패", e)
-                Result.Failure(handleError(e, "화분 목록을 불러오는데 실패했습니다."))
-            }
-        )
+    override suspend fun getUserPotsByStatus(uid: String, isCompleted: Boolean): List<Pot> {
+        val snapshot = db.collection("users").document(uid)
+            .collection("pots")
+            .whereEqualTo("isCompleted", isCompleted)
+            .get()
+            .await()
+        return snapshot.toObjects(com.a32b.plant.data.model.PotDto::class.java).map { it.toDomain() }
     }
 
     override fun getAvailableTags(): Flow<List<Tag>> = callbackFlow {
@@ -124,60 +100,36 @@ class PotRepositoryImpl @Inject constructor(
         awaitClose { listener.remove() }
     }.catch { e -> Log.e("PotRepository", "태그 목록 구독 실패: ${e.message}", e) }
 
-    override suspend fun updatePotName(uid: String, potId: String, newName: String): Result<Unit> {
-        return safeRunCatching {
-            db.collection("users").document(uid)
-                .collection("pots").document(potId)
-                .update("name", newName)
-                .await()
-        }.fold(
-            onSuccess = { Result.Success(Unit) },
-            onFailure = { e ->
-                Log.e("PotRepository", "화분 이름 수정 실패", e)
-                Result.Failure(handleError(e, "화분 이름 변경에 실패했습니다.", isWrite = true))
-            }
-        )
+    override suspend fun updatePotName(uid: String, potId: String, newName: String) {
+        db.collection("users").document(uid)
+            .collection("pots").document(potId)
+            .update("name", newName)
+            .await()
     }
 
-    override suspend fun deleteEntirePot(uid: String, potId: String, totalStudyingTime: Long): Result<Unit> {
-        return safeRunCatching {
-            val userRef = db.collection("users").document(uid)
-            val potRef = userRef.collection("pots").document(potId)
+    override suspend fun deleteEntirePot(uid: String, potId: String, totalStudyingTime: Long) {
+        val userRef = db.collection("users").document(uid)
+        val potRef = userRef.collection("pots").document(potId)
 
-            db.runBatch { batch ->
-                batch.update(userRef, "totalStudyTime", FieldValue.increment(totalStudyingTime * -1))
-                batch.delete(potRef)
-            }.await()
-        }.fold(
-            onSuccess = { Result.Success(Unit) },
-            onFailure = { e ->
-                Log.e("PotRepository", "화분 삭제 실패", e)
-                Result.Failure(handleError(e, "화분 삭제에 실패했습니다.", isWrite = true))
-            }
-        )
+        db.runBatch { batch ->
+            batch.update(userRef, "totalStudyTime", FieldValue.increment(totalStudyingTime * -1))
+            batch.delete(potRef)
+        }.await()
     }
 
-    override suspend fun completeStudyPlan(uid: String, potId: String): Result<Unit> {
-        return safeRunCatching {
-            val userRef = db.collection("users").document(uid)
-            val potRef = userRef.collection("pots").document(potId)
+    override suspend fun completeStudyPlan(uid: String, potId: String) {
+        val userRef = db.collection("users").document(uid)
+        val potRef = userRef.collection("pots").document(potId)
 
-            db.runBatch { batch ->
-                batch.update(userRef, "completedPotsCount", FieldValue.increment(1))
-                batch.update(
-                    potRef, mapOf(
-                        "isCompleted" to true,
-                        "completedAt" to FieldValue.serverTimestamp()
-                    )
+        db.runBatch { batch ->
+            batch.update(userRef, "completedPotsCount", FieldValue.increment(1))
+            batch.update(
+                potRef, mapOf(
+                    "isCompleted" to true,
+                    "completedAt" to FieldValue.serverTimestamp()
                 )
-            }.await()
-        }.fold(
-            onSuccess = { Result.Success(Unit) },
-            onFailure = { e ->
-                Log.e("PotRepository", "학습 완료 처리 실패", e)
-                Result.Failure(handleError(e, "학습 완료 처리에 실패했습니다.", isWrite = true))
-            }
-        )
+            )
+        }.await()
     }
 
     override suspend fun getTodayStudyLogs(uid: String, potId: String, startOfToday: Date): Result<List<StudyLog>> {
