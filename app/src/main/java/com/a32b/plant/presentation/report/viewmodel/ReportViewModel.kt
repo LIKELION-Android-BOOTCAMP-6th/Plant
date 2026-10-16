@@ -14,6 +14,8 @@ import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -135,7 +137,9 @@ class ReportViewModel @Inject constructor(
     }
 
     private suspend fun fetchMonthlyReport(uid: String, month: YearMonth) {
-        getMonthlyReportUseCase(uid, month)
+        val result = getMonthlyReportUseCase(uid, month)
+        currentCoroutineContext().ensureActive()
+        result
             .onSuccess { report ->
                 // 다른 조회가 먼저 실패했으면 결과를 반영하지 않는다(실패 화면 유지).
                 _uiState.update {
@@ -148,7 +152,9 @@ class ReportViewModel @Inject constructor(
     }
 
     private suspend fun fetchDailyReport(uid: String, date: LocalDate) {
-        getDailyReportUseCase(uid, date)
+        val result = getDailyReportUseCase(uid, date)
+        currentCoroutineContext().ensureActive()
+        result
             .onSuccess { report ->
                 // 다른 조회가 먼저 실패했으면 결과를 반영하지 않는다(실패 화면 유지).
                 _uiState.update {
