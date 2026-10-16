@@ -1,8 +1,12 @@
 package com.a32b.plant.domain.repository
 
+import com.a32b.plant.data.model.StudyLogDto
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.model.Tag
+import com.a32b.plant.domain.model.StudyLog
+import com.a32b.plant.domain.result.Result
 import kotlinx.coroutines.flow.Flow
+import java.util.Date
 
 interface PotRepository {
     fun getPots(uid: String): Flow<List<Pot>>
@@ -15,5 +19,4 @@ interface PotRepository {
     suspend fun updatePotName(uid: String, potId: String, newName: String)
     suspend fun deleteEntirePot(uid: String, potId: String, totalStudyingTime: Long)
     suspend fun completeStudyPlan(uid: String, potId: String)
-    suspend fun getTodayTotalStudyTime(uid: String, potId: String): Result<Long>
-}
+    suspend fun getTodayStudyLogs(uid: String, potId: String, startOfToday: Date): Result<List<StudyLog>>}

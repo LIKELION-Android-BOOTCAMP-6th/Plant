@@ -4,9 +4,12 @@ import android.util.Log
 import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.data.source.remote.pot.PotRemoteDataSource
 import com.a32b.plant.data.mapper.toDomain
+import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.Pot
+import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.PotRepository
+import com.a32b.plant.domain.result.Result
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
@@ -15,8 +18,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
-import java.time.LocalDate
-import java.time.ZoneId
+import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -33,11 +35,25 @@ class PotRepositoryImpl @Inject constructor(
             // 이때 서버가 PERMISSION_DENIED를 반환하는데, 처리하지 않으면 앱 전체가 죽는다.
             .catch { e -> Log.e("PotRepository", "화분 목록 구독 실패: ${e.message}", e) }
 
-    override suspend fun addPot(uid: String, tag: Tag, name: String) =
-        potRemoteDataSource.addPot(uid, tag, name)
+    override suspend fun addPot(uid: String, tag: Tag, name: String): Result<Unit> {
+        return potRemoteDataSource.addPot(uid, tag, name).fold(
+            onSuccess = { Result.Success(it) },
+            onFailure = { throwable ->
+                val appError = throwable as? AppError ?: AppError.Server(throwable.message ?: "화분 추가 실패")
+                Result.Failure(appError)
+            }
+        )
+    }
 
-    override suspend fun updatePotLevel(uid: String, potId: String, newLevel: String) =
-        potRemoteDataSource.updatePotLevel(uid, potId, newLevel)
+    override suspend fun updatePotLevel(uid: String, potId: String, newLevel: String): Result<Unit> {
+        return potRemoteDataSource.updatePotLevel(uid, potId, newLevel).fold(
+            onSuccess = { Result.Success(it) },
+            onFailure = { throwable ->
+                val appError = throwable as? AppError ?: AppError.Server(throwable.message ?: "화분 레벨 업데이트 실패")
+                Result.Failure(appError)
+            }
+        )
+    }
 
     //특정 화분 정보 조회
     override suspend fun getUserPotById(uid: String, potId: String): Pot? {
@@ -111,13 +127,20 @@ class PotRepositoryImpl @Inject constructor(
         }.await()
     }
 
-    override suspend fun getTodayTotalStudyTime(uid: String, potId: String): Result<Long> = safeRunCatching {
-        val startOfToday = LocalDate.now(ZoneId.of("Asia/Seoul"))
-            .atStartOfDay(ZoneId.of("Asia/Seoul"))
-            .toInstant()
-            .let { java.util.Date.from(it) }
-
-        val logs = potRemoteDataSource.getTodayStudyLogs(uid, potId, startOfToday)
-        logs.sumOf { it.studyingTime }
+    override suspend fun getTodayStudyLogs(uid: String, potId: String, startOfToday: Date): Result<List<StudyLog>> {
+        return safeRunCatching {
+            val dtoList = potRemoteDataSource.getTodayStudyLogs(uid, potId, startOfToday)
+            dtoList.map { it.toDomain() }
+        }.fold(
+            onSuccess = { Result.Success(it) },
+            onFailure = { throwable ->
+                Log.e("PotRepository", "오늘 학습 로그 조회 실패: ${throwable.message}", throwable)
+                val appError = when (throwable) {
+                    is AppError -> throwable
+                    else -> AppError.Server(throwable.message ?: "오늘 학습 시간 조회 중 오류가 발생했습니다.")
+                }
+                Result.Failure(appError)
+            }
+        )
     }
 }

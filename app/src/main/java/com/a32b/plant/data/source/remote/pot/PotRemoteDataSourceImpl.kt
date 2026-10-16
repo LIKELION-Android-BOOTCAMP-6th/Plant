@@ -73,11 +73,7 @@ class PotRemoteDataSourceImpl @Inject constructor(
             .await()
     }
 
-    override suspend fun getTodayStudyLogs(
-        uid: String,
-        potId: String,
-        startOfToday: Date
-    ): List<StudyLogDto> {
+    override suspend fun getTodayStudyLogs(uid: String, potId: String, startOfToday: Date): List<StudyLogDto> {
         val snapshot = db.collection("users").document(uid)
             .collection("pots").document(potId)
             .collection("logs")

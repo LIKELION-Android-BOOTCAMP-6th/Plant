@@ -15,6 +15,7 @@ import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.pot.GetActivePotUseCase
 import com.a32b.plant.domain.usecase.pot.GetPotListUseCase
+import com.a32b.plant.domain.usecase.pot.GetTodayTotalStudyTimeUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -78,7 +79,8 @@ class HomeViewModel @Inject constructor(
     private val getPotListUseCase: GetPotListUseCase,
     private val userRepository: UserRepository,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
-    private val potRepository: PotRepository
+    private val potRepository: PotRepository,
+    private val getTodayTotalStudyTimeUseCase: GetTodayTotalStudyTimeUseCase
 ) : BaseViewModel() {
 
     private val _displayPot = MutableStateFlow(Pot.EMPTY)
@@ -150,14 +152,21 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun fetchTodayStudyTime(uid: String, potId: String){
+    private fun sendToast(message: String) {
         viewModelScope.launch {
-            potRepository.getTodayTotalStudyTime(uid, potId)
+            _eventChannel.send(HomeEvent.ShowToast(message))
+        }
+    }
+
+    private fun fetchTodayStudyTime(uid: String, potId: String) {
+        viewModelScope.launch {
+            getTodayTotalStudyTimeUseCase(uid, potId)
                 .onSuccess { totalMillis ->
                     _todayStudyTime.value = TimeFormatter.formatToDigitalClock(totalMillis)
                 }
                 .onFailure { error ->
                     _todayStudyTime.value = "00:00:00"
+                    sendToast(error.message)
                 }
         }
     }
