@@ -39,18 +39,17 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.a32b.plant.R
-import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadingBox
+import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.core.type.StudyingGoalCheckMode
 import com.a32b.plant.presentation.studying.viewmodel.StudyingEvent
 import com.a32b.plant.presentation.studying.viewmodel.StudyingViewModel
 import com.a32b.plant.presentation.theme.LocalIsDarkTheme
-import java.time.LocalDateTime
 
 @Composable
 fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = hiltViewModel()) {
@@ -143,6 +142,11 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
                 StateChangeButton("학습종료", MaterialTheme.colorScheme.surface) {
                     viewModel.onChangeGoalCheckMode(StudyingGoalCheckMode.FINISH)
                 }
+            }
+
+            // [DEBUG] 보상 테스트용 — 릴리즈 전 제거
+            StateChangeButton("+1h [DEBUG]", MaterialTheme.colorScheme.errorContainer) {
+                viewModel.addDebugTime()
             }
             Spacer(modifier = Modifier.weight(1f))
 

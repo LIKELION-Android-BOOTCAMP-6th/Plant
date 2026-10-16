@@ -141,6 +141,9 @@ class StudyingViewModel @Inject constructor(
     /** 스톱워치 */
     private var job: Job? = null
     fun onTimerChange() = _uiState.update { it.copy(timer = it.timer + 1000 ) }
+
+    /** [DEBUG] 타이머에 1시간(3,600,000ms) 추가 — 보상 테스트용, 릴리즈 전 제거 */
+    fun addDebugTime() = _uiState.update { it.copy(timer = it.timer + 3_600_000L) }
     private fun startStopwatch(){
         job?.cancel()
         job = viewModelScope.launch {
