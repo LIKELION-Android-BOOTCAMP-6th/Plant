@@ -44,10 +44,12 @@ import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyReward
+import com.a32b.plant.domain.type.ItemType
 import com.a32b.plant.presentation.core.component.ConfettiOverlay
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.core.component.ProfileImage
+import com.a32b.plant.presentation.core.extension.resId
 import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.studying.viewmodel.StudyResultEvent
 import com.a32b.plant.presentation.studying.viewmodel.StudyResultViewModel
@@ -212,18 +214,42 @@ private fun StudyRewardSection(reward: StudyReward) {
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
             Spacer(modifier = Modifier.height(8.dp))
-            reward.items.forEach { item ->
-                Text(
-                    text = "${item.kor} ×1",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+            Column(modifier = Modifier.fillMaxWidth()) {
+                reward.items.forEach { item ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(id = item.resId),
+                            contentDescription = item.kor,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Text(
+                            text = "${item.kor} ×1",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+                if (reward.boxCount > 0) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(id = ItemType.BOX.resId),
+                            contentDescription = "보너스 박스",
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Text(
+                            text = "보너스 박스 ×${reward.boxCount}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
             }
-            Text(
-                text = "보너스 박스 ×${reward.boxCount}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
         }
     }
 }
