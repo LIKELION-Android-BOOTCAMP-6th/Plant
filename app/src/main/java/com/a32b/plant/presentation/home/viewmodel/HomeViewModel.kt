@@ -9,7 +9,6 @@ import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.AttendanceReward
 import com.a32b.plant.domain.model.DailyCheckThisMonth
 import com.a32b.plant.domain.model.Pot
-import com.a32b.plant.domain.repository.PotRepository
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
@@ -79,7 +78,6 @@ class HomeViewModel @Inject constructor(
     private val getPotListUseCase: GetPotListUseCase,
     private val userRepository: UserRepository,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
-    private val potRepository: PotRepository,
     private val getTodayTotalStudyTimeUseCase: GetTodayTotalStudyTimeUseCase
 ) : BaseViewModel() {
 

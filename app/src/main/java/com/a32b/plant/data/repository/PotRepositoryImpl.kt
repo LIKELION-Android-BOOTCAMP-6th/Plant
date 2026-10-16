@@ -12,6 +12,7 @@ import com.a32b.plant.domain.repository.PotRepository
 import com.a32b.plant.domain.result.Result
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -36,21 +37,25 @@ class PotRepositoryImpl @Inject constructor(
             .catch { e -> Log.e("PotRepository", "화분 목록 구독 실패: ${e.message}", e) }
 
     override suspend fun addPot(uid: String, tag: Tag, name: String): Result<Unit> {
-        return potRemoteDataSource.addPot(uid, tag, name).fold(
+        return safeRunCatching {
+            potRemoteDataSource.addPot(uid, tag, name).getOrThrow()
+        }.fold(
             onSuccess = { Result.Success(it) },
-            onFailure = { throwable ->
-                val appError = throwable as? AppError ?: AppError.Server(throwable.message ?: "화분 추가 실패")
-                Result.Failure(appError)
+            onFailure = { e ->
+                Log.e("PotRepository", "화분 추가 실패", e)
+                Result.Failure(handleError(e, "화분 추가에 실패했습니다.", isWrite = true))
             }
         )
     }
 
     override suspend fun updatePotLevel(uid: String, potId: String, newLevel: String): Result<Unit> {
-        return potRemoteDataSource.updatePotLevel(uid, potId, newLevel).fold(
+        return safeRunCatching {
+            potRemoteDataSource.updatePotLevel(uid, potId, newLevel).getOrThrow()
+        }.fold(
             onSuccess = { Result.Success(it) },
-            onFailure = { throwable ->
-                val appError = throwable as? AppError ?: AppError.Server(throwable.message ?: "화분 레벨 업데이트 실패")
-                Result.Failure(appError)
+            onFailure = { e ->
+                Log.e("PotRepository", "화분 레벨 업데이트 실패", e)
+                Result.Failure(handleError(e, "화분 레벨 업데이트에 실패했습니다.", isWrite = true))
             }
         )
     }
@@ -142,5 +147,19 @@ class PotRepositoryImpl @Inject constructor(
                 Result.Failure(appError)
             }
         )
+    }
+
+    private fun handleError(e: Throwable, defaultMessage: String, isWrite: Boolean = false): AppError = when (e) {
+        is AppError -> e
+        is FirebaseFirestoreException -> when (e.code) {
+            FirebaseFirestoreException.Code.UNAVAILABLE,
+            FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
+
+            FirebaseFirestoreException.Code.PERMISSION_DENIED -> AppError.Permission()
+
+            else -> if (isWrite) AppError.Upload() else AppError.Custom(defaultMessage)
+        }
+        is IllegalArgumentException -> AppError.Unknown()
+        else -> if (isWrite) AppError.Upload() else AppError.Custom(defaultMessage)
     }
 }
