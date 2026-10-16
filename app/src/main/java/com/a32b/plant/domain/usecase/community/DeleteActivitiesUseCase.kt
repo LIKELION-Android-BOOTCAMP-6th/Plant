@@ -5,11 +5,8 @@ import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.domain.repository.CommunityRepository
 import com.a32b.plant.domain.result.Result
-import com.a32b.plant.domain.result.onFailure
-import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.type.ActivityType
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
-import com.google.android.play.integrity.internal.ac
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -45,6 +42,11 @@ class DeleteActivitiesUseCase @Inject constructor(
                                 ActivityType.LIKE ->
                                     ensureCurrentUserUseCase{ user ->
                                         repository.toggleLike(activity.targetId, user.uid, activity.title)
+                                    }
+
+                                ActivityType.BOOKMARK ->
+                                    ensureCurrentUserUseCase { user ->
+                                        repository.toggleBookmark(activity.targetId, user.uid, activity.title)
                                     }
                             }
                         } else {

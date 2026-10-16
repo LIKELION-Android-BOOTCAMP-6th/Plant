@@ -16,3 +16,8 @@ local.properties
 # 파이어베이스
 app/google-services.json
 /.idea
+
+# 로그 파일
+*.log
+crash_real.txt
+logcat.txt

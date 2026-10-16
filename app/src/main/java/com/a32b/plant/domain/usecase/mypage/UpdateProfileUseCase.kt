@@ -122,7 +122,7 @@ class UpdateProfileUseCase @Inject constructor(
     private fun validateNickname(nickname: String): String? {
         val len = nickname.length
         return if (len !in 2..10) {
-            "닉네임은 2자 이상 10자 이하로 입력해주세요."
+            "2~10자로 입력해주세요."
         } else {
             null
         }

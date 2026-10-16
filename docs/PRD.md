@@ -1,6 +1,9 @@
 # Plant PRD (Product Requirements Document)
 
 
+> **최초 작성일**: 2026-09-09
+> **최종 수정일**: 2026-10-12
+
 ## 1. 배경 및 문제 정의
 
 ### 1-1. 문제
@@ -40,7 +43,7 @@
 
 ### 3-1. 기능 목록 총괄
 
-> **상태 범례**: ✅ 구현 완료 · 🚧 부분 구현 · 📋 기획 완료(미구현) · 💡 아이디어 단계
+> **상태 범례**: ✅ 구현 완료 · 🚧 부분 구현
 
 | 영역 | 기능 | 상태 | 비고 |
 |------|------|:----:|------|
@@ -60,14 +63,16 @@
 | | 화분 이름 변경 | ✅ | |
 | | 화분 삭제 | ✅ | 누적 시간 반영 |
 | | 화분 학습 완료 처리 | ✅ | |
-| | 화분 성장 (학습 시간 + 아이템 이중 조건) | 🚧 | Lv.0~6, 시간 기준은 구현됨, 아이템 조건은 미구현 |
-| | 화분 목록 정렬 (5종) | 📋 | 화분 탭 내 정렬 UI, 생성일/학습시간/레벨/이름/최근학습순 |
-| **아이템·보상** | 성장 아이템 (5종: 하트/햇빛/물/비료/영양제) | 📋 | 레벨업 시 소비, 학습 보상·랜덤박스·상점·출석에서 수급 |
-| | 학습 완료 보상 (아이템 + 보너스박스) | 📋 | 1h/3h/5h/7h/9h 티어별 차등 지급, 중복 없음 |
-| | 보너스박스 (랜덤박스) | 📋 | 아이템(89%) 또는 Gold(11%) 확률 드롭 |
-| | Gold 시스템 | 📋 | 랜덤박스, 연속 출석, 목표 달성에서 획득 |
-| | 상점 | 📋 | Gold로 아이템·화분 구매 (모든 기능 완료 후) |
+| | 화분 성장 (학습 시간 + 아이템 이중 조건) | 🚧 | Lv.0~6, 시간 기준은 구현됨 |
+| | 화분 목록 정렬 (5종) | | 화분 탭 내 정렬 UI, 생성일/학습시간/레벨/이름/최근학습순 |
+| **아이템·보상** | 성장 아이템 (5종: 하트/햇빛/물/비료/영양제) | | 레벨업 시 소비, 학습 보상·랜덤박스·상점·출석에서 수급 |
+| | 학습 완료 보상 (아이템 + 보너스박스) | | 1h/3h/5h/7h/9h 티어별 차등 지급, 중복 없음 |
+| | 보너스박스 (랜덤박스) | | 아이템(89%) 또는 Gold(11%) 확률 드롭 |
+| | Gold 시스템 | | 랜덤박스, 연속 출석, 목표 달성에서 획득 |
+| | 상점 | | Gold로 아이템·화분 구매 (모든 기능 완료 후) |
 | **학습 (Studying)** | 스톱워치 (시작/일시정지/재개/종료) | ✅ | |
+| | 학습 목표 입력 (시작 시 다이얼로그) | ✅ | 최대 10개, 각 100자, 선택 입력 |
+| | 학습 목표 체크/관리 (진행 중) | ✅ | CHECK/INTERRUPTED/FINISH 모드 |
 | | 실시간 학습 시간 공유 | ✅ | 5초마다 로컬 저장, 1분마다 서버 동기화 |
 | | 같은 분야 공부 사용자 조회 | ✅ | 상위 3명, 구독 방식 자동 갱신 |
 | | 비정상 종료 복구 | ✅ | 로컬 DB에 세션 백업 |
@@ -88,22 +93,22 @@
 | | 본인 게시글 수정/삭제 | ✅ | |
 | | 좋아요 | ✅ | 본인 게시글 불가 |
 | | 댓글 CRUD | ✅ | 최대 100자 |
-| | 북마크 | 📋 | 좋아요와 별개, 개인 저장 목적 |
-| | 커뮤니티 활동 내역 | ✅ | 게시글/댓글/좋아요 |
+| | 북마크 | | 좋아요와 별개, 개인 저장 목적 |
+| | 커뮤니티 활동 내역 | ✅ | 게시글/댓글/좋아요/북마크 |
 | **마이페이지** | 프로필 조회 | ✅ | 닉네임, 이미지, 총 공부 시간 |
 | | 닉네임 변경 | ✅ | 2~10자, 중복 불가 |
 | | 프로필 이미지 변경 | 🚧 | 화분 성장 이미지 기반, 변경 가능성 있음 |
-| | 다크모드 | ✅ | DataStore 기반, 유저별 설정 유지 |
-| **출석체크** | 출석판 (28일 고정) | 📋 | 윤달/윤년 등은 28일 통일 |
-| | 하루 1회 출석 + 누적 보상 | 📋 | Gold·성장 아이템 지급, 서버 시간 기준, Transaction 기반 중복 보상 방지 |
+| | 다크모드 | ✅ | DataStore 기반, 기기별 로컬 저장 |
+| **출석체크** | 출석판 (28일 고정) | 🚧 | 윤달/윤년 등은 28일 통일 |
+| | 하루 1회 출석 + 누적 보상 | 🚧 | Gold·성장 아이템 지급, Transaction 기반, 서버 시간 판정은 미적용 (클라이언트 KST) |
 | **리포트/통계** | 학습 달력 (공부한 날짜 표시) | 🚧 | ReportScreen 존재, 세부 미확인 |
-| | 일간 학습 통계 (총/최대/최소/평균) | 📋 | |
-| | 월간 학습 통계 (그래프 포함) | 📋 | |
-| **알림** | 학습 리마인더 알림 | 📋 | FCM 의존성은 추가됨 |
-| | 학습 목표 알림 | 📋 | |
-| **설정** | 하루 시작 시간 기준 설정 | 📋 | 00:00 또는 05:00 선택 |
-| | 사용 가이드 / 이용약관 / 개인정보처리방침 | 📋 | |
-| **뱃지/업적** | 화분 성장·연속 학습 달성 뱃지 | 💡 | 최후순위 |
+| | 일간 학습 통계 (총/최대/최소/평균) | | |
+| | 월간 학습 통계 (그래프 포함) | | |
+| **알림** | 학습 리마인더 알림 | | FCM 의존성은 추가됨 |
+| | 학습 목표 알림 | | |
+| **설정** | 하루 시작 시간 기준 설정 | | 00:00 또는 05:00 선택 |
+| | 사용 가이드 / 이용약관 / 개인정보처리방침 | | |
+| **뱃지/업적** | 화분 성장·연속 학습 달성 뱃지 | | 최후순위 |
 
 ---
 
@@ -179,10 +184,11 @@
 | 항목 | 분류 | 설명 | 플로우 | 비고 |
 |------|------|------|--------|------|
 | **스톱워치** | 기능 | 진입 즉시 타이머 시작, 일시정지/재개/종료 지원 | — | — |
-| **로컬 백업** | 기능 | 비정상 종료 대비 세션 저장 | 5초마다 `StudyingLocalDataSource`(DataStore)에 저장 | — |
+| **학습 목표** | 기능 | 학습 시작 시 목표 입력 다이얼로그 (선택), 진행 중 체크/관리 | 시작 → 목표 입력(선택, 최대 10개×100자) → 진행 중 체크 → 종료 시 확인 | StudyingGoalCheckMode: CHECK/INTERRUPTED/FINISH |
+| **로컬 백업** | 기능 | 비정상 종료 대비 세션 저장 | 5초마다 `StudyingLocalDataSource`(DataStore)에 저장 | 학습 목표도 로컬 백업에 포함 |
 | **서버 동기화** | 기능 | Firestore `studying` 컬렉션에 학습 시간 업데이트 | 1분마다 동기화 | — |
 | **함께 공부하는 사용자** | 기능 | 같은 태그로 학습 중인 유저를 실시간 구독 | `observeStudyingUser`로 Firestore 구독 | 현재 세션 공부 시간 기준 상위 3명 표시 |
-| **학습 종료** | 기능 | 학습 내용 입력 후 DB 저장 | 학습 내용 입력(선택) → DB 저장(화분·유저 시간 반영) → 커뮤니티 공유 토글 → 결과 화면 | — |
+| **학습 종료** | 기능 | 학습 목표 확인 후 DB 저장 | 종료 → 목표 확인 다이얼로그 → DB 저장(화분·유저 시간 반영) → 커뮤니티 공유 토글 → 결과 화면 | — |
 | **결과 화면** | 기능 | 공부 시간, 학습 내용, 화분 성장 결과 확인 | — | 갤러리 이미지 저장 가능 |
 
 #### D. 커뮤니티
@@ -196,7 +202,7 @@
 | **좋아요** | 기능 | 게시글에 좋아요 표시 | — | `likedBy` 배열 기반, 본인 게시글 불가 |
 | **댓글** | 기능 | 댓글 작성/수정/삭제 | — | `comments` 서브컬렉션, 최대 100자 |
 | **북마크** | 기능 | 게시글 개인 저장 (좋아요와 별개) | — | `bookmarkedBy` 배열 기반 |
-| **활동 내역** | 기능 | 게시글/댓글/좋아요 활동 기록 조회 | 아이템 클릭 시 해당 게시글로 이동 | `activities` 컬렉션 |
+| **활동 내역** | 기능 | 게시글/댓글/좋아요/북마크 활동 기록 조회 | 아이템 클릭 시 해당 게시글로 이동 | `activities` 컬렉션 (북마크도 활동 기록 추가 필요) |
 
 #### E. 마이페이지
 
@@ -215,7 +221,7 @@
 | **출석판** | 특징 | 28일 고정, 월간 출석 현황 표시 | — | 윤달/윤년 등 날짜 차이 무시 |
 | **출석 방식** | 특징 | 하루 1회, 당일 중복 불가 | — | 서버 시간 기준 판정 |
 | **출석 기록** | 특징 | 누적 방식 | 5일과 12일에 출석하면 두 번째 칸까지 체크 | — |
-| **보상** | 기능 | 출석 칸별 Gold/성장 아이템 지급 | — | Transaction 기반 중복 보상 방지(`isRewarded`) |
+| **보상** | 기능 | 출석 칸별 Gold/성장 아이템 지급 | — | Transaction 기반, `lastCheckedAt` 날짜로 중복 출석 방지 |
 
 #### G. 보상 · Gold · 상점 (신규)
 
@@ -226,7 +232,7 @@
 | 항목 | 분류 | 설명 | 플로우 | 비고 |
 |------|------|------|--------|------|
 | **학습 완료 보상** | 기능 | 세션 공부 시간에 따라 아이템 + 보너스박스 지급 | — | 해당 티어 하나만 적용, 하위 티어 중복 지급 없음 |
-| **보너스박스** | 기능 | 보너스박스를 열면 확률에 따라 1가지 보상 드롭 | — | 아이템(89%) 또는 Gold(11%) |
+| **보너스박스** | 기능 | 보너스박스를 열면 확률에 따라 1가지 보상 드롭 | — | 아이템(89%) / 보너스박스(5%) / Gold(6%) |
 | **상점** | 기능 | Gold를 사용하여 성장 아이템 구매 | — | 모든 기본 기능 완료 후 개발 |
 | **Gold 수급** | 특징 | 보너스박스, 출석, 목표 달성에서 획득 | — | 목표 달성 보상 구체적 기획 미정 |
 
@@ -249,7 +255,8 @@
 | 💧 물 | 9% |
 | 🌿 비료 | 5% |
 | 💊 영양제 | 2% |
-| 300 Gold | 8.5% |
+| 📦 보너스박스 | 5% |
+| 300 Gold | 3.5% |
 | 500 Gold | 2% |
 | 1,000 Gold | 0.5% |
 
@@ -270,7 +277,7 @@ Gold를 사용하여 성장 아이템을 구매할 수 있다.
 
 | 수급 경로 | 내용 |
 |---------|------|
-| **보너스박스** | 300G(8.5%) / 500G(2%) / 1,000G(0.5%) |
+| **보너스박스** | 300G(3.5%) / 500G(2%) / 1,000G(0.5%) |
 | **출석** | 출석 보상으로 Gold 지급 |
 | **목표 달성** | 일간·월간 목표, 누적 학습 시간, 화분 성장 달성 시 지급 (구체적 기획 미정) |
 
@@ -371,7 +378,7 @@ com.a32b.plant
 │   └── usecase/       # 유스케이스
 │       ├── auth/      # 인증 관련 (8개)
 │       ├── community/ # 커뮤니티 관련 (4개)
-│       ├── mypage/    # 마이페이지 관련 (3개)
+│       ├── mypage/    # 마이페이지 관련 (4개)
 │       ├── pot/       # 화분 관련 (6개)
 │       ├── session/   # 세션 관련 (1개)
 │       ├── studyLog/  # 학습 기록 관련 (3개)
@@ -394,13 +401,14 @@ com.a32b.plant
 
 | 컬렉션 | 구조 | 용도 |
 |--------|------|------|
-| `users/{uid}` | nickname, profileImg, lastSelectedPotId, isFirstLogin, totalStudyTime, completedPotsCount | 사용자 프로필 |
+| `users/{uid}` | nickname, profileImg, lastSelectedPotId, isFirstLogin, totalStudyTime, gold, completedPotsCount, dailyCheckThisMonth{count,lastCheckedAt}, item{heart,sun,water,fertilizer,nutrient,box} | 사용자 프로필 |
 | `users/{uid}/pots/{potId}` | id, tag_id, tag_name, name, imageUrl, potTotalStudyingTime, createdAt, completedAt, isCompleted, **lastStudiedAt** (신규) | 화분 정보 |
 | `users/{uid}/pots/{potId}/logs/{logId}` | id, title, contents[], studyingTime, createAt | 학습 기록 |
 | `posts/{postId}` | author{id,nickname,profileImg}, title, content, tag{id,name,parentId,no}, commentCount, likeCount, likedBy[], bookmarkCount, bookmarkedBy[], createdAt, activityId, isShared, studyLogs[] | 게시글 |
 | `posts/{postId}/comments/{commentId}` | user{uid,nickname,profileImg}, content, activityId, createdAt | 댓글 |
-| `activities/{activityId}` | uid, type, title, comment, commentId, targetId, createAt | 커뮤니티 활동 |
-| `studying/{studyingId}` | uid, nickname, tag, studyingTime, profileImg | 실시간 학습 현황 |
+| `activities/{activityId}` | uid, type(게시물/댓글/좋아요/북마크), title, comment, commentId, targetId, createAt | 커뮤니티 활동 |
+| `studying/{uid}` | nickname, tag, studyingTime, profileImg | 실시간 학습 현황 |
+| `Tags/{tagId}` | id, name, parentId, no | 화분·커뮤니티 태그 |
 | `nicknames/{nickname}` | nickname | 닉네임 중복 방지 |
 
 ---
@@ -412,25 +420,25 @@ SplashScreen (자동 로그인 판단)
 ├── SignInScreen
 │   └── SignUpScreen
 │
-└── HomeScreen (BottomNavigation)
-    ├── [홈 탭] HomeScreen
-    │   ├── NewBornTreeScreen (화분 생성)
-    │   ├── PotListScreen (나의 정원)
-    │   │   └── PotDetailScreen
-    │   ├── StudyPlanDetailScreen (화분 상세/학습 기록)
-    │   │   └── StudyLogDetailDialog
-    │   └── Studying Flow
-    │       ├── StudyingScreen (스톱워치)
-    │       └── StudyResultScreen (결과)
-    │
+└── HomeScreen (BottomNavigation — 5탭)
     ├── [커뮤니티 탭] CommunityListScreen
     │   ├── CommunityPostScreen (글 작성/수정)
-    │   └── CommunityDetailScreen (글 상세)
+    │   ├── CommunityDetailScreen (글 상세)
+    │   └── CommunityActivityScreen (활동 내역)
+    │
+    ├── [나의 정원 탭] PotListScreen
+    │   ├── NewBornTreeScreen (화분 생성)
+    │   └── StudyPlanDetailScreen (화분 상세/학습 기록)
+    │       └── StudyLogDetailDialog
+    │
+    ├── [홈 탭 (중앙)] HomeScreen
+    │   └── Studying Flow
+    │       ├── StudyingScreen (스톱워치 + 학습 목표)
+    │       └── StudyResultScreen (결과)
     │
     ├── [리포트 탭] ReportScreen
     │
     └── [마이페이지 탭] MyPageScreen
-        └── CommunityActivityScreen (활동 내역)
 ```
 
 ---
@@ -457,8 +465,9 @@ SplashScreen (자동 로그인 판단)
 
 | 문서 | 경로 |
 |------|------|
-| 기능명세서 | [docs/FEATURE_SPEC.md](FEATURE_SPEC.md) |
-| 화면명세서 | [docs/SCREEN_SPEC.pdf](SCREEN_SPEC.pdf) |
+| User Flow | [docs/USER_FLOW.md](USER_FLOW.md) |
+| System Flow | [docs/SYSTEM_FLOW.md](SYSTEM_FLOW.md) |
+| 화면명세 | docs/SCREEN_SPEC.md (작성 예정) |
 | 데이터 모델 | [docs/DATA_MODEL.md](DATA_MODEL.md) |
 | 발표자료 | [Google Drive](https://drive.google.com/file/d/1Mwvug51RlhaJiB6CjpF8rBXy9hWRgweU/view?usp=drive_link) |
 | 시연 영상 | [YouTube](https://youtu.be/ipBhhjw6aRo) |

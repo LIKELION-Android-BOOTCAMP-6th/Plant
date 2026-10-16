@@ -137,6 +137,16 @@ class CommunityRepositoryImpl @Inject constructor(
         }
     )
 
+    override suspend fun toggleBookmark(postId: String, uid: String, title: String): Result<Boolean> = safeRunCatching {
+        communityRemoteDataSource.toggleBookmark(postId, uid, title)
+    }.fold(
+        onSuccess = { Result.Success(it) },
+        onFailure = { e ->
+            Log.e("Community", "북마크 처리 실패", e)
+            Result.Failure(handleError(e, "북마크 처리에 실패했습니다.", isWrite = true))
+        }
+    )
+
     override suspend fun addComment(postId: String, comment: Comment, activity: CommunityActivity): Result<Unit> = safeRunCatching {
         communityRemoteDataSource.addComment(postId, comment, activity)
     }.fold(
