@@ -35,7 +35,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,12 +51,10 @@ import com.a32b.plant.presentation.core.component.getLogoImage
 import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.home.viewmodel.HomeEvent
 import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
-import com.a32b.plant.presentation.theme.fontColor
-import com.a32b.plant.presentation.theme.fontColorSub
+
 import com.a32b.plant.presentation.theme.primary
 import com.a32b.plant.presentation.theme.sub2
 import com.a32b.plant.presentation.theme.sub_green1
-import com.a32b.plant.presentation.theme.sub_green2
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -71,6 +68,8 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
     val tempSelectedPot by viewModel.tempSelectedPot.collectAsState()
     val attendanceUiState by viewModel.attendanceUiState.collectAsState()
     val context = LocalContext.current
+
+    val todayStudyTime by viewModel.todayStudyTime.collectAsState()
 
     val hasNoPot = displayPot.id.isEmpty() || displayPot == Pot.EMPTY
 
@@ -129,6 +128,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                     MainPlantCard(
                         displayPot = displayPot,
                         hasNoPot = hasNoPot,
+                        todayStudyTime = todayStudyTime,
                         onStartClick = {
                             if (!hasNoPot) {
                                 navController.navigate(
@@ -234,7 +234,7 @@ fun PotChangeDialog(
                         Text(
                             "생성된 다른 화분이 없습니다.",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSecondary
+                            color = MaterialTheme.colorScheme.tertiary
                         )
                     }
                 } else {
@@ -307,7 +307,7 @@ fun PotChangeDialog(
             TextButton(
                 onClick = onDismiss,
                 colors = ButtonDefaults.textButtonColors(
-                    contentColor = fontColorSub
+                    contentColor = MaterialTheme.colorScheme.onSecondary
                 )
             ) {
                 Text("취소")
@@ -346,7 +346,7 @@ fun HomeTopBar(
             Text(
                 text = "${displayName}의 Garden",
                 modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.displayLarge,
                 color = MaterialTheme.colorScheme.primary,
                 fontSize = 30.sp,
                 textAlign = TextAlign.Start
@@ -373,6 +373,7 @@ fun HomeTopBar(
             text = dateString,
             modifier = Modifier.fillMaxWidth(),
             style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center
         )
     }
@@ -382,6 +383,7 @@ fun HomeTopBar(
 fun MainPlantCard(
     displayPot: Pot,
     hasNoPot: Boolean,
+    todayStudyTime: String,
     onStartClick: () -> Unit,
     onChangeOrMakeClick: () -> Unit,
     onRecordClick: () -> Unit
@@ -421,6 +423,7 @@ fun MainPlantCard(
             Text(
                 text = if(hasNoPot) "공부 화분이 없습니다" else displayPot.name.ifEmpty { "실험용" },
                 style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.tertiary
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -442,12 +445,13 @@ fun MainPlantCard(
             Text(
                 text = "오늘 학습 시간",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSecondary
+                color = MaterialTheme.colorScheme.onSecondary,
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = "00:00", // 나중에 DB에서 가져오기
-                style = MaterialTheme.typography.titleMedium,
+                text = if(hasNoPot) "00:00:00" else todayStudyTime,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.tertiary,
                 fontSize = 26.sp
             )
             Spacer(modifier = Modifier.height(5.dp))
@@ -469,8 +473,8 @@ fun MainPlantCard(
                         )
                         Text(
                             text = "60% (30분/50분)", // 예시 텍스트 (추후 뷰모델 데이터와 연결)
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSecondary,
                         )
                     }
                     Spacer(modifier = Modifier.height(4.dp))
@@ -536,7 +540,8 @@ fun HomeItemBoxSection(){
 
         Text(
             text = "아이템 : ${itemNumber}개",
-            style = MaterialTheme.typography.titleSmall,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.tertiary,
             modifier = Modifier.padding(start = 10.dp)
         )
 
@@ -558,7 +563,7 @@ fun HomeItemBoxSection(){
                             .width(60.dp)
                             .height(95.dp)
                             .clip(RoundedCornerShape(0.dp))
-                            .background(MaterialTheme.colorScheme.secondary),
+                            .background(sub_green1),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
