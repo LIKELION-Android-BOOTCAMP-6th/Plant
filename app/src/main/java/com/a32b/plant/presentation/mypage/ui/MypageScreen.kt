@@ -228,16 +228,6 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
         )
     }
 
-    // 비밀번호 재인증 다이얼로그 (이메일 유저)
-    if (deleteUiState.showPasswordDialog) {
-        PasswordReauthDialog(
-            onDismiss = { deleteViewModel.dismissPasswordDialog() },
-            onConfirm = { password ->
-                deleteViewModel.reauthenticateWithEmailAndDelete(password)
-            }
-        )
-    }
-
     // 탈퇴 진행 중 화면 이탈 차단
     if (deleteUiState.isLoading) {
         Dialog(
