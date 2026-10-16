@@ -537,11 +537,10 @@ fun HomeItemBoxSection(item: Item){
     val displayItems = listOf(
         ItemType.HEART to item.heart,
         ItemType.SUN to item.sun,
-        ItemType.WATER to item.heart,
+        ItemType.WATER to item.water,
         ItemType.FERTILIZER to item.fertilizer,
         ItemType.NUTRIENT to item.nutrient,
         ItemType.BOX to item.box
-
     )
 
     val totalCount = displayItems.sumOf { it.second }
@@ -582,13 +581,12 @@ fun HomeItemBoxSection(item: Item){
                         )
                         Text(
                             text = type.kor,
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.titleSmall,
                         )
                         Text(
                             text = "${count}개",
                             style = MaterialTheme.typography.bodySmall
                         )
-
                     }
                 }
             }
