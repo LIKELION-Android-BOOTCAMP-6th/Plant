@@ -5,7 +5,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 sealed interface Routes {
     @Serializable data object SignIn: Routes
-    @Serializable data object SignUp: Routes
     @Serializable data object HomeMain: Routes
     @Serializable data object NewBornTree: Routes
     @Serializable data object CommunityList: Routes

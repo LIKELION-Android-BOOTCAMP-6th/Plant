@@ -22,50 +22,13 @@ class AuthRepositoryImpl @Inject constructor(
 
     override fun hasSession(): Boolean = authRemoteDataSource.hasSession()
 
-    override fun isEmailVerified(): Boolean = authRemoteDataSource.isEmailVerified()
-
     override fun getSignInProvider(): String? = authRemoteDataSource.getSignInProvider()
-
-    override suspend fun signInWithEmail(email: String, password: String): Result<String> = safeRunCatching {
-        authRemoteDataSource.signInWithEmail(email, password)
-    }.fold(
-        onSuccess = { Result.Success(it) },
-        onFailure = { e -> Result.Failure(handleAuthError(e, "이메일 로그인 실패")) }
-    )
 
     override suspend fun signInWithGoogle(idToken: String): Result<String> = safeRunCatching {
         authRemoteDataSource.signInWithGoogle(idToken)
     }.fold(
         onSuccess = { Result.Success(it) },
         onFailure = { e -> Result.Failure(handleAuthError(e, "구글 로그인 실패")) }
-    )
-
-    override suspend fun signUpWithEmail(email: String, password: String): Result<String> = safeRunCatching {
-        authRemoteDataSource.signUpWithEmail(email, password)
-    }.fold(
-        onSuccess = { Result.Success(it) },
-        onFailure = { e -> Result.Failure(handleAuthError(e, "회원가입 실패")) }
-    )
-
-    override suspend fun sendEmailVerification(): Result<Unit> = safeRunCatching {
-        authRemoteDataSource.sendEmailVerification()
-    }.fold(
-        onSuccess = { Result.Success(Unit) },
-        onFailure = { e -> Result.Failure(handleAuthError(e, "인증 메일 발송 실패")) }
-    )
-
-    override suspend fun sendPasswordResetEmail(email: String): Result<Unit> = safeRunCatching {
-        authRemoteDataSource.sendPasswordResetEmail(email)
-    }.fold(
-        onSuccess = { Result.Success(Unit) },
-        onFailure = { e -> Result.Failure(handleAuthError(e, "비밀번호 재설정 메일 발송 실패")) }
-    )
-
-    override suspend fun reauthenticateWithEmail(email: String, password: String): Result<Unit> = safeRunCatching {
-        authRemoteDataSource.reauthenticateWithEmail(email, password)
-    }.fold(
-        onSuccess = { Result.Success(Unit) },
-        onFailure = { e -> Result.Failure(handleAuthError(e, "이메일 재인증 실패")) }
     )
 
     override suspend fun reauthenticateWithGoogle(idToken: String): Result<Unit> = safeRunCatching {
@@ -99,12 +62,9 @@ class AuthRepositoryImpl @Inject constructor(
 
         val firebaseEx = e as? FirebaseAuthException
         return when (firebaseEx?.errorCode) {
-            "ERROR_INVALID_EMAIL" -> AppError.Email()
-            "ERROR_WEAK_PASSWORD" -> AppError.Password()
             "ERROR_USER_NOT_FOUND",
             "ERROR_WRONG_PASSWORD",
             "ERROR_INVALID_CREDENTIAL" -> AppError.Auth("계정 정보가 올바르지 않습니다.")
-            "ERROR_EMAIL_ALREADY_IN_USE" -> AppError.Custom("이미 등록된 계정입니다.")
             else -> when (e) {
                 is FirebaseNetworkException -> AppError.Network()
                 // datasource에서 auth.currentUser가 null일 때 던지는 예외.
