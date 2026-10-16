@@ -15,5 +15,6 @@ val ItemType.resId: Int
   ItemType.WATER -> R.drawable.ic_water
   ItemType.FERTILIZER -> R.drawable.ic_fertilizer
   ItemType.NUTRIENT -> R.drawable.ic_nutrient
+  ItemType.BOX -> R.drawable.ic_box
   else -> R.drawable.ic_coin
  }

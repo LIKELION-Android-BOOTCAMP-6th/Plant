@@ -43,11 +43,14 @@ import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.domain.model.AttendanceReward
+import com.a32b.plant.domain.model.Item
 import com.a32b.plant.domain.model.Pot
+import com.a32b.plant.domain.type.ItemType
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.component.getLogoImage
+import com.a32b.plant.presentation.core.extension.resId
 import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.home.viewmodel.HomeEvent
 import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
@@ -67,6 +70,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
     val allPots by viewModel.allPots.collectAsState()
     val tempSelectedPot by viewModel.tempSelectedPot.collectAsState()
     val attendanceUiState by viewModel.attendanceUiState.collectAsState()
+    val userItem by viewModel.userItem.collectAsState()
     val context = LocalContext.current
 
     val todayStudyTime by viewModel.todayStudyTime.collectAsState()
@@ -161,7 +165,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                     )
                 }
                 Spacer(modifier = Modifier.height(18.dp))
-                HomeItemBoxSection()
+                HomeItemBoxSection(item = userItem)
             }
 
             // 화분 변경 다이얼로그
@@ -529,17 +533,24 @@ fun MainPlantCard(
 }
 
 @Composable
-fun HomeItemBoxSection(){
+fun HomeItemBoxSection(item: Item){
+    val displayItems = listOf(
+        ItemType.HEART to item.heart,
+        ItemType.SUN to item.sun,
+        ItemType.WATER to item.water,
+        ItemType.FERTILIZER to item.fertilizer,
+        ItemType.NUTRIENT to item.nutrient,
+        ItemType.BOX to item.box
+    )
+
+    val totalCount = displayItems.sumOf { it.second }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
            verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        //총 개수를 넣을지, 개수를 없앨지 고민 필요
-        //추후 동적 연결 필요
-        var itemNumber = 3
-
         Text(
-            text = "아이템 : ${itemNumber}개",
+            text = "아이템 : ${totalCount}개",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.tertiary,
             modifier = Modifier.padding(start = 10.dp)
@@ -557,18 +568,24 @@ fun HomeItemBoxSection(){
                     .padding(12.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                items(5) { index ->
-                    Box(
-                        modifier = Modifier
-                            .width(60.dp)
-                            .height(95.dp)
-                            .clip(RoundedCornerShape(0.dp))
-                            .background(sub_green1),
-                        contentAlignment = Alignment.Center
+                items(displayItems) { (type, count) ->
+                    Column(
+                        modifier = Modifier.width(60.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
+                        Image(
+                            painter = painterResource(id = type.resId),
+                            contentDescription = type.kor,
+                            modifier = Modifier.size(40.dp)
+                        )
                         Text(
-                            text = "",
-                            style = MaterialTheme.typography.bodySmall,
+                            text = type.kor,
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                        Text(
+                            text = "${count}개",
+                            style = MaterialTheme.typography.bodySmall
                         )
                     }
                 }
