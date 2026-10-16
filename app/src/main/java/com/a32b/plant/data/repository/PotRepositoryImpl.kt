@@ -1,19 +1,25 @@
 package com.a32b.plant.data.repository
 
 import android.util.Log
+import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.data.source.remote.pot.PotRemoteDataSource
 import com.a32b.plant.data.mapper.toDomain
+import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.Pot
+import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.PotRepository
+import com.a32b.plant.domain.result.Result
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
+import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -30,11 +36,29 @@ class PotRepositoryImpl @Inject constructor(
             // 이때 서버가 PERMISSION_DENIED를 반환하는데, 처리하지 않으면 앱 전체가 죽는다.
             .catch { e -> Log.e("PotRepository", "화분 목록 구독 실패: ${e.message}", e) }
 
-    override suspend fun addPot(uid: String, tag: Tag, name: String) =
-        potRemoteDataSource.addPot(uid, tag, name)
+    override suspend fun addPot(uid: String, tag: Tag, name: String): Result<Unit> {
+        return safeRunCatching {
+            potRemoteDataSource.addPot(uid, tag, name).getOrThrow()
+        }.fold(
+            onSuccess = { Result.Success(it) },
+            onFailure = { e ->
+                Log.e("PotRepository", "화분 추가 실패", e)
+                Result.Failure(handleError(e, "화분 추가에 실패했습니다.", isWrite = true))
+            }
+        )
+    }
 
-    override suspend fun updatePotLevel(uid: String, potId: String, newLevel: String) =
-        potRemoteDataSource.updatePotLevel(uid, potId, newLevel)
+    override suspend fun updatePotLevel(uid: String, potId: String, newLevel: String): Result<Unit> {
+        return safeRunCatching {
+            potRemoteDataSource.updatePotLevel(uid, potId, newLevel).getOrThrow()
+        }.fold(
+            onSuccess = { Result.Success(it) },
+            onFailure = { e ->
+                Log.e("PotRepository", "화분 레벨 업데이트 실패", e)
+                Result.Failure(handleError(e, "화분 레벨 업데이트에 실패했습니다.", isWrite = true))
+            }
+        )
+    }
 
     //특정 화분 정보 조회
     override suspend fun getUserPotById(uid: String, potId: String): Pot? {
@@ -106,5 +130,32 @@ class PotRepositoryImpl @Inject constructor(
                 )
             )
         }.await()
+    }
+
+    override suspend fun getTodayStudyLogs(uid: String, potId: String, startOfToday: Date): Result<List<StudyLog>> {
+        return safeRunCatching {
+            val dtoList = potRemoteDataSource.getTodayStudyLogs(uid, potId, startOfToday)
+            dtoList.map { it.toDomain() }
+        }.fold(
+            onSuccess = { Result.Success(it) },
+            onFailure = { throwable ->
+                Log.e("PotRepository", "오늘 학습 로그 조회 실패: ${throwable.message}", throwable)
+                Result.Failure(handleError(throwable, "오늘 학습 시간 조회 중 오류가 발생했습니다."))
+            }
+        )
+    }
+
+    private fun handleError(e: Throwable, defaultMessage: String, isWrite: Boolean = false): AppError = when (e) {
+        is AppError -> e
+        is FirebaseFirestoreException -> when (e.code) {
+            FirebaseFirestoreException.Code.UNAVAILABLE,
+            FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
+
+            FirebaseFirestoreException.Code.PERMISSION_DENIED -> AppError.Permission()
+
+            else -> if (isWrite) AppError.Upload() else AppError.Custom(defaultMessage)
+        }
+        is IllegalArgumentException -> AppError.Unknown()
+        else -> if (isWrite) AppError.Upload() else AppError.Custom(defaultMessage)
     }
 }

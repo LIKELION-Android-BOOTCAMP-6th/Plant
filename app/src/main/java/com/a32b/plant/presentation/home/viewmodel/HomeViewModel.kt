@@ -2,6 +2,7 @@ package com.a32b.plant.presentation.home.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
+import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.AttendanceDecision
@@ -13,6 +14,7 @@ import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.pot.GetActivePotUseCase
 import com.a32b.plant.domain.usecase.pot.GetPotListUseCase
+import com.a32b.plant.domain.usecase.pot.GetTodayTotalStudyTimeUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -75,7 +77,8 @@ class HomeViewModel @Inject constructor(
     private val getActivePotUseCase: GetActivePotUseCase,
     private val getPotListUseCase: GetPotListUseCase,
     private val userRepository: UserRepository,
-    private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase
+    private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
+    private val getTodayTotalStudyTimeUseCase: GetTodayTotalStudyTimeUseCase
 ) : BaseViewModel() {
 
     private val _displayPot = MutableStateFlow(Pot.EMPTY)
@@ -108,6 +111,10 @@ class HomeViewModel @Inject constructor(
     private val _eventChannel = Channel<HomeEvent>(Channel.BUFFERED)
     val events = _eventChannel.receiveAsFlow()
 
+    //오늘 학습 시간 상태
+    private val _todayStudyTime = MutableStateFlow("00:00:00")
+    val todayStudyTime = _todayStudyTime.asStateFlow()
+
     init {
         checkUserAndLoadData()
     }
@@ -131,10 +138,34 @@ class HomeViewModel @Inject constructor(
                 getActivePotUseCase(uid = uid, lastSelectedPotId = lastSelectedPotId)
                     .collect { pot ->
                         _displayPot.value = pot
+                        if (pot.id.isNotEmpty() && pot != Pot.EMPTY) {
+                            fetchTodayStudyTime(uid, pot.id)
+                        } else {
+                            _todayStudyTime.value = "00:00:00"
+                        }
                     }
             }.onFailure { throwable ->
                 // 필요시 에러 핸들링
             }
+        }
+    }
+
+    private fun sendToast(message: String) {
+        viewModelScope.launch {
+            _eventChannel.send(HomeEvent.ShowToast(message))
+        }
+    }
+
+    private fun fetchTodayStudyTime(uid: String, potId: String) {
+        viewModelScope.launch {
+            getTodayTotalStudyTimeUseCase(uid, potId)
+                .onSuccess { totalMillis ->
+                    _todayStudyTime.value = TimeFormatter.formatToDigitalClock(totalMillis)
+                }
+                .onFailure { error ->
+                    _todayStudyTime.value = "00:00:00"
+                    sendToast(error.message)
+                }
         }
     }
 
@@ -150,6 +181,7 @@ class HomeViewModel @Inject constructor(
                 safeRunCatching {
                     ensureCurrentUserUseCase { user ->
                         userRepository.updateLastSelectedPot(user.uid, selected.id)
+                        fetchTodayStudyTime(user.uid, selected.id)
                     }
                 }.onFailure {
                     // 예외 처리
