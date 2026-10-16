@@ -8,6 +8,7 @@ import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.AttendanceReward
 import com.a32b.plant.domain.model.DailyCheckThisMonth
+import com.a32b.plant.domain.model.Item
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.onFailure
@@ -115,6 +116,11 @@ class HomeViewModel @Inject constructor(
     private val _todayStudyTime = MutableStateFlow("00:00:00")
     val todayStudyTime = _todayStudyTime.asStateFlow()
 
+
+    //아이템 상태
+    private val _userItem = MutableStateFlow(Item(0, 0, 0, 0, 0, 0))
+    val userItem = _userItem.asStateFlow()
+
     init {
         checkUserAndLoadData()
     }
@@ -123,6 +129,7 @@ class HomeViewModel @Inject constructor(
             ensureCurrentUserUseCase { user ->
                 _userName.value = user.nickname
                 _attendanceUiState.value = user.monthCheck.toAttendanceUiState()
+                _userItem.value = user.item
 
                 loadActivePot(uid = user.uid, lastSelectedPotId = user.lastSelectedPotId)
                 loaded()
