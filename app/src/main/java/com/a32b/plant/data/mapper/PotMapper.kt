@@ -15,6 +15,8 @@ fun PotDto.toDomain(): Pot = Pot(
     createdAt = createdAt.toLong(),
     completedAt = completedAt.toLong(),
     isCompleted = isCompleted,
+    lastStudiedAt = lastStudiedAt,
+    potLevel = potLevel
 )
 
 fun Pot.toDto(): PotDto = PotDto(
@@ -27,4 +29,7 @@ fun Pot.toDto(): PotDto = PotDto(
     createdAt = createdAt.toTimestamp(),
     completedAt = if(isCompleted) completedAt.toTimestamp() else null,
     isCompleted = isCompleted,
+    lastStudiedAt = lastStudiedAt,
+    potLevel = potLevel
+
 )

@@ -141,7 +141,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                                         tagId = displayPot.tagId,
                                         tagName = displayPot.tagName,
                                         title = displayPot.name.ifEmpty { "공부 목표" },
-                                        level = displayPot.level.ifEmpty { "Lv.1" }
+                                        level = "Lv.${displayPot.potLevel}"
                                     ))
                             }
                         },
@@ -272,7 +272,7 @@ fun PotChangeDialog(
                                         )
                                     }
                                     Text(
-                                        text = pot.level.ifEmpty { "Lv.0" },
+                                        text = "Lv.${pot.potLevel}",
                                         style = MaterialTheme.typography.labelMedium, //todo 지정된 스타일로 바꾸거나 스타일 새로 생성하기
                                         color = if(isSelected) primary else MaterialTheme.colorScheme.onSecondary
                                     )
@@ -440,8 +440,7 @@ fun MainPlantCard(
                     getLogoImage()
                 }
             } else {
-                ProfileImage(level = displayPot.level.ifEmpty { "Lv.1" }, size = 100)
-
+                ProfileImage(level = "Lv.${displayPot.potLevel}", size = 100)
             }
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -537,17 +536,18 @@ fun HomeItemBoxSection(item: Item){
     val displayItems = listOf(
         ItemType.HEART to item.heart,
         ItemType.SUN to item.sun,
-        ItemType.WATER to item.water,
+        ItemType.WATER to item.heart,
         ItemType.FERTILIZER to item.fertilizer,
         ItemType.NUTRIENT to item.nutrient,
         ItemType.BOX to item.box
+
     )
 
     val totalCount = displayItems.sumOf { it.second }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-           verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Text(
             text = "아이템 : ${totalCount}개",
@@ -581,12 +581,13 @@ fun HomeItemBoxSection(item: Item){
                         )
                         Text(
                             text = type.kor,
-                            style = MaterialTheme.typography.titleSmall,
+                            style = MaterialTheme.typography.labelSmall,
                         )
                         Text(
                             text = "${count}개",
                             style = MaterialTheme.typography.bodySmall
                         )
+
                     }
                 }
             }
