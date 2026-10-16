@@ -152,12 +152,13 @@ class HomeViewModel @Inject constructor(
 
     private fun fetchTodayStudyTime(uid: String, potId: String){
         viewModelScope.launch {
-            safeRunCatching {
-                val totalMinutes = potRepository.getTodayTotalStudyTime(uid, potId)
-                _todayStudyTime.value = TimeFormatter.formatToDigitalClock(totalMinutes)
-            }.onFailure {
-                _todayStudyTime.value = "00:00"
-            }
+            potRepository.getTodayTotalStudyTime(uid, potId)
+                .onSuccess { totalMillis ->
+                    _todayStudyTime.value = TimeFormatter.formatToDigitalClock(totalMillis)
+                }
+                .onFailure { error ->
+                    _todayStudyTime.value = "00:00:00"
+                }
         }
     }
 

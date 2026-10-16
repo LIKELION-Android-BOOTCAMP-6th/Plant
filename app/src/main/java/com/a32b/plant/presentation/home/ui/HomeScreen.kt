@@ -373,7 +373,7 @@ fun HomeTopBar(
             text = dateString,
             modifier = Modifier.fillMaxWidth(),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground,
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center
         )
     }

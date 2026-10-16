@@ -15,5 +15,5 @@ interface PotRepository {
     suspend fun updatePotName(uid: String, potId: String, newName: String)
     suspend fun deleteEntirePot(uid: String, potId: String, totalStudyingTime: Long)
     suspend fun completeStudyPlan(uid: String, potId: String)
-    suspend fun getTodayTotalStudyTime(uid: String, potId: String): Long
+    suspend fun getTodayTotalStudyTime(uid: String, potId: String): Result<Long>
 }

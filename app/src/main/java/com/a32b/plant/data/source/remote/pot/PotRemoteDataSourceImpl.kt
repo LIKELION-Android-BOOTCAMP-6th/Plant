@@ -2,12 +2,14 @@ package com.a32b.plant.data.source.remote.pot
 
 import android.util.Log
 import com.a32b.plant.data.model.PotDto
+import com.a32b.plant.data.model.StudyLogDto
 import com.a32b.plant.domain.model.Tag
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -69,6 +71,23 @@ class PotRemoteDataSourceImpl @Inject constructor(
                 "level" to newLevel
             ))
             .await()
+    }
+
+    override suspend fun getTodayStudyLogs(
+        uid: String,
+        potId: String,
+        startOfToday: Date
+    ): List<StudyLogDto> {
+        val snapshot = db.collection("users").document(uid)
+            .collection("pots").document(potId)
+            .collection("logs")
+            .whereGreaterThanOrEqualTo("startedAt", startOfToday)
+            .get()
+            .await()
+
+        return snapshot.documents.mapNotNull { doc ->
+            doc.toObject(StudyLogDto::class.java)
+        }
     }
 
 }

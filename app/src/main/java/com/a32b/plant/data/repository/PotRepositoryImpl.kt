@@ -1,6 +1,7 @@
 package com.a32b.plant.data.repository
 
 import android.util.Log
+import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.data.source.remote.pot.PotRemoteDataSource
 import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.domain.model.Pot
@@ -110,31 +111,13 @@ class PotRepositoryImpl @Inject constructor(
         }.await()
     }
 
-    override suspend fun getTodayTotalStudyTime(uid: String, potId: String): Long {
-        return try {
-            val startOfToday = LocalDate.now(ZoneId.of("Asia/Seoul"))
-                .atStartOfDay(ZoneId.of("Asia/Seoul"))
-                .toInstant()
-                .let { java.util.Date.from(it) }
+    override suspend fun getTodayTotalStudyTime(uid: String, potId: String): Result<Long> = safeRunCatching {
+        val startOfToday = LocalDate.now(ZoneId.of("Asia/Seoul"))
+            .atStartOfDay(ZoneId.of("Asia/Seoul"))
+            .toInstant()
+            .let { java.util.Date.from(it) }
 
-            val snapshot = db.collection("users")
-                .document(uid)
-                .collection("pots")
-                .document(potId)
-                .collection("logs")
-                .whereGreaterThanOrEqualTo("startedAt", startOfToday)
-                .get()
-                .await()
-
-            var totalMillis = 0L
-            for (document in snapshot.documents) {
-                val studyingTimeMillis = document.getLong("studyingTime") ?: 0L
-                totalMillis += studyingTimeMillis
-            }
-            totalMillis
-        } catch (e: Exception) {
-            Log.e("PotRepository", "오늘 학습 시간 조회 실패: ${e.message}", e)
-            0L
-        }
+        val logs = potRemoteDataSource.getTodayStudyLogs(uid, potId, startOfToday)
+        logs.sumOf { it.studyingTime }
     }
 }
