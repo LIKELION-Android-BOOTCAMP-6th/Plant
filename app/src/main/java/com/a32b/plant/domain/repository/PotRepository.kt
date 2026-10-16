@@ -12,12 +12,12 @@ interface PotRepository {
     fun getAvailableTags(): Flow<List<Tag>>
     suspend fun addPot(uid: String, tag: Tag, name: String): Result<Unit>
     suspend fun updatePotLevel(uid: String, potId: String, newLevel: String): Result<Unit>
-    suspend fun getUserPotById(uid: String, potId: String): Pot?
-    suspend fun getDuplicationLevelList(uid: String): List<String>
-    suspend fun getUserPotsByStatus(uid: String, isCompleted: Boolean): List<Pot>
-    suspend fun updatePotName(uid: String, potId: String, newName: String)
-    suspend fun deleteEntirePot(uid: String, potId: String, totalStudyingTime: Long)
-    suspend fun completeStudyPlan(uid: String, potId: String)
+    suspend fun getUserPotById(uid: String, potId: String): Result<Pot?>
+    suspend fun getDuplicationLevelList(uid: String): Result<List<String>>
+    suspend fun getUserPotsByStatus(uid: String, isCompleted: Boolean): Result<List<Pot>>
+    suspend fun updatePotName(uid: String, potId: String, newName: String): Result<Unit>
+    suspend fun deleteEntirePot(uid: String, potId: String, totalStudyingTime: Long): Result<Unit>
+    suspend fun completeStudyPlan(uid: String, potId: String): Result<Unit>
     suspend fun getTodayStudyLogs(uid: String, potId: String, startOfToday: Date): Result<List<StudyLog>>
 
 }
