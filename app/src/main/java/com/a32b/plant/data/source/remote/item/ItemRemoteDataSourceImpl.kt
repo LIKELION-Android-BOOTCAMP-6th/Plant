@@ -3,6 +3,9 @@ package com.a32b.plant.data.source.remote.item
 import com.a32b.plant.domain.type.ItemType
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -32,6 +35,15 @@ class ItemRemoteDataSourceImpl @Inject constructor(
 
             it.update(ref, buildUpdates(items) + ("item.box" to FieldValue.increment(-boxCount)))
         }.await()
+    }
+
+    override fun observeBoxCount(uid: String): Flow<Int> = callbackFlow {
+        val listener = db.collection("users").document(uid)
+            .addSnapshotListener { snap, err ->
+                if (err != null) { close(err); return@addSnapshotListener }
+                trySend(snap?.getLong("item.box")?.toInt() ?: 0)
+            }
+        awaitClose { listener.remove() }
     }
 
     private fun buildUpdates(items: List<ItemType>) : Map<String, Any>{
