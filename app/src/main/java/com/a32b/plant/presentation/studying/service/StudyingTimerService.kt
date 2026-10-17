@@ -91,7 +91,6 @@ class StudyingTimerService : Service() {
     private fun stopTimer() {
         timerJob?.cancel()
         accumulatedMs = 0L
-        _elapsed.value = 0L
         stopForeground(STOP_FOREGROUND_REMOVE)
     }
 
@@ -103,6 +102,7 @@ class StudyingTimerService : Service() {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()
 
     private fun updateNotification(ms: Long) {
