@@ -34,6 +34,20 @@ class ItemRepositoryImpl @Inject constructor(
     override fun getBoxCount(uid: String): Flow<Int> =
         itemRemoteDataSource.observeBoxCount(uid)
 
+    override suspend fun consumeItems(uid: String, items: Map<ItemType, Int>): Result<Unit> = safeRunCatching {
+        itemRemoteDataSource.consumeItems(uid, items)
+    }.fold(
+        onSuccess = { Result.Success(Unit) },
+        onFailure = { e -> Result.Failure(handleError(e, "아이템 소비 중 오류가 발생했습니다.")) }
+    )
+
+    override suspend fun canConsumeItems(uid: String, items: Map<ItemType, Int>): Result<Boolean> = safeRunCatching {
+        itemRemoteDataSource.canConsumeItems(uid, items)
+    }.fold(
+        onSuccess = { Result.Success(it) },
+        onFailure = { e -> Result.Failure(handleError(e, "아이템 확인 중 오류가 발생했습니다.")) }
+    )
+
     private fun handleError(e: Throwable, logMessage: String): AppError {
         Log.e("ItemRepository", "$logMessage: ${e.message}", e)
 
