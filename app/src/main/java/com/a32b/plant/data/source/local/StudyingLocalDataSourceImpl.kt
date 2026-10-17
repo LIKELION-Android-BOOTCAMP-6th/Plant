@@ -8,7 +8,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.a32b.plant.data.model.StudyingSession
+import com.a32b.plant.data.model.StudyingSessionDto
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
@@ -33,7 +33,7 @@ class StudyingLocalDataSourceImpl @Inject constructor(
     private val LOG = stringPreferencesKey("log")
     private val STARTEDAT = longPreferencesKey("startedAt")
 
-    override suspend fun save(studying: StudyingSession) {
+    override suspend fun save(studying: StudyingSessionDto) {
         context.dataStore.edit { preferences ->
             preferences[USER_ID] = studying.userId
             preferences[POT_ID] = studying.potId
@@ -47,7 +47,7 @@ class StudyingLocalDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun read(): StudyingSession? {
+    override suspend fun read(): StudyingSessionDto? {
         val preferences = context.dataStore.data
             .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
             .first()
@@ -62,7 +62,7 @@ class StudyingLocalDataSourceImpl @Inject constructor(
             runCatching { Json.decodeFromString<List<String>>(it) }.getOrNull()
         } //log를 나중에 작성한 경우일 수 있으니 nullable
 
-        return StudyingSession(
+        return StudyingSessionDto(
             userId = userId,
             potId = potId,
             tag = tag,

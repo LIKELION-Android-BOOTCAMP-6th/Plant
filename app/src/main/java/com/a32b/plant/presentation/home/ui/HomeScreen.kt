@@ -57,7 +57,7 @@ import com.a32b.plant.presentation.home.viewmodel.HomeEvent
 import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
 
 import com.a32b.plant.core.util.TimeFormatter
-import com.a32b.plant.data.model.StudyingSession
+import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.presentation.theme.primary
 import com.a32b.plant.presentation.theme.sub2
 import com.a32b.plant.presentation.theme.sub_green1

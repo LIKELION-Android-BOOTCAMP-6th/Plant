@@ -1,7 +1,7 @@
 package com.a32b.plant.domain.repository
 
-import com.a32b.plant.data.model.StudyingSession
 import com.a32b.plant.domain.model.StudyLog
+import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.domain.result.Result
 import kotlinx.coroutines.flow.Flow
