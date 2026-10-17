@@ -2,7 +2,7 @@ package com.a32b.plant.presentation.studying.viewmodel
 
 import android.content.Context
 import android.content.Intent
-import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -191,7 +191,11 @@ class StudyingViewModel @Inject constructor(
             this.action = action
             extras?.invoke(this)
         }
-        context.startService(intent)
+        if (action == StudyingTimerService.ACTION_START) {
+            ContextCompat.startForegroundService(context, intent)
+        } else {
+            context.startService(intent)
+        }
     }
 
     /** 공부중 상태 변경 t: studying f:!studying */
@@ -225,7 +229,6 @@ class StudyingViewModel @Inject constructor(
                 .filter { studyLog -> studyLog.log.isNotBlank() }
             )
         }
-        Log.d("입력값 확인", "$studyLog")
         viewModelScope.launch {
             updateLocalStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title, potId, _uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt)
         }

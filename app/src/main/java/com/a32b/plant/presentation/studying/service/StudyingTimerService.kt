@@ -9,7 +9,6 @@ import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import com.a32b.plant.R
 import com.a32b.plant.core.util.TimeFormatter
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -20,7 +19,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-@AndroidEntryPoint
 class StudyingTimerService : Service() {
 
     companion object {
@@ -64,6 +62,7 @@ class StudyingTimerService : Service() {
     }
 
     private fun startTimer() {
+        _elapsed.value = accumulatedMs
         startForeground(NOTIFICATION_ID, buildNotification(accumulatedMs))
         segmentStart = SystemClock.elapsedRealtime()
         timerJob?.cancel()
