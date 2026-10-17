@@ -106,7 +106,7 @@ class StudyingViewModel @Inject constructor(
 
     /** 비정상 종료 대비 로컬 디비에 데이터 저장   */
     private suspend fun saveSession(){
-        updateLocalStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title, potId,_uiState.value.timer, startedAt = _uiState.value.startedAt)
+        updateLocalStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title, potId, _uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt)
             .onSuccess { _uiState.update { it.copy(isLocalSaved = true) } }
             .onFailure { e ->
                 if (e is AppError.Custom) _uiState.update { it.copy(isLocalSaved = false) }

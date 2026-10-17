@@ -27,6 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -56,7 +57,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
 
     val context = LocalContext.current
 
-    val startTime = remember { System.currentTimeMillis() }
+    val startTime = rememberSaveable { System.currentTimeMillis() }
     viewModel.onStartedAtChange(startTime)
 
     val uiState by viewModel.uiState.collectAsState()
@@ -108,6 +109,24 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
 
             Spacer(modifier = Modifier.height(40.dp))
             StudyStatusBadge(uiState.tag, uiState.title)
+
+            if (!uiState.isLocalSaved) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.errorContainer
+                ) {
+                    Text(
+                        text = "자동 저장에 실패했습니다. 앱 종료 시 학습 기록이 유실될 수 있습니다.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(30.dp))
             Text("${TimeFormatter.formatToTimeOnly(startTime)} ~", style = MaterialTheme.typography.bodyMedium, fontSize = 13.sp,)
