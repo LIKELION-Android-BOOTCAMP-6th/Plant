@@ -9,6 +9,7 @@ import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.type.ItemType
 import com.google.firebase.FirebaseNetworkException
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -30,6 +31,9 @@ class ItemRepositoryImpl @Inject constructor(
         onSuccess = { Result.Success(Unit)},
         onFailure = { e -> Result.Failure(handleError(e, "알 수 없는 오류가 발생했습니다."))}
     )
+
+    override fun getBoxCount(uid: String): Flow<Int> =
+        itemRemoteDataSource.observeBoxCount(uid)
 
     private fun handleError(e: Throwable, logMessage: String): AppError {
         if (e is CancellationException) throw e
