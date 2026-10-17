@@ -4,8 +4,8 @@ import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.core.util.safeRunCatching
-import com.a32b.plant.data.model.StudyingSession
 import com.a32b.plant.domain.error.AppError
+import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.AttendanceReward
 import com.a32b.plant.domain.model.DailyCheckThisMonth
