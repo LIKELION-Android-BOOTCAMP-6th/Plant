@@ -8,7 +8,6 @@ import com.a32b.plant.domain.repository.ItemRepository
 import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.type.ItemType
 import com.google.firebase.FirebaseNetworkException
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -36,8 +35,6 @@ class ItemRepositoryImpl @Inject constructor(
         itemRemoteDataSource.observeBoxCount(uid)
 
     private fun handleError(e: Throwable, logMessage: String): AppError {
-        if (e is CancellationException) throw e
-
         Log.e("ItemRepository", "$logMessage: ${e.message}", e)
 
         return when (e) {
