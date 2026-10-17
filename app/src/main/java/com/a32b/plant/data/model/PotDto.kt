@@ -22,5 +22,9 @@ data class PotDto(
     @get:PropertyName("completedAt") @set:PropertyName("completedAt")
     var completedAt: Timestamp? = null,
     @get:PropertyName("isCompleted") @set:PropertyName("isCompleted")
-    var isCompleted: Boolean = false
+    var isCompleted: Boolean = false,
+    @get:PropertyName("lastStudiedAt") @set:PropertyName("lastStudiedAt")
+    var lastStudiedAt: Timestamp? = null,
+    @get:PropertyName("potLevel") @set:PropertyName("potLevel")
+    var potLevel: Int = 0
 )

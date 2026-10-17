@@ -14,13 +14,15 @@ import com.a32b.plant.R
 @Composable
 fun ProfileImage(level: String, size: Int, modifier: Modifier = Modifier){
 
-    val imageRes = when (level) {
-        "0" -> R.drawable.ic_pot_lv0
-        "1" -> R.drawable.ic_pot_lv1
-        "2" -> R.drawable.ic_pot_lv2
-        "3" -> R.drawable.ic_pot_lv3
-        "4" -> R.drawable.ic_pot_lv4
-        "5" -> R.drawable.ic_pot_lv5
+    val levelInt = level.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0
+
+    val imageRes = when (levelInt) {
+        0 -> R.drawable.ic_pot_lv0
+        1 -> R.drawable.ic_pot_lv1
+        2 -> R.drawable.ic_pot_lv2
+        3 -> R.drawable.ic_pot_lv3
+        4 -> R.drawable.ic_pot_lv4
+        5 -> R.drawable.ic_pot_lv5
         else -> R.drawable.logo_plant     // 예외 상황 대비
     }
 

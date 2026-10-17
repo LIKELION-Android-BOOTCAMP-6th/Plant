@@ -18,6 +18,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.pot.viewmodel.PotListViewModel
 
 @Composable
@@ -107,7 +108,7 @@ fun PotListScreen(
                 items(currentPots) { pot ->
                     PotGridItem(
                         potName = pot.name,
-                        level = pot.level,
+                        potLevel = pot.potLevel,
                         totalStudyingTime = pot.potTotalStudyingTime,
                         isCompleted = pot.isCompleted,
                         onClick = {
@@ -123,7 +124,7 @@ fun PotListScreen(
 @Composable
 fun PotGridItem(
     potName: String,
-    level: String,
+    potLevel: Int,
     totalStudyingTime: Long,
     isCompleted: Boolean,
     onClick: () -> Unit
@@ -140,12 +141,12 @@ fun PotGridItem(
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = if (isCompleted) "🌳" else "🌱",
-                    style = MaterialTheme.typography.headlineMedium //todo 이미지로 변경 예정
+                ProfileImage(
+                    level = "Lv.$potLevel",
+                    size = 80
                 )
                 Text(
-                    text = "Lv.$level",
+                    text = "Lv.$potLevel",
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
