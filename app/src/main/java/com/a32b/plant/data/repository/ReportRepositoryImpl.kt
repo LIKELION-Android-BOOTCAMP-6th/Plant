@@ -55,7 +55,8 @@ class ReportRepositoryImpl @Inject constructor(
             is FirebaseFirestoreException -> {
                 when (throwable.code) {
                     FirebaseFirestoreException.Code.PERMISSION_DENIED -> AppError.Permission()
-                    FirebaseFirestoreException.Code.UNAVAILABLE -> AppError.Network()
+                    FirebaseFirestoreException.Code.UNAVAILABLE,
+                    FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
                     else -> AppError.Server()
                 }
             }

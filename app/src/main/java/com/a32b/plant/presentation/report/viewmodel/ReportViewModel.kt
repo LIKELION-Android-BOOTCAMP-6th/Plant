@@ -129,7 +129,7 @@ class ReportViewModel @Inject constructor(
         ensureCurrentUserUseCase.invoke()
             .onSuccess { user ->
                 monthJob = viewModelScope.launch { fetchMonthlyReport(user.uid, month) }
-                // 월간 조회가 곧바로 실패했으면 일간 조회를 새로 시작하지 않는다.
+                // Firestore 작업이 await 전에 이미 끝나 월간 조회가 곧바로 실패했으면 일간 조회를 시작하지 않는다.
                 if (_uiState.value.loadError) return@onSuccess
                 dailyJob = viewModelScope.launch { fetchDailyReport(user.uid, selectedDate) }
             }
