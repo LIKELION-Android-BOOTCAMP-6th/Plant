@@ -102,17 +102,38 @@ class StudyingViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            restoreFromLocalBackup()
             initStudyingUser()
         }
         onStudyingUsersChange()
         observeTimer()
     }
 
+    private suspend fun restoreFromLocalBackup() {
+        repository.readLocalSession()
+            .onSuccess { session ->
+                if (session != null && session.potId == potId) {
+                    lastSaveMs = session.time
+                    lastUpdateMs = session.time
+                    _uiState.update {
+                        it.copy(
+                            timer = session.time,
+                            startedAt = session.startedAt,
+                            studyLog = session.log?.map { log -> StudyLogUi(log = log) } ?: emptyList(),
+                            isGoalInputDialogShown = false,
+                            isStudying = true
+                        )
+                    }
+                    startStopwatch()
+                }
+            }
+    }
+
     private fun observeTimer() {
         viewModelScope.launch {
             StudyingTimerService.elapsed.collect { elapsed ->
-                _uiState.update { it.copy(timer = elapsed) }
                 if (_uiState.value.isStudying) {
+                    _uiState.update { it.copy(timer = elapsed) }
                     if (elapsed - lastSaveMs >= 5_000L) {
                         lastSaveMs = elapsed
                         saveSession()
