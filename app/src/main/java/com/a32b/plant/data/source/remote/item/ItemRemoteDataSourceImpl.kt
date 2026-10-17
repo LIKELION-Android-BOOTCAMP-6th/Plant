@@ -37,6 +37,35 @@ class ItemRemoteDataSourceImpl @Inject constructor(
         }.await()
     }
 
+    override suspend fun consumeItems(uid: String, items: Map<ItemType, Int>) {
+        if (items.isEmpty()) return
+        val ref = db.collection("users").document(uid)
+
+        db.runTransaction { transaction ->
+            val snapshot = transaction.get(ref)
+
+            for ((itemType, required) in items) {
+                val current = snapshot.getLong("item.${itemType.fieldKey}")?.toInt() ?: 0
+                check(current >= required) { "${itemType.kor}이(가) 부족합니다." }
+            }
+
+            val decrements = items.entries.associate { (itemType, required) ->
+                "item.${itemType.fieldKey}" to FieldValue.increment(-required.toLong())
+            }
+            transaction.update(ref, decrements)
+        }.await()
+    }
+
+    override suspend fun canConsumeItems(uid: String, items: Map<ItemType, Int>): Boolean {
+        if (items.isEmpty()) return true
+        val snapshot = db.collection("users").document(uid).get().await()
+
+        return items.all { (itemType, required) ->
+            val current = snapshot.getLong("item.${itemType.fieldKey}")?.toInt() ?: 0
+            current >= required
+        }
+    }
+
     override fun observeBoxCount(uid: String): Flow<Int> = callbackFlow {
         val listener = db.collection("users").document(uid)
             .addSnapshotListener { snap, err ->
