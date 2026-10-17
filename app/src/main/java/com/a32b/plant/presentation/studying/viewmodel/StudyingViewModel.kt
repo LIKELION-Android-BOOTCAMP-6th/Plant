@@ -1,6 +1,8 @@
 package com.a32b.plant.presentation.studying.viewmodel
 
-import android.util.Log
+import android.content.Context
+import android.content.Intent
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -16,11 +18,11 @@ import com.a32b.plant.domain.usecase.studying.FinishStudyingUseCase
 import com.a32b.plant.domain.usecase.studying.StartStudyingSessionUseCase
 import com.a32b.plant.domain.usecase.studying.UpdateLocalStudyingSessionUseCase
 import com.a32b.plant.presentation.core.type.StudyingGoalCheckMode
+import com.a32b.plant.presentation.studying.service.StudyingTimerService
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -72,6 +74,7 @@ sealed class StudyingEvent{
 }
 @HiltViewModel
 class StudyingViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val repository: StudyingRepository,
     private val startStudyingSessionUseCase: StartStudyingSessionUseCase,
     private val updateLocalStudyingSessionUseCase: UpdateLocalStudyingSessionUseCase,
@@ -94,11 +97,33 @@ class StudyingViewModel @Inject constructor(
     val uiState = _uiState.asStateFlow()
 
 
+    private var lastSaveMs = 0L
+    private var lastUpdateMs = 0L
+
     init {
         viewModelScope.launch {
             initStudyingUser()
         }
         onStudyingUsersChange()
+        observeTimer()
+    }
+
+    private fun observeTimer() {
+        viewModelScope.launch {
+            StudyingTimerService.elapsed.collect { elapsed ->
+                _uiState.update { it.copy(timer = elapsed) }
+                if (_uiState.value.isStudying) {
+                    if (elapsed - lastSaveMs >= 5_000L) {
+                        lastSaveMs = elapsed
+                        saveSession()
+                    }
+                    if (elapsed - lastUpdateMs >= 60_000L) {
+                        lastUpdateMs = elapsed
+                        updateUser()
+                    }
+                }
+            }
+        }
     }
 
     /** 현재 시간 기록 */
@@ -138,25 +163,39 @@ class StudyingViewModel @Inject constructor(
         }
     }
 
-    /** 스톱워치 */
-    private var job: Job? = null
-    fun onTimerChange() = _uiState.update { it.copy(timer = it.timer + 1000 ) }
-
     /** [DEBUG] 타이머에 1시간(3,600,000ms) 추가 — 보상 테스트용, 릴리즈 전 제거 */
-    fun addDebugTime() = _uiState.update { it.copy(timer = it.timer + 3_600_000L) }
-    private fun startStopwatch(){
-        job?.cancel()
-        job = viewModelScope.launch {
-            while (true){
-                delay(1000)
-                onTimerChange()
-                if(_uiState.value.timer % 5_000L == 0L) saveSession() //5초마다 로컬 디비 저장
-                if(_uiState.value.timer % 60_000L == 0L) updateUser() //1분마다 원격 디비 저장
+    fun addDebugTime() {
+        val newTimer = _uiState.value.timer + 3_600_000L
+        lastSaveMs = newTimer
+        lastUpdateMs = newTimer
+        if (_uiState.value.isStudying) {
+            sendServiceIntent(StudyingTimerService.ACTION_START) {
+                putExtra(StudyingTimerService.EXTRA_ACCUMULATED, newTimer)
             }
         }
     }
-    private fun stopStopwatch(){
-        job?.cancel()
+
+    private fun startStopwatch() {
+        sendServiceIntent(StudyingTimerService.ACTION_START) {
+            putExtra(StudyingTimerService.EXTRA_ACCUMULATED, _uiState.value.timer)
+        }
+    }
+
+    private fun stopStopwatch() {
+        viewModelScope.launch { saveSession() }
+        sendServiceIntent(StudyingTimerService.ACTION_PAUSE)
+    }
+
+    private fun sendServiceIntent(action: String, extras: (Intent.() -> Unit)? = null) {
+        val intent = Intent(context, StudyingTimerService::class.java).apply {
+            this.action = action
+            extras?.invoke(this)
+        }
+        if (action == StudyingTimerService.ACTION_START) {
+            ContextCompat.startForegroundService(context, intent)
+        } else {
+            context.startService(intent)
+        }
     }
 
     /** 공부중 상태 변경 t: studying f:!studying */
@@ -190,7 +229,6 @@ class StudyingViewModel @Inject constructor(
                 .filter { studyLog -> studyLog.log.isNotBlank() }
             )
         }
-        Log.d("입력값 확인", "$studyLog")
         viewModelScope.launch {
             updateLocalStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title, potId, _uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt)
         }
@@ -259,6 +297,7 @@ class StudyingViewModel @Inject constructor(
 
     /** 학습 완전 종료 시 (= 다이얼로그에서도 기록 입력 후 종료 버튼 클릭했을 때)    */
     fun onIsStudyFinishChange() {
+        sendServiceIntent(StudyingTimerService.ACTION_STOP)
         _uiState.update { it.copy(isLoading = true, goalCheckMode = null) }
         onFinishStudyingClick()
     }
@@ -323,6 +362,7 @@ class StudyingViewModel @Inject constructor(
 
     /**  에러 다이얼로그 표출 시 세션 클리어 및 홈으로 이동 */
     fun onErrorConfirmClicked(){
+        sendServiceIntent(StudyingTimerService.ACTION_STOP)
         _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
             clearStudyingSessionUseCase(true)

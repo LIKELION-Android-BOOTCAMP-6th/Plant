@@ -1,6 +1,10 @@
 package com.a32b.plant.presentation.studying.ui
 
+import android.Manifest
+import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -59,6 +63,15 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
 
     val startTime = rememberSaveable { System.currentTimeMillis() }
     viewModel.onStartedAtChange(startTime)
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) {}
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     val uiState by viewModel.uiState.collectAsState()
     val timerButtonText = if (uiState.isStudying) "일시정지" else "학습하기"
