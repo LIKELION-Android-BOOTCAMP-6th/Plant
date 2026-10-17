@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.data.model.StudyingSessionDto
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.catch
@@ -59,7 +60,7 @@ class StudyingLocalDataSourceImpl @Inject constructor(
         val time = preferences[TIME] ?: return null
         val startedAt = preferences[STARTEDAT] ?: return null
         val log = preferences[LOG]?.let {
-            runCatching { Json.decodeFromString<List<String>>(it) }.getOrNull()
+            safeRunCatching { Json.decodeFromString<List<String>>(it) }.getOrNull()
         } //log를 나중에 작성한 경우일 수 있으니 nullable
 
         return StudyingSessionDto(

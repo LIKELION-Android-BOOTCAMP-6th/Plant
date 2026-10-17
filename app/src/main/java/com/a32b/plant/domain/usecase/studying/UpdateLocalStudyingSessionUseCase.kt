@@ -12,7 +12,7 @@ class UpdateLocalStudyingSessionUseCase @Inject constructor(
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase
 ) {
 
-    suspend operator fun invoke(tag: String, title: String, potId: String, time: Long, log: List<String>? = null, startedAt: Long) : Result<Unit>{
+    suspend operator fun invoke(tag: String, title: String, potId: String, time: Long, log: List<String>?, startedAt: Long) : Result<Unit>{
 
         return ensureCurrentUserUseCase{
             repository.saveLocalSession(
