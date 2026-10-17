@@ -4,12 +4,14 @@ import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.core.util.safeRunCatching
+import com.a32b.plant.data.model.StudyingSession
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.AttendanceReward
 import com.a32b.plant.domain.model.DailyCheckThisMonth
 import com.a32b.plant.domain.model.Item
 import com.a32b.plant.domain.model.Pot
+import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
@@ -17,6 +19,8 @@ import com.a32b.plant.domain.usecase.pot.GetActivePotUseCase
 import com.a32b.plant.domain.usecase.pot.GetPotListUseCase
 import com.a32b.plant.domain.usecase.pot.GetTodayTotalStudyTimeUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
+import com.a32b.plant.domain.usecase.studying.ClearStudyingSessionUseCase
+import com.a32b.plant.domain.usecase.studying.RecoverStudySessionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -79,7 +83,10 @@ class HomeViewModel @Inject constructor(
     private val getPotListUseCase: GetPotListUseCase,
     private val userRepository: UserRepository,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
-    private val getTodayTotalStudyTimeUseCase: GetTodayTotalStudyTimeUseCase
+    private val getTodayTotalStudyTimeUseCase: GetTodayTotalStudyTimeUseCase,
+    private val studyingRepository: StudyingRepository,
+    private val recoverStudySessionUseCase: RecoverStudySessionUseCase,
+    private val clearStudyingSessionUseCase: ClearStudyingSessionUseCase
 ) : BaseViewModel() {
 
     private val _displayPot = MutableStateFlow(Pot.EMPTY)
@@ -121,6 +128,14 @@ class HomeViewModel @Inject constructor(
     private val _userItem = MutableStateFlow(Item(0, 0, 0, 0, 0, 0))
     val userItem = _userItem.asStateFlow()
 
+    // 복구 세션 상태
+    private val _recoverySession = MutableStateFlow<StudyingSession?>(null)
+    val recoverySession = _recoverySession.asStateFlow()
+
+    // 복구 처리 중 로딩
+    private val _isRecovering = MutableStateFlow(false)
+    val isRecovering = _isRecovering.asStateFlow()
+
     init {
         checkUserAndLoadData()
     }
@@ -132,10 +147,56 @@ class HomeViewModel @Inject constructor(
                 _userItem.value = user.item
 
                 loadActivePot(uid = user.uid, lastSelectedPotId = user.lastSelectedPotId)
+                checkRecoverySession(user.uid)
                 loaded()
             } ?: run {
                 _isLoginError.value = true
             }
+        }
+    }
+
+    private suspend fun checkRecoverySession(uid: String) {
+        studyingRepository.readLocalSession()
+            .onSuccess { session ->
+                if (session != null && session.userId == uid && session.time > 0L) {
+                    _recoverySession.value = session
+                }
+            }
+    }
+
+    fun recoverSession() {
+        val session = _recoverySession.value ?: return
+        _isRecovering.value = true
+        viewModelScope.launch {
+            recoverStudySessionUseCase(session)
+                .onSuccess {
+                    _recoverySession.value = null
+                    sendToast("학습 기록이 저장되었습니다.")
+                }
+                .onFailure { error ->
+                    when (error) {
+                        is AppError.UnknownUser -> ensureCurrentUserUseCase()
+                        else -> sendToast(error.message)
+                    }
+                }
+            _isRecovering.value = false
+        }
+    }
+
+    fun discardSession() {
+        _isRecovering.value = true
+        viewModelScope.launch {
+            clearStudyingSessionUseCase()
+                .onSuccess {
+                    _recoverySession.value = null
+                }
+                .onFailure { error ->
+                    when (error) {
+                        is AppError.UnknownUser -> ensureCurrentUserUseCase()
+                        else -> sendToast(error.message)
+                    }
+                }
+            _isRecovering.value = false
         }
     }
 
