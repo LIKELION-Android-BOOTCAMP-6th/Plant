@@ -259,12 +259,17 @@ class CommunityListViewModel @Inject constructor(
         if (_uiState.value.isRefreshing) return
         loadJob?.cancel()
         loadMoreJob?.cancel()
+        // loadMoreJob 취소 시 코루틴이 CancellationException으로 종료되어 onFailure가 실행되지 않음
+        // → isLoadingMore=true가 고착될 수 있으므로 명시적으로 초기화
+        _uiState.update { it.copy(isLoadingMore = false) }
         loadJob = viewModelScope.launch(Dispatchers.IO) {
             val state = _uiState.value
+            // 현재 로드된 게시글 수만큼 재로드해 스크롤 위치와 목록을 보존
+            val refreshSize = maxOf(state.posts.size, PAGE_SIZE)
             val pageResult = withTimeoutOrNull(10_000L) {
                 repository.loadPostPage(
                     cursor = null,
-                    pageSize = PAGE_SIZE,
+                    pageSize = refreshSize,
                     tagIds = state.selected.map { it.id },
                     sharedOnly = state.isSharedShown
                 )

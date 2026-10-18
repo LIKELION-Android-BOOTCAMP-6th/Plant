@@ -1,9 +1,9 @@
 package com.a32b.plant.data.model
 
-import com.a32b.plant.domain.model.StudyLog
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
+
 data class PostAuthorDto(
     @get:PropertyName("id") @set:PropertyName("id")
     var id: String = "",
@@ -62,7 +62,7 @@ data class PostDto(
     @get:PropertyName("bookmarkCount") @set:PropertyName("bookmarkCount")
     var bookmarkCount: Int = 0,
     @get:PropertyName("studyLogs") @set:PropertyName("studyLogs")
-    var studyLogs: List<StudyLog>? = null,
+    var studyLogs: List<StudyLogEmbedDto>? = null,
     @get:PropertyName("isShared") @set:PropertyName("isShared")
     var isShared: Boolean? = false,
     @get:PropertyName("updatedAt") @set:PropertyName("updatedAt")

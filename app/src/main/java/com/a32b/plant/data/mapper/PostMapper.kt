@@ -6,10 +6,12 @@ import com.a32b.plant.data.model.CommentDto
 import com.a32b.plant.data.model.CommentUserDto
 import com.a32b.plant.data.model.PostAuthorDto
 import com.a32b.plant.data.model.PostDto
+import com.a32b.plant.data.model.StudyLogEmbedDto
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.CommentUser
 import com.a32b.plant.domain.model.Post
 import com.a32b.plant.domain.model.PostAuthor
+import com.a32b.plant.domain.model.StudyLog
 
 
 /**
@@ -28,6 +30,26 @@ fun CommentDto.toDomain() : Comment = Comment(
     activityId = activityId,
     createdAt = createdAt.toLong()
 )
+fun StudyLogEmbedDto.toDomain(): StudyLog = StudyLog(
+    title = title,
+    contents = contents,
+    studyingTime = studyingTime,
+    createAt = createAt,
+    startedAt = startedAt,
+    id = id,
+    isSelected = isSelected
+)
+
+fun StudyLog.toEmbedDto(): StudyLogEmbedDto = StudyLogEmbedDto(
+    title = title,
+    contents = contents,
+    studyingTime = studyingTime,
+    createAt = createAt,
+    startedAt = startedAt,
+    id = id,
+    isSelected = isSelected
+)
+
 fun PostDto.toDomain(uid: String, comments: List<Comment>) : Post = Post(
     postId = postId,
     author = author.toDomain(),
@@ -41,7 +63,7 @@ fun PostDto.toDomain(uid: String, comments: List<Comment>) : Post = Post(
     activityId = activityId,
     isLiked = uid in likedBy,
     isBookmarked = uid in bookmarkedBy,
-    studyLogs = studyLogs,
+    studyLogs = studyLogs?.map { it.toDomain() },
     isShared = isShared,
     comments = comments,
     updatedAt = updatedAt?.toDate()?.time
@@ -77,7 +99,7 @@ fun Post.toDto() : PostDto = PostDto(
     likeCount = likeCount,
     createdAt = createdAt.toTimestamp(),
     activityId = activityId,
-    studyLogs = studyLogs,
+    studyLogs = studyLogs?.map { it.toEmbedDto() },
     isShared = isShared,
     updatedAt = updatedAt?.toTimestamp()
 )
