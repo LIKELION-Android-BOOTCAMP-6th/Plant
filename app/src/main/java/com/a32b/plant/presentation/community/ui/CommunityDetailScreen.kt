@@ -8,7 +8,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalDensity
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,7 +30,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -41,6 +52,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -92,6 +104,34 @@ fun CommunityDetailScreen(
         }
     }
 
+    val listState = rememberLazyListState()
+
+    BackHandler(enabled = uiState.editingCommentId != null) {
+        viewModel.cancelEditComment()
+    }
+
+    // 삭제된 게시글 다이얼로그
+    if (uiState.isDeletedPost) {
+        AlertDialog(
+            onDismissRequest = { navController.popBackStack() },
+            title = {
+                Text(
+                    "삭제된 게시글입니다.",
+                    style = MaterialTheme.typography.titleMedium
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { navController.popBackStack() }) {
+                    Text(
+                        "이전 화면으로 가기",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        )
+    }
+
     // 게시글 삭제 다이얼로그 (core/component/ConfirmDialog.kt - 다이얼로그 공통소스 ConfirmDialog로 변경)
     if (showDeleteDialog) {
         ConfirmDialog(
@@ -110,19 +150,20 @@ fun CommunityDetailScreen(
         )
     }
 
-    PullToRefreshBox(
-        isRefreshing = uiState.isRefreshing,
-        onRefresh = { viewModel.refresh() },
-        modifier = Modifier.fillMaxSize()
-    ) {
-        Scaffold(
-            containerColor = MaterialTheme.colorScheme.background,
-        ) { innerPadding ->
-            val currentPost = postState ?: return@Scaffold
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+    ) { innerPadding ->
+        val currentPost = postState ?: return@Scaffold
 
+        PullToRefreshBox(
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = { viewModel.refresh() },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
             Column(
                 modifier = Modifier
-                    .padding(innerPadding)
                     .fillMaxSize()
                     .padding(horizontal = 10.dp)
                     .background(MaterialTheme.colorScheme.background)
@@ -136,7 +177,10 @@ fun CommunityDetailScreen(
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     elevation = CardDefaults.elevatedCardElevation(1.dp)
                 ) {
-                    LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 24.dp)) {
+                    LazyColumn(
+                        state = listState,
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 24.dp)
+                    ) {
 
                         item {
                             Box(
@@ -308,7 +352,7 @@ fun CommunityDetailScreen(
                         }
 
                         // CommentRow에 수정/삭제 기능 파라미터 전달
-                        items(uiState.commentList) { commentData ->
+                        items(uiState.commentList, key = { it.commentId }) { commentData ->
                             CommentRow(
                                 comment = commentData,
                                 isOwner = commentData.user.uid == uiState.currentUid,
@@ -318,7 +362,7 @@ fun CommunityDetailScreen(
                                 onEditStart = { viewModel.startEditComment(commentData) },
                                 onEditSubmit = { viewModel.submitEditComment() },
                                 onEditCancel = { viewModel.cancelEditComment() },
-                                onDeleteClick = { viewModel.openCommentDeleteDialog(commentData.commentId) }
+                                onDeleteClick = { viewModel.openCommentDeleteDialog(commentData.commentId) },
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                         }
@@ -330,6 +374,7 @@ fun CommunityDetailScreen(
 }
 
 // CommentRow에 인라인 편집 모드 + 수정/삭제 아이콘 추가
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CommentRow(
     comment: Comment,
@@ -340,10 +385,19 @@ fun CommentRow(
     onEditStart: () -> Unit,
     onEditSubmit: () -> Unit,
     onEditCancel: () -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
 ) {
     val context = LocalContext.current
     val maxLength = 100
+    val density = LocalDensity.current
+    val imeBottom = WindowInsets.ime.getBottom(density)
+    val editBringIntoViewRequester = remember { BringIntoViewRequester() }
+
+    // 편집 모드 진입 + 키보드 상승 시 저장/취소 버튼까지 포함한 영역을 화면에 표시
+    LaunchedEffect(isEditing, imeBottom) {
+        if (!isEditing || imeBottom == 0) return@LaunchedEffect
+        editBringIntoViewRequester.bringIntoView()
+    }
 
     Row(verticalAlignment = Alignment.Top) {
         ProfileImage(comment.user.profileImg, 24)
@@ -365,53 +419,54 @@ fun CommentRow(
 
 
             if (isEditing) {
-                // 인라인 편집 모드
-                TextField(
-                    value = editingText,
-                    onValueChange = { input ->
-                        limitLength(input, maxLength, context, onEditTextChange)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        cursorColor = MaterialTheme.colorScheme.primary
-                    ),
-                    shape = RoundedCornerShape(8.dp),
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
-
-                )
-                Row {
-                    TextButton(onClick = onEditSubmit) {
-                        Text(
-                            "저장",
-                            color = MaterialTheme.colorScheme.primary,
-//                            fontSize = 12.sp,
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    }
-                    TextButton(onClick = onEditCancel) {
-                        Text(
-                            "취소",
-//                            fontSize = 12.sp,
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                    Text(
-                        "${editingText.length} / $maxLength",
-//                        fontSize = 12.sp,
-                        color = if (editingText.length >= maxLength)
-                            MaterialTheme.colorScheme.error
-                        else
-                            MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(end = 20.dp)
+                // 인라인 편집 모드: bringIntoViewRequester로 저장/취소까지 포함한 영역 확보
+                Column(modifier = Modifier.bringIntoViewRequester(editBringIntoViewRequester)) {
+                    TextField(
+                        value = editingText,
+                        onValueChange = { input ->
+                            limitLength(input, maxLength, context, onEditTextChange)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            cursorColor = MaterialTheme.colorScheme.primary
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+                        minLines = 1,
+                        maxLines = 10
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Row {
+                        TextButton(onClick = onEditSubmit) {
+                            Text(
+                                "저장",
+                                color = MaterialTheme.colorScheme.primary,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                        TextButton(onClick = onEditCancel) {
+                            Text(
+                                "취소",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                        Spacer(modifier = Modifier.weight(1f))
+                        Text(
+                            "${editingText.length} / $maxLength",
+                            color = if (editingText.length >= maxLength)
+                                MaterialTheme.colorScheme.error
+                            else
+                                MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 2.dp, end = 8.dp)
+                        )
+                    }
                 }
             } else {
                 Text(
@@ -434,13 +489,14 @@ fun CommentRow(
                 Icon(
                     painterResource(id = R.drawable.ic_trash), null,
                     tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(14.dp)
+                    modifier = Modifier.size(17.dp)
                 )
             }
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CommentInputSection(
     nickname: String,
@@ -453,6 +509,8 @@ fun CommentInputSection(
     val context = LocalContext.current
     val maxLength = 100
     val focus = LocalFocusManager.current
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    val coroutineScope = rememberCoroutineScope()
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -475,10 +533,12 @@ fun CommentInputSection(
                 value = text,
                 onValueChange = { input ->
                     limitLength(input, maxLength, context, onTextChange)
+                    coroutineScope.launch { bringIntoViewRequester.bringIntoView() }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp),
+                    .padding(top = 8.dp)
+                    .bringIntoViewRequester(bringIntoViewRequester),
                 placeholder = {
                     Text(
                         "댓글을 남겨보세요...",

@@ -88,7 +88,7 @@ class CommunityListViewModel @Inject constructor(
         loadJob?.cancel()
         loadMoreJob?.cancel()
         loadJob = viewModelScope.launch(Dispatchers.IO) {
-            _uiState.update { it.copy(isLoadingMore = true, cursor = null, hasMore = true, posts = emptyList()) }
+            _uiState.update { it.copy(isLoadingMore = true, cursor = null, hasMore = true) }
 
             val state = _uiState.value
             // withTimeoutOrNull: 오프라인 + 캐시 없을 때 Firestore가 무한 대기하는 현상 방지
@@ -247,6 +247,39 @@ class CommunityListViewModel @Inject constructor(
     // ScrollToTop 애니메이션 완료 후 Screen에서 호출 → loadMore 차단 해제
     fun clearSuppressLoadMore() {
         _uiState.update { it.copy(suppressLoadMore = false) }
+    }
+
+    // 화면 복귀(Resume) 시 호출 — 초기 로딩 전에는 무시
+    fun refreshOnResume() {
+        if (_uiState.value.hasLoadedOnce) silentRefresh()
+    }
+
+    // PullToRefresh 인디케이터 없이 백그라운드로 조용히 갱신 (화면 복귀 전용)
+    private fun silentRefresh() {
+        if (_uiState.value.isRefreshing) return
+        loadJob?.cancel()
+        loadMoreJob?.cancel()
+        loadJob = viewModelScope.launch(Dispatchers.IO) {
+            val state = _uiState.value
+            val pageResult = withTimeoutOrNull(10_000L) {
+                repository.loadPostPage(
+                    cursor = null,
+                    pageSize = PAGE_SIZE,
+                    tagIds = state.selected.map { it.id },
+                    sharedOnly = state.isSharedShown
+                )
+            } ?: return@launch
+
+            pageResult.onSuccess { page ->
+                _uiState.update {
+                    it.copy(
+                        posts = page.items,
+                        cursor = page.nextCursor,
+                        hasMore = page.hasMore
+                    )
+                }
+            }
+        }
     }
 
     fun onIsTagSheetShownChange() = _uiState.update { it.copy(isTagSheetShown = !it.isTagSheetShown) }

@@ -126,7 +126,7 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                         contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            "선택",
+                            "관리",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -156,8 +156,8 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                     isSelectionMode = uiState.isSelectionMode,
                     selectedIds = uiState.selectedIds,
                     onToggleSelection = { id -> viewModel.toggleItemSelection(id) },
-                    onClick = { targetId ->
-                        viewModel.moveToCommunityDetail(targetId)
+                    onClick = { activityId, targetId, type ->
+                        viewModel.moveToCommunityDetail(activityId, targetId, type)
                     }
                 )
             }
@@ -171,7 +171,7 @@ fun ContentList(
     isSelectionMode: Boolean = false,
     selectedIds: Set<String> = emptySet(),
     onToggleSelection: (String) -> Unit = {},
-    onClick: (String) -> Unit
+    onClick: (activityId: String, targetId: String, type: String) -> Unit
 ) {
     LazyColumn {
         items(lists) { list ->
@@ -184,7 +184,7 @@ fun ContentList(
                 elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
                 onClick = {
                     if (isSelectionMode) onToggleSelection(list.id)
-                    else onClick(list.targetId)
+                    else onClick(list.id, list.targetId, list.type)
                 }
             ) {
                 Row(
