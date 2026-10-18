@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.offset
@@ -338,7 +339,9 @@ fun CommunityListScreen(
                 shape = CircleShape,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(16.dp)
+                    .navigationBarsPadding()
+                    .offset(y = 32.dp)
+                    .padding(end = 16.dp, bottom = 4.dp)
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_edit),
