@@ -43,7 +43,6 @@ data class CommunityDetailUiState(
     val currentProfileImg: String = "",
     val isCommentSubmitting: Boolean = false,
     val isRefreshing: Boolean = false,
-    val isDeletedPost: Boolean = false,
 
     // 댓글 수정 상태
     val editingCommentId: String? = null,
@@ -103,12 +102,8 @@ class CommunityDetailViewModel @Inject constructor(
 
             postDeferred.await()
                 .onSuccess { post ->
-                    if (post == null) {
-                        _uiState.update { it.copy(isDeletedPost = true) }
-                    } else {
-                        _post.value = post
-                        onIsSharedChange()
-                    }
+                    _post.value = post
+                    onIsSharedChange()
                 }
                 .onFailure { e -> sendToast(e.message) }
 

@@ -88,7 +88,7 @@ class CommunityListViewModel @Inject constructor(
         loadJob?.cancel()
         loadMoreJob?.cancel()
         loadJob = viewModelScope.launch(Dispatchers.IO) {
-            _uiState.update { it.copy(isLoadingMore = true, cursor = null, hasMore = true) }
+            _uiState.update { it.copy(isLoadingMore = true, cursor = null, hasMore = true, posts = emptyList()) }
 
             val state = _uiState.value
             // withTimeoutOrNull: 오프라인 + 캐시 없을 때 Firestore가 무한 대기하는 현상 방지
