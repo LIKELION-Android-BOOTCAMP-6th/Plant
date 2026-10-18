@@ -231,8 +231,13 @@ class CommunityDetailViewModel @Inject constructor(
                 }
             }
             .onFailure { e ->
-                sendToast(e.message)
-                refresh()
+                when (e) {
+                    is AppError.UnknownUser -> Unit
+                    else -> {
+                        sendToast(e.message)
+                        refresh()
+                    }
+                }
             }
     }
 
@@ -248,9 +253,14 @@ class CommunityDetailViewModel @Inject constructor(
                 }
             }
             .onFailure { e ->
-                sendToast(e.message)
-                // 정확한 롤백값을 모르므로 서버 상태 재조회로 정합성 확보
-                refresh()
+                when (e) {
+                    is AppError.UnknownUser -> Unit
+                    else -> {
+                        sendToast(e.message)
+                        // 정확한 롤백값을 모르므로 서버 상태 재조회로 정합성 확보
+                        refresh()
+                    }
+                }
             }
     }
 
