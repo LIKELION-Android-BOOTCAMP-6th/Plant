@@ -73,7 +73,7 @@ class PotRepositoryImpl @Inject constructor(
         val result = db.collection("users").document(uid).collection("pots")
             .get().await()
         return result.documents
-            .mapNotNull { it.getString("level") }
+            .mapNotNull { it.getString("potLevel") }
             .distinct()
             .sorted()
     }

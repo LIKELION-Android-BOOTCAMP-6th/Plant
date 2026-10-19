@@ -550,7 +550,7 @@ fun HomeItemBoxSection(item: Item){
     val displayItems = listOf(
         ItemType.HEART to item.heart,
         ItemType.SUN to item.sun,
-        ItemType.WATER to item.heart,
+        ItemType.WATER to item.water,
         ItemType.FERTILIZER to item.fertilizer,
         ItemType.NUTRIENT to item.nutrient,
         ItemType.BOX to item.box

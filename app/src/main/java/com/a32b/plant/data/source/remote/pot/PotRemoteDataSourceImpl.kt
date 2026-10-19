@@ -69,7 +69,7 @@ class PotRemoteDataSourceImpl @Inject constructor(
             .document(potId)
             .update(mapOf(
                 "imageUrl" to newLevel,
-                "level" to newLevel
+                "potLevel" to newLevel
             ))
             .await()
     }

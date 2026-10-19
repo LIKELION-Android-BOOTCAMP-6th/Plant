@@ -1,8 +1,5 @@
 package com.a32b.plant.domain.model
 
-import com.google.firebase.Timestamp
-
-
 /**
 PotInfo -> Pot으로 변경
  */
@@ -17,7 +14,7 @@ data class Pot(
     val createdAt: Long?,
     val completedAt: Long?,
     val isCompleted: Boolean,
-    val lastStudiedAt: Timestamp?,
+    val lastStudiedAt: Long?,
     val potLevel: Int,
 
     ){
