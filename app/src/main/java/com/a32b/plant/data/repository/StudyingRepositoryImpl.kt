@@ -6,8 +6,8 @@ import com.a32b.plant.data.source.remote.studying.StudyingRemoteDataSource
 import com.a32b.plant.data.source.local.StudyingLocalDataSource
 import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.mapper.toDto
-import com.a32b.plant.data.model.StudyingSession
 import com.a32b.plant.domain.error.AppError
+import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.domain.repository.StudyingRepository
@@ -143,7 +143,7 @@ class StudyingRepositoryImpl @Inject constructor(
     )
 
     override suspend fun saveLocalSession(studying: StudyingSession) = safeRunCatching {
-        local.save(studying)
+        local.save(studying.toDto())
     }.fold(
         onSuccess = { Result.Success(Unit)},
         onFailure = { e ->
@@ -159,14 +159,14 @@ class StudyingRepositoryImpl @Inject constructor(
     override suspend fun readLocalSession(): Result<StudyingSession?> = safeRunCatching {
         local.read()
     }.fold(
-        onSuccess = { Result.Success(it)},
+        onSuccess = { Result.Success(it?.toDomain()) },
         onFailure = { e ->
             Log.e("studying", "학습중 세션 읽기", e)
             Result.Failure(AppError.Local("불러오기 실패"))
         }
     )
 
-    override suspend fun clearLocalSession() = runCatching {
+    override suspend fun clearLocalSession() = safeRunCatching {
         local.clear()
     }.fold(
         onSuccess = { Result.Success(Unit)},

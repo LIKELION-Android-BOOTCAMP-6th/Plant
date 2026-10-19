@@ -1,4 +1,4 @@
-package com.a32b.plant.data.model
+package com.a32b.plant.domain.model
 
 data class StudyingSession(
     val userId: String,
@@ -6,6 +6,6 @@ data class StudyingSession(
     val title: String,
     val potId: String,
     val time: Long,
-    val log: List<String>? = null,
-    val startedAt : Long
+    val log: List<String>?,
+    val startedAt: Long
 )

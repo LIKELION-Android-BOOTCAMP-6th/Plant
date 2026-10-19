@@ -15,9 +15,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -40,9 +41,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -98,26 +99,27 @@ fun CommunityListScreen(
     }
 
     LoadableScreen(viewModel) {
-        // State<T> 참조 보존 (derivedStateOf에서 suppressLoadMore를 Compose 의존성으로 추적하기 위해)
+        // State<T> 참조 보존 (collect 핸들러에서 suppressLoadMore 최신값 읽기 위해)
         val uiStateFlow = viewModel.uiState.collectAsStateWithLifecycle()
         val uiState by uiStateFlow
         val filteredPosts by viewModel.filteredPosts.collectAsStateWithLifecycle()
         val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
 
         // 하단 도달 감지 → loadMore
-        // suppressLoadMore: refresh 성공 시 true → ScrollToTop 애니메이션 완료 후 false
-        //   → recomposition 타이밍 레이스(47→20개로 줄어들 때 잠깐 false→true 전환) 원천 차단
-        val shouldLoadMore by remember {
-            derivedStateOf {
-                if (uiStateFlow.value.suppressLoadMore) return@derivedStateOf false
+        // snapshotFlow: 스크롤 상태 변화를 레이아웃 단계에서 직접 관찰 (derivedStateOf보다 안정적)
+        LaunchedEffect(listState) {
+            snapshotFlow {
                 val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
-                    ?: return@derivedStateOf false
+                    ?: return@snapshotFlow false
                 val total = listState.layoutInfo.totalItemsCount
-                lastVisible >= total - 3
+                total > 0 && lastVisible >= total - 3
             }
-        }
-        LaunchedEffect(shouldLoadMore) {
-            if (shouldLoadMore) viewModel.loadMore()
+                .distinctUntilChanged()
+                .collect { shouldLoad ->
+                    if (shouldLoad && !uiStateFlow.value.suppressLoadMore) {
+                        viewModel.loadMore()
+                    }
+                }
         }
 
         BackHandler {
@@ -170,18 +172,22 @@ fun CommunityListScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    "태그",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    modifier = Modifier.padding(start = 16.dp),
-                                )
-                                Icon(
-                                    painter = painterResource(id = if (uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
-                                    contentDescription = "태그박스",
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier
-                                        .size(18.dp)
+                                        .padding(start = 16.dp)
                                         .clickable { viewModel.onIsTagSheetShownChange() }
-                                )
+                                ) {
+                                    Text(
+                                        "태그",
+                                        style = MaterialTheme.typography.titleMedium,
+                                    )
+                                    Icon(
+                                        painter = painterResource(id = if (uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
+                                        contentDescription = "태그박스",
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                                 Box(modifier = Modifier.clickable {
                                     viewModel.onSelectedChanged(emptyList())
                                 }) {
@@ -202,62 +208,49 @@ fun CommunityListScreen(
                                     modifier = Modifier
                                         .scale(0.7f)
                                         .padding(end = 10.dp),
-                                    colors = SwitchDefaults.colors( // 마이페이지 다크모드 토글과 색상 맞추기
+                                    colors = SwitchDefaults.colors(
                                         checkedTrackColor = MaterialTheme.colorScheme.primary,
                                         uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
                                         uncheckedBorderColor = MaterialTheme.colorScheme.outline
                                     )
                                 )
                             }
-                            FlowRow(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 8.dp, start = 16.dp, end = 16.dp),
-                                maxItemsInEachRow = 6,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                uiState.selected.forEach { tag ->
-                                    Surface(
-                                        shape = RoundedCornerShape(16.dp),
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.padding(vertical = 2.dp)
-                                    ) {
-                                        Text(
-                                            text = tag.name,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            modifier = Modifier.padding(
-                                                horizontal = 10.dp,
-                                                vertical = 4.dp
-                                            ),
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
+                            if (uiState.selected.isNotEmpty()) {
+                                FlowRow(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 8.dp, start = 16.dp, end = 16.dp),
+                                    maxItemsInEachRow = 6,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    uiState.selected.forEach { tag ->
+                                        Surface(
+                                            shape = RoundedCornerShape(16.dp),
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = tag.name,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                modifier = Modifier.padding(
+                                                    horizontal = 10.dp,
+                                                    vertical = 4.dp
+                                                ),
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
                     },
-                    floatingActionButton = {
-                        FloatingActionButton(
-                            onClick = { navController.navigate(Routes.CommunityPost()) },
-                            containerColor = MaterialTheme.colorScheme.secondary,
-                            shape = CircleShape,
-                            modifier = Modifier.offset(y = 32.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_edit),
-                                contentDescription = null,
-                                modifier = Modifier.size(26.dp),
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
-                        }
-                    }
                 ) { innerPadding ->
                     Box(modifier = Modifier.fillMaxSize()) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(innerPadding)
+                                .padding(top = innerPadding.calculateTopPadding())
                                 .background(MaterialTheme.colorScheme.background)
                         ) {
                             if (uiState.posts.isEmpty() && !uiState.isLoadingMore) {
@@ -339,6 +332,23 @@ fun CommunityListScreen(
                         }
                     }
                 }
+            }
+            FloatingActionButton(
+                onClick = { navController.navigate(Routes.CommunityPost()) },
+                containerColor = MaterialTheme.colorScheme.secondary,
+                shape = CircleShape,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .navigationBarsPadding()
+                    .offset(y = 32.dp)
+                    .padding(end = 16.dp, bottom = 4.dp)
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_edit),
+                    contentDescription = null,
+                    modifier = Modifier.size(26.dp),
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
             }
         }
     }

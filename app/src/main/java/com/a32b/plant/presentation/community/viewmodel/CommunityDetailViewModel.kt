@@ -162,8 +162,10 @@ class CommunityDetailViewModel @Inject constructor(
                     refresh()
                 }
                 .onFailure { e ->
-                    // UnknownUser는 AddCommentUseCase 내부에서 이미 세션 만료 이벤트를 발송함
-                    sendToast(e.message)
+                    when (e) {
+                        is AppError.UnknownUser -> Unit
+                        else -> sendToast(e.message)
+                    }
                 }
 
             _uiState.update { it.copy(isCommentSubmitting = false) }
@@ -177,8 +179,10 @@ class CommunityDetailViewModel @Inject constructor(
             }
                 .onSuccess { _eventChannel.send(CommunityDetailEvent.NavigateBack) }
                 .onFailure { e ->
-                    if (e is AppError.UnknownUser) ensureCurrentUserUseCase()
-                    sendToast(e.message)
+                    when (e) {
+                        is AppError.UnknownUser -> ensureCurrentUserUseCase()
+                        else -> sendToast(e.message)
+                    }
                 }
             closeDeleteDialog()
         }
@@ -231,8 +235,13 @@ class CommunityDetailViewModel @Inject constructor(
                 }
             }
             .onFailure { e ->
-                sendToast(e.message)
-                refresh()
+                when (e) {
+                    is AppError.UnknownUser -> Unit
+                    else -> {
+                        sendToast(e.message)
+                        refresh()
+                    }
+                }
             }
     }
 
@@ -248,9 +257,14 @@ class CommunityDetailViewModel @Inject constructor(
                 }
             }
             .onFailure { e ->
-                sendToast(e.message)
-                // 정확한 롤백값을 모르므로 서버 상태 재조회로 정합성 확보
-                refresh()
+                when (e) {
+                    is AppError.UnknownUser -> Unit
+                    else -> {
+                        sendToast(e.message)
+                        // 정확한 롤백값을 모르므로 서버 상태 재조회로 정합성 확보
+                        refresh()
+                    }
+                }
             }
     }
 
@@ -282,8 +296,10 @@ class CommunityDetailViewModel @Inject constructor(
                 repository.updateComment(postId, commentId, state.editingCommentText)
             }
                 .onFailure { e ->
-                    if (e is AppError.UnknownUser) ensureCurrentUserUseCase()
-                    sendToast(e.message)
+                    when (e) {
+                        is AppError.UnknownUser -> ensureCurrentUserUseCase()
+                        else -> sendToast(e.message)
+                    }
                 }
             _uiState.update { it.copy(editingCommentId = null, editingCommentText = "") }
             refresh()
@@ -309,8 +325,10 @@ class CommunityDetailViewModel @Inject constructor(
                 repository.deleteComment(postId, commentId)
             }
                 .onFailure { e ->
-                    if (e is AppError.UnknownUser) ensureCurrentUserUseCase()
-                    sendToast(e.message)
+                    when (e) {
+                        is AppError.UnknownUser -> ensureCurrentUserUseCase()
+                        else -> sendToast(e.message)
+                    }
                 }
             _uiState.update { it.copy(deletingCommentId = null) }
             refresh()

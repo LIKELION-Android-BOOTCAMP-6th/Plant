@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -55,6 +56,8 @@ import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.home.viewmodel.HomeEvent
 import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
 
+import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.presentation.theme.primary
 import com.a32b.plant.presentation.theme.sub2
 import com.a32b.plant.presentation.theme.sub_green1
@@ -71,11 +74,22 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
     val tempSelectedPot by viewModel.tempSelectedPot.collectAsState()
     val attendanceUiState by viewModel.attendanceUiState.collectAsState()
     val userItem by viewModel.userItem.collectAsState()
+    val recoverySession by viewModel.recoverySession.collectAsState()
+    val isRecovering by viewModel.isRecovering.collectAsState()
     val context = LocalContext.current
 
     val todayStudyTime by viewModel.todayStudyTime.collectAsState()
 
     val hasNoPot = displayPot.id.isEmpty() || displayPot == Pot.EMPTY
+
+    recoverySession?.let { session ->
+        RecoveryDialog(
+            session = session,
+            isLoading = isRecovering,
+            onRecover = { viewModel.recoverSession() },
+            onDiscard = { viewModel.discardSession() }
+        )
+    }
 
     var showAttendanceDialog by remember { mutableStateOf(false) }
     if (showAttendanceDialog) {
@@ -593,4 +607,66 @@ fun HomeItemBoxSection(item: Item){
             }
         }
     }
+}
+
+@Composable
+private fun RecoveryDialog(
+    session: StudyingSession,
+    isLoading: Boolean,
+    onRecover: () -> Unit,
+    onDiscard: () -> Unit
+) {
+    val studyTimeText = TimeFormatter.formatToDigitalClock(session.time)
+    val dateText = TimeFormatter.formatTimeToDate(session.startedAt)
+
+    AlertDialog(
+        onDismissRequest = {},
+        title = {
+            Text(
+                text = "이전 학습 기록 발견",
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = "앱이 비정상 종료되어 저장되지 않은 학습 기록이 있습니다.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "화분: ${session.title}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    text = "날짜: $dateText",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    text = "학습 시간: $studyTimeText",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                if (isLoading) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onRecover,
+                enabled = !isLoading
+            ) {
+                Text("저장")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDiscard,
+                enabled = !isLoading
+            ) {
+                Text("폐기")
+            }
+        }
+    )
 }
