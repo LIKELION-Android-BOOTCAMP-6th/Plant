@@ -3,7 +3,6 @@ package com.a32b.plant.domain.repository
 import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.User
 import com.a32b.plant.domain.result.Result
-import com.a32b.plant.domain.type.ItemType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -26,8 +25,7 @@ interface UserRepository {
     suspend fun createUser(uid: String): Result<User>
     suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit>
 
-    /** 전달받은 다크모드 값을 기기에 저장한다. 기존 UseCase의 User 전달 계약은 유지한다. */
-    suspend fun updateDarkMode(user: User): Result<Unit>
+    suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit>
     suspend fun updateProfile(user: User): Result<Unit>
     suspend fun isNicknameTaken(nickname: String): Result<Boolean>
     suspend fun registerNickname(nickname: String): Result<Unit>
