@@ -172,6 +172,7 @@ class HomeViewModel @Inject constructor(
                 .onSuccess {
                     _recoverySession.value = null
                     sendToast("학습 기록이 저장되었습니다.")
+                    refreshUserItem()
                 }
                 .onFailure { error ->
                     when (error) {
@@ -303,6 +304,7 @@ class HomeViewModel @Inject constructor(
                                 reward = decision.reward
                             )
                         }
+                        refreshUserItem()
                     }
                     .onFailure { error ->
                         when (error) {
@@ -319,4 +321,14 @@ class HomeViewModel @Inject constructor(
     fun dismissAttendanceReward() {
         _attendanceUiState.update { it.copy(reward = null) }
     }
+
+    private fun refreshUserItem() {
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(200L)
+            ensureCurrentUserUseCase { user ->
+                _userItem.value = user.item
+            }
+        }
+    }
+
 }
