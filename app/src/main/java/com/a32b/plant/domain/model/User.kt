@@ -67,7 +67,6 @@ data class User(
     // [추가] 마지막으로 공부를 시작했던 화분의 ID
     val lastSelectedPotId: String,
     var isFirstLogin: Boolean?, // 회원가입 시 true 유지 -> 첫 로그인 후 닉네임 재설정 하고 false 바꾸기
-    var isDarkMode: Boolean,
     val totalStudyTime: Long,
     val gold: Int,
     val monthCheck: DailyCheckThisMonth,
@@ -83,7 +82,6 @@ data class User(
             profileImg = "",
             lastSelectedPotId = "",
             isFirstLogin = true, // 회원가입 시 true 유지 -> 첫 로그인 후 닉네임 설정하면 false
-            isDarkMode = false,
             totalStudyTime = 0L,
             gold = 0,
             monthCheck = DailyCheckThisMonth(
