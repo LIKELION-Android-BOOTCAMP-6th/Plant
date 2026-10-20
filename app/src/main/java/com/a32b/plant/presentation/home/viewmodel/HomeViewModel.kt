@@ -303,6 +303,7 @@ class HomeViewModel @Inject constructor(
                                 reward = decision.reward
                             )
                         }
+                        refreshUserItem(user.uid)
                     }
                     .onFailure { error ->
                         when (error) {
@@ -319,4 +320,16 @@ class HomeViewModel @Inject constructor(
     fun dismissAttendanceReward() {
         _attendanceUiState.update { it.copy(reward = null) }
     }
+
+    private fun refreshUserItem(uid: String) {
+        viewModelScope.launch {
+            userRepository.getUser(uid)
+                .onSuccess { user ->
+                    user?.let {
+                        _userItem.value = it.item
+                    }
+                }
+        }
+    }
+
 }
