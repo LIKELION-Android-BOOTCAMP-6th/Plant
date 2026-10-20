@@ -48,7 +48,7 @@ class PotRepositoryImpl @Inject constructor(
         )
     }
 
-    override suspend fun updatePotLevel(uid: String, potId: String, newLevel: String): Result<Unit> {
+    override suspend fun updatePotLevel(uid: String, potId: String, newLevel: Int): Result<Unit> {
         return safeRunCatching {
             potRemoteDataSource.updatePotLevel(uid, potId, newLevel).getOrThrow()
         }.fold(
@@ -69,11 +69,11 @@ class PotRepositoryImpl @Inject constructor(
     }
 
     //중복 제거된 레벨 리스트 조회
-    override suspend fun getDuplicationLevelList(uid: String): List<String> {
+    override suspend fun getDuplicationLevelList(uid: String): List<Int> {
         val result = db.collection("users").document(uid).collection("pots")
             .get().await()
         return result.documents
-            .mapNotNull { it.getString("potLevel") }
+            .mapNotNull { it.getLong("potLevel")?.toInt() }
             .distinct()
             .sorted()
     }

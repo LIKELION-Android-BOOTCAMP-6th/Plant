@@ -13,8 +13,6 @@ data class PotDto(
     var tagName: String = "",
     @get:PropertyName("name") @set:PropertyName("name")
     var name: String = "",
-    @get:PropertyName("imageUrl") @set:PropertyName("imageUrl")
-    var imageUrl: String = "",
     @get:PropertyName("potTotalStudyingTime") @set:PropertyName("potTotalStudyingTime")
     var potTotalStudyingTime: Long = 0L,
     @get:PropertyName("createdAt") @set:PropertyName("createdAt")

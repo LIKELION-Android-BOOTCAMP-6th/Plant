@@ -9,15 +9,13 @@ data class Pot(
     val tagId: String,
     val tagName: String,
     val name: String,
-    val imageUrl: String,
     val potTotalStudyingTime: Long,
     val createdAt: Long?,
     val completedAt: Long?,
     val isCompleted: Boolean,
     val lastStudiedAt: Long?,
     val potLevel: Int,
-
-    ){
+    ) {
 
     companion object {
         val EMPTY = Pot(
@@ -25,7 +23,6 @@ data class Pot(
             tagId = "",
             tagName = "",
             name = "화분을 추가해주세요",
-            imageUrl = "",
             potTotalStudyingTime = 0L,
             createdAt = null,
             completedAt = null,

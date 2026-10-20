@@ -287,7 +287,7 @@ fun PotChangeDialog(
                                     }
                                     Text(
                                         text = "Lv.${pot.potLevel}",
-                                        style = MaterialTheme.typography.labelMedium, //todo 지정된 스타일로 바꾸거나 스타일 새로 생성하기
+                                        style = MaterialTheme.typography.labelMedium,
                                         color = if(isSelected) primary else MaterialTheme.colorScheme.onSecondary
                                     )
                                 }
@@ -595,7 +595,7 @@ fun HomeItemBoxSection(item: Item){
                         )
                         Text(
                             text = type.kor,
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.titleSmall,
                         )
                         Text(
                             text = "${count}개",
