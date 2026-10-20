@@ -10,11 +10,12 @@ fun PotDto.toDomain(): Pot = Pot(
     tagId = tagId,
     tagName = tagName,
     name = name,
-    imageUrl = imageUrl,
     potTotalStudyingTime = potTotalStudyingTime,
     createdAt = createdAt.toLong(),
     completedAt = completedAt.toLong(),
     isCompleted = isCompleted,
+    lastStudiedAt = lastStudiedAt.toLong(),
+    potLevel = potLevel
 )
 
 fun Pot.toDto(): PotDto = PotDto(
@@ -22,9 +23,10 @@ fun Pot.toDto(): PotDto = PotDto(
     tagId = tagId,
     tagName = tagName,
     name = name,
-    imageUrl = imageUrl,
     potTotalStudyingTime = potTotalStudyingTime,
     createdAt = createdAt.toTimestamp(),
     completedAt = if(isCompleted) completedAt.toTimestamp() else null,
     isCompleted = isCompleted,
+    lastStudiedAt = lastStudiedAt.toTimestamp(),
+    potLevel = potLevel
 )

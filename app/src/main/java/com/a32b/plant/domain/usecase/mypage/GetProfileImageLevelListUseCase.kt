@@ -7,8 +7,8 @@ import javax.inject.Inject
 class GetProfileImageLevelListUseCase @Inject constructor(
     private val potRepository: PotRepository
 ) {
-    suspend operator fun invoke(): List<String> {
+    suspend operator fun invoke(): List<Int> {
         val levelList = potRepository.getDuplicationLevelList(CurrentUser.uid)
-        return levelList.ifEmpty { listOf("") }
+        return levelList.ifEmpty { listOf(0) }
     }
 }

@@ -13,8 +13,6 @@ data class PotDto(
     var tagName: String = "",
     @get:PropertyName("name") @set:PropertyName("name")
     var name: String = "",
-    @get:PropertyName("imageUrl") @set:PropertyName("imageUrl")
-    var imageUrl: String = "",
     @get:PropertyName("potTotalStudyingTime") @set:PropertyName("potTotalStudyingTime")
     var potTotalStudyingTime: Long = 0L,
     @get:PropertyName("createdAt") @set:PropertyName("createdAt")
@@ -22,5 +20,9 @@ data class PotDto(
     @get:PropertyName("completedAt") @set:PropertyName("completedAt")
     var completedAt: Timestamp? = null,
     @get:PropertyName("isCompleted") @set:PropertyName("isCompleted")
-    var isCompleted: Boolean = false
+    var isCompleted: Boolean = false,
+    @get:PropertyName("lastStudiedAt") @set:PropertyName("lastStudiedAt")
+    var lastStudiedAt: Timestamp? = null,
+    @get:PropertyName("potLevel") @set:PropertyName("potLevel")
+    var potLevel: Int = 0
 )

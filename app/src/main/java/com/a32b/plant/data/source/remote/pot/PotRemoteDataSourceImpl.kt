@@ -53,7 +53,6 @@ class PotRemoteDataSourceImpl @Inject constructor(
             tagId = tag.id,
             tagName = tag.name,
             name = name,
-            imageUrl = "0",
             potTotalStudyingTime = 0L,
             createdAt = null,
             completedAt = null,
@@ -63,13 +62,12 @@ class PotRemoteDataSourceImpl @Inject constructor(
     }
 
     //화분 레벨 업데이트
-    override suspend fun updatePotLevel(uid: String, potId: String, newLevel: String): Result<Unit> = runCatching {
+    override suspend fun updatePotLevel(uid: String, potId: String, newLevel: Int): Result<Unit> = runCatching {
         db.collection("users").document(uid)
             .collection("pots")
             .document(potId)
             .update(mapOf(
-                "imageUrl" to newLevel,
-                "level" to newLevel
+                "potLevel" to newLevel
             ))
             .await()
     }

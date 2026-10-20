@@ -509,7 +509,7 @@ fun DividerImage() {
 // 프로필 편집 다이얼로그 화분 이미지 배치
 @Composable
 fun SetImages(
-    levelList: List<String>,
+    levelList: List<Int>,
     selectedImageLevel: String,
     onImageClick: (String) -> Unit
 ) {
@@ -520,17 +520,17 @@ fun SetImages(
         maxItemsInEachRow = 3
     ) {
         levelList.forEach { level ->
-            val removeTextResult = level.replace("lv.", "")
+            val removeTextResult = level.toString()
             Box(
                 modifier = Modifier
                     .size(60.dp)
                     .clip(CircleShape)
                     .border(
-                        width = if (selectedImageLevel == level) 5.dp else 0.dp,
+                        width = if (selectedImageLevel == removeTextResult || selectedImageLevel == "lv.$removeTextResult") 5.dp else 0.dp,
                         color = MaterialTheme.colorScheme.primary,
                         shape = CircleShape
                     )
-                    .clickable { onImageClick(level) }
+                    .clickable { onImageClick(removeTextResult) }
             ) {
                 ProfileImage(level = removeTextResult, size = 60)
             }

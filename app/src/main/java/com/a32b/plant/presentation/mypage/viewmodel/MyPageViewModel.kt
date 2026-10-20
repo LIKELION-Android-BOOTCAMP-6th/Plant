@@ -31,7 +31,7 @@ data class MyPageUiState(
     val nickname: String = "",
     val profileImg: String = "",
     val isUpdateSuccess: Boolean = false,
-    val levelList: List<String> = emptyList(), // 프로필 편집 - 화분 이미지 띄우기 위해 쓰이는 레벨 리스트
+    val levelList: List<Int> = emptyList(), // 프로필 편집 - 화분 이미지 띄우기 위해 쓰이는 레벨 리스트
     val isDarkMode: Boolean = false,
     val isDarkModeUpdating: Boolean = false,
     val isLoading: Boolean = false,
