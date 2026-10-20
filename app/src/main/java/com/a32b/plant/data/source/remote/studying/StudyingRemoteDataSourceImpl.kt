@@ -83,7 +83,12 @@ class StudyingRemoteDataSourceImpl @Inject constructor(
             .document(uid)
             .collection("pots")
             .document(potId)
-            .update("potTotalStudyingTime", FieldValue.increment(time))
+            .update(
+                mapOf(
+                    "potTotalStudyingTime" to FieldValue.increment(time),
+                    "lastStudiedAt" to FieldValue.serverTimestamp()
+                )
+            )
             .await()
     }
 
