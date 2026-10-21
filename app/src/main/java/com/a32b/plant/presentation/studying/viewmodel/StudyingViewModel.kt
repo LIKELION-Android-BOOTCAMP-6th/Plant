@@ -53,6 +53,8 @@ data class StudyingUiState(
     val error: String? = null,
     val isGoalInputDialogShown: Boolean = true, //학습 목표 입력
     val goalCheckMode: StudyingGoalCheckMode? = null,
+    val wasStudyingBeforeGoalInputDialog: Boolean = false,
+    val wasStudyingBeforeGoalCheckDialog: Boolean = false,
     val isEditing: Boolean = false,
     val logIndex: Int? = null
 )
@@ -257,15 +259,32 @@ class StudyingViewModel @Inject constructor(
 
     /** 학습 목표 설정 다이얼로그 표출 여부 제어*/
     fun onGoalInputDialogChange(value: Boolean) {
-        _uiState.update { it.copy(isGoalInputDialogShown = value) }
-        if (!_uiState.value.isEditing) onStudyingStatusChange(!value)
+        if (!_uiState.value.isEditing) {
+            if (value) {
+                val wasStudying = _uiState.value.isStudying
+                _uiState.update { it.copy(isGoalInputDialogShown = true, wasStudyingBeforeGoalInputDialog = wasStudying) }
+                onStudyingStatusChange(false)
+            } else {
+                val restore = _uiState.value.wasStudyingBeforeGoalInputDialog
+                _uiState.update { it.copy(isGoalInputDialogShown = false) }
+                onStudyingStatusChange(restore)
+            }
+        } else {
+            _uiState.update { it.copy(isGoalInputDialogShown = value) }
+        }
     }
 
     /** 학습 목표 확인 다이얼로그 표출 모드 제어*/
-    fun onChangeGoalCheckMode(mode: StudyingGoalCheckMode?){
-        _uiState.update { it.copy(goalCheckMode = mode) }
-        if (mode != null) onStudyingStatusChange(false)
-        else onStudyingStatusChange(true)
+    fun onChangeGoalCheckMode(mode: StudyingGoalCheckMode?) {
+        if (mode != null) {
+            val wasStudying = _uiState.value.isStudying
+            _uiState.update { it.copy(goalCheckMode = mode, wasStudyingBeforeGoalCheckDialog = wasStudying) }
+            onStudyingStatusChange(false)
+        } else {
+            val restore = _uiState.value.wasStudyingBeforeGoalCheckDialog
+            _uiState.update { it.copy(goalCheckMode = null) }
+            onStudyingStatusChange(restore)
+        }
     }
 
     /** 수정중으로 변환*/
