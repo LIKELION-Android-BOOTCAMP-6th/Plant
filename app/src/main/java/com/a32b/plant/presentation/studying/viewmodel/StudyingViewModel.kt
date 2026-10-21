@@ -53,7 +53,8 @@ data class StudyingUiState(
     val error: String? = null,
     val isGoalInputDialogShown: Boolean = true, //학습 목표 입력
     val goalCheckMode: StudyingGoalCheckMode? = null,
-    val wasStudyingBeforeDialog: Boolean = false, // 다이얼로그 열기 직전 타이머 상태 보존
+    val wasStudyingBeforeGoalInputDialog: Boolean = false,
+    val wasStudyingBeforeGoalCheckDialog: Boolean = false,
     val isEditing: Boolean = false,
     val logIndex: Int? = null
 )
@@ -261,10 +262,10 @@ class StudyingViewModel @Inject constructor(
         if (!_uiState.value.isEditing) {
             if (value) {
                 val wasStudying = _uiState.value.isStudying
-                _uiState.update { it.copy(isGoalInputDialogShown = true, wasStudyingBeforeDialog = wasStudying) }
+                _uiState.update { it.copy(isGoalInputDialogShown = true, wasStudyingBeforeGoalInputDialog = wasStudying) }
                 onStudyingStatusChange(false)
             } else {
-                val restore = _uiState.value.wasStudyingBeforeDialog
+                val restore = _uiState.value.wasStudyingBeforeGoalInputDialog
                 _uiState.update { it.copy(isGoalInputDialogShown = false) }
                 onStudyingStatusChange(restore)
             }
@@ -277,10 +278,10 @@ class StudyingViewModel @Inject constructor(
     fun onChangeGoalCheckMode(mode: StudyingGoalCheckMode?) {
         if (mode != null) {
             val wasStudying = _uiState.value.isStudying
-            _uiState.update { it.copy(goalCheckMode = mode, wasStudyingBeforeDialog = wasStudying) }
+            _uiState.update { it.copy(goalCheckMode = mode, wasStudyingBeforeGoalCheckDialog = wasStudying) }
             onStudyingStatusChange(false)
         } else {
-            val restore = _uiState.value.wasStudyingBeforeDialog
+            val restore = _uiState.value.wasStudyingBeforeGoalCheckDialog
             _uiState.update { it.copy(goalCheckMode = null) }
             onStudyingStatusChange(restore)
         }
