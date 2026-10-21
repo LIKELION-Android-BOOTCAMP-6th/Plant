@@ -72,9 +72,12 @@ fun CommunityPostScreen(
         viewModel.event.collect { event ->
             when (event) {
                 is CommunityPostEvent.NavigateToDetail -> {
-                    navController.navigate(Routes.CommunityList)
                     navController.navigate(Routes.CommunityDetail(event.postId)) {
-                        popUpTo<Routes.CommunityPost> { inclusive = true }
+                        if (postId != null) {
+                            popUpTo<Routes.CommunityDetail> { inclusive = true }
+                        } else {
+                            popUpTo<Routes.CommunityPost> { inclusive = true }
+                        }
                     }
                 }
 
