@@ -176,7 +176,7 @@ class UserRemoteDataSourceImpl @Inject constructor(
         }
         Log.d("UserRemoteDataSource", "Step 3 완료: posts ${myPosts.size()}개")
 
-        // 4. 다른 사람 게시글에 남긴 내 댓글 → 소프트 삭제 (내용만 변경)
+        // 4. 다른 사람 게시글에 남긴 내 댓글 → 소프트 삭제 (내용만 변경, uid도 익명화)
         Log.d("UserRemoteDataSource", "Step 4: 댓글 소프트 삭제 시작")
         val myComments = db.collectionGroup("comments")
             .whereEqualTo("user.uid", uid).get().await()
@@ -185,7 +185,7 @@ class UserRemoteDataSourceImpl @Inject constructor(
                 mapOf(
                     "content" to "- 삭제된 댓글입니다. -",
                     "user" to mapOf(
-                        "id" to uid,
+                        "id" to "",
                         "nickname" to "(알 수 없음)",
                         "profileImg" to ""
                     )
@@ -194,21 +194,42 @@ class UserRemoteDataSourceImpl @Inject constructor(
         }
         Log.d("UserRemoteDataSource", "Step 4 완료: 댓글 ${myComments.size()}개")
 
-        // 5. 다른 사람 게시글에 남긴 내 좋아요 삭제
+        // 5. 다른 사람 게시글에 남긴 내 좋아요 삭제 + likedBy 배열 / likeCount 업데이트
         // collectionGroup + FieldPath.documentId()는 단순 uid를 경로로 인식하지 못해 사용 불가.
-        // posts의 likedBy 배열로 내가 좋아요한 게시글을 조회 후 likes/{uid} 문서를 직접 삭제.
+        // posts의 likedBy 배열로 내가 좋아요한 게시글을 조회 후 처리.
         Log.d("UserRemoteDataSource", "Step 5: 내 좋아요 삭제 시작")
         val likedPosts = db.collection("posts")
             .whereArrayContains("likedBy", uid)
             .get().await()
         for (post in likedPosts.documents) {
             post.reference.collection("likes").document(uid).delete().await()
+            post.reference.update(
+                "likedBy", FieldValue.arrayRemove(uid),
+                "likeCount", FieldValue.increment(-1)
+            ).await()
         }
         Log.d("UserRemoteDataSource", "Step 5 완료: 좋아요 ${likedPosts.size()}개")
+
+        // 5.5. 다른 사람 게시글에서 내 북마크 제거
+        Log.d("UserRemoteDataSource", "Step 5.5: 내 북마크 제거 시작")
+        val bookmarkedPosts = db.collection("posts")
+            .whereArrayContains("bookmarkedBy", uid)
+            .get().await()
+        for (post in bookmarkedPosts.documents) {
+            post.reference.update(
+                "bookmarkedBy", FieldValue.arrayRemove(uid),
+                "bookmarkCount", FieldValue.increment(-1)
+            ).await()
+        }
+        Log.d("UserRemoteDataSource", "Step 5.5 완료: 북마크 ${bookmarkedPosts.size()}개")
 
         // 6. users/{uid} 문서는 맨 마지막에 삭제 (위 단계 실패 시 유저 데이터 보존)
         Log.d("UserRemoteDataSource", "Step 6: users 문서 삭제")
         db.collection("users").document(uid).delete().await()
+
+        // 7. studying/{uid} 문서 삭제 (학습 중 비정상 종료 후 탈퇴 시 잔존 방지)
+        Log.d("UserRemoteDataSource", "Step 7: studying 문서 삭제")
+        db.collection("studying").document(uid).delete().await()
         Log.d("UserRemoteDataSource", "deleteUserData 완료")
     }
 
