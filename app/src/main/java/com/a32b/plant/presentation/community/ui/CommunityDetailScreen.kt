@@ -63,6 +63,7 @@ import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.presentation.community.viewmodel.CommunityDetailEvent
 import com.a32b.plant.presentation.community.viewmodel.CommunityDetailViewModel
 import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.component.TagChip
 import com.a32b.plant.presentation.core.extension.showToast
@@ -118,6 +119,10 @@ fun CommunityDetailScreen(
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
         ) { innerPadding ->
+            if (uiState.isInitialLoading) {
+                LoadingBox()
+                return@Scaffold
+            }
             if (postState == null) {
                 if (uiState.isPostNotFound) {
                     Box(
@@ -130,7 +135,7 @@ fun CommunityDetailScreen(
                             Text(
                                 text = "삭제된 게시글입니다.",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSecondary
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             TextButton(onClick = { navController.popBackStack() }) {

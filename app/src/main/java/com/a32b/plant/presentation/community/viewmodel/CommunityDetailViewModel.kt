@@ -139,6 +139,9 @@ class CommunityDetailViewModel @Inject constructor(
                 .onSuccess { post ->
                     _post.value = post
                     onIsSharedChange()
+                    if (post == null) {
+                        _uiState.update { it.copy(isPostNotFound = true) }
+                    }
                 }
                 .onFailure { e -> sendToast(e.message) }
 
