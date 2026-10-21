@@ -53,7 +53,7 @@ data class StudyingUiState(
     val error: String? = null,
     val isGoalInputDialogShown: Boolean = true, //학습 목표 입력
     val goalCheckMode: StudyingGoalCheckMode? = null,
-    val wasStudyingBeforeGoalInputDialog: Boolean = false,
+    val wasStudyingBeforeGoalInputDialog: Boolean = true,
     val wasStudyingBeforeGoalCheckDialog: Boolean = false,
     val isEditing: Boolean = false,
     val logIndex: Int? = null
