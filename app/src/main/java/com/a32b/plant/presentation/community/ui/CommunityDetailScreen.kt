@@ -118,7 +118,30 @@ fun CommunityDetailScreen(
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
         ) { innerPadding ->
-            val currentPost = postState ?: return@Scaffold
+            if (postState == null) {
+                if (!uiState.isInitialLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "삭제된 게시글입니다.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            TextButton(onClick = { navController.popBackStack() }) {
+                                Text("돌아가기")
+                            }
+                        }
+                    }
+                }
+                return@Scaffold
+            }
+            val currentPost = postState!!
 
             Column(
                 modifier = Modifier
