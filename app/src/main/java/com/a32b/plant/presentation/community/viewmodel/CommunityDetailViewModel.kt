@@ -51,7 +51,8 @@ data class CommunityDetailUiState(
     // 댓글 삭제 대상 ID
     val deletingCommentId: String? = null,
 
-    val isInitialLoading: Boolean = true
+    val isInitialLoading: Boolean = true,
+    val isPostNotFound: Boolean = false
 )
 
 sealed class CommunityDetailEvent {
@@ -106,6 +107,9 @@ class CommunityDetailViewModel @Inject constructor(
                 .onSuccess { post ->
                     _post.value = post
                     onIsSharedChange()
+                    if (post == null) {
+                        _uiState.update { it.copy(isPostNotFound = true) }
+                    }
                 }
                 .onFailure { e -> sendToast(e.message) }
 

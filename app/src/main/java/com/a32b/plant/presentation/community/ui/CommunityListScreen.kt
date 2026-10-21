@@ -90,6 +90,8 @@ fun CommunityListScreen(
     val listState = rememberLazyListState()
 
     // 상세/활동 화면에서 복귀 시 목록 새로고침
+    // LifecycleEventObserver는 등록 시점에 현재 lifecycle 상태까지 이벤트를 즉시 재생하므로
+    // 초기 진입 시에도 ON_RESUME이 발화됨 — refreshOnResume() 내 hasLoadedOnce 가드로 무시됨
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) viewModel.refreshOnResume()

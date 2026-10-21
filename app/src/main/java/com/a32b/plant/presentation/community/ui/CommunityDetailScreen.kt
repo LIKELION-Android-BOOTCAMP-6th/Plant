@@ -119,7 +119,7 @@ fun CommunityDetailScreen(
             containerColor = MaterialTheme.colorScheme.background,
         ) { innerPadding ->
             if (postState == null) {
-                if (!uiState.isInitialLoading) {
+                if (uiState.isPostNotFound) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
