@@ -199,9 +199,9 @@ class UserRemoteDataSourceImpl @Inject constructor(
             .whereArrayContains("likedBy", uid)
             .get().await()
         for (post in likedPosts.documents) {
-            post.reference.collection("likes").document(uid).delete().await()
             db.runTransaction { txn ->
                 val current = txn.get(post.reference).getLong("likeCount") ?: 0L
+                txn.delete(post.reference.collection("likes").document(uid))
                 txn.update(post.reference, mapOf(
                     "likedBy" to FieldValue.arrayRemove(uid),
                     "likeCount" to (current - 1).coerceAtLeast(0)
