@@ -1,6 +1,10 @@
 package com.a32b.plant.presentation.community.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -81,8 +85,20 @@ fun CommunityListScreen(
 ) {
 
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     val listState = rememberLazyListState()
+
+    // 상세/활동 화면에서 복귀 시 목록 새로고침
+    // LifecycleEventObserver는 등록 시점에 현재 lifecycle 상태까지 이벤트를 즉시 재생하므로
+    // 초기 진입 시에도 ON_RESUME이 발화됨 — refreshOnResume() 내 hasLoadedOnce 가드로 무시됨
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.refreshOnResume()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     // 이벤트 수신 (토스트, 맨 위로 스크롤)
     // ScrollToTop: 애니메이션 완료 후 clearSuppressLoadMore() 호출 → loadMore 차단 해제

@@ -49,7 +49,10 @@ data class CommunityDetailUiState(
     val editingCommentText: String = "",
 
     // 댓글 삭제 대상 ID
-    val deletingCommentId: String? = null
+    val deletingCommentId: String? = null,
+
+    val isInitialLoading: Boolean = true,
+    val isPostNotFound: Boolean = false
 )
 
 sealed class CommunityDetailEvent {
@@ -104,12 +107,17 @@ class CommunityDetailViewModel @Inject constructor(
                 .onSuccess { post ->
                     _post.value = post
                     onIsSharedChange()
+                    if (post == null) {
+                        _uiState.update { it.copy(isPostNotFound = true) }
+                    }
                 }
                 .onFailure { e -> sendToast(e.message) }
 
             commentsDeferred.await()
                 .onSuccess { comments -> _uiState.update { it.copy(commentList = comments) } }
                 .onFailure { e -> sendToast(e.message) }
+
+            _uiState.update { it.copy(isInitialLoading = false) }
         }
     }
 
@@ -131,6 +139,9 @@ class CommunityDetailViewModel @Inject constructor(
                 .onSuccess { post ->
                     _post.value = post
                     onIsSharedChange()
+                    if (post == null) {
+                        _uiState.update { it.copy(isPostNotFound = true) }
+                    }
                 }
                 .onFailure { e -> sendToast(e.message) }
 
