@@ -145,6 +145,16 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
             Text("${TimeFormatter.formatToTimeOnly(startTime)} ~", style = MaterialTheme.typography.bodyMedium, fontSize = 13.sp,)
             SetTimer(uiState.timer)
 
+            Box(modifier = Modifier.height(20.dp), contentAlignment = Alignment.Center) {
+                if (!uiState.isStudying && uiState.goalCheckMode == null) {
+                    Text(
+                        text = "일시정지",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(10.dp))
 
             Card(
