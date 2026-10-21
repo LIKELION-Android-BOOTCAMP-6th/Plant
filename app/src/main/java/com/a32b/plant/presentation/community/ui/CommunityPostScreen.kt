@@ -73,7 +73,11 @@ fun CommunityPostScreen(
             when (event) {
                 is CommunityPostEvent.NavigateToDetail -> {
                     navController.navigate(Routes.CommunityDetail(event.postId)) {
-                        popUpTo<Routes.CommunityDetail> { inclusive = true }
+                        if (postId != null) {
+                            popUpTo<Routes.CommunityDetail> { inclusive = true }
+                        } else {
+                            popUpTo<Routes.CommunityPost> { inclusive = true }
+                        }
                     }
                 }
 
