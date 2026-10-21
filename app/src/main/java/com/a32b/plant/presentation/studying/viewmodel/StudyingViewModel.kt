@@ -277,13 +277,20 @@ class StudyingViewModel @Inject constructor(
     /** 학습 목표 확인 다이얼로그 표출 모드 제어*/
     fun onChangeGoalCheckMode(mode: StudyingGoalCheckMode?) {
         if (mode != null) {
-            val wasStudying = _uiState.value.isStudying
-            _uiState.update { it.copy(goalCheckMode = mode, wasStudyingBeforeGoalCheckDialog = wasStudying) }
-            onStudyingStatusChange(false)
+            if (mode == StudyingGoalCheckMode.FINISH) {
+                val wasStudying = _uiState.value.isStudying
+                _uiState.update { it.copy(goalCheckMode = mode, wasStudyingBeforeGoalCheckDialog = wasStudying) }
+                onStudyingStatusChange(false)
+            } else {
+                _uiState.update { it.copy(goalCheckMode = mode) }
+            }
         } else {
+            val previousMode = _uiState.value.goalCheckMode
             val restore = _uiState.value.wasStudyingBeforeGoalCheckDialog
             _uiState.update { it.copy(goalCheckMode = null) }
-            onStudyingStatusChange(restore)
+            if (previousMode == StudyingGoalCheckMode.FINISH) {
+                onStudyingStatusChange(restore)
+            }
         }
     }
 
