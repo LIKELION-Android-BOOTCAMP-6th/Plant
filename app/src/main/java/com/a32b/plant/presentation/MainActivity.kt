@@ -16,10 +16,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
@@ -28,10 +30,12 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.a32b.plant.core.navigation.PlantAppNavigation
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.domain.repository.AuthRepository
 import com.a32b.plant.domain.session.SessionExpiredObserver
 import com.a32b.plant.presentation.core.component.BottomBar
 import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
 import com.a32b.plant.presentation.splash.SplashViewModel
 import com.a32b.plant.presentation.theme.PlantTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -103,10 +107,28 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
+                    // HomeMain BackStackEntry가 스택에 있을 때 HomeScreen과 동일한
+                    // HomeViewModel 인스턴스를 공유해 recoverySession 상태를 관찰한다.
+                    // HomeMain이 스택에 없는 경우(로그인 화면 등) null을 반환해 차단하지 않는다.
+                    val homeBackStackEntry = remember(navBackStackEntry) {
+                        try { navController.getBackStackEntry<Routes.HomeMain>() }
+                        catch (_: Exception) { null }
+                    }
+                    val recoverySession: StudyingSession? by (
+                        homeBackStackEntry
+                            ?.let { hiltViewModel<HomeViewModel>(it) }
+                            ?.recoverySession
+                            ?.collectAsState()
+                            ?: remember { mutableStateOf(null) }
+                    )
+
                     val showBottomBar = navBackStackEntry?.destination?.let { destination ->
-                        destination.hasRoute<Routes.HomeMain>() ||
+                        (destination.hasRoute<Routes.HomeMain>() ||
                                 destination.hasRoute<Routes.CommunityList>() ||
-                                destination.hasRoute<Routes.Mypage>() || destination.hasRoute<Routes.Report>() || destination.hasRoute<Routes.PotList>()
+                                destination.hasRoute<Routes.Mypage>() ||
+                                destination.hasRoute<Routes.Report>() ||
+                                destination.hasRoute<Routes.PotList>()) &&
+                                recoverySession == null
                     } ?: false
                     Scaffold(
                         modifier = Modifier.fillMaxSize(),
