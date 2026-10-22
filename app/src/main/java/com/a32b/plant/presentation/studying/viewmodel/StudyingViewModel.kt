@@ -280,7 +280,7 @@ class StudyingViewModel @Inject constructor(
             if (mode == StudyingGoalCheckMode.FINISH) {
                 val wasStudying = _uiState.value.isStudying
                 _uiState.update { it.copy(goalCheckMode = mode, wasStudyingBeforeGoalCheckDialog = wasStudying) }
-                onStudyingStatusChange(false)
+                if (wasStudying) onStudyingStatusChange(false)
             } else {
                 _uiState.update { it.copy(goalCheckMode = mode) }
             }
