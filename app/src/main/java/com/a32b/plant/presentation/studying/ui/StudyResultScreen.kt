@@ -39,9 +39,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.drawToBitmap
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
-import androidx.navigation.toRoute
 import com.a32b.plant.R
-import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyReward
 import com.a32b.plant.domain.type.ItemType
@@ -56,14 +54,12 @@ import com.a32b.plant.presentation.studying.viewmodel.StudyResultViewModel
 
 @Composable
 fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewModel = hiltViewModel()) {
-    val args = navController.currentBackStackEntry?.toRoute<Routes.StudyResult>()
-
-    val timestamp = args!!.timestamp
-    val tag = args.tag
-    val title = args.title
-    val log = args.log
-    val level = args.level
-    val time = args.time
+    val timestamp = viewModel.timestamp
+    val tag = viewModel.tag
+    val title = viewModel.title
+    val log = viewModel.log
+    val level = viewModel.level
+    val time = viewModel.time
 
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -73,7 +69,6 @@ fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewMo
     var showConfetti by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
-        viewModel.loadReward(time)
         viewModel.event.collect { event ->
             when (event) {
                 is StudyResultEvent.ShowToast -> context.showToast(event.message)

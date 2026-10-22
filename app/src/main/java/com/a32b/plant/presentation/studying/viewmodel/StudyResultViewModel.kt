@@ -5,8 +5,11 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.os.Environment
 import android.provider.MediaStore
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
+import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.StudyReward
@@ -36,8 +39,17 @@ sealed class StudyResultEvent {
 
 @HiltViewModel
 class StudyResultViewModel @Inject constructor(
-    private val giveStudyRewardUseCase: GiveStudyRewardUseCase
+    private val giveStudyRewardUseCase: GiveStudyRewardUseCase,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    private val route = savedStateHandle.toRoute<Routes.StudyResult>()
+    val timestamp: String = route.timestamp
+    val tag: String = route.tag
+    val title: String = route.title
+    val log: List<String> = route.log
+    val time: Long = route.time
+    val level: String = route.level
 
     private val _uiState = MutableStateFlow(StudyResultUiState())
     val uiState = _uiState.asStateFlow()
@@ -45,14 +57,18 @@ class StudyResultViewModel @Inject constructor(
     private val _event = Channel<StudyResultEvent>(Channel.BUFFERED)
     val event = _event.receiveAsFlow()
 
+    init {
+        loadReward()
+    }
+
     fun onDialogShow() = _uiState.update { it.copy(isDialogShow = true) }
     fun onDialogDismiss() = _uiState.update { it.copy(isDialogShow = false) }
 
-    fun loadReward(sessionTimeMs: Long) {
+    private fun loadReward() {
         if (_uiState.value.isRewardLoaded) return
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            giveStudyRewardUseCase(sessionTimeMs)
+            giveStudyRewardUseCase(time)
                 .onSuccess { reward ->
                     _uiState.update { it.copy(isLoading = false, reward = reward, isRewardLoaded = true) }
                 }
