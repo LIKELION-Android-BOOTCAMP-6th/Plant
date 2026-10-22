@@ -149,7 +149,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
             )
 
             Box(modifier = Modifier.height(20.dp), contentAlignment = Alignment.Center) {
-                if (!uiState.isStudying && uiState.goalCheckMode == null) {
+                if (!uiState.isStudying && uiState.goalCheckMode == null && !uiState.isGoalInputDialogShown) {
                     Text(
                         text = "일시정지",
                         style = MaterialTheme.typography.bodySmall,
