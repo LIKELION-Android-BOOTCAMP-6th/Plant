@@ -61,7 +61,7 @@ fun StudyingGoalCheckDialog(
             ) {
                 Box(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "학습 목표",
+                        text = if (mode == StudyingGoalCheckMode.FINISH) "학습 종료" else "학습 목표",
                         style = MaterialTheme.typography.titleSmall,
                         modifier = Modifier.align(Alignment.Center)
                     )

@@ -143,7 +143,10 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
 
             Spacer(modifier = Modifier.height(30.dp))
             Text("${TimeFormatter.formatToTimeOnly(startTime)} ~", style = MaterialTheme.typography.bodyMedium, fontSize = 13.sp,)
-            SetTimer(uiState.timer)
+            SetTimer(
+                time = uiState.timer,
+                color = if (uiState.goalCheckMode == StudyingGoalCheckMode.FINISH) MaterialTheme.colorScheme.error else Color.Unspecified
+            )
 
             Box(modifier = Modifier.height(20.dp), contentAlignment = Alignment.Center) {
                 if (!uiState.isStudying && uiState.goalCheckMode == null) {
@@ -267,7 +270,7 @@ fun StudyStatusBadge(tag: String, title: String){
 }
 
 @Composable
-fun SetTimer(time: Long){
+fun SetTimer(time: Long, color: Color = Color.Unspecified){
     Box(modifier = Modifier.size(250.dp)
         .padding(16.dp),
         contentAlignment = Alignment.Center){
@@ -277,7 +280,7 @@ fun SetTimer(time: Long){
             modifier = Modifier.matchParentSize(),
             contentScale = ContentScale.Fit
         )
-        Text(text = "${TimeFormatter.formatToDigitalClock(time)}", style = MaterialTheme.typography.titleLarge,)
+        Text(text = "${TimeFormatter.formatToDigitalClock(time)}", style = MaterialTheme.typography.titleLarge, color = color)
     }
 }
 @Composable
