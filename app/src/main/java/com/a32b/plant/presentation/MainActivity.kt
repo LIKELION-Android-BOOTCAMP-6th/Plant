@@ -123,17 +123,19 @@ class MainActivity : ComponentActivity() {
                     )
 
                     val showBottomBar = navBackStackEntry?.destination?.let { destination ->
-                        (destination.hasRoute<Routes.HomeMain>() ||
+                        destination.hasRoute<Routes.HomeMain>() ||
                                 destination.hasRoute<Routes.CommunityList>() ||
                                 destination.hasRoute<Routes.Mypage>() ||
                                 destination.hasRoute<Routes.Report>() ||
-                                destination.hasRoute<Routes.PotList>()) &&
-                                recoverySession == null
+                                destination.hasRoute<Routes.PotList>()
                     } ?: false
                     Scaffold(
                         modifier = Modifier.fillMaxSize(),
                         bottomBar = {
-                            if (showBottomBar) BottomBar(navController = navController)
+                            if (showBottomBar) BottomBar(
+                                navController = navController,
+                                enabled = recoverySession == null
+                            )
                         }
                     ) { innerPadding ->
                         Box(modifier = Modifier.padding(innerPadding)) {

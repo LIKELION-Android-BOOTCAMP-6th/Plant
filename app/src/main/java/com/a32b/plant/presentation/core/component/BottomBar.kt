@@ -25,7 +25,7 @@ import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.theme.bottom
 
 @Composable
-fun BottomBar(navController: NavController){
+fun BottomBar(navController: NavController, enabled: Boolean = true){
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
@@ -47,7 +47,7 @@ fun BottomBar(navController: NavController){
                 modifier = Modifier
                     .weight(1f)
                     .size(size.dp)
-                    .clickable{
+                    .clickable(enabled = enabled) {
                         if (!isCommunitySelected) {  // ★
                             navController.navigate(Routes.CommunityList) {
                                 popUpTo(Routes.HomeMain) { inclusive = false }
@@ -64,7 +64,7 @@ fun BottomBar(navController: NavController){
                 modifier = Modifier
                     .weight(1f)
                     .size(size.dp)
-                    .clickable{
+                    .clickable(enabled = enabled) {
                         if (!isPotSelected) {  // ★
                             navController.navigate(Routes.PotList) {
                                 popUpTo(Routes.HomeMain) { inclusive = false }
@@ -81,7 +81,7 @@ fun BottomBar(navController: NavController){
                 modifier = Modifier
                     .weight(1f)
                     .size(size.dp)
-                    .clickable{
+                    .clickable(enabled = enabled) {
                         if (!isHomeSelected) {  // ★
                             navController.navigate(Routes.HomeMain) {
                                 popUpTo(Routes.HomeMain) { inclusive = false }
@@ -98,7 +98,7 @@ fun BottomBar(navController: NavController){
                 modifier = Modifier
                     .weight(1f)
                     .size(size.dp)
-                    .clickable{
+                    .clickable(enabled = enabled) {
                         if (!isReportSelected) {  // ★
                             navController.navigate(Routes.Report) {
                                 popUpTo(Routes.HomeMain) { inclusive = false }
@@ -116,7 +116,7 @@ fun BottomBar(navController: NavController){
                 modifier = Modifier
                     .weight(1f)
                     .size(size.dp)
-                    .clickable{
+                    .clickable(enabled = enabled) {
                         if (!isMyPageSelected) {  // ★
                             navController.navigate(Routes.Mypage) {
                                 popUpTo(Routes.HomeMain) { inclusive = false }
