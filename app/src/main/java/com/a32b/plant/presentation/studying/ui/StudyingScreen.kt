@@ -198,23 +198,6 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
             StudyingUserCard(studyingUsers, uiState.tag)
         }
     }
-    uiState.goalCheckMode?.let {
-        StudyingGoalCheckDialog(
-            mode = it,
-            studyLog = uiState.studyLog,
-            onEdit = { index ->
-                viewModel.onIsEditingChanged(index = index, value = true)
-                viewModel.onGoalInputDialogChange(true)
-             },
-            onCompleted = {index, isCompleted ->
-                viewModel.onStudyLogChanged(index, isCompleted)
-            },
-            onDismiss = {viewModel.onChangeGoalCheckMode(null)},
-            onConfirm = {
-                viewModel.onIsStudyFinishChange()
-            }
-        )
-    }
     if (uiState.isGoalInputDialogShown){
         StudyingGoalInputDialog(
             isEditing = uiState.isEditing,
@@ -233,6 +216,20 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
                 val index = uiState.logIndex ?: return@confirmEdit
                 viewModel.onStudyLogChanged(index = index, log = log)
                 viewModel.onGoalInputDialogChange(false)
+            }
+        )
+    }
+    uiState.goalCheckMode?.let {
+        StudyingGoalCheckDialog(
+            mode = it,
+            studyLog = uiState.studyLog,
+            onEdit = { index -> viewModel.onStartEditing(index) },
+            onCompleted = {index, isCompleted ->
+                viewModel.onStudyLogChanged(index, isCompleted)
+            },
+            onDismiss = {viewModel.onChangeGoalCheckMode(null)},
+            onConfirm = {
+                viewModel.onIsStudyFinishChange()
             }
         )
     }

@@ -57,7 +57,6 @@ data class StudyingUiState(
     val wasStudyingBeforeGoalCheckDialog: Boolean = false,
     val isEditing: Boolean = false,
     val logIndex: Int? = null,
-    val savedGoalCheckMode: StudyingGoalCheckMode? = null
 )
 
 sealed class StudyingEvent{
@@ -102,6 +101,7 @@ class StudyingViewModel @Inject constructor(
 
     private var lastSaveMs = 0L
     private var lastUpdateMs = 0L
+    private var savedGoalCheckMode: StudyingGoalCheckMode? = null
 
     init {
         viewModelScope.launch {
@@ -258,6 +258,11 @@ class StudyingViewModel @Inject constructor(
         }
     }
 
+    fun onStartEditing(index: Int) {
+        onIsEditingChanged(index = index, value = true)
+        onGoalInputDialogChange(true)
+    }
+
     /** 학습 목표 설정 다이얼로그 표출 여부 제어*/
     fun onGoalInputDialogChange(value: Boolean) {
         if (!_uiState.value.isEditing) {
@@ -272,17 +277,17 @@ class StudyingViewModel @Inject constructor(
             }
         } else {
             if (value) {
+                savedGoalCheckMode = _uiState.value.goalCheckMode
                 _uiState.update { it.copy(
                     isGoalInputDialogShown = true,
-                    savedGoalCheckMode = it.goalCheckMode,
                     goalCheckMode = null
                 )}
             } else {
                 _uiState.update { it.copy(
                     isGoalInputDialogShown = false,
-                    goalCheckMode = it.savedGoalCheckMode,
-                    savedGoalCheckMode = null
+                    goalCheckMode = savedGoalCheckMode
                 )}
+                savedGoalCheckMode = null
                 onIsEditingChanged(false, null)
             }
         }
