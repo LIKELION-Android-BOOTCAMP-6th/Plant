@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -34,7 +35,7 @@ fun BottomBar(navController: NavController, enabled: Boolean = true){
         .navigationBarsPadding(),
         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
         color = MaterialTheme.colorScheme.surface) {
-        Row(modifier = Modifier.fillMaxWidth().height(68.dp),
+        Row(modifier = Modifier.fillMaxWidth().height(68.dp).alpha(if (enabled) 1f else 0.38f),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically) {
 
