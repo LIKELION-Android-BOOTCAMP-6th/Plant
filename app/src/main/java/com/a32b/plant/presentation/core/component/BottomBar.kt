@@ -22,7 +22,6 @@ import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
-import com.a32b.plant.presentation.theme.bottom
 
 @Composable
 fun BottomBar(navController: NavController, enabled: Boolean = true){
