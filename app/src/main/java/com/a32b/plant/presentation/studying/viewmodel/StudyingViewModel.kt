@@ -56,7 +56,7 @@ data class StudyingUiState(
     val wasStudyingBeforeGoalInputDialog: Boolean = true,
     val wasStudyingBeforeGoalCheckDialog: Boolean = false,
     val isEditing: Boolean = false,
-    val logIndex: Int? = null
+    val logIndex: Int? = null,
 )
 
 sealed class StudyingEvent{
@@ -101,6 +101,7 @@ class StudyingViewModel @Inject constructor(
 
     private var lastSaveMs = 0L
     private var lastUpdateMs = 0L
+    private var savedGoalCheckMode: StudyingGoalCheckMode? = null
 
     init {
         viewModelScope.launch {
@@ -121,7 +122,7 @@ class StudyingViewModel @Inject constructor(
                         it.copy(
                             timer = session.time,
                             startedAt = session.startedAt,
-                            studyLog = session.log?.map { log -> StudyLogUi(log = log) } ?: emptyList(),
+                            studyLog = session.log?.map { log -> StudyLogUi(log = log) }?.filter { it.log.isNotBlank() } ?: emptyList(),
                             isGoalInputDialogShown = false,
                             isStudying = true
                         )
@@ -257,6 +258,11 @@ class StudyingViewModel @Inject constructor(
         }
     }
 
+    fun onStartEditing(index: Int) {
+        onIsEditingChanged(index = index, value = true)
+        onGoalInputDialogChange(true)
+    }
+
     /** 학습 목표 설정 다이얼로그 표출 여부 제어*/
     fun onGoalInputDialogChange(value: Boolean) {
         if (!_uiState.value.isEditing) {
@@ -270,7 +276,20 @@ class StudyingViewModel @Inject constructor(
                 onStudyingStatusChange(restore)
             }
         } else {
-            _uiState.update { it.copy(isGoalInputDialogShown = value) }
+            if (value) {
+                savedGoalCheckMode = _uiState.value.goalCheckMode
+                _uiState.update { it.copy(
+                    isGoalInputDialogShown = true,
+                    goalCheckMode = null
+                )}
+            } else {
+                _uiState.update { it.copy(
+                    isGoalInputDialogShown = false,
+                    goalCheckMode = savedGoalCheckMode
+                )}
+                savedGoalCheckMode = null
+                onIsEditingChanged(false, null)
+            }
         }
     }
 
@@ -303,7 +322,7 @@ class StudyingViewModel @Inject constructor(
                     state.copy(
                         studyLog = state.studyLog.dropLast(1),
                         isEditing = false,
-                        logIndex = -1
+                        logIndex = null
                     )
                 }
 
