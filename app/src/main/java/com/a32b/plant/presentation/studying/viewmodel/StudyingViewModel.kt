@@ -303,7 +303,7 @@ class StudyingViewModel @Inject constructor(
                     state.copy(
                         studyLog = state.studyLog.dropLast(1),
                         isEditing = false,
-                        logIndex = -1
+                        logIndex = null
                     )
                 }
 
