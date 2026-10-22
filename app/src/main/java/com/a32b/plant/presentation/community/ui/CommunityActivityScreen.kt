@@ -82,7 +82,9 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
             onConfirm = {
                 viewModel.hideDeleteDialog()
                 viewModel.deleteSelected()
-            }
+            },
+            textStyle = MaterialTheme.typography.titleMedium,
+            buttonTextStyle = MaterialTheme.typography.labelLarge
         )
     }
 
