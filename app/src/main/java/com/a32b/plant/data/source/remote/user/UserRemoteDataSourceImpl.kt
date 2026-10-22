@@ -191,11 +191,14 @@ class UserRemoteDataSourceImpl @Inject constructor(
             .get().await()
         for (post in likedPosts.documents) {
             db.runTransaction { txn ->
-                val current = txn.get(post.reference).getLong("likeCount") ?: 0L
+                val snapshot = txn.get(post.reference)
+                @Suppress("UNCHECKED_CAST")
+                val likedBy = (snapshot.get("likedBy") as? List<String>) ?: emptyList()
+                if (uid !in likedBy) return@runTransaction
                 txn.delete(post.reference.collection("likes").document(uid))
                 txn.update(post.reference, mapOf(
                     "likedBy" to FieldValue.arrayRemove(uid),
-                    "likeCount" to (current - 1).coerceAtLeast(0)
+                    "likeCount" to FieldValue.increment(-1L)
                 ))
             }.await()
         }
@@ -206,10 +209,13 @@ class UserRemoteDataSourceImpl @Inject constructor(
             .get().await()
         for (post in bookmarkedPosts.documents) {
             db.runTransaction { txn ->
-                val current = txn.get(post.reference).getLong("bookmarkCount") ?: 0L
+                val snapshot = txn.get(post.reference)
+                @Suppress("UNCHECKED_CAST")
+                val bookmarkedBy = (snapshot.get("bookmarkedBy") as? List<String>) ?: emptyList()
+                if (uid !in bookmarkedBy) return@runTransaction
                 txn.update(post.reference, mapOf(
                     "bookmarkedBy" to FieldValue.arrayRemove(uid),
-                    "bookmarkCount" to (current - 1).coerceAtLeast(0)
+                    "bookmarkCount" to FieldValue.increment(-1L)
                 ))
             }.await()
         }
