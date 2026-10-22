@@ -223,6 +223,8 @@ class CommunityDetailViewModel @Inject constructor(
         likePendingCommit = true
         likeDebounceJob = viewModelScope.launch {
             delay(LIKE_DEBOUNCE)
+            // onCleared()가 먼저 실행됐다면 flag가 이미 false → 중복 커밋 방지
+            if (!likePendingCommit) return@launch
             likePendingCommit = false
             commitLike()
         }
@@ -242,6 +244,7 @@ class CommunityDetailViewModel @Inject constructor(
         bookmarkPendingCommit = true
         bookmarkDebounceJob = viewModelScope.launch {
             delay(BOOKMARK_DEBOUNCE)
+            if (!bookmarkPendingCommit) return@launch
             bookmarkPendingCommit = false
             commitBookmark()
         }
@@ -249,12 +252,15 @@ class CommunityDetailViewModel @Inject constructor(
 
     private suspend fun commitBookmark() {
         val post = _post.value ?: return
-        // NonCancellable: viewModelScope 취소(화면 이탈) 후에도 Firestore 쓰기가 완료되도록 보장
+        val localIsBookmarked = post.isBookmarked
+        // NonCancellable: viewModelScope 취소(화면 이탈) 후에도 Firestore 쓰기가 완료되도록 보장 (Case B)
         withContext(NonCancellable) {
             toggleBookmarkUseCase(postId, post.title)
         }.onSuccess { wasBookmarked ->
                 val serverFinal = !wasBookmarked
-                if (_post.value?.isBookmarked != serverFinal) {
+                // 커밋 이후 사용자가 또 탭했다면(localIsBookmarked != 현재값) 덮어쓰지 않음
+                // → 다른 기기에서 상태가 바뀐 케이스만 보정
+                if (_post.value?.isBookmarked == localIsBookmarked && _post.value?.isBookmarked != serverFinal) {
                     _post.value = _post.value?.copy(isBookmarked = serverFinal)
                 }
             }
@@ -262,6 +268,7 @@ class CommunityDetailViewModel @Inject constructor(
                 when (e) {
                     is AppError.UnknownUser -> Unit
                     else -> {
+                        // 화면 이탈 후 실행(onCleared 경로)이면 viewModelScope가 취소돼 sendToast/refresh는 no-op
                         sendToast(e.message)
                         refresh()
                     }
@@ -271,14 +278,16 @@ class CommunityDetailViewModel @Inject constructor(
 
     private suspend fun commitLike() {
         val post = _post.value ?: return
-        // NonCancellable: viewModelScope 취소(화면 이탈) 후에도 Firestore 쓰기가 완료되도록 보장
+        val localIsLiked = post.isLiked
+        // NonCancellable: viewModelScope 취소(화면 이탈) 후에도 Firestore 쓰기가 완료되도록 보장 (Case B)
         withContext(NonCancellable) {
             toggleLikeUseCase(postId, post.author.id, post.title)
         }.onSuccess { wasLiked ->
                 // 서버가 실제로 반영한 최종 상태 (wasLiked=true이면 취소됐으니 최종은 false)
                 val serverFinal = !wasLiked
-                if (_post.value?.isLiked != serverFinal) {
-                    // 다른 기기에서 상태가 바뀐 케이스 → 서버 기준으로 UI 정정
+                // 커밋 이후 사용자가 또 탭했다면(localIsLiked != 현재값) 덮어쓰지 않음
+                // → 다른 기기에서 상태가 바뀐 케이스만 보정
+                if (_post.value?.isLiked == localIsLiked && _post.value?.isLiked != serverFinal) {
                     _post.value = _post.value?.copy(isLiked = serverFinal)
                 }
             }
@@ -286,6 +295,7 @@ class CommunityDetailViewModel @Inject constructor(
                 when (e) {
                     is AppError.UnknownUser -> Unit
                     else -> {
+                        // 화면 이탈 후 실행(onCleared 경로)이면 viewModelScope가 취소돼 sendToast/refresh는 no-op
                         sendToast(e.message)
                         // 정확한 롤백값을 모르므로 서버 상태 재조회로 정합성 확보
                         refresh()
@@ -362,12 +372,16 @@ class CommunityDetailViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        // 디바운스 delay 중 화면 이탈 시 viewModelScope가 취소되기 전에 펜딩 커밋을 독립 스코프로 실행
+        // 디바운스 delay 중 화면 이탈 시 viewModelScope가 취소되기 전에 펜딩 커밋을 독립 스코프로 실행 (Case A)
+        // flag를 먼저 false로 리셋 → delay가 이미 만료돼 큐에 올라간 debounce 연속체가
+        // if (!likePendingCommit) guard에 걸려 중복 커밋하지 않도록 방지
         if (likePendingCommit) {
+            likePendingCommit = false
             likeDebounceJob?.cancel()
             CoroutineScope(SupervisorJob()).launch { commitLike() }
         }
         if (bookmarkPendingCommit) {
+            bookmarkPendingCommit = false
             bookmarkDebounceJob?.cancel()
             CoroutineScope(SupervisorJob()).launch { commitBookmark() }
         }
