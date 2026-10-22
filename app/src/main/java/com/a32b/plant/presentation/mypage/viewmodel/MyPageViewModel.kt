@@ -69,7 +69,7 @@ class MyPageViewModel @Inject constructor(
             }
             // 사용자가 확인된 경우에만 설정을 읽고, 읽은 뒤 화면을 표시한다.
             observeDarkMode()
-        }
+        } ?: loaded()
     }
 
     private fun observeDarkMode() {
