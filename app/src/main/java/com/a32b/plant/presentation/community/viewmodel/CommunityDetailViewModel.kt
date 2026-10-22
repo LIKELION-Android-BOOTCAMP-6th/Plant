@@ -21,7 +21,9 @@ import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -247,8 +249,10 @@ class CommunityDetailViewModel @Inject constructor(
 
     private suspend fun commitBookmark() {
         val post = _post.value ?: return
-        toggleBookmarkUseCase(postId, post.title)
-            .onSuccess { wasBookmarked ->
+        // NonCancellable: viewModelScope 취소(화면 이탈) 후에도 Firestore 쓰기가 완료되도록 보장
+        withContext(NonCancellable) {
+            toggleBookmarkUseCase(postId, post.title)
+        }.onSuccess { wasBookmarked ->
                 val serverFinal = !wasBookmarked
                 if (_post.value?.isBookmarked != serverFinal) {
                     _post.value = _post.value?.copy(isBookmarked = serverFinal)
@@ -267,8 +271,10 @@ class CommunityDetailViewModel @Inject constructor(
 
     private suspend fun commitLike() {
         val post = _post.value ?: return
-        toggleLikeUseCase(postId, post.author.id, post.title)
-            .onSuccess { wasLiked ->
+        // NonCancellable: viewModelScope 취소(화면 이탈) 후에도 Firestore 쓰기가 완료되도록 보장
+        withContext(NonCancellable) {
+            toggleLikeUseCase(postId, post.author.id, post.title)
+        }.onSuccess { wasLiked ->
                 // 서버가 실제로 반영한 최종 상태 (wasLiked=true이면 취소됐으니 최종은 false)
                 val serverFinal = !wasLiked
                 if (_post.value?.isLiked != serverFinal) {
