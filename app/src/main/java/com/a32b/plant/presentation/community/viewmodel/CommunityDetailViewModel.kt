@@ -23,6 +23,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
@@ -261,12 +262,18 @@ class CommunityDetailViewModel @Inject constructor(
                 // 커밋 이후 사용자가 또 탭했다면(localIsBookmarked != 현재값) 덮어쓰지 않음
                 // → 다른 기기에서 상태가 바뀐 케이스만 보정
                 if (_post.value?.isBookmarked == localIsBookmarked && _post.value?.isBookmarked != serverFinal) {
-                    _post.value = _post.value?.copy(isBookmarked = serverFinal)
+                    val delta = if (serverFinal) 1 else -1
+                    _post.value = _post.value?.copy(
+                        isBookmarked = serverFinal,
+                        bookmarkCount = ((_post.value?.bookmarkCount ?: 0) + delta).coerceAtLeast(0)
+                    )
                 }
             }
             .onFailure { e ->
                 when (e) {
-                    is AppError.UnknownUser -> Unit
+                    is AppError.UnknownUser -> {
+                        if (viewModelScope.isActive) ensureCurrentUserUseCase()
+                    }
                     else -> {
                         // 화면 이탈 후 실행(onCleared 경로)이면 viewModelScope가 취소돼 sendToast/refresh는 no-op
                         sendToast(e.message)
@@ -288,12 +295,19 @@ class CommunityDetailViewModel @Inject constructor(
                 // 커밋 이후 사용자가 또 탭했다면(localIsLiked != 현재값) 덮어쓰지 않음
                 // → 다른 기기에서 상태가 바뀐 케이스만 보정
                 if (_post.value?.isLiked == localIsLiked && _post.value?.isLiked != serverFinal) {
-                    _post.value = _post.value?.copy(isLiked = serverFinal)
+                    val delta = if (serverFinal) 1 else -1
+                    _post.value = _post.value?.copy(
+                        isLiked = serverFinal,
+                        likeCount = ((_post.value?.likeCount ?: 0) + delta).coerceAtLeast(0)
+                    )
                 }
             }
             .onFailure { e ->
                 when (e) {
-                    is AppError.UnknownUser -> Unit
+                    is AppError.UnknownUser -> {
+                        // onCleared 경로(viewModelScope 취소됨): 화면 없으므로 세션 복구 불필요
+                        if (viewModelScope.isActive) ensureCurrentUserUseCase()
+                    }
                     else -> {
                         // 화면 이탈 후 실행(onCleared 경로)이면 viewModelScope가 취소돼 sendToast/refresh는 no-op
                         sendToast(e.message)
