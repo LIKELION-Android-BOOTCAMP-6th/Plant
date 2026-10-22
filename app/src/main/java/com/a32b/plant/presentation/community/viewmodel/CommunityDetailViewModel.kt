@@ -272,6 +272,7 @@ class CommunityDetailViewModel @Inject constructor(
             .onFailure { e ->
                 when (e) {
                     is AppError.UnknownUser -> {
+                        // onCleared 경로(viewModelScope 취소됨): 화면 없으므로 세션 복구 불필요
                         if (viewModelScope.isActive) ensureCurrentUserUseCase()
                     }
                     else -> {
