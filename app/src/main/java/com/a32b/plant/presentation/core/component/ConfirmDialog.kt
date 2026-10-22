@@ -38,7 +38,7 @@ fun ConfirmDialog(
                 modifier = Modifier.padding(22.dp)) {
                 Spacer(modifier = Modifier.height(10.dp))
 
-                Text(text, style = MaterialTheme.typography.titleSmall)
+                Text(text, style = MaterialTheme.typography.titleMedium)
                 semiText?.let {
                     Spacer(modifier = Modifier.height(9.dp))
                     Text(semiText, style = MaterialTheme.typography.bodyMedium)
@@ -52,7 +52,7 @@ fun ConfirmDialog(
                             modifier = Modifier.height(30.dp).weight(1f),
                             shape = RoundedCornerShape(8.dp),
                             colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.outline)) {
-                            Text("취소", style = MaterialTheme.typography.bodyMedium)
+                            Text("취소", style = MaterialTheme.typography.labelLarge)
                         }
                         Spacer(modifier = Modifier.width(10.dp))
                     }
@@ -61,7 +61,7 @@ fun ConfirmDialog(
                         modifier = Modifier.height(30.dp).weight(1f),
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.primary)) {
-                        Text(confirmBtnText, style = MaterialTheme.typography.bodyMedium)
+                        Text(confirmBtnText, style = MaterialTheme.typography.labelLarge)
                     }
                 }
 
