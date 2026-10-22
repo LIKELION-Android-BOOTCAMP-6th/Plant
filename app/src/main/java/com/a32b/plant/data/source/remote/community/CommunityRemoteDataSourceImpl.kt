@@ -233,8 +233,10 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         val commentDoc = db.collection("posts").document(postId)
             .collection("comments").document(commentId)
 
-        // activityId가 있으면 activity도 삭제
-        val activityId = commentDoc.get().await().getString("activityId")
+        val snapshot = commentDoc.get().await()
+        if (!snapshot.exists()) return
+
+        val activityId = snapshot.getString("activityId")
 
         commentDoc.delete().await()
 
