@@ -110,6 +110,11 @@ class MainActivity : ComponentActivity() {
                     // HomeMain BackStackEntry가 스택에 있을 때 HomeScreen과 동일한
                     // HomeViewModel 인스턴스를 공유해 recoverySession 상태를 관찰한다.
                     // HomeMain이 스택에 없는 경우(로그인 화면 등) null을 반환해 차단하지 않는다.
+                    //
+                    // [기술 부채] hiltViewModel()과 remember()가 ?.let / ?: 안에서 조건부 호출됨 —
+                    // Compose Rules of Hooks 위반. homeBackStackEntry는 실제로 null → non-null
+                    // 단방향 전환만 하므로 현재 nav 구조에서는 안전하게 동작하나,
+                    // 근본 해결을 위해서는 RecoverySessionHolder 싱글톤 도입 필요.
                     val homeBackStackEntry = remember(navBackStackEntry) {
                         try { navController.getBackStackEntry<Routes.HomeMain>() }
                         catch (_: Exception) { null }
