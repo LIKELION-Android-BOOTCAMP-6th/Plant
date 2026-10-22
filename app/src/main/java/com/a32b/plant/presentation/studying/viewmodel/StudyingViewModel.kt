@@ -56,7 +56,8 @@ data class StudyingUiState(
     val wasStudyingBeforeGoalInputDialog: Boolean = true,
     val wasStudyingBeforeGoalCheckDialog: Boolean = false,
     val isEditing: Boolean = false,
-    val logIndex: Int? = null
+    val logIndex: Int? = null,
+    val savedGoalCheckMode: StudyingGoalCheckMode? = null
 )
 
 sealed class StudyingEvent{
@@ -121,7 +122,7 @@ class StudyingViewModel @Inject constructor(
                         it.copy(
                             timer = session.time,
                             startedAt = session.startedAt,
-                            studyLog = session.log?.map { log -> StudyLogUi(log = log) } ?: emptyList(),
+                            studyLog = session.log?.map { log -> StudyLogUi(log = log) }?.filter { it.log.isNotBlank() } ?: emptyList(),
                             isGoalInputDialogShown = false,
                             isStudying = true
                         )
@@ -270,7 +271,20 @@ class StudyingViewModel @Inject constructor(
                 onStudyingStatusChange(restore)
             }
         } else {
-            _uiState.update { it.copy(isGoalInputDialogShown = value) }
+            if (value) {
+                _uiState.update { it.copy(
+                    isGoalInputDialogShown = true,
+                    savedGoalCheckMode = it.goalCheckMode,
+                    goalCheckMode = null
+                )}
+            } else {
+                _uiState.update { it.copy(
+                    isGoalInputDialogShown = false,
+                    goalCheckMode = it.savedGoalCheckMode,
+                    savedGoalCheckMode = null
+                )}
+                onIsEditingChanged(false, null)
+            }
         }
     }
 

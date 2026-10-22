@@ -224,16 +224,15 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
             studyLogs = uiState.studyLog.map { it.log },
             onDismiss = {
                 viewModel.onGoalInputDialogChange(false)
-                if (uiState.isEditing) viewModel.onIsEditingChanged(false, null)
             },
             onConfirm = {
                 viewModel.setStudyLog(it)
                 viewModel.onGoalInputDialogChange(false)
             },
-            onConfirmEdit = {
-                viewModel.onStudyLogChanged(index = uiState.logIndex ?: 0, log = it )
+            onConfirmEdit = confirmEdit@{ log ->
+                val index = uiState.logIndex ?: return@confirmEdit
+                viewModel.onStudyLogChanged(index = index, log = log)
                 viewModel.onGoalInputDialogChange(false)
-                viewModel.onIsEditingChanged(false, index = null)
             }
         )
     }
