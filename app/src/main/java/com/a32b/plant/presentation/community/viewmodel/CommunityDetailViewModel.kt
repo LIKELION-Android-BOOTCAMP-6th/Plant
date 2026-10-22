@@ -19,7 +19,9 @@ import com.a32b.plant.domain.usecase.community.ToggleBookmarkUseCase
 import com.a32b.plant.domain.usecase.community.ToggleLikeUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -91,6 +93,9 @@ class CommunityDetailViewModel @Inject constructor(
     // 좋아요/북마크 디바운스 상태
     private var likeDebounceJob: Job? = null
     private var bookmarkDebounceJob: Job? = null
+    // delay 구간에서만 true — commitXXX() 시작 직전 false로 해제
+    private var likePendingCommit = false
+    private var bookmarkPendingCommit = false
 
     init {
         ensureCurrentUserUseCase { user -> _uiState.update { it.copy(currentUid = user.uid, currentNickname = user.nickname, currentProfileImg = user.profileImg) } }
@@ -213,8 +218,10 @@ class CommunityDetailViewModel @Inject constructor(
 
         // 디바운스: 이전 타이머 취소하고 새로 시작
         likeDebounceJob?.cancel()
+        likePendingCommit = true
         likeDebounceJob = viewModelScope.launch {
             delay(LIKE_DEBOUNCE)
+            likePendingCommit = false
             commitLike()
         }
     }
@@ -230,8 +237,10 @@ class CommunityDetailViewModel @Inject constructor(
         )
 
         bookmarkDebounceJob?.cancel()
+        bookmarkPendingCommit = true
         bookmarkDebounceJob = viewModelScope.launch {
             delay(BOOKMARK_DEBOUNCE)
+            bookmarkPendingCommit = false
             commitBookmark()
         }
     }
@@ -344,6 +353,19 @@ class CommunityDetailViewModel @Inject constructor(
             _uiState.update { it.copy(deletingCommentId = null) }
             refresh()
         }
+    }
+
+    override fun onCleared() {
+        // 디바운스 delay 중 화면 이탈 시 viewModelScope가 취소되기 전에 펜딩 커밋을 독립 스코프로 실행
+        if (likePendingCommit) {
+            likeDebounceJob?.cancel()
+            CoroutineScope(SupervisorJob()).launch { commitLike() }
+        }
+        if (bookmarkPendingCommit) {
+            bookmarkDebounceJob?.cancel()
+            CoroutineScope(SupervisorJob()).launch { commitBookmark() }
+        }
+        super.onCleared()
     }
 
     private fun sendToast(message: String) {
