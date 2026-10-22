@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -39,15 +40,15 @@ fun ConfirmDialog(
             elevation = CardDefaults.cardElevation(3.dp)) {
             Column(horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(22.dp)) {
-                Spacer(modifier = Modifier.heightIn(min = 10.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 Text(text, style = textStyle ?: MaterialTheme.typography.titleSmall)
                 semiText?.let {
-                    Spacer(modifier = Modifier.heightIn(min = 9.dp))
+                    Spacer(modifier = Modifier.height(9.dp))
                     Text(semiText, style = MaterialTheme.typography.bodyMedium)
                 }
 
-                Spacer(modifier = Modifier.heightIn(min = 22.dp))
+                Spacer(modifier = Modifier.height(22.dp))
 
                 Row(modifier = Modifier.fillMaxWidth()) {
                     if (!isSingleBtn){
