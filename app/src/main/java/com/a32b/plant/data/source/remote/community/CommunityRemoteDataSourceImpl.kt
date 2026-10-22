@@ -180,10 +180,9 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             val already = uid in likedBy
 
             if (already) {
-                val newCount = (current - 1).coerceAtLeast(0)
                 txn.update(postRef, mapOf(
                     "likedBy" to FieldValue.arrayRemove(uid),
-                    "likeCount" to newCount
+                    "likeCount" to (current - 1)
                 ))
             } else {
                 txn.update(postRef, mapOf(
@@ -340,7 +339,7 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             if (already) {
                 txn.update(postRef, mapOf(
                     "bookmarkedBy" to FieldValue.arrayRemove(uid),
-                    "bookmarkCount" to (current - 1).coerceAtLeast(0)
+                    "bookmarkCount" to (current - 1)
                 ))
             } else {
                 txn.update(postRef, mapOf(

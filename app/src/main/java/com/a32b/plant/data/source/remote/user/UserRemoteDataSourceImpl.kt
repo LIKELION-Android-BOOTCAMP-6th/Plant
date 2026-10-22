@@ -195,7 +195,7 @@ class UserRemoteDataSourceImpl @Inject constructor(
                 txn.delete(post.reference.collection("likes").document(uid))
                 txn.update(post.reference, mapOf(
                     "likedBy" to FieldValue.arrayRemove(uid),
-                    "likeCount" to (current - 1).coerceAtLeast(0)
+                    "likeCount" to (current - 1)
                 ))
             }.await()
         }
@@ -209,7 +209,7 @@ class UserRemoteDataSourceImpl @Inject constructor(
                 val current = txn.get(post.reference).getLong("bookmarkCount") ?: 0L
                 txn.update(post.reference, mapOf(
                     "bookmarkedBy" to FieldValue.arrayRemove(uid),
-                    "bookmarkCount" to (current - 1).coerceAtLeast(0)
+                    "bookmarkCount" to (current - 1)
                 ))
             }.await()
         }
