@@ -54,17 +54,10 @@ import com.a32b.plant.presentation.studying.viewmodel.StudyResultViewModel
 
 @Composable
 fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewModel = hiltViewModel()) {
-    val timestamp = viewModel.timestamp
-    val tag = viewModel.tag
-    val title = viewModel.title
-    val log = viewModel.log
-    val level = viewModel.level
-    val time = viewModel.time
-
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val capture = captureBitmap {
-        StudyResultContent(timestamp, tag, title, log, level, time, reward = null)
+        StudyResultContent(uiState.timestamp, uiState.tag, uiState.title, uiState.log, uiState.level, uiState.time, reward = null)
     }
     var showConfetti by remember { mutableStateOf(true) }
 
@@ -97,7 +90,7 @@ fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewMo
                     }
                 }
 
-                StudyResultContent(timestamp, tag, title, log, level, time, uiState.reward)
+                StudyResultContent(uiState.timestamp, uiState.tag, uiState.title, uiState.log, uiState.level, uiState.time, uiState.reward)
 
             }
 

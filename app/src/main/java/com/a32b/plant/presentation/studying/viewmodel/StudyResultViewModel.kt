@@ -30,7 +30,12 @@ data class StudyResultUiState(
     val isLoading: Boolean = false,
     val isDialogShow: Boolean = false,
     val reward: StudyReward? = null,
-    val isRewardLoaded: Boolean = false
+    val timestamp: String = "",
+    val tag: String = "",
+    val title: String = "",
+    val log: List<String> = emptyList(),
+    val time: Long = 0L,
+    val level: String = ""
 )
 
 sealed class StudyResultEvent {
@@ -43,15 +48,18 @@ class StudyResultViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val route = savedStateHandle.toRoute<Routes.StudyResult>()
-    val timestamp: String = route.timestamp
-    val tag: String = route.tag
-    val title: String = route.title
-    val log: List<String> = route.log
-    val time: Long = route.time
-    val level: String = route.level
-
-    private val _uiState = MutableStateFlow(StudyResultUiState())
+    private val _uiState = MutableStateFlow(
+        savedStateHandle.toRoute<Routes.StudyResult>().let { route ->
+            StudyResultUiState(
+                timestamp = route.timestamp,
+                tag = route.tag,
+                title = route.title,
+                log = route.log,
+                time = route.time,
+                level = route.level
+            )
+        }
+    )
     val uiState = _uiState.asStateFlow()
 
     private val _event = Channel<StudyResultEvent>(Channel.BUFFERED)
@@ -65,15 +73,14 @@ class StudyResultViewModel @Inject constructor(
     fun onDialogDismiss() = _uiState.update { it.copy(isDialogShow = false) }
 
     private fun loadReward() {
-        if (_uiState.value.isRewardLoaded) return
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            giveStudyRewardUseCase(time)
+            giveStudyRewardUseCase(_uiState.value.time)
                 .onSuccess { reward ->
-                    _uiState.update { it.copy(isLoading = false, reward = reward, isRewardLoaded = true) }
+                    _uiState.update { it.copy(isLoading = false, reward = reward) }
                 }
                 .onFailure { error ->
-                    _uiState.update { it.copy(isLoading = false, isRewardLoaded = true) }
+                    _uiState.update { it.copy(isLoading = false) }
                     when (error) {
                         is AppError.UnknownUser -> Unit
                         else -> _event.send(StudyResultEvent.ShowToast(error.message))
