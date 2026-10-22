@@ -1,6 +1,7 @@
 package com.a32b.plant.data.source.remote.community
 
 import android.util.Log
+import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.data.mapper.toDto
 import com.a32b.plant.data.model.CommentDto
 import com.a32b.plant.data.model.CommunityActivityDto
@@ -54,7 +55,7 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         if (snapshot.metadata.isFromCache && snapshot.isEmpty) throw AppError.Network()
 
         return snapshot.documents.mapNotNull { doc ->
-            runCatching { doc.toObject(PostDto::class.java) }
+            safeRunCatching { doc.toObject(PostDto::class.java) }
                 .onFailure { e -> Log.e("CommunityRemoteDS", "게시글 파싱 실패: ${doc.id}", e) }
                 .getOrNull()
         }
@@ -79,7 +80,7 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         if (snapshot.metadata.isFromCache && snapshot.isEmpty) throw AppError.Network()
 
         return snapshot.documents.mapNotNull { doc ->
-            runCatching { doc.toObject(PostDto::class.java) }
+            safeRunCatching { doc.toObject(PostDto::class.java) }
                 .onFailure { e -> Log.e("CommunityRemoteDS", "게시글 파싱 실패: ${doc.id}", e) }
                 .getOrNull()
         }
