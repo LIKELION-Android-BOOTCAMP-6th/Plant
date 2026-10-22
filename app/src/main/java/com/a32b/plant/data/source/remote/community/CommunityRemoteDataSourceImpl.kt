@@ -174,7 +174,6 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         // → 다른 기기에서 상태가 바뀌어도 잘못된 방향으로 flip되지 않음
         val wasLiked = db.runTransaction { txn ->
             val snapshot = txn.get(postRef)
-            val current = snapshot.getLong("likeCount") ?: 0L
             @Suppress("UNCHECKED_CAST")
             val likedBy = (snapshot.get("likedBy") as? List<String>) ?: emptyList()
             val already = uid in likedBy
@@ -182,12 +181,12 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             if (already) {
                 txn.update(postRef, mapOf(
                     "likedBy" to FieldValue.arrayRemove(uid),
-                    "likeCount" to (current - 1)
+                    "likeCount" to FieldValue.increment(-1L)
                 ))
             } else {
                 txn.update(postRef, mapOf(
                     "likedBy" to FieldValue.arrayUnion(uid),
-                    "likeCount" to current + 1
+                    "likeCount" to FieldValue.increment(1L)
                 ))
             }
             already
@@ -331,7 +330,6 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
 
         val wasBookmarked = db.runTransaction { txn ->
             val snapshot = txn.get(postRef)
-            val current = snapshot.getLong("bookmarkCount") ?: 0L
             @Suppress("UNCHECKED_CAST")
             val bookmarkedBy = (snapshot.get("bookmarkedBy") as? List<String>) ?: emptyList()
             val already = uid in bookmarkedBy
@@ -339,12 +337,12 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             if (already) {
                 txn.update(postRef, mapOf(
                     "bookmarkedBy" to FieldValue.arrayRemove(uid),
-                    "bookmarkCount" to (current - 1)
+                    "bookmarkCount" to FieldValue.increment(-1L)
                 ))
             } else {
                 txn.update(postRef, mapOf(
                     "bookmarkedBy" to FieldValue.arrayUnion(uid),
-                    "bookmarkCount" to current + 1
+                    "bookmarkCount" to FieldValue.increment(1L)
                 ))
             }
             already
