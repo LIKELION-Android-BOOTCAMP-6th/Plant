@@ -259,8 +259,16 @@ class StudyingViewModel @Inject constructor(
     }
 
     fun onStartEditing(index: Int) {
-        onIsEditingChanged(index = index, value = true)
-        onGoalInputDialogChange(true)
+        savedGoalCheckMode = _uiState.value.goalCheckMode
+        _uiState.update { state ->
+            val newState = if (index == -1) {
+                val newLog = state.studyLog + StudyLogUi()
+                state.copy(studyLog = newLog, isEditing = true, logIndex = newLog.lastIndex)
+            } else {
+                state.copy(isEditing = true, logIndex = index)
+            }
+            newState.copy(isGoalInputDialogShown = true, goalCheckMode = null)
+        }
     }
 
     /** 학습 목표 설정 다이얼로그 표출 여부 제어*/
