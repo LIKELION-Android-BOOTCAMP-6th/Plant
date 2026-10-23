@@ -79,7 +79,10 @@ class CommunityPostViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             repository.getTags()
                 .onSuccess { tags ->
-                    _uiState.update { it.copy(tags = tags) }
+                    _uiState.update { it.copy(
+                        tags = tags,
+                        isTagSheetShown = postId == null && potId == null
+                    ) }
                     matchSelectedTag()
                 }
                 .onFailure { e -> Log.e("CommunityPostVM", "태그 목록 조회 실패: ${e.message}") }
@@ -135,7 +138,7 @@ class CommunityPostViewModel @Inject constructor(
 
     fun onSelectedTagChange(tag:Tag) {
         if (!_uiState.value.isShared) {
-            _uiState.update { it.copy(selected = tag) }
+            _uiState.update { it.copy(selected = tag, isTagSheetShown = false) }
         }
     }
     fun onIsDismissDialogShowChange() = _uiState.update { it.copy(isDismissDialogShow = !it.isDismissDialogShow) }

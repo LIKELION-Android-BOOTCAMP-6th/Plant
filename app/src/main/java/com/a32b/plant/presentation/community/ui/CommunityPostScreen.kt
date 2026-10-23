@@ -85,7 +85,13 @@ fun CommunityPostScreen(
             }
         }
     }
-    BackHandler { viewModel.onIsDismissDialogShowChange() }
+    BackHandler {
+        if (uiState.isTagSheetShown) {
+            viewModel.onIsTagSheetShownChange()
+        } else {
+            viewModel.onIsDismissDialogShowChange()
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
