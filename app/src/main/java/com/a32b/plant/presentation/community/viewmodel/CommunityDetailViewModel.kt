@@ -14,7 +14,9 @@ import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.repository.CommunityRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
+import com.a32b.plant.domain.type.ReportReason
 import com.a32b.plant.domain.usecase.community.AddCommentUseCase
+import com.a32b.plant.domain.usecase.community.CreateCommunityReportUseCase
 import com.a32b.plant.domain.usecase.community.ToggleBookmarkUseCase
 import com.a32b.plant.domain.usecase.community.ToggleLikeUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
@@ -57,7 +59,15 @@ data class CommunityDetailUiState(
     val deletingCommentId: String? = null,
 
     val isInitialLoading: Boolean = true,
-    val isPostNotFound: Boolean = false
+    val isPostNotFound: Boolean = false,
+
+    // 신고 BottomSheet
+    val showReportSheet: Boolean = false,
+    val reportTargetType: String = "",
+    val reportTargetId: String = "",
+    val selectedReportReason: ReportReason? = null,
+    val reportDetailText: String = "",
+    val isReportSubmitting: Boolean = false
 )
 
 sealed class CommunityDetailEvent {
@@ -71,6 +81,7 @@ class CommunityDetailViewModel @Inject constructor(
     private val addCommentUseCase: AddCommentUseCase,
     private val toggleLikeUseCase: ToggleLikeUseCase,
     private val toggleBookmarkUseCase: ToggleBookmarkUseCase,
+    private val createCommunityReportUseCase: CreateCommunityReportUseCase,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -400,6 +411,80 @@ class CommunityDetailViewModel @Inject constructor(
             CoroutineScope(SupervisorJob()).launch { commitBookmark() }
         }
         super.onCleared()
+    }
+
+    fun openPostReportSheet() {
+        _uiState.update {
+            it.copy(
+                showReportSheet = true,
+                reportTargetType = "post",
+                reportTargetId = postId,
+                selectedReportReason = null,
+                reportDetailText = ""
+            )
+        }
+    }
+
+    fun openCommentReportSheet(commentId: String) {
+        _uiState.update {
+            it.copy(
+                showReportSheet = true,
+                reportTargetType = "comment",
+                reportTargetId = commentId,
+                selectedReportReason = null,
+                reportDetailText = ""
+            )
+        }
+    }
+
+    fun closeReportSheet() {
+        _uiState.update { it.copy(showReportSheet = false) }
+    }
+
+    fun selectReportReason(reason: ReportReason) {
+        _uiState.update {
+            it.copy(
+                selectedReportReason = reason,
+                reportDetailText = if (reason == ReportReason.OTHER) it.reportDetailText else ""
+            )
+        }
+    }
+
+    fun onReportDetailChange(text: String) {
+        _uiState.update { it.copy(reportDetailText = text) }
+    }
+
+    fun submitReport() {
+        val state = _uiState.value
+        val reason = state.selectedReportReason ?: return
+        if (state.isReportSubmitting) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isReportSubmitting = true) }
+
+            val parentPostId = if (state.reportTargetType == "comment") postId else null
+
+            createCommunityReportUseCase(
+                targetType = state.reportTargetType,
+                targetId = state.reportTargetId,
+                parentPostId = parentPostId,
+                reason = reason,
+                detail = state.reportDetailText
+            )
+                .onSuccess {
+                    _uiState.update { it.copy(showReportSheet = false) }
+                    sendToast("신고가 접수되었습니다.")
+                    refresh()
+                }
+                .onFailure { e ->
+                    when (e) {
+                        is AppError.UnknownUser -> Unit
+                        else -> sendToast(e.message)
+                    }
+                }
+
+            _uiState.update { it.copy(isReportSubmitting = false) }
+        }
     }
 
     private fun sendToast(message: String) {

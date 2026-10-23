@@ -15,13 +15,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -31,26 +36,30 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -60,6 +69,7 @@ import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.Comment
+import com.a32b.plant.domain.type.ReportReason
 import com.a32b.plant.presentation.community.viewmodel.CommunityDetailEvent
 import com.a32b.plant.presentation.community.viewmodel.CommunityDetailViewModel
 import com.a32b.plant.presentation.core.component.ConfirmDialog
@@ -67,6 +77,7 @@ import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.component.TagChip
 import com.a32b.plant.presentation.core.extension.showToast
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -108,6 +119,19 @@ fun CommunityDetailScreen(
             text = "댓글을 삭제하시겠습니까?",
             onDismiss = { viewModel.closeCommentDeleteDialog() },
             onConfirm = { viewModel.deleteComment() }
+        )
+    }
+
+    // 신고 BottomSheet
+    if (uiState.showReportSheet) {
+        ReportBottomSheet(
+            selectedReason = uiState.selectedReportReason,
+            detailText = uiState.reportDetailText,
+            isSubmitting = uiState.isReportSubmitting,
+            onReasonSelect = { viewModel.selectReportReason(it) },
+            onDetailChange = { viewModel.onReportDetailChange(it) },
+            onDismiss = { viewModel.closeReportSheet() },
+            onConfirm = { viewModel.submitReport() }
         )
     }
 
@@ -220,19 +244,37 @@ fun CommunityDetailScreen(
 
                         }
 
-                        if (!currentPost.studyLogs.isNullOrEmpty()) {
+                        val isPostBlind = currentPost.isHidden || currentPost.reportCount >= 5
+                        if (isPostBlind) {
                             item {
-                                StudyLogCard(currentPost.studyLogs)
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 24.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        "신고가 접수되어 숨김 처리된 콘텐츠입니다.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSecondary
+                                    )
+                                }
                             }
-                        }
-                        item {
-                            if (!currentPost.studyLogs.isNullOrEmpty() && !currentPost.content.isNullOrBlank()) {
-                                Spacer(modifier = Modifier.height(16.dp))
+                        } else {
+                            if (!currentPost.studyLogs.isNullOrEmpty()) {
+                                item {
+                                    StudyLogCard(currentPost.studyLogs)
+                                }
                             }
-                            Text(
-                                currentPost.content ?: "",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
+                            item {
+                                if (!currentPost.studyLogs.isNullOrEmpty() && !currentPost.content.isNullOrBlank()) {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                }
+                                Text(
+                                    currentPost.content ?: "",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
                         }
 
                         item {
@@ -298,7 +340,6 @@ fun CommunityDetailScreen(
 
                                 Spacer(modifier = Modifier.weight(1f))
 
-
                                 if (currentPost.author.id == uiState.currentUid) {
                                     IconButton(onClick = {
                                         navController.navigate(Routes.CommunityPost(postId = currentPost.postId))
@@ -306,7 +347,6 @@ fun CommunityDetailScreen(
                                         Icon(
                                             painterResource(id = R.drawable.ic_edit), null,
                                             tint = MaterialTheme.colorScheme.onSurface,
-//                                        tint = Color.DarkGray,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -314,8 +354,16 @@ fun CommunityDetailScreen(
                                         Icon(
                                             painterResource(id = R.drawable.ic_trash), null,
                                             tint = MaterialTheme.colorScheme.onSurface,
-//                                        tint = Color.DarkGray,
                                             modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                } else if (!isPostBlind) {
+                                    IconButton(onClick = { viewModel.openPostReportSheet() }) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_siren_report),
+                                            contentDescription = "신고",
+                                            tint = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(20.dp)
                                         )
                                     }
                                 }
@@ -346,7 +394,8 @@ fun CommunityDetailScreen(
                                 onEditStart = { viewModel.startEditComment(commentData) },
                                 onEditSubmit = { viewModel.submitEditComment() },
                                 onEditCancel = { viewModel.cancelEditComment() },
-                                onDeleteClick = { viewModel.openCommentDeleteDialog(commentData.commentId) }
+                                onDeleteClick = { viewModel.openCommentDeleteDialog(commentData.commentId) },
+                                onReportClick = { viewModel.openCommentReportSheet(commentData.commentId) }
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                         }
@@ -368,7 +417,8 @@ fun CommentRow(
     onEditStart: () -> Unit,
     onEditSubmit: () -> Unit,
     onEditCancel: () -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
+    onReportClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val maxLength = 100
@@ -377,77 +427,91 @@ fun CommentRow(
         ProfileImage(comment.user.profileImg, 24)
         Spacer(Modifier.width(5.dp))
         Column(modifier = Modifier.weight(1f)) {
-            // 닉네임 + 작성 시간을 한 줄에 표시
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    comment.user.nickname,
-                    style = MaterialTheme.typography.titleSmall
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = comment.createdAt?.let { TimeFormatter.formatTimeWithClock(it) } ?: "",
-                    style = MaterialTheme.typography.labelMedium
-                )
-            }
-            Spacer(modifier = Modifier.height(7.dp))
-
-
-            if (isEditing) {
-                // 인라인 편집 모드
-                TextField(
-                    value = editingText,
-                    onValueChange = { input ->
-                        limitLength(input, maxLength, context, onEditTextChange)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        cursorColor = MaterialTheme.colorScheme.primary
-                    ),
-                    shape = RoundedCornerShape(8.dp),
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
-
-                )
-                Row {
-                    TextButton(onClick = onEditSubmit) {
-                        Text(
-                            "저장",
-                            color = MaterialTheme.colorScheme.primary,
-//                            fontSize = 12.sp,
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    }
-                    TextButton(onClick = onEditCancel) {
-                        Text(
-                            "취소",
-//                            fontSize = 12.sp,
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
+                val isCommentBlind = comment.isHidden || comment.reportCount >= 5
+                // 닉네임 + 작성 시간을 한 줄에 표시
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "${editingText.length} / $maxLength",
-//                        fontSize = 12.sp,
-                        color = if (editingText.length >= maxLength)
-                            MaterialTheme.colorScheme.error
-                        else
-                            MaterialTheme.colorScheme.onSurface,
+                        comment.user.nickname,
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = comment.createdAt?.let { TimeFormatter.formatTimeWithClock(it) } ?: "",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                    if (!isOwner && !isEditing && !isCommentBlind) {
+                        Spacer(Modifier.width(6.dp))
+                        Icon(
+                            painter = painterResource(R.drawable.ic_siren_report),
+                            contentDescription = "신고",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier
+                                .clickable { onReportClick() }
+                                .padding(8.dp)
+                                .size(12.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(7.dp))
+                if (isCommentBlind) {
+                    Text(
+                        "신고가 접수되어 숨김 처리된 콘텐츠입니다.",
                         style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(end = 20.dp)
+                        color = MaterialTheme.colorScheme.onSecondary
+                    )
+                } else if (isEditing) {
+                    // 인라인 편집 모드
+                    TextField(
+                        value = editingText,
+                        onValueChange = { input ->
+                            limitLength(input, maxLength, context, onEditTextChange)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            cursorColor = MaterialTheme.colorScheme.primary
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
+
+                    )
+                    Row {
+                        TextButton(onClick = onEditSubmit) {
+                            Text(
+                                "저장",
+                                color = MaterialTheme.colorScheme.primary,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                        TextButton(onClick = onEditCancel) {
+                            Text(
+                                "취소",
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                        Spacer(modifier = Modifier.weight(1f))
+                        Text(
+                            "${editingText.length} / $maxLength",
+                            color = if (editingText.length >= maxLength)
+                                MaterialTheme.colorScheme.error
+                            else
+                                MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(end = 20.dp)
+                        )
+                    }
+                } else {
+                    Text(
+                        comment.content,
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
-            } else {
-                Text(
-                    comment.content,
-                    style = MaterialTheme.typography.bodySmall
-                )
             }
-        }
 
         // 본인 댓글이고 편집 중이 아닐 때만 수정/삭제 아이콘 표시
         if (isOwner && !isEditing) {
@@ -573,5 +637,105 @@ fun limitLength(input: String, maxLength: Int, context: Context, onValueChange: 
         onValueChange(input)
     } else {
         Toast.makeText(context, "${maxLength}자 이하로 입력해주세요.", Toast.LENGTH_SHORT).show()
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ReportBottomSheet(
+    selectedReason: ReportReason?,
+    detailText: String,
+    isSubmitting: Boolean,
+    onReasonSelect: (ReportReason) -> Unit,
+    onDetailChange: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.background
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .imePadding()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Text(
+                "신고 사유 선택",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            ReportReason.entries.forEach { reason ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .selectable(
+                            selected = selectedReason == reason,
+                            onClick = { onReasonSelect(reason) }
+                        )
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = selectedReason == reason,
+                        onClick = null
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(reason.label, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+
+            if (selectedReason == ReportReason.OTHER) {
+                Spacer(modifier = Modifier.height(8.dp))
+                TextField(
+                    value = detailText,
+                    onValueChange = { if (it.length <= 200) onDetailChange(it) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged {
+                            if (it.isFocused) {
+                                scope.launch { sheetState.expand() }
+                            }
+                        },
+                    placeholder = {
+                        Text("상세 내용을 입력해주세요.", style = MaterialTheme.typography.labelMedium)
+                    },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    textStyle = MaterialTheme.typography.bodyMedium,
+                    maxLines = 4
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Button(
+                onClick = onConfirm,
+                enabled = selectedReason != null && !isSubmitting,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    if (isSubmitting) "신고 중..." else "신고하기",
+                    color = MaterialTheme.colorScheme.onError,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
     }
 }
