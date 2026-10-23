@@ -727,12 +727,12 @@ fun ReportBottomSheet(
                 onClick = onConfirm,
                 enabled = selectedReason != null && !isSubmitting,
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Text(
                     if (isSubmitting) "신고 중..." else "신고하기",
-                    color = MaterialTheme.colorScheme.onPrimary,
+                    color = MaterialTheme.colorScheme.onError,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
