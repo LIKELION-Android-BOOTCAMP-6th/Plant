@@ -167,18 +167,24 @@ class CommunityRepositoryImpl @Inject constructor(
         }
     )
 
-    override suspend fun deleteComment(postId: String, commentId: String): Result<Unit> = safeRunCatching {
-        val activityId = communityRemoteDataSource.deleteComment(postId, commentId)
+    override suspend fun deleteComment(postId: String, commentId: String): Result<Unit> {
+        val activityId = safeRunCatching {
+            communityRemoteDataSource.deleteComment(postId, commentId)
+        }.fold(
+            onSuccess = { Result.Success(it) },
+            onFailure = { e ->
+                Log.e("Community", "댓글 삭제 실패", e)
+                return Result.Failure(handleError(e, "댓글 삭제에 실패했습니다.", isWrite = true))
+            }
+        ).let { (it as Result.Success).data }
+
         if (!activityId.isNullOrEmpty()) {
-            communityRemoteDataSource.deleteActivity(activityId)
+            safeRunCatching { communityRemoteDataSource.deleteActivity(activityId) }
+                .onFailure { Log.e("Community", "activity 삭제 실패 (댓글은 삭제됨): $activityId", it) }
         }
-    }.fold(
-        onSuccess = { Result.Success(Unit) },
-        onFailure = { e ->
-            Log.e("Community", "댓글 삭제 실패", e)
-            Result.Failure(handleError(e, "댓글 삭제에 실패했습니다.", isWrite = true))
-        }
-    )
+
+        return Result.Success(Unit)
+    }
 
     override fun observeActivity(selected: String): Flow<List<CommunityActivity>> {
         if (currentUid.isEmpty()) {
