@@ -121,7 +121,7 @@ fun StudyingGoalCheckDialog(
                     StudyingGoalCheckMode.CHECK -> {
                         Button(
                             onClick = onDismiss,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 7.dp),
+                            modifier = Modifier.padding(bottom = 7.dp),
                             shape = RoundedCornerShape(8.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(0.7f))
                         ) { Text("닫기", style = MaterialTheme.typography.bodySmall) }
