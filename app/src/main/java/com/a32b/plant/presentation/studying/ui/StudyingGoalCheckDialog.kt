@@ -90,41 +90,49 @@ fun StudyingGoalCheckDialog(
                     }
                 }
 
-                TextButton(onClick = {onEdit(-1)}) {
+                TextButton(onClick = { onEdit(-1) }) {
                     Text(
                         "추가하기",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
                         textDecoration = TextDecoration.Underline
                     )
                 }
 
-
                 when (mode) {
                     StudyingGoalCheckMode.FINISH -> {
-                        Row(modifier = Modifier.fillMaxWidth().padding(7.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(7.dp),
+                            horizontalArrangement = Arrangement.End,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Button(
                                 onClick = onDismiss,
                                 shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.height(33.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.outline)
                             ) { Text("취소", style = MaterialTheme.typography.bodySmall) }
-
+                            Spacer(Modifier.width(8.dp))
                             Button(
                                 onClick = onConfirm,
                                 shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.height(33.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(0.7f))
                             ) { Text("종료", style = MaterialTheme.typography.bodySmall) }
                         }
                     }
                     StudyingGoalCheckMode.CHECK -> {
-                        Button(
-                            onClick = onDismiss,
-                            modifier = Modifier.padding(bottom = 7.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(0.7f))
-                        ) { Text("닫기", style = MaterialTheme.typography.bodySmall) }
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(7.dp),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Button(
+                                onClick = onDismiss,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.height(33.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                            ) { Text("닫기", style = MaterialTheme.typography.bodySmall) }
+                        }
                     }
                 }
             }
