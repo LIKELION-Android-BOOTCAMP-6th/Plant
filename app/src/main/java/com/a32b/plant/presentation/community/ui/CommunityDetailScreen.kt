@@ -357,7 +357,7 @@ fun CommunityDetailScreen(
                                             modifier = Modifier.size(22.dp)
                                         )
                                     }
-                                } else {
+                                } else if (!isPostBlind) {
                                     IconButton(onClick = { viewModel.openPostReportSheet() }) {
                                         Icon(
                                             painter = painterResource(R.drawable.ic_siren_report),
@@ -427,6 +427,7 @@ fun CommentRow(
         ProfileImage(comment.user.profileImg, 24)
         Spacer(Modifier.width(5.dp))
         Column(modifier = Modifier.weight(1f)) {
+                val isCommentBlind = comment.isHidden || comment.reportCount >= 5
                 // 닉네임 + 작성 시간을 한 줄에 표시
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -438,7 +439,7 @@ fun CommentRow(
                         text = comment.createdAt?.let { TimeFormatter.formatTimeWithClock(it) } ?: "",
                         style = MaterialTheme.typography.labelMedium
                     )
-                    if (!isOwner && !isEditing) {
+                    if (!isOwner && !isEditing && !isCommentBlind) {
                         Spacer(Modifier.width(6.dp))
                         Icon(
                             painter = painterResource(R.drawable.ic_siren_report),
@@ -451,9 +452,6 @@ fun CommentRow(
                     }
                 }
                 Spacer(modifier = Modifier.height(7.dp))
-
-
-                val isCommentBlind = comment.isHidden || comment.reportCount >= 5
                 if (isCommentBlind) {
                     Text(
                         "신고가 접수되어 숨김 처리된 콘텐츠입니다.",

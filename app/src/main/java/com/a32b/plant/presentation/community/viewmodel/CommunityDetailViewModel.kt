@@ -469,7 +469,7 @@ class CommunityDetailViewModel @Inject constructor(
                 targetId = state.reportTargetId,
                 parentPostId = parentPostId,
                 reason = reason,
-                detail = state.reportDetailText.takeIf { it.isNotBlank() }
+                detail = state.reportDetailText
             )
                 .onSuccess {
                     _uiState.update { it.copy(showReportSheet = false) }
