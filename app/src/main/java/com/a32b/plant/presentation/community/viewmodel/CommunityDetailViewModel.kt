@@ -442,7 +442,12 @@ class CommunityDetailViewModel @Inject constructor(
     }
 
     fun selectReportReason(reason: ReportReason) {
-        _uiState.update { it.copy(selectedReportReason = reason) }
+        _uiState.update {
+            it.copy(
+                selectedReportReason = reason,
+                reportDetailText = if (reason == ReportReason.OTHER) it.reportDetailText else ""
+            )
+        }
     }
 
     fun onReportDetailChange(text: String) {
@@ -473,7 +478,7 @@ class CommunityDetailViewModel @Inject constructor(
                 }
                 .onFailure { e ->
                     when (e) {
-                        is AppError.UnknownUser -> ensureCurrentUserUseCase()
+                        is AppError.UnknownUser -> Unit
                         else -> sendToast(e.message)
                     }
                 }

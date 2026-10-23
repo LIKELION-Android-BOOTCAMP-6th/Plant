@@ -688,7 +688,7 @@ fun ReportBottomSheet(
                 ) {
                     RadioButton(
                         selected = selectedReason == reason,
-                        onClick = { onReasonSelect(reason) }
+                        onClick = null
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(reason.label, style = MaterialTheme.typography.bodyMedium)

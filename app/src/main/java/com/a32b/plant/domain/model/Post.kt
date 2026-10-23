@@ -31,8 +31,8 @@ data class Post(
     var isShared: Boolean?,
     val comments: List<Comment>,
     val updatedAt: Long?,
-    val reportCount: Int = 0,
-    val isHidden: Boolean = false
+    val reportCount: Int,
+    val isHidden: Boolean
 ){
     companion object{
         fun createOriginal(author: PostAuthor, title: String, content: String, tag: Tag) = Post(
@@ -51,7 +51,9 @@ data class Post(
             studyLogs = null,
             isShared = false,
             comments = emptyList(),
-            updatedAt = null
+            updatedAt = null,
+            reportCount = 0,
+            isHidden = false
         )
 
         fun createShared(author: PostAuthor, title: String, studyLogs: List<StudyLog>, tag: Tag, content: String? = null) = Post(
@@ -70,7 +72,9 @@ data class Post(
             studyLogs = studyLogs,
             isShared = true,
             comments = emptyList(),
-            updatedAt = null
+            updatedAt = null,
+            reportCount = 0,
+            isHidden = false
         )
 
     }
@@ -83,7 +87,7 @@ data class Comment(
     val content: String,
     val activityId: String,
     val createdAt: Long?,
-    val reportCount: Int = 0,
-    val isHidden: Boolean = false
+    val reportCount: Int,
+    val isHidden: Boolean
 )
 
