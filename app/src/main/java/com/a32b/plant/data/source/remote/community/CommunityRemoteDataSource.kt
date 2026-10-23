@@ -39,11 +39,10 @@ interface CommunityRemoteDataSource {
     suspend fun updateComment(postId: String, commentId: String, newContent: String)
     suspend fun deleteComment(postId: String, commentId: String): String?
 
-    suspend fun deleteActivityByType(uid: String, targetId: String, type: String)
-    suspend fun createActivity(activity: CommunityActivity)
-
     fun observeActivity(uid: String, selected: String): Flow<List<CommunityActivityDto>>
     suspend fun deleteActivity(activityId: String)
+    suspend fun deleteActivityByType(uid: String, targetId: String, type: String)
+    suspend fun createActivity(activity: CommunityActivity)
 
     suspend fun findCommentIdByActivityId(postId: String, activityId: String): String?
 

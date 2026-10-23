@@ -8,13 +8,13 @@ import com.a32b.plant.data.source.remote.community.CommunityRemoteDataSource
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.CommunityActivity
-import com.a32b.plant.domain.type.ActivityType
 import com.a32b.plant.domain.model.Post
 import com.a32b.plant.domain.model.PostPage
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.CommunityRepository
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
+import com.a32b.plant.domain.type.ActivityType
 import com.a32b.plant.core.extension.toLong
 import com.a32b.plant.core.extension.toTimestamp
 import com.google.firebase.firestore.FirebaseFirestoreException
