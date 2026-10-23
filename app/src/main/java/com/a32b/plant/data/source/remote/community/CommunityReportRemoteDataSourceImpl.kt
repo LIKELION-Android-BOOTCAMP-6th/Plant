@@ -30,6 +30,7 @@ class CommunityReportRemoteDataSourceImpl @Inject constructor(
         val reportData = buildMap<String, Any?> {
             put("targetType", targetType)
             put("targetId", targetId)
+            put("parentPostId", parentPostId)
             put("reporterId", reporterUid)
             put("reason", reason)
             put("detail", detail)
