@@ -96,7 +96,7 @@ class CommunityDetailViewModel @Inject constructor(
     // 좋아요/북마크 디바운스 상태
     private var likeDebounceJob: Job? = null
     private var bookmarkDebounceJob: Job? = null
-    // delay 구간에서만 true — commitXXX() 시작 직전 false로 해제
+    // delay 구간에서만 true — 재진입 차단 + commitXXX() 시작 직전 false로 해제
     private var likePendingCommit = false
     private var bookmarkPendingCommit = false
 
@@ -220,8 +220,6 @@ class CommunityDetailViewModel @Inject constructor(
             likeCount = (currentPost.likeCount + delta).coerceAtLeast(0)
         )
 
-        // 디바운스: 이전 타이머 취소하고 새로 시작
-        likeDebounceJob?.cancel()
         likePendingCommit = true
         likeDebounceJob = viewModelScope.launch {
             delay(LIKE_DEBOUNCE)
@@ -243,7 +241,6 @@ class CommunityDetailViewModel @Inject constructor(
             bookmarkCount = (currentPost.bookmarkCount + delta).coerceAtLeast(0)
         )
 
-        bookmarkDebounceJob?.cancel()
         bookmarkPendingCommit = true
         bookmarkDebounceJob = viewModelScope.launch {
             delay(BOOKMARK_DEBOUNCE)
