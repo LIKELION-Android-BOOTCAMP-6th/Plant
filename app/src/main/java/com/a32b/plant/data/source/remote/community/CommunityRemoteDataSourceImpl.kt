@@ -228,13 +228,13 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             .firstOrNull()?.reference?.update("comment", newContent)?.await()
     }
 
-    override suspend fun deleteComment(postId: String, commentId: String) {
+    override suspend fun deleteComment(postId: String, commentId: String): String? {
         val commentRef = db.collection("posts").document(postId)
             .collection("comments").document(commentId)
         val postRef = commentRef.parent.parent!!
 
         // exists() 체크 → delete() → commentCount 감소를 트랜잭션으로 묶어 TOCTOU 방지 + 포스트 부재 시 NOT_FOUND 방어
-        val activityId = db.runTransaction { txn ->
+        return db.runTransaction { txn ->
             val commentSnapshot = txn.get(commentRef)
             if (!commentSnapshot.exists()) return@runTransaction null
 
@@ -246,10 +246,6 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             }
             actId
         }.await()
-
-        if (!activityId.isNullOrEmpty()) {
-            deleteActivity(DeleteActivityRequest.ById(activityId))
-        }
     }
 
     private suspend fun getActivityId(postId: String): String {

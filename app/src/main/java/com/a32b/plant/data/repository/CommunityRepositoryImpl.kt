@@ -168,7 +168,10 @@ class CommunityRepositoryImpl @Inject constructor(
     )
 
     override suspend fun deleteComment(postId: String, commentId: String): Result<Unit> = safeRunCatching {
-        communityRemoteDataSource.deleteComment(postId, commentId)
+        val activityId = communityRemoteDataSource.deleteComment(postId, commentId)
+        if (!activityId.isNullOrEmpty()) {
+            communityRemoteDataSource.deleteActivity(activityId)
+        }
     }.fold(
         onSuccess = { Result.Success(Unit) },
         onFailure = { e ->
