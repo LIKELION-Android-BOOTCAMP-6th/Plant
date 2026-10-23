@@ -108,15 +108,19 @@ class CommunityRepositoryImpl @Inject constructor(
         }
     )
 
-    override suspend fun updatePost(isShared: Boolean, postId: String, title: String, content: String?, tag: Tag?): Result<Unit> = safeRunCatching {
-        communityRemoteDataSource.updatePost(isShared, postId, title, content, tag?.toDto())
-    }.fold(
-        onSuccess = { Result.Success(Unit) },
-        onFailure = { e ->
+    override suspend fun updatePost(isShared: Boolean, postId: String, title: String, content: String?, tag: Tag?): Result<Unit> {
+        safeRunCatching {
+            communityRemoteDataSource.updatePost(isShared, postId, title, content, tag?.toDto())
+        }.onFailure { e ->
             Log.e("Community", "게시글 수정 실패", e)
-            Result.Failure(handleError(e, "게시글 수정에 실패했습니다.", isWrite = true))
+            return Result.Failure(handleError(e, "게시글 수정에 실패했습니다.", isWrite = true))
         }
-    )
+
+        safeRunCatching { communityRemoteDataSource.updateActivityTitle(postId, title) }
+            .onFailure { Log.e("Community", "activity title 업데이트 실패 (게시글은 수정됨): postId=$postId", it) }
+
+        return Result.Success(Unit)
+    }
 
     override suspend fun deletePost(postId: String, activityId: String): Result<Unit> {
         safeRunCatching {

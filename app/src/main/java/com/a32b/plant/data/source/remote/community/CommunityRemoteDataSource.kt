@@ -30,6 +30,7 @@ interface CommunityRemoteDataSource {
 
     suspend fun savePost(post: PostDto, activity: CommunityActivityDto): String
     suspend fun updatePost(isShared: Boolean, postId: String, title: String, content: String?, tag: TagDto?)
+    suspend fun updateActivityTitle(postId: String, title: String)
     suspend fun deletePost(postId: String)
 
     suspend fun toggleLike(postId: String, uid: String): Boolean
