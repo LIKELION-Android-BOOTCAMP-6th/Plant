@@ -385,8 +385,8 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
         },
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 10.dp, vertical = 8.dp)
-            .height(56.dp),
+            .padding(horizontal = 10.dp, vertical = 4.dp)
+            .height(48.dp),
         shape = RoundedCornerShape(12.dp),
         textStyle = MaterialTheme.typography.bodyMedium,
         trailingIcon = {
