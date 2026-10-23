@@ -121,18 +121,15 @@ fun StudyingGoalCheckDialog(
                         }
                     }
                     StudyingGoalCheckMode.CHECK -> {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(7.dp),
-                            horizontalArrangement = Arrangement.End,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Button(
-                                onClick = onDismiss,
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.height(33.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-                            ) { Text("닫기", style = MaterialTheme.typography.bodySmall) }
-                        }
+                        Button(
+                            onClick = onDismiss,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier
+                                .align(Alignment.End)
+                                .padding(end = 7.dp, bottom = 7.dp)
+                                .height(33.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                        ) { Text("닫기", style = MaterialTheme.typography.bodySmall) }
                     }
                 }
             }
