@@ -261,6 +261,7 @@ class StudyingViewModel @Inject constructor(
     fun onStartEditing(index: Int) {
         savedGoalCheckMode = _uiState.value.goalCheckMode
         _uiState.update { state ->
+            // index == -1 분기 로직은 onIsEditingChanged와 동일 — 한쪽 변경 시 같이 수정 필요
             val newState = if (index == -1) {
                 val newLog = state.studyLog + StudyLogUi()
                 state.copy(studyLog = newLog, isEditing = true, logIndex = newLog.lastIndex)
