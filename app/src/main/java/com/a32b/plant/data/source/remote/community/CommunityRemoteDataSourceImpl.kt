@@ -207,14 +207,12 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         val commentWithAct = comment.copy(activityId = activityRef.id, commentId = commentRef.id)
         val activityWithCo = activity.copy(targetId = postId, commentId = commentRef.id)
 
+        val postRef = commentRef.parent.parent!!
         db.runBatch { batch ->
             batch.set(commentRef, commentWithAct.toDto())
             batch.set(activityRef, activityWithCo.toDto())
+            batch.update(postRef, "commentCount", FieldValue.increment(1))
         }.await()
-
-        db.collection("posts").document(postId)
-            .update("commentCount", FieldValue.increment(1))
-            .await()
     }
 
     override suspend fun updateComment(postId: String, commentId: String, newContent: String) {
@@ -231,23 +229,27 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
     }
 
     override suspend fun deleteComment(postId: String, commentId: String) {
-        val commentDoc = db.collection("posts").document(postId)
+        val commentRef = db.collection("posts").document(postId)
             .collection("comments").document(commentId)
+        val postRef = commentRef.parent.parent!!
 
-        val snapshot = commentDoc.get().await()
-        if (!snapshot.exists()) return
+        // exists() 체크 → delete() → commentCount 감소를 트랜잭션으로 묶어 TOCTOU 방지 + 포스트 부재 시 NOT_FOUND 방어
+        val activityId = db.runTransaction { txn ->
+            val commentSnapshot = txn.get(commentRef)
+            if (!commentSnapshot.exists()) return@runTransaction null
 
-        val activityId = snapshot.getString("activityId")
-
-        commentDoc.delete().await()
+            val postSnapshot = txn.get(postRef)
+            val actId = commentSnapshot.getString("activityId")
+            txn.delete(commentRef)
+            if (postSnapshot.exists()) {
+                txn.update(postRef, "commentCount", FieldValue.increment(-1))
+            }
+            actId
+        }.await()
 
         if (!activityId.isNullOrEmpty()) {
             deleteActivity(DeleteActivityRequest.ById(activityId))
         }
-
-        db.collection("posts").document(postId)
-            .update("commentCount", FieldValue.increment(-1))
-            .await()
     }
 
     private suspend fun getActivityId(postId: String): String {
@@ -277,7 +279,7 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
                 }
 
                 val activities = snapshots?.documents?.mapNotNull { doc ->
-                    runCatching { doc.toObject(CommunityActivityDto::class.java)}.getOrNull()
+                    safeRunCatching { doc.toObject(CommunityActivityDto::class.java) }.getOrNull()
                 } ?: emptyList()
 
                 trySend(activities)
