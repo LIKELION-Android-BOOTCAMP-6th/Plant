@@ -210,11 +210,8 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         db.runBatch { batch ->
             batch.set(commentRef, commentWithAct.toDto())
             batch.set(activityRef, activityWithCo.toDto())
+            batch.update(db.collection("posts").document(postId), "commentCount", FieldValue.increment(1))
         }.await()
-
-        db.collection("posts").document(postId)
-            .update("commentCount", FieldValue.increment(1))
-            .await()
     }
 
     override suspend fun updateComment(postId: String, commentId: String, newContent: String) {
@@ -233,16 +230,20 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
     override suspend fun deleteComment(postId: String, commentId: String) {
         val commentRef = db.collection("posts").document(postId)
             .collection("comments").document(commentId)
-        val postRef = db.collection("posts").document(postId)
+        val postRef = commentRef.parent.parent!!
 
         // exists() 체크 → delete() → commentCount 감소를 트랜잭션으로 묶어 TOCTOU 방지
+        // postRef도 읽어두어 포스트가 없는 엣지케이스에서 NOT_FOUND 실패를 방지
         val activityId = db.runTransaction { txn ->
-            val snapshot = txn.get(commentRef)
-            if (!snapshot.exists()) return@runTransaction null
+            val commentSnapshot = txn.get(commentRef)
+            val postSnapshot = txn.get(postRef)
+            if (!commentSnapshot.exists()) return@runTransaction null
 
-            val actId = snapshot.getString("activityId")
+            val actId = commentSnapshot.getString("activityId")
             txn.delete(commentRef)
-            txn.update(postRef, "commentCount", FieldValue.increment(-1))
+            if (postSnapshot.exists()) {
+                txn.update(postRef, "commentCount", FieldValue.increment(-1))
+            }
             actId
         }.await()
 
@@ -278,7 +279,7 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
                 }
 
                 val activities = snapshots?.documents?.mapNotNull { doc ->
-                    runCatching { doc.toObject(CommunityActivityDto::class.java)}.getOrNull()
+                    safeRunCatching { doc.toObject(CommunityActivityDto::class.java) }.getOrNull()
                 } ?: emptyList()
 
                 trySend(activities)
