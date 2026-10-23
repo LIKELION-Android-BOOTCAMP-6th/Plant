@@ -30,7 +30,9 @@ data class Post(
     val studyLogs: List<StudyLog>?,
     var isShared: Boolean?,
     val comments: List<Comment>,
-    val updatedAt: Long?
+    val updatedAt: Long?,
+    val reportCount: Int = 0,
+    val isHidden: Boolean = false
 ){
     companion object{
         fun createOriginal(author: PostAuthor, title: String, content: String, tag: Tag) = Post(
@@ -80,6 +82,8 @@ data class Comment(
     val user: CommentUser,      // ERD: user { id, nickname, profileImg }
     val content: String,
     val activityId: String,
-    val createdAt: Long?
+    val createdAt: Long?,
+    val reportCount: Int = 0,
+    val isHidden: Boolean = false
 )
 
