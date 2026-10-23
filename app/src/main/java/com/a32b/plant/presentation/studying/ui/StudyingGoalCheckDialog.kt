@@ -46,7 +46,6 @@ fun StudyingGoalCheckDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    val showActionRow = mode != StudyingGoalCheckMode.CHECK
     Dialog(onDismiss) {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -100,22 +99,32 @@ fun StudyingGoalCheckDialog(
                 }
 
 
-                if (showActionRow){
-                    Row(modifier = Modifier.fillMaxWidth().padding(7.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                when (mode) {
+                    StudyingGoalCheckMode.FINISH -> {
+                        Row(modifier = Modifier.fillMaxWidth().padding(7.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Button(
+                                onClick = onDismiss,
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.outline)
+                            ) { Text("취소", style = MaterialTheme.typography.bodySmall) }
+
+                            Button(
+                                onClick = onConfirm,
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(0.7f))
+                            ) { Text("종료", style = MaterialTheme.typography.bodySmall) }
+                        }
+                    }
+                    StudyingGoalCheckMode.CHECK -> {
                         Button(
                             onClick = onDismiss,
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.outline)
-                        ) { Text("취소", style = MaterialTheme.typography.bodySmall)}
-
-                        Button(
-                            onClick = onConfirm,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 7.dp),
                             shape = RoundedCornerShape(8.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(0.7f))
-                        ) { Text("종료", style = MaterialTheme.typography.bodySmall )}
+                        ) { Text("닫기", style = MaterialTheme.typography.bodySmall) }
                     }
                 }
             }
