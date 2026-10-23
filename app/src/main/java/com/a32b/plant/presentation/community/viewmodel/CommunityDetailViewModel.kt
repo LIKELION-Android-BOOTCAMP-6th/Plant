@@ -210,6 +210,7 @@ class CommunityDetailViewModel @Inject constructor(
     fun toggleLike() {
         val currentPost = _post.value ?: return
         if (currentPost.author.id == _uiState.value.currentUid) return
+        if (likePendingCommit) return
 
         // 낙관적 UI: 로컬 즉시 토글
         val newIsLiked = !currentPost.isLiked
@@ -233,6 +234,7 @@ class CommunityDetailViewModel @Inject constructor(
 
     fun toggleBookmark() {
         val currentPost = _post.value ?: return
+        if (bookmarkPendingCommit) return
 
         val newIsBookmarked = !currentPost.isBookmarked
         val delta = if (newIsBookmarked) 1 else -1
