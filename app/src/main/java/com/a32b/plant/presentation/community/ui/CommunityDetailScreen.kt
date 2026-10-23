@@ -446,8 +446,9 @@ fun CommentRow(
                             contentDescription = "신고",
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier
-                                .size(12.dp)
                                 .clickable { onReportClick() }
+                                .padding(8.dp)
+                                .size(12.dp)
                         )
                     }
                 }
@@ -467,8 +468,8 @@ fun CommentRow(
                         },
                         modifier = Modifier.fillMaxWidth(),
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             focusedTextColor = MaterialTheme.colorScheme.onSurface,
@@ -709,8 +710,8 @@ fun ReportBottomSheet(
                         Text("상세 내용을 입력해주세요.", style = MaterialTheme.typography.labelMedium)
                     },
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent
                     ),
