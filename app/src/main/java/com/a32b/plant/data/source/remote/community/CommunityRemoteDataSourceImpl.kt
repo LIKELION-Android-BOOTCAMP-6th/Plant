@@ -231,23 +231,24 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
     }
 
     override suspend fun deleteComment(postId: String, commentId: String) {
-        val commentDoc = db.collection("posts").document(postId)
+        val commentRef = db.collection("posts").document(postId)
             .collection("comments").document(commentId)
+        val postRef = db.collection("posts").document(postId)
 
-        val snapshot = commentDoc.get().await()
-        if (!snapshot.exists()) return
+        // exists() 체크 → delete() → commentCount 감소를 트랜잭션으로 묶어 TOCTOU 방지
+        val activityId = db.runTransaction { txn ->
+            val snapshot = txn.get(commentRef)
+            if (!snapshot.exists()) return@runTransaction null
 
-        val activityId = snapshot.getString("activityId")
-
-        commentDoc.delete().await()
+            val actId = snapshot.getString("activityId")
+            txn.delete(commentRef)
+            txn.update(postRef, "commentCount", FieldValue.increment(-1))
+            actId
+        }.await()
 
         if (!activityId.isNullOrEmpty()) {
             deleteActivity(DeleteActivityRequest.ById(activityId))
         }
-
-        db.collection("posts").document(postId)
-            .update("commentCount", FieldValue.increment(-1))
-            .await()
     }
 
     private suspend fun getActivityId(postId: String): String {
