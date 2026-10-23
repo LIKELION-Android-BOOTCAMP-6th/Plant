@@ -69,6 +69,9 @@ class CommunityPostViewModel @Inject constructor(
     init {
         fetchTags()
         onIsSharedChange()
+        if (postId == null && potId == null) {
+            _uiState.update { it.copy(isTagSheetShown = true) }
+        }
     }
     fun onIsTagSheetShownChange() {
         if (!_uiState.value.isShared) {
@@ -135,7 +138,7 @@ class CommunityPostViewModel @Inject constructor(
 
     fun onSelectedTagChange(tag:Tag) {
         if (!_uiState.value.isShared) {
-            _uiState.update { it.copy(selected = tag) }
+            _uiState.update { it.copy(selected = tag, isTagSheetShown = false) }
         }
     }
     fun onIsDismissDialogShowChange() = _uiState.update { it.copy(isDismissDialogShow = !it.isDismissDialogShow) }
