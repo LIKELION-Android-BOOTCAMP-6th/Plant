@@ -174,11 +174,11 @@ class CommunityPostViewModel @Inject constructor(
                         tag = if (isShared) null else selectedTag
                     )
                 }.onSuccess {
-                    sendToast("수정되었습니다!")
+                    _eventChannel.send(CommunityPostEvent.ShowToast("수정되었습니다!"))
                     _eventChannel.send(CommunityPostEvent.NavigateToDetail(postId!!))
                 }.onFailure { e ->
                     Log.e("CommunityPostVM", "게시글 수정 실패: ${e.message}")
-                    sendToast("등록에 실패했습니다.")
+                    _eventChannel.send(CommunityPostEvent.ShowToast("수정에 실패했습니다."))
                 }
             } else {
                 if (!postCooldownManager.canPost()) {
@@ -199,11 +199,11 @@ class CommunityPostViewModel @Inject constructor(
                 }.onSuccess { newPostId ->
                     postCooldownManager.recordPost()
                     postId = newPostId
-                    sendToast("성공적으로 등록되었습니다!")
+                    _eventChannel.send(CommunityPostEvent.ShowToast("성공적으로 등록되었습니다!"))
                     _eventChannel.send(CommunityPostEvent.NavigateToDetail(newPostId))
                 }.onFailure { e ->
                     Log.e("CommunityPostVM", "게시글 등록 실패: ${e.message}")
-                    sendToast("등록에 실패했습니다.")
+                    _eventChannel.send(CommunityPostEvent.ShowToast("등록에 실패했습니다."))
                 }
             }
 
