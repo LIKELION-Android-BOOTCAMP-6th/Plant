@@ -22,7 +22,7 @@ val sub_green2 = Color(0xFF3F9661)
 //노란 색상
 val sub_yellow = Color(0xFFF2C94C)
 
-//서브 1 - 하단 바
+//서브 1
 val bottom = Color(0xFFE0C8A4)
 //서브 2
 val sub2 = Color(0xFFEEF0E7)
