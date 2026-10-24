@@ -1,9 +1,9 @@
 package com.a32b.plant.data.session
 
+import android.util.Log
 import com.a32b.plant.domain.session.SessionExpiredNotifier
 import com.a32b.plant.domain.session.SessionExpiredObserver
 import com.a32b.plant.domain.session.SessionExpiredReason
-import android.util.Log
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow

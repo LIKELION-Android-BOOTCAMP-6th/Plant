@@ -17,7 +17,6 @@ import com.a32b.plant.domain.session.SessionExpiredReason
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -216,8 +215,6 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     private fun handleError(e: Throwable, logMessage: String): AppError {
-        if (e is CancellationException) throw e
-
         Log.e("UserRepository", "$logMessage: ${e.message}", e)
 
         return when (e) {
