@@ -24,8 +24,8 @@ import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.a32b.plant.R
-import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.theme.sub_green2
+import com.a32b.plant.core.navigation.Routes
 
 @Composable
 fun BottomBar(navController: NavController, enabled: Boolean = true) {
@@ -143,7 +143,7 @@ private fun BottomBarItem(
             .clickable(enabled = enabled) { onClick() }
             .padding(vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp)
+        verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
         Image(
             painter = painterResource(id = iconRes),
@@ -153,7 +153,7 @@ private fun BottomBarItem(
         )
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.bodySmall,
             color = tintColor
         )
     }
