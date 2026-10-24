@@ -24,8 +24,8 @@ class ItemRepositoryImpl @Inject constructor(
         onFailure = { e -> Result.Failure(handleError(e, "알 수 없는 오류가 발생했습니다."))}
     )
 
-    override suspend fun openBonusBoxes(uid: String, items: List<ItemType>): Result<Unit> = safeRunCatching {
-        itemRemoteDataSource.openBonusBoxes(uid, items)
+    override suspend fun openBonusBoxes(uid: String, boxCount: Int, items: List<ItemType>): Result<Unit> = safeRunCatching {
+        itemRemoteDataSource.openBonusBoxes(uid, boxCount, items)
     }.fold(
         onSuccess = { Result.Success(Unit)},
         onFailure = { e -> Result.Failure(handleError(e, "알 수 없는 오류가 발생했습니다."))}

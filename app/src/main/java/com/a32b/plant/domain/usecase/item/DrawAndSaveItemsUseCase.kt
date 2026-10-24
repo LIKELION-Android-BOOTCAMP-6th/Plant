@@ -18,7 +18,7 @@ class DrawAndSaveItemsUseCase @Inject constructor(
         val drawItems = Random.drawItems(count)
 
         val result = if (isBoxOpened) {
-            repository.openBonusBoxes(uid, drawItems)
+            repository.openBonusBoxes(uid, count, drawItems)
         } else {
             repository.addDrawItems(uid, drawItems)
         }
