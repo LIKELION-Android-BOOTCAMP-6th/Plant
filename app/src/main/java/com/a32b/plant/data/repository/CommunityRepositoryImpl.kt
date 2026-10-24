@@ -192,15 +192,19 @@ class CommunityRepositoryImpl @Inject constructor(
         }
     )
 
-    override suspend fun updateComment(postId: String, commentId: String, newContent: String): Result<Unit> = safeRunCatching {
-        communityRemoteDataSource.updateComment(postId, commentId, newContent)
-    }.fold(
-        onSuccess = { Result.Success(Unit) },
-        onFailure = { e ->
+    override suspend fun updateComment(postId: String, commentId: String, newContent: String): Result<Unit> {
+        safeRunCatching {
+            communityRemoteDataSource.updateComment(postId, commentId, newContent)
+        }.onFailure { e ->
             Log.e("Community", "댓글 수정 실패", e)
-            Result.Failure(handleError(e, "댓글 수정에 실패했습니다.", isWrite = true))
+            return Result.Failure(handleError(e, "댓글 수정에 실패했습니다.", isWrite = true))
         }
-    )
+
+        safeRunCatching { communityRemoteDataSource.updateActivityComment(commentId, newContent) }
+            .onFailure { Log.e("Community", "activity comment 업데이트 실패 (댓글은 수정됨): commentId=$commentId", it) }
+
+        return Result.Success(Unit)
+    }
 
     override suspend fun deleteComment(postId: String, commentId: String): Result<Unit> {
         val activityId = safeRunCatching {

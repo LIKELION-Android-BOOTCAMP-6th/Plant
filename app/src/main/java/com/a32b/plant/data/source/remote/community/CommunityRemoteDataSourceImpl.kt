@@ -206,12 +206,15 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             .collection("comments").document(commentId)
             .update("content", newContent)
             .await()
+    }
 
-        db.collection("activities").whereEqualTo("commentId", commentId)
+    override suspend fun updateActivityComment(commentId: String, content: String) {
+        db.collection("activities")
+            .whereEqualTo("commentId", commentId)
             .get()
             .await()
             .documents
-            .firstOrNull()?.reference?.update("comment", newContent)?.await()
+            .firstOrNull()?.reference?.update("comment", content)?.await()
     }
 
     override suspend fun deleteComment(postId: String, commentId: String): String? {
