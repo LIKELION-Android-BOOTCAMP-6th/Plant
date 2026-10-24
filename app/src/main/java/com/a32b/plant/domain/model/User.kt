@@ -70,10 +70,8 @@ data class User(
     val totalStudyTime: Long,
     val gold: Int,
     val monthCheck: DailyCheckThisMonth,
-    val item: Item
-    //===아이템===
-
-
+    val item: Item,
+    val activeSessionToken: String?
 ) {
     companion object{
         fun create() = User(
@@ -88,8 +86,8 @@ data class User(
                 count = 0,
                 lastCheckedAt = null
             ),
-            item = Item(0,0,0,0,0,0)
-
+            item = Item(0,0,0,0,0,0),
+            activeSessionToken = null
         )
     }
 }

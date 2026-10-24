@@ -31,6 +31,7 @@ interface UserRepository {
     suspend fun registerNickname(nickname: String): Result<Unit>
     suspend fun deleteNickname(nickname: String): Result<Unit>
     suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success>
+    suspend fun updateSessionToken(uid: String, token: String?): Result<Unit>
     suspend fun deleteUserData(uid: String): Result<Unit>
 
 }

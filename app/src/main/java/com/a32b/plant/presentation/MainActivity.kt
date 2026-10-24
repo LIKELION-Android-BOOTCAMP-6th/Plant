@@ -1,7 +1,6 @@
 package com.a32b.plant.presentation
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -31,8 +30,9 @@ import androidx.navigation.compose.rememberNavController
 import com.a32b.plant.core.navigation.PlantAppNavigation
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.domain.model.StudyingSession
-import com.a32b.plant.domain.repository.AuthRepository
 import com.a32b.plant.domain.session.SessionExpiredObserver
+import com.a32b.plant.domain.usecase.auth.SignOutUseCase
+import com.a32b.plant.domain.session.SessionExpiredReason
 import com.a32b.plant.presentation.core.component.BottomBar
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
@@ -49,11 +49,10 @@ class MainActivity : ComponentActivity() {
     lateinit var sessionExpiredObserver: SessionExpiredObserver
 
     @Inject
-    lateinit var authRepository: AuthRepository
+    lateinit var signOutUseCase: SignOutUseCase
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
-        Log.d("plantLog", "-----MainActivity")
         val splashScreen = installSplashScreen()
         splashScreen.setKeepOnScreenCondition {
             //해당 값이 트루일 동안 스플래시 유지
@@ -79,31 +78,42 @@ class MainActivity : ComponentActivity() {
                     2. 로그인 화면으로 이동
                     3. 유저 정보 조회 실패 다이얼로그 표출
                      */
-                    var isSessionDialogShown by rememberSaveable { mutableStateOf(false) }
+                    var sessionExpiredReasonOrdinal by rememberSaveable { mutableStateOf<Int?>(null) }
+                    val sessionExpiredReason = sessionExpiredReasonOrdinal?.let { SessionExpiredReason.entries[it] }
                     val lifecycleOwner = LocalLifecycleOwner.current
 
                     LaunchedEffect(Unit) {
                         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            sessionExpiredObserver.event.collect {
-                                authRepository.signOut()
+                            sessionExpiredObserver.event.collect { reason ->
+                                val alreadyAtSignIn = navController.currentBackStackEntry
+                                    ?.destination?.hasRoute<Routes.SignIn>() == true
+                                if (alreadyAtSignIn) return@collect
+
+                                signOutUseCase()
 
                                 navController.navigate(Routes.SignIn) {
                                     popUpTo(0) { inclusive = true }
                                 }
 
-                                isSessionDialogShown = true
+                                sessionExpiredReasonOrdinal = reason.ordinal
                             }
                         }
-
-
                     }
 
-                    if (isSessionDialogShown) {
+                    if (sessionExpiredReason != null) {
+                        val (text, semiText) = when (sessionExpiredReason) {
+                            SessionExpiredReason.DUPLICATE_LOGIN ->
+                                "다른 기기에서 로그인되었습니다." to "보안을 위해 자동 로그아웃 됩니다."
+                            SessionExpiredReason.USER_NOT_FOUND ->
+                                "로그인한 유저의 정보를 찾을 수 없습니다." to "다시 로그인해 주세요."
+                        }
                         ConfirmDialog(
-                            text = "로그인한 유저의 정보를 찾을 수 없습니다.",
-                            semiText = "다시 로그인해 주세요.",
+                            text = text,
+                            semiText = semiText,
+                            isSingleBtn = true,
+                            confirmBtnText = "확인",
                             onDismiss = {},
-                            onConfirm = { isSessionDialogShown = false }
+                            onConfirm = { sessionExpiredReasonOrdinal = null }
                         )
                     }
 
