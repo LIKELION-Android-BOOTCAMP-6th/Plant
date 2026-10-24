@@ -82,6 +82,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
     var bonusBoxResult by remember { mutableStateOf<List<ItemType>?>(null) }
     var showOpenDialog by remember { mutableStateOf(false) }
 
+    val uiState by viewModel.uiState.collectAsState()
     val todayStudyTime by viewModel.todayStudyTime.collectAsState()
 
     val hasNoPot = displayPot.id.isEmpty() || displayPot == Pot.EMPTY
@@ -110,6 +111,15 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
             isSingleBtn = true,
             onDismiss = viewModel::dismissAttendanceReward,
             onConfirm = viewModel::dismissAttendanceReward
+        )
+    }
+
+    if (uiState.showInsufficientItemsDialog) {
+        ConfirmDialog(
+            text = "아이템이 부족합니다",
+            semiText = "아이템 상점에서 구매할 수 있어요.",
+            onDismiss = { viewModel.onDismissInsufficientDialog() },
+            onConfirm = { viewModel.onDismissInsufficientDialog() }
         )
     }
 
@@ -152,6 +162,9 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                         displayPot = displayPot,
                         hasNoPot = hasNoPot,
                         todayStudyTime = todayStudyTime,
+                        levelUpProgress = uiState.levelUpProgress,
+                        levelUpProgressText = uiState.levelUpProgressText,
+                        levelUpAvailable = uiState.levelUpAvailable,
                         onStartClick = {
                             if (!hasNoPot) {
                                 navController.navigate(
@@ -162,6 +175,11 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                                         title = displayPot.name.ifEmpty { "공부 목표" },
                                         level = "Lv.${displayPot.potLevel}"
                                     ))
+                            }
+                        },
+                        onLevelUpClick = {
+                            if (!hasNoPot) {
+                                viewModel.onLevelUpClick(displayPot.id, displayPot.potLevel)
                             }
                         },
                         //화분 생성 이동 or 화분 변경 다이얼로그 오픈
@@ -440,7 +458,11 @@ fun MainPlantCard(
     displayPot: Pot,
     hasNoPot: Boolean,
     todayStudyTime: String,
+    levelUpProgress: Float,
+    levelUpProgressText: String,
+    levelUpAvailable: Boolean,
     onStartClick: () -> Unit,
+    onLevelUpClick: () -> Unit,
     onChangeOrMakeClick: () -> Unit,
     onRecordClick: () -> Unit
 ) {
@@ -527,14 +549,14 @@ fun MainPlantCard(
                             color = MaterialTheme.colorScheme.onSecondary
                         )
                         Text(
-                            text = "60% (30분/50분)", // 예시 텍스트 (추후 뷰모델 데이터와 연결)
+                            text = levelUpProgressText,
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSecondary,
                         )
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     LinearProgressIndicator(
-                        progress = { 0.6f }, // 예시 진행률 (0.0f ~ 1.0f)
+                        progress = { levelUpProgress },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(8.dp)
@@ -543,6 +565,19 @@ fun MainPlantCard(
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                         drawStopIndicator = {}
                     )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = onLevelUpClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = levelUpAvailable,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text("화분 레벨업", style = MaterialTheme.typography.titleMedium)
                 }
             }
 
