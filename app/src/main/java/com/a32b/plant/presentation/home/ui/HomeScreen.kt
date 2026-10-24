@@ -78,7 +78,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
     val recoverySession by viewModel.recoverySession.collectAsState()
     val isRecovering by viewModel.isRecovering.collectAsState()
     val context = LocalContext.current
-    val boxCount by viewModel.boxCount.collectAsState()
+    val isBoxOpening by viewModel.isBoxOpening.collectAsState()
     var bonusBoxResult by remember { mutableStateOf<List<ItemType>?>(null) }
     var showOpenDialog by remember { mutableStateOf(false) }
 
@@ -185,10 +185,11 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                 }
                 Spacer(modifier = Modifier.height(18.dp))
                 HomeItemBoxSection(
-                    item = userItem.copy(box = boxCount),
+                    item = userItem,
                     onItemClick = { clickedType ->
                         if (clickedType == ItemType.BOX) {
-                            if (boxCount <= 0) {
+                            if (isBoxOpening) return@HomeItemBoxSection
+                            if (userItem.box <= 0) {
                                 context.showToast("보유한 보너스 박스가 없습니다.")
                             } else {
                                 showOpenDialog = true // 오픈 수량 선택 다이얼로그 호출
@@ -199,8 +200,9 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                 //수량 선택 다이얼로그
                 if (showOpenDialog) {
                     BonusBoxOpenDialog(
-                        maxCount = boxCount,
-                        onDismiss = { showOpenDialog = false},
+                        maxCount = userItem.box,
+                        isOpening = isBoxOpening,
+                        onDismiss = {if (!isBoxOpening) showOpenDialog = false },
                         onConfirm = { count ->
                             showOpenDialog = false
                             viewModel.openBoxes(count)
@@ -313,7 +315,7 @@ fun PotChangeDialog(
                                     Column {
                                         Text(
                                             text = pot.name.ifEmpty { "이름 없는 화분" },
-                                            style = MaterialTheme.typography.bodyLarge, //todo 지정된 스타일로 바꾸거나 스타일 새로 생성하기
+                                            style = MaterialTheme.typography.bodyMedium,
                                         )
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
@@ -324,7 +326,7 @@ fun PotChangeDialog(
                                     Text(
                                         text = "Lv.${pot.potLevel}",
                                         style = MaterialTheme.typography.labelMedium,
-                                        color = if(isSelected) primary else MaterialTheme.colorScheme.onSecondary
+                                        color = if(isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSecondary
                                     )
                                 }
                             }
@@ -341,7 +343,7 @@ fun PotChangeDialog(
                 ) {
                     Text(
                         text = "+ 새로운 화분 만들기",
-                        color = primary
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -351,7 +353,7 @@ fun PotChangeDialog(
                 onClick = onConfirm,
                 enabled = selectedPot != null && selectedPot != Pot.EMPTY,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = primary
+                    containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
                 Text("선택 완료")
@@ -639,16 +641,11 @@ fun HomeItemBoxSection(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Box(
-                            modifier = Modifier.size(40.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Image(
-                                painter = painterResource(id = type.resId),
-                                contentDescription = type.kor,
-                                modifier = Modifier.size(40.dp)
-                            )
-                        }
+                        Image(
+                            painter = painterResource(id = type.resId),
+                            contentDescription = type.kor,
+                            modifier = Modifier.size(40.dp)
+                        )
                         Text(
                             text = type.kor,
                             style = MaterialTheme.typography.titleSmall,
@@ -689,7 +686,7 @@ fun BonusBoxResultDialog(
                 ) {
                     itemCounts.forEach { (type, count) ->
                         Text(
-                            text = "${type.kor} x${count}획득!",
+                            text = "${type.kor} x${count} 획득!",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -773,6 +770,7 @@ private fun RecoveryDialog(
 @Composable
 fun BonusBoxOpenDialog(
     maxCount: Int,
+    isOpening: Boolean,
     onDismiss: () -> Unit,
     onConfirm: (Int) -> Unit
 ) {
@@ -785,7 +783,7 @@ fun BonusBoxOpenDialog(
     }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!isOpening) onDismiss() },
         title = { Text("보너스 박스 개봉", style = MaterialTheme.typography.titleMedium) },
         text = {
             Column(
@@ -806,7 +804,7 @@ fun BonusBoxOpenDialog(
                 ) {
                     OutlinedButton(
                         onClick = { if (count > 1) count-- },
-                        enabled = count > 1,
+                        enabled = count > 1 && !isOpening,
                         modifier = Modifier.size(40.dp),
                         contentPadding = PaddingValues(0.dp)
                     ) {
@@ -844,13 +842,14 @@ fun BonusBoxOpenDialog(
         confirmButton = {
             Button(
                 onClick = { onConfirm(count) },
+                enabled = !isOpening,
                 colors = ButtonDefaults.buttonColors(containerColor = primary)
             ) {
                 Text("${count}개 개봉하기")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = onDismiss, enabled = !isOpening) {
                 Text("취소", color = MaterialTheme.colorScheme.onSecondary)
             }
         },

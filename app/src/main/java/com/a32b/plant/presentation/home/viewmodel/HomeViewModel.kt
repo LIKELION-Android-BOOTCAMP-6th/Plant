@@ -16,7 +16,6 @@ import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.type.ItemType
-import com.a32b.plant.domain.usecase.item.GetBoxCountUseCase
 import com.a32b.plant.domain.usecase.item.OpenBonusBoxUseCase
 import com.a32b.plant.domain.usecase.pot.GetActivePotUseCase
 import com.a32b.plant.domain.usecase.pot.GetPotListUseCase
@@ -91,7 +90,6 @@ class HomeViewModel @Inject constructor(
     private val studyingRepository: StudyingRepository,
     private val recoverStudySessionUseCase: RecoverStudySessionUseCase,
     private val clearStudyingSessionUseCase: ClearStudyingSessionUseCase,
-    private val getBoxCountUseCase: GetBoxCountUseCase,
     private val openBonusBoxUseCase: OpenBonusBoxUseCase
 ) : BaseViewModel() {
 
@@ -134,10 +132,6 @@ class HomeViewModel @Inject constructor(
     private val _userItem = MutableStateFlow(Item(0, 0, 0, 0, 0, 0))
     val userItem = _userItem.asStateFlow()
 
-    //아이템 박스 상태
-    private val _boxCount = MutableStateFlow(0)
-    val boxCount = _boxCount.asStateFlow()
-
     // 복구 세션 상태
     private val _recoverySession = MutableStateFlow<StudyingSession?>(null)
     val recoverySession = _recoverySession.asStateFlow()
@@ -152,33 +146,32 @@ class HomeViewModel @Inject constructor(
 
     init {
         checkUserAndLoadData()
-        observeBoxCount()
+        observeUserItem()
     }
     private fun checkUserAndLoadData() {
         viewModelScope.launch {
-            userRepository.currentUser.collect { user ->
-                if (user == null) {
-                    _isLoginError.value = true
-                } else {
-                    _userName.value = user.nickname
-                    _attendanceUiState.value = user.monthCheck.toAttendanceUiState()
-                    _userItem.value = user.item // 아이템 실시간 반영
+            ensureCurrentUserUseCase { user ->
+                _userName.value = user.nickname
+                _attendanceUiState.value = user.monthCheck.toAttendanceUiState()
+                _userItem.value = user.item
 
-                    if (_displayPot.value == Pot.EMPTY || _displayPot.value.id.isEmpty()) {
-                        loadActivePot(uid = user.uid, lastSelectedPotId = user.lastSelectedPotId)
-                        checkRecoverySession(user.uid)
-                    }
-                    loaded()
-                }
+                loadActivePot(uid = user.uid, lastSelectedPotId = user.lastSelectedPotId)
+                checkRecoverySession(user.uid)
+            } ?: run {
+                _isLoginError.value = true
             }
+            loaded()
         }
     }
 
-
-    private fun observeBoxCount() {
+    private fun observeUserItem() {
         viewModelScope.launch {
-            getBoxCountUseCase().collect { count ->
-                _boxCount.value = count
+            userRepository.currentUser.collect { currentUser ->
+                currentUser?.let {
+                    _userItem.value = it.item
+                    _userName.value = it.nickname
+                    _attendanceUiState.value = it.monthCheck.toAttendanceUiState()
+                }
             }
         }
     }
@@ -362,6 +355,7 @@ class HomeViewModel @Inject constructor(
 
     fun openBoxes(count: Int) {
         if (count <= 0) return
+        if (_isBoxOpening.value) return
 
         viewModelScope.launch {
             _isBoxOpening.value = true
@@ -370,9 +364,6 @@ class HomeViewModel @Inject constructor(
                     .onSuccess { droppedItem ->
                         if (droppedItem.isNotEmpty()) {
                             _eventChannel.send(HomeEvent.BonusBoxResult(droppedItem))
-                            ensureCurrentUserUseCase { user ->
-                                _userItem.value = user.item
-                            }
                         }
                     }
                     .onFailure { error ->

@@ -33,7 +33,11 @@ class ItemRemoteDataSourceImpl @Inject constructor(
             val box = transaction.get(ref).getLong("item.box") ?: 0
             check( box >= neededBoxes) {"보너스 박스의 개수가 부족합니다."}
 
-            transaction.update(ref, buildUpdates(items) + ("item.box" to FieldValue.increment(-neededBoxes)))
+            val drawnBoxCount = items.count { it == ItemType.BOX }
+            val netBoxChange = drawnBoxCount.toLong() - neededBoxes
+            val updates = buildUpdates(items).toMutableMap()
+            updates["item.box"] = FieldValue.increment(netBoxChange)
+            transaction.update(ref, updates)
         }.await()
     }
 
