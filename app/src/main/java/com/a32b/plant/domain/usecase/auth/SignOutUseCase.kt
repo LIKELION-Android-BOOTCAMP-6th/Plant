@@ -11,8 +11,6 @@ class SignOutUseCase @Inject constructor(
     private val userRepository: UserRepository
 ) {
     operator fun invoke() {
-        val uid = userRepository.currentUser.value?.uid
-
         // currentUser 실시간 구독을 먼저 끊어야 한다. signOut()이 먼저 실행되면
         // 아직 살아있는 리스너가 서버로부터 PERMISSION_DENIED를 받아 앱이 크래시한다.
         userRepository.endUserSession()

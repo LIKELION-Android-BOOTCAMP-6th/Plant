@@ -80,8 +80,8 @@ class MainActivity : ComponentActivity() {
                     2. 로그인 화면으로 이동
                     3. 유저 정보 조회 실패 다이얼로그 표출
                      */
-                    var isSessionDialogShown by rememberSaveable { mutableStateOf(false) }
-                    var sessionExpiredReason by remember { mutableStateOf(SessionExpiredReason.USER_NOT_FOUND) }
+                    var sessionExpiredReasonOrdinal by rememberSaveable { mutableStateOf<Int?>(null) }
+                    val sessionExpiredReason = sessionExpiredReasonOrdinal?.let { SessionExpiredReason.entries[it] }
                     val lifecycleOwner = LocalLifecycleOwner.current
 
                     LaunchedEffect(Unit) {
@@ -93,13 +93,12 @@ class MainActivity : ComponentActivity() {
                                     popUpTo(0) { inclusive = true }
                                 }
 
-                                sessionExpiredReason = reason
-                                isSessionDialogShown = true
+                                sessionExpiredReasonOrdinal = reason.ordinal
                             }
                         }
                     }
 
-                    if (isSessionDialogShown) {
+                    if (sessionExpiredReason != null) {
                         val (text, semiText) = when (sessionExpiredReason) {
                             SessionExpiredReason.DUPLICATE_LOGIN ->
                                 "다른 기기에서 로그인되었습니다." to "보안을 위해 자동 로그아웃 됩니다."
@@ -112,7 +111,7 @@ class MainActivity : ComponentActivity() {
                             isSingleBtn = true,
                             confirmBtnText = "확인",
                             onDismiss = {},
-                            onConfirm = { isSessionDialogShown = false }
+                            onConfirm = { sessionExpiredReasonOrdinal = null }
                         )
                     }
 
