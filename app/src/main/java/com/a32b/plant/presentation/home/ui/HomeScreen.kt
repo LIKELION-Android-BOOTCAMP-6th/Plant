@@ -416,7 +416,7 @@ fun HomeTopBar(
                         id = if (isAttendanceCompleted) {
                             R.drawable.plant_attendance_checked
                         } else {
-                            R.drawable.ic_daily_default
+                            R.drawable.plant_attendance_before
                         }
                     ),
                     contentDescription = "출석체크",

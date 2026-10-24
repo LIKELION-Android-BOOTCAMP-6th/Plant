@@ -23,7 +23,8 @@ data class CommunityActivityUiState(
     val selected: String = ActivityType.POST,
     val activities: List<CommunityActivity> = emptyList(),
     val isSelectionMode: Boolean = false,
-    val selectedIds: Set<String> = emptySet()
+    val selectedIds: Set<String> = emptySet(),
+    val isDeleteDialogShown: Boolean = false
 )
 sealed class CommunityActivityEvent {
     data class NavigateToCommunityDetail(val postId: String) : CommunityActivityEvent()
@@ -76,6 +77,14 @@ class CommunityActivityViewModel @Inject constructor(
                          else state.selectedIds + id
             state.copy(selectedIds = newIds)
         }
+    }
+
+    fun showDeleteDialog() {
+        _uiState.update { it.copy(isDeleteDialogShown = true) }
+    }
+
+    fun hideDeleteDialog() {
+        _uiState.update { it.copy(isDeleteDialogShown = false) }
     }
 
     fun deleteSelected() {

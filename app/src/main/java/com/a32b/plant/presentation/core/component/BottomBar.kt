@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -22,10 +23,9 @@ import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
-import com.a32b.plant.presentation.theme.bottom
 
 @Composable
-fun BottomBar(navController: NavController){
+fun BottomBar(navController: NavController, enabled: Boolean = true){
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
@@ -35,7 +35,7 @@ fun BottomBar(navController: NavController){
         .navigationBarsPadding(),
         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
         color = MaterialTheme.colorScheme.surface) {
-        Row(modifier = Modifier.fillMaxWidth().height(68.dp),
+        Row(modifier = Modifier.fillMaxWidth().height(68.dp).alpha(if (enabled) 1f else 0.38f),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically) {
 
@@ -47,7 +47,7 @@ fun BottomBar(navController: NavController){
                 modifier = Modifier
                     .weight(1f)
                     .size(size.dp)
-                    .clickable{
+                    .clickable(enabled = enabled) {
                         if (!isCommunitySelected) {  // ★
                             navController.navigate(Routes.CommunityList) {
                                 popUpTo(Routes.HomeMain) { inclusive = false }
@@ -64,7 +64,7 @@ fun BottomBar(navController: NavController){
                 modifier = Modifier
                     .weight(1f)
                     .size(size.dp)
-                    .clickable{
+                    .clickable(enabled = enabled) {
                         if (!isPotSelected) {  // ★
                             navController.navigate(Routes.PotList) {
                                 popUpTo(Routes.HomeMain) { inclusive = false }
@@ -81,7 +81,7 @@ fun BottomBar(navController: NavController){
                 modifier = Modifier
                     .weight(1f)
                     .size(size.dp)
-                    .clickable{
+                    .clickable(enabled = enabled) {
                         if (!isHomeSelected) {  // ★
                             navController.navigate(Routes.HomeMain) {
                                 popUpTo(Routes.HomeMain) { inclusive = false }
@@ -98,7 +98,7 @@ fun BottomBar(navController: NavController){
                 modifier = Modifier
                     .weight(1f)
                     .size(size.dp)
-                    .clickable{
+                    .clickable(enabled = enabled) {
                         if (!isReportSelected) {  // ★
                             navController.navigate(Routes.Report) {
                                 popUpTo(Routes.HomeMain) { inclusive = false }
@@ -116,7 +116,7 @@ fun BottomBar(navController: NavController){
                 modifier = Modifier
                     .weight(1f)
                     .size(size.dp)
-                    .clickable{
+                    .clickable(enabled = enabled) {
                         if (!isMyPageSelected) {  // ★
                             navController.navigate(Routes.Mypage) {
                                 popUpTo(Routes.HomeMain) { inclusive = false }

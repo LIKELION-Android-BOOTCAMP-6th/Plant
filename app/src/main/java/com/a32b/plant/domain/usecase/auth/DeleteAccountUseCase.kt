@@ -2,6 +2,7 @@ package com.a32b.plant.domain.usecase.auth
 
 import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.domain.repository.AuthRepository
+import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
@@ -10,6 +11,7 @@ import javax.inject.Inject
 class DeleteAccountUseCase @Inject constructor(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
+    private val studyingRepository: StudyingRepository,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase
 ) {
     suspend operator fun invoke(): Result<Unit> {
@@ -41,9 +43,10 @@ class DeleteAccountUseCase @Inject constructor(
         val deleteAuthResult = authRepository.deleteAuthAccount()
         if (deleteAuthResult is Result.Failure) return deleteAuthResult
 
-        // 회원탈퇴가 완료된 뒤에만 기기 테마를 라이트로 초기화한다.
+        // 회원탈퇴가 완료된 뒤에만 기기 테마와 로컬 학습 세션을 초기화한다.
         // 저장 실패는 Repository에서 로그를 남기며, 완료된 회원탈퇴 결과는 유지한다.
-        userRepository.updateDarkMode(user.copy(isDarkMode = false))
+        userRepository.updateDarkMode(false)
+        studyingRepository.clearLocalSession()
 
         return Result.Success(Unit)
     }

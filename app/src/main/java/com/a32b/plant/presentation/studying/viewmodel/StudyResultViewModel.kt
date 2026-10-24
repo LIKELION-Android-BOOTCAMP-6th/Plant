@@ -5,8 +5,11 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.os.Environment
 import android.provider.MediaStore
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
+import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.StudyReward
@@ -27,7 +30,12 @@ data class StudyResultUiState(
     val isLoading: Boolean = false,
     val isDialogShow: Boolean = false,
     val reward: StudyReward? = null,
-    val isRewardLoaded: Boolean = false
+    val timestamp: String = "",
+    val tag: String = "",
+    val title: String = "",
+    val log: List<String> = emptyList(),
+    val time: Long = 0L,
+    val level: String = ""
 )
 
 sealed class StudyResultEvent {
@@ -36,28 +44,43 @@ sealed class StudyResultEvent {
 
 @HiltViewModel
 class StudyResultViewModel @Inject constructor(
-    private val giveStudyRewardUseCase: GiveStudyRewardUseCase
+    private val giveStudyRewardUseCase: GiveStudyRewardUseCase,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(StudyResultUiState())
+    private val _uiState = MutableStateFlow(
+        savedStateHandle.toRoute<Routes.StudyResult>().let { route ->
+            StudyResultUiState(
+                timestamp = route.timestamp,
+                tag = route.tag,
+                title = route.title,
+                log = route.log,
+                time = route.time,
+                level = route.level
+            )
+        }
+    )
     val uiState = _uiState.asStateFlow()
 
     private val _event = Channel<StudyResultEvent>(Channel.BUFFERED)
     val event = _event.receiveAsFlow()
 
+    init {
+        loadReward()
+    }
+
     fun onDialogShow() = _uiState.update { it.copy(isDialogShow = true) }
     fun onDialogDismiss() = _uiState.update { it.copy(isDialogShow = false) }
 
-    fun loadReward(sessionTimeMs: Long) {
-        if (_uiState.value.isRewardLoaded) return
+    private fun loadReward() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            giveStudyRewardUseCase(sessionTimeMs)
+            giveStudyRewardUseCase(_uiState.value.time)
                 .onSuccess { reward ->
-                    _uiState.update { it.copy(isLoading = false, reward = reward, isRewardLoaded = true) }
+                    _uiState.update { it.copy(isLoading = false, reward = reward) }
                 }
                 .onFailure { error ->
-                    _uiState.update { it.copy(isLoading = false, isRewardLoaded = true) }
+                    _uiState.update { it.copy(isLoading = false) }
                     when (error) {
                         is AppError.UnknownUser -> Unit
                         else -> _event.send(StudyResultEvent.ShowToast(error.message))

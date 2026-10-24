@@ -18,8 +18,6 @@ data class UserDto(
     var lastSelectedPotId: String = "",
     @get:PropertyName("isFirstLogin") @set:PropertyName("isFirstLogin")
     var isFirstLogin: Boolean? = null, // 회원가입 시 true 유지 -> 첫 로그인 후 닉네임 재설정 하고 false 바꾸기
-    @get:PropertyName("isDarkMode") @set:PropertyName("isDarkMode")
-    var isDarkMode: Boolean = false,
     @get:PropertyName("totalStudyTime") @set:PropertyName("totalStudyTime")
     var totalStudyTime: Long = 0L,
     @get:PropertyName("gold") @set:PropertyName("gold")
