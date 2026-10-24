@@ -24,8 +24,8 @@ import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.a32b.plant.R
-import com.a32b.plant.presentation.theme.sub_green2
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.presentation.theme.sub_green2
 
 @Composable
 fun BottomBar(navController: NavController, enabled: Boolean = true) {
@@ -42,7 +42,7 @@ fun BottomBar(navController: NavController, enabled: Boolean = true) {
             modifier = Modifier
                 .fillMaxWidth()
                 .alpha(if (enabled) 1f else 0.38f),
-            horizontalArrangement = Arrangement.Start,
+
             verticalAlignment = Alignment.CenterVertically
         ) {
             val isHomeSelected = currentDestination?.hasRoute<Routes.HomeMain>() == true
