@@ -87,6 +87,10 @@ class MainActivity : ComponentActivity() {
                     LaunchedEffect(Unit) {
                         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                             sessionExpiredObserver.event.collect { reason ->
+                                val alreadyAtSignIn = navController.currentBackStackEntry
+                                    ?.destination?.hasRoute<Routes.SignIn>() == true
+                                if (alreadyAtSignIn) return@collect
+
                                 signOutUseCase()
 
                                 navController.navigate(Routes.SignIn) {

@@ -31,9 +31,10 @@ class ResolveUserSessionUseCase @Inject constructor(
 
         val token = SessionTokenGenerator.generate()
         val tokenResult = userRepository.updateSessionToken(uid, token)
-        if (tokenResult is Result.Failure) return tokenResult
+        // 실패해도 로그인 허용. 토큰이 저장되지 않았으므로 해당 세션은 중복 로그인 감지 비활성.
+        val activeToken = if (tokenResult is Result.Success) token else null
 
-        userRepository.startUserSession(user.copy(activeSessionToken = token))
+        userRepository.startUserSession(user.copy(activeSessionToken = activeToken))
         // TODO: CurrentUser 전역 싱글톤 제거 대상.
         //  아직 CurrentUser를 직접 읽는 화면이 남아 있어 과도기 동안 함께 세팅한다.
         //  모든 화면이 UserRepository로 전환되면 이 줄과 di/CurrentUser.kt를 함께 삭제할 것.
