@@ -109,6 +109,8 @@ class MainActivity : ComponentActivity() {
                         ConfirmDialog(
                             text = text,
                             semiText = semiText,
+                            isSingleBtn = true,
+                            confirmBtnText = "확인",
                             onDismiss = {},
                             onConfirm = { isSessionDialogShown = false }
                         )
