@@ -31,8 +31,8 @@ import androidx.navigation.compose.rememberNavController
 import com.a32b.plant.core.navigation.PlantAppNavigation
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.domain.model.StudyingSession
-import com.a32b.plant.domain.repository.AuthRepository
 import com.a32b.plant.domain.session.SessionExpiredObserver
+import com.a32b.plant.domain.usecase.auth.SignOutUseCase
 import com.a32b.plant.domain.session.SessionExpiredReason
 import com.a32b.plant.presentation.core.component.BottomBar
 import com.a32b.plant.presentation.core.component.ConfirmDialog
@@ -50,7 +50,7 @@ class MainActivity : ComponentActivity() {
     lateinit var sessionExpiredObserver: SessionExpiredObserver
 
     @Inject
-    lateinit var authRepository: AuthRepository
+    lateinit var signOutUseCase: SignOutUseCase
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -87,7 +87,7 @@ class MainActivity : ComponentActivity() {
                     LaunchedEffect(Unit) {
                         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                             sessionExpiredObserver.event.collect { reason ->
-                                authRepository.signOut()
+                                signOutUseCase()
 
                                 navController.navigate(Routes.SignIn) {
                                     popUpTo(0) { inclusive = true }

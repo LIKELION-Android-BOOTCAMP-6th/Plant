@@ -79,6 +79,7 @@ class UserRepositoryImpl @Inject constructor(
                     val remoteToken = dto.activeSessionToken
                     val currentToken = localSessionToken
                     if (currentToken != null && remoteToken != null && currentToken != remoteToken) {
+                        endUserSession()
                         sessionExpiredNotifier.notifySessionExpired(SessionExpiredReason.DUPLICATE_LOGIN)
                         return@collect
                     }
