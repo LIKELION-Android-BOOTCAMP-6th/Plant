@@ -164,6 +164,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+
     private fun observeUserItem() {
         viewModelScope.launch {
             userRepository.currentUser.collect { currentUser ->
