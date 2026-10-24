@@ -1,4 +1,4 @@
-package com.a32b.plant.domain.usecase.community
+package com.a32b.plant.domain.service
 
 import javax.inject.Inject
 import javax.inject.Singleton
