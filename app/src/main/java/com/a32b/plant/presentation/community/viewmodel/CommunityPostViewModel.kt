@@ -13,6 +13,7 @@ import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.community.CreatePostUseCase
+import com.a32b.plant.domain.service.PostCooldownManager
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import com.a32b.plant.domain.usecase.studyLog.GetSelectedStudyLogUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -48,11 +49,11 @@ sealed class CommunityPostEvent{
 class CommunityPostViewModel @Inject constructor(
     private val repository: CommunityRepository,
     private val createPostUseCase: CreatePostUseCase,
+    private val postCooldownManager: PostCooldownManager,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     private val getSelectedStudyLogUseCase: GetSelectedStudyLogUseCase,
     savedStateHandle: SavedStateHandle,
-
-    ) : ViewModel() {
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CommunityPostUiState())
     val uiState = _uiState.asStateFlow()
@@ -151,8 +152,7 @@ class CommunityPostViewModel @Inject constructor(
         }
     }
 
-    fun savePost(onComplete: (Boolean) -> Unit) {
-        // 등록/수정 중 중복 탭으로 게시글이 여러 번 생성되는 것을 방지
+    fun savePost() {
         if (_uiState.value.isSubmitting) return
 
         viewModelScope.launch {
@@ -165,7 +165,6 @@ class CommunityPostViewModel @Inject constructor(
             }
 
             if (postId != null) {
-                //게시글 수정
                 withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
                     repository.updatePost(
                         isShared = isShared,
@@ -175,14 +174,20 @@ class CommunityPostViewModel @Inject constructor(
                         tag = if (isShared) null else selectedTag
                     )
                 }.onSuccess {
-                    onComplete(true)
+                    _eventChannel.send(CommunityPostEvent.ShowToast("수정되었습니다!"))
                     _eventChannel.send(CommunityPostEvent.NavigateToDetail(postId!!))
                 }.onFailure { e ->
                     Log.e("CommunityPostVM", "게시글 수정 실패: ${e.message}")
-                    onComplete(false)
+                    _eventChannel.send(CommunityPostEvent.ShowToast("수정에 실패했습니다."))
                 }
             } else {
-                // 새 글 작성 모드
+                if (!postCooldownManager.canPost()) {
+                    val remaining = postCooldownManager.getRemainingSeconds()
+                    sendToast("게시글 작성은 ${remaining}초 후에 가능합니다")
+                    _uiState.update { it.copy(isSubmitting = false) }
+                    return@launch
+                }
+
                 withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
                     createPostUseCase(
                         isShared = isShared,
@@ -192,12 +197,13 @@ class CommunityPostViewModel @Inject constructor(
                         tag = selectedTag
                     )
                 }.onSuccess { newPostId ->
+                    postCooldownManager.recordPost()
                     postId = newPostId
-                    onComplete(true)
+                    _eventChannel.send(CommunityPostEvent.ShowToast("성공적으로 등록되었습니다!"))
                     _eventChannel.send(CommunityPostEvent.NavigateToDetail(newPostId))
                 }.onFailure { e ->
                     Log.e("CommunityPostVM", "게시글 등록 실패: ${e.message}")
-                    onComplete(false)
+                    _eventChannel.send(CommunityPostEvent.ShowToast("등록에 실패했습니다."))
                 }
             }
 

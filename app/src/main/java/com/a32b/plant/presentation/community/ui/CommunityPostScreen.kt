@@ -110,14 +110,7 @@ fun CommunityPostScreen(
                     } else if (uiState.selected?.id.isNullOrEmpty()) {
                         context.showToast("태그를 선택해주세요.")
                     } else {
-                        viewModel.savePost() { isSuccess ->
-                            if (isSuccess) {
-                                val msg = if (postId != null) "수정되었습니다!" else "성공적으로 등록되었습니다!"
-                                context.showToast(msg)
-                            } else {
-                                context.showToast("등록에 실패했습니다.")
-                            }
-                        }
+                        viewModel.savePost()
                     }
                 }
             )
