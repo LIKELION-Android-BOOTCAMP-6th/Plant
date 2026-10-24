@@ -15,6 +15,8 @@ import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
+import com.a32b.plant.domain.type.ItemType
+import com.a32b.plant.domain.usecase.item.OpenBonusBoxUseCase
 import com.a32b.plant.domain.usecase.pot.GetActivePotUseCase
 import com.a32b.plant.domain.usecase.pot.GetPotListUseCase
 import com.a32b.plant.domain.usecase.pot.GetTodayTotalStudyTimeUseCase
@@ -43,6 +45,7 @@ data class AttendanceUiState(
 
 sealed class HomeEvent {
     data class ShowToast(val message: String) : HomeEvent()
+    data class BonusBoxResult(val items: List<ItemType>) : HomeEvent()
 }
 
 private fun DailyCheckThisMonth.toAttendanceUiState(): AttendanceUiState {
@@ -86,7 +89,8 @@ class HomeViewModel @Inject constructor(
     private val getTodayTotalStudyTimeUseCase: GetTodayTotalStudyTimeUseCase,
     private val studyingRepository: StudyingRepository,
     private val recoverStudySessionUseCase: RecoverStudySessionUseCase,
-    private val clearStudyingSessionUseCase: ClearStudyingSessionUseCase
+    private val clearStudyingSessionUseCase: ClearStudyingSessionUseCase,
+    private val openBonusBoxUseCase: OpenBonusBoxUseCase
 ) : BaseViewModel() {
 
     private val _displayPot = MutableStateFlow(Pot.EMPTY)
@@ -132,8 +136,13 @@ class HomeViewModel @Inject constructor(
     private val _isRecovering = MutableStateFlow(false)
     val isRecovering = _isRecovering.asStateFlow()
 
+    //박스 개봉 로딩
+    private val _isBoxOpening = MutableStateFlow(false)
+    val isBoxOpening = _isBoxOpening.asStateFlow()
+
     init {
         checkUserAndLoadData()
+        observeUserItem()
     }
     private fun checkUserAndLoadData() {
         viewModelScope.launch {
@@ -144,8 +153,24 @@ class HomeViewModel @Inject constructor(
 
                 loadActivePot(uid = user.uid, lastSelectedPotId = user.lastSelectedPotId)
                 checkRecoverySession(user.uid)
-                loaded()
-            } ?: loaded()
+            } ?: Unit
+            loaded()
+        }
+    }
+
+
+    private fun observeUserItem() {
+        viewModelScope.launch {
+            userRepository.currentUser.collect { currentUser ->
+                currentUser?.let {
+                    _userItem.value = it.item
+                    _userName.value = it.nickname
+
+                    val newState = it.monthCheck.toAttendanceUiState()
+                    _attendanceUiState.update { currentUiState ->
+                        newState.copy(reward = currentUiState.reward)
+                    }                }
+            }
         }
     }
 
@@ -297,7 +322,6 @@ class HomeViewModel @Inject constructor(
                                 reward = decision.reward
                             )
                         }
-                        refreshUserItem(user.uid)
                     }
                     .onFailure { error ->
                         when (error) {
@@ -315,15 +339,28 @@ class HomeViewModel @Inject constructor(
         _attendanceUiState.update { it.copy(reward = null) }
     }
 
-    private fun refreshUserItem(uid: String) {
+    fun openBoxes(count: Int) {
+        if (count <= 0) return
+        if (_isBoxOpening.value) return
+
         viewModelScope.launch {
-            userRepository.getUser(uid)
-                .onSuccess { user ->
-                    user?.let {
-                        _userItem.value = it.item
+            _isBoxOpening.value = true
+            try {
+                openBonusBoxUseCase(count)
+                    .onSuccess { droppedItem ->
+                        if (droppedItem.isNotEmpty()) {
+                            _eventChannel.send(HomeEvent.BonusBoxResult(droppedItem))
+                        }
                     }
-                }
+                    .onFailure { error ->
+                        when (error) {
+                            is AppError.UnknownUser -> ensureCurrentUserUseCase()
+                            else -> sendToast(error.message)
+                        }
+                    }
+            } finally {
+                _isBoxOpening.value = false
+            }
         }
     }
-
 }

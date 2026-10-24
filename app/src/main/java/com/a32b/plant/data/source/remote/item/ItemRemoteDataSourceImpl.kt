@@ -25,15 +25,19 @@ class ItemRemoteDataSourceImpl @Inject constructor(
             .await()
     }
 
-    override suspend fun openBonusBoxes(uid: String, items: List<ItemType>) {
+    override suspend fun openBonusBoxes(uid: String, boxCount: Int, items: List<ItemType>) {
         val ref = db.collection("users").document(uid)
-        val boxCount = items.size.toLong()
+        val neededBoxes = boxCount.toLong()
 
-        db.runTransaction {
-            val box = it.get(ref).getLong("item.box") ?: 0
-            check( box >= boxCount) {"보너스 박스의 개수가 부족합니다."}
+        db.runTransaction { transaction ->
+            val box = transaction.get(ref).getLong("item.box") ?: 0
+            check( box >= neededBoxes) {"보너스 박스의 개수가 부족합니다."}
 
-            it.update(ref, buildUpdates(items) + ("item.box" to FieldValue.increment(-boxCount)))
+            val drawnBoxCount = items.count { it == ItemType.BOX }
+            val netBoxChange = drawnBoxCount.toLong() - neededBoxes
+            val updates = buildUpdates(items).toMutableMap()
+            updates["item.box"] = FieldValue.increment(netBoxChange)
+            transaction.update(ref, updates)
         }.await()
     }
 

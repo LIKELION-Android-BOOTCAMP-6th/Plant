@@ -58,6 +58,7 @@ import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
 
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyingSession
+import com.a32b.plant.presentation.core.component.ConfettiOverlay
 import com.a32b.plant.presentation.theme.primary
 import com.a32b.plant.presentation.theme.sub2
 import com.a32b.plant.presentation.theme.sub_green1
@@ -77,6 +78,9 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
     val recoverySession by viewModel.recoverySession.collectAsState()
     val isRecovering by viewModel.isRecovering.collectAsState()
     val context = LocalContext.current
+    val isBoxOpening by viewModel.isBoxOpening.collectAsState()
+    var bonusBoxResult by remember { mutableStateOf<List<ItemType>?>(null) }
+    var showOpenDialog by remember { mutableStateOf(false) }
 
     val todayStudyTime by viewModel.todayStudyTime.collectAsState()
 
@@ -113,6 +117,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
         viewModel.events.collect { event ->
             when (event) {
                 is HomeEvent.ShowToast -> context.showToast(event.message)
+                is HomeEvent.BonusBoxResult -> bonusBoxResult = event.items
             }
         }
     }
@@ -179,7 +184,32 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                     )
                 }
                 Spacer(modifier = Modifier.height(18.dp))
-                HomeItemBoxSection(item = userItem)
+                HomeItemBoxSection(
+                    item = userItem,
+                    onItemClick = { clickedType ->
+                        if (clickedType == ItemType.BOX) {
+                            if (isBoxOpening) return@HomeItemBoxSection
+                            if (userItem.box <= 0) {
+                                context.showToast("보유한 보너스 박스가 없습니다.")
+                            } else {
+                                showOpenDialog = true // 오픈 수량 선택 다이얼로그 호출
+                            }
+                        }
+                    }
+                )
+                //수량 선택 다이얼로그
+                if (showOpenDialog) {
+                    BonusBoxOpenDialog(
+                        maxCount = userItem.box,
+                        isOpening = isBoxOpening,
+                        onDismiss = {if (!isBoxOpening) showOpenDialog = false },
+                        onConfirm = { count ->
+                            showOpenDialog = false
+                            viewModel.openBoxes(count)
+                        }
+                    )
+                }
+
             }
 
             // 화분 변경 다이얼로그
@@ -203,6 +233,14 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                 )
             }
         }
+
+        bonusBoxResult?.let { items ->
+            BonusBoxResultDialog(
+                items = items,
+                onDismiss = { bonusBoxResult = null }
+            )
+        }
+
     }
 }
 
@@ -277,7 +315,7 @@ fun PotChangeDialog(
                                     Column {
                                         Text(
                                             text = pot.name.ifEmpty { "이름 없는 화분" },
-                                            style = MaterialTheme.typography.bodyLarge, //todo 지정된 스타일로 바꾸거나 스타일 새로 생성하기
+                                            style = MaterialTheme.typography.bodyMedium,
                                         )
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
@@ -288,7 +326,7 @@ fun PotChangeDialog(
                                     Text(
                                         text = "Lv.${pot.potLevel}",
                                         style = MaterialTheme.typography.labelMedium,
-                                        color = if(isSelected) primary else MaterialTheme.colorScheme.onSecondary
+                                        color = if(isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSecondary
                                     )
                                 }
                             }
@@ -305,7 +343,7 @@ fun PotChangeDialog(
                 ) {
                     Text(
                         text = "+ 새로운 화분 만들기",
-                        color = primary
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -315,7 +353,7 @@ fun PotChangeDialog(
                 onClick = onConfirm,
                 enabled = selectedPot != null && selectedPot != Pot.EMPTY,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = primary
+                    containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
                 Text("선택 완료")
@@ -546,7 +584,10 @@ fun MainPlantCard(
 }
 
 @Composable
-fun HomeItemBoxSection(item: Item){
+fun HomeItemBoxSection(
+    item: Item,
+    onItemClick: (ItemType) -> Unit
+) {
     val displayItems = listOf(
         ItemType.HEART to item.heart,
         ItemType.SUN to item.sun,
@@ -554,7 +595,6 @@ fun HomeItemBoxSection(item: Item){
         ItemType.FERTILIZER to item.fertilizer,
         ItemType.NUTRIENT to item.nutrient,
         ItemType.BOX to item.box
-
     )
 
     val totalCount = displayItems.sumOf { it.second }
@@ -583,8 +623,21 @@ fun HomeItemBoxSection(item: Item){
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(displayItems) { (type, count) ->
+                    val isBox = type == ItemType.BOX
+
                     Column(
-                        modifier = Modifier.width(60.dp),
+                        modifier = Modifier
+                            .width(60.dp)
+                            .let { baseModifier ->
+                                if (isBox) {
+                                    baseModifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { onItemClick(type) }
+                                } else {
+                                    baseModifier
+                                }
+                            }
+                            .padding(vertical = 4.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
@@ -609,6 +662,49 @@ fun HomeItemBoxSection(item: Item){
     }
 }
 
+@Composable
+fun BonusBoxResultDialog(
+    items: List<ItemType>,
+    onDismiss: () -> Unit
+) {
+    var showConfetti by remember { mutableStateOf(true) }
+
+    val itemCounts = remember(items) {
+        items.groupingBy { it }.eachCount()
+    }
+    Box(modifier = Modifier.fillMaxSize()){
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = {
+                Text("보너스 박스 개봉 결과!", style = MaterialTheme.typography.titleMedium)
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    itemCounts.forEach { (type, count) ->
+                        Text(
+                            text = "${type.kor} x${count} 획득!",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = onDismiss) {
+                    Text("확인", style = MaterialTheme.typography.labelLarge)
+                }
+            },
+            shape = RoundedCornerShape(24.dp)
+        )
+        if (showConfetti) {
+            ConfettiOverlay(onFinished = { showConfetti = false })
+        }
+    }
+}
 @Composable
 private fun RecoveryDialog(
     session: StudyingSession,
@@ -668,5 +764,95 @@ private fun RecoveryDialog(
                 Text("폐기")
             }
         }
+    )
+}
+
+@Composable
+fun BonusBoxOpenDialog(
+    maxCount: Int,
+    isOpening: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit
+) {
+    var count by remember { mutableStateOf(1) }
+
+    LaunchedEffect(maxCount) {
+        if (count > maxCount) {
+            count = maxCount.coerceAtLeast(1)
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = { if (!isOpening) onDismiss() },
+        title = { Text("보너스 박스 개봉", style = MaterialTheme.typography.titleMedium) },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "보유한 박스: ${maxCount}개",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSecondary
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(
+                        onClick = { if (count > 1) count-- },
+                        enabled = count > 1 && !isOpening,
+                        modifier = Modifier.size(40.dp),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text("-", style = MaterialTheme.typography.titleMedium)
+                    }
+
+                    Spacer(modifier = Modifier.width(20.dp))
+
+                    Text(
+                        text = "${count}개",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    Spacer(modifier = Modifier.width(20.dp))
+
+                    OutlinedButton(
+                        onClick = { if (count < maxCount) count++ },
+                        enabled = count < maxCount && !isOpening,
+                        modifier = Modifier.size(40.dp),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text("+", style = MaterialTheme.typography.titleMedium)
+                    }
+                }
+
+                TextButton(
+                    onClick = { count = maxCount },
+                    enabled = count < maxCount
+                ) {
+                    Text("전체 선택 (MAX)", color = MaterialTheme.colorScheme.primary)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(count) },
+                enabled = !isOpening,
+                colors = ButtonDefaults.buttonColors(containerColor = primary)
+            ) {
+                Text("${count}개 개봉하기")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isOpening) {
+                Text("취소", color = MaterialTheme.colorScheme.onSecondary)
+            }
+        },
+        shape = RoundedCornerShape(24.dp)
     )
 }
