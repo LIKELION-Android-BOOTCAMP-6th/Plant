@@ -47,6 +47,7 @@ fun BottomBar(navController: NavController, enabled: Boolean = true) {
         ) {
             val isHomeSelected = currentDestination?.hasRoute<Routes.HomeMain>() == true
             BottomBarItem(
+                modifier = Modifier.weight(1f),
                 iconRes = R.drawable.ic_bottom_home_normal,
                 label = "홈",
                 selected = isHomeSelected,
@@ -62,6 +63,7 @@ fun BottomBar(navController: NavController, enabled: Boolean = true) {
 
             val isPotSelected = currentDestination?.hasRoute<Routes.PotList>() == true
             BottomBarItem(
+                modifier = Modifier.weight(1f),
                 iconRes = R.drawable.ic_bottom_pot_normal,
                 label = "화분",
                 selected = isPotSelected,
@@ -77,6 +79,7 @@ fun BottomBar(navController: NavController, enabled: Boolean = true) {
 
             val isCommunitySelected = currentDestination?.hasRoute<Routes.CommunityList>() == true
             BottomBarItem(
+                modifier = Modifier.weight(1f),
                 iconRes = R.drawable.ic_bottom_community_normal,
                 label = "커뮤니티",
                 selected = isCommunitySelected,
@@ -92,6 +95,7 @@ fun BottomBar(navController: NavController, enabled: Boolean = true) {
 
             val isReportSelected = currentDestination?.hasRoute<Routes.Report>() == true
             BottomBarItem(
+                modifier = Modifier.weight(1f),
                 iconRes = R.drawable.ic_bottom_report_normal,
                 label = "리포트",
                 selected = isReportSelected,
@@ -107,6 +111,7 @@ fun BottomBar(navController: NavController, enabled: Boolean = true) {
 
             val isMyPageSelected = currentDestination?.hasRoute<Routes.Mypage>() == true
             BottomBarItem(
+                modifier = Modifier.weight(1f),
                 iconRes = R.drawable.ic_bottom_mypage_normal,
                 label = "마이페이지",
                 selected = isMyPageSelected,
@@ -125,6 +130,7 @@ fun BottomBar(navController: NavController, enabled: Boolean = true) {
 
 @Composable
 private fun BottomBarItem(
+    modifier: Modifier = Modifier,
     iconRes: Int,
     label: String,
     selected: Boolean,
@@ -133,16 +139,16 @@ private fun BottomBarItem(
 ) {
     val tintColor = if (selected) sub_green2 else MaterialTheme.colorScheme.onSurfaceVariant
     Column(
-        modifier = Modifier
+        modifier = modifier
             .clickable(enabled = enabled) { onClick() }
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Image(
             painter = painterResource(id = iconRes),
             contentDescription = label,
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(21.dp),
             colorFilter = ColorFilter.tint(tintColor)
         )
         Text(
