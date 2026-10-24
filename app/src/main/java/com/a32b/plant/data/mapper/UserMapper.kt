@@ -39,7 +39,8 @@ fun UserDto.toDomain() : User = User(
     totalStudyTime = totalStudyTime,
     gold = gold,
     monthCheck = monthCheck.toDomain(),
-    item = item.toDomain()
+    item = item.toDomain(),
+    activeSessionToken = activeSessionToken
 )
 
 fun User.toDto(): UserDto = UserDto(
@@ -51,5 +52,6 @@ fun User.toDto(): UserDto = UserDto(
     totalStudyTime = totalStudyTime,
     gold = gold,
     monthCheck = monthCheck.toDto(),
-    item = item.toDto()
+    item = item.toDto(),
+    activeSessionToken = activeSessionToken
 )

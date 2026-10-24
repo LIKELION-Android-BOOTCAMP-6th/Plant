@@ -12,6 +12,8 @@ import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.User
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
+import com.a32b.plant.domain.session.SessionExpiredNotifier
+import com.a32b.plant.domain.session.SessionExpiredReason
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
@@ -35,11 +37,13 @@ import javax.inject.Singleton
 class UserRepositoryImpl @Inject constructor(
     private val userRemoteDataSource: UserRemoteDataSource,
     private val settingsLocalDataSource: SettingsLocalDataSource,
+    private val sessionExpiredNotifier: SessionExpiredNotifier,
     private val db: FirebaseFirestore,
     @param:ApplicationScope private val scope: CoroutineScope
 ) : UserRepository {
     private val _currentUser = MutableStateFlow<User?>(null)
     private var sessionJob: Job? = null
+    private var localSessionToken: String? = null
     // 읽기 실패와 재구독 사이에도 마지막 정상 테마를 유지한다. 영구 저장은 DataStore가 담당한다.
     private val lastKnownDarkMode = MutableStateFlow(false)
 
@@ -61,6 +65,7 @@ class UserRepositoryImpl @Inject constructor(
         // 초기값을 즉시 세팅해 HomeViewModel 등이 init에서 currentUser.value를
         // 곧바로 읽어도 null로 오인해 로그인 에러 처리하지 않도록 한다.
         _currentUser.value = user
+        localSessionToken = user.activeSessionToken
 
         sessionJob?.cancel()
         sessionJob = scope.launch {
@@ -70,7 +75,14 @@ class UserRepositoryImpl @Inject constructor(
                 // 여기서 흡수한다. (endUserSession으로 정상 종료되는 경로와는 별개의 방어선)
                 .catch { e -> Log.e("UserRepository", "currentUser 실시간 구독 실패: ${e.message}", e) }
                 .collect { dto ->
-                    dto?.let { _currentUser.value = it.toDomain() }
+                    if (dto == null) return@collect
+                    val remoteToken = dto.activeSessionToken
+                    val currentToken = localSessionToken
+                    if (currentToken != null && remoteToken != null && currentToken != remoteToken) {
+                        sessionExpiredNotifier.notifySessionExpired(SessionExpiredReason.DUPLICATE_LOGIN)
+                        return@collect
+                    }
+                    _currentUser.value = dto.toDomain()
                 }
         }
     }
@@ -79,7 +91,16 @@ class UserRepositoryImpl @Inject constructor(
         sessionJob?.cancel()
         sessionJob = null
         _currentUser.value = null
+        localSessionToken = null
     }
+
+    override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> =
+        safeRunCatching {
+            userRemoteDataSource.updateSessionToken(uid, token)
+        }.fold(
+            onSuccess = { Result.Success(Unit) },
+            onFailure = { e -> Result.Failure(handleError(e, "세션 토큰 업데이트 실패")) }
+        )
 
     override suspend fun updateLastSelectedPot(uid: String, potId: String) {
         db.collection("users").document(uid)

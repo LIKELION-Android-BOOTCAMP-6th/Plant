@@ -133,6 +133,12 @@ class UserRemoteDataSourceImpl @Inject constructor(
         }.await()
     }
 
+    override suspend fun updateSessionToken(uid: String, token: String?) {
+        db.collection("users").document(uid)
+            .update("activeSessionToken", token)
+            .await()
+    }
+
     override suspend fun deleteUserData(uid: String) {
         // 1. users/{uid}/pots/{potId}/logs/ (하위-하위) 컬렉션 내 문서들 삭제
         val pots = db.collection("users").document(uid)

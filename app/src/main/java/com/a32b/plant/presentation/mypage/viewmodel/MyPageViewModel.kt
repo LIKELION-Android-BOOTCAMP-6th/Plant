@@ -161,7 +161,7 @@ class MyPageViewModel @Inject constructor(
 
     fun logout() {
         viewModelScope.launch {
-            signOutUseCase()
+            signOutUseCase.invokeWithTokenClear()
             _eventChannel.send(MyPageEvent.NavigateToSignIn)
         }
     }

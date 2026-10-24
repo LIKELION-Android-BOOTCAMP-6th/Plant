@@ -33,6 +33,7 @@ import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.domain.repository.AuthRepository
 import com.a32b.plant.domain.session.SessionExpiredObserver
+import com.a32b.plant.domain.session.SessionExpiredReason
 import com.a32b.plant.presentation.core.component.BottomBar
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
@@ -80,28 +81,34 @@ class MainActivity : ComponentActivity() {
                     3. 유저 정보 조회 실패 다이얼로그 표출
                      */
                     var isSessionDialogShown by rememberSaveable { mutableStateOf(false) }
+                    var sessionExpiredReason by remember { mutableStateOf(SessionExpiredReason.USER_NOT_FOUND) }
                     val lifecycleOwner = LocalLifecycleOwner.current
 
                     LaunchedEffect(Unit) {
                         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            sessionExpiredObserver.event.collect {
+                            sessionExpiredObserver.event.collect { reason ->
                                 authRepository.signOut()
 
                                 navController.navigate(Routes.SignIn) {
                                     popUpTo(0) { inclusive = true }
                                 }
 
+                                sessionExpiredReason = reason
                                 isSessionDialogShown = true
                             }
                         }
-
-
                     }
 
                     if (isSessionDialogShown) {
+                        val (text, semiText) = when (sessionExpiredReason) {
+                            SessionExpiredReason.DUPLICATE_LOGIN ->
+                                "다른 기기에서 로그인되었습니다." to "보안을 위해 자동 로그아웃 됩니다."
+                            SessionExpiredReason.USER_NOT_FOUND ->
+                                "로그인한 유저의 정보를 찾을 수 없습니다." to "다시 로그인해 주세요."
+                        }
                         ConfirmDialog(
-                            text = "로그인한 유저의 정보를 찾을 수 없습니다.",
-                            semiText = "다시 로그인해 주세요.",
+                            text = text,
+                            semiText = semiText,
                             onDismiss = {},
                             onConfirm = { isSessionDialogShown = false }
                         )

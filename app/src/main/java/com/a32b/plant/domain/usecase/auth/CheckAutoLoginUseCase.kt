@@ -1,5 +1,6 @@
 package com.a32b.plant.domain.usecase.auth
 
+import com.a32b.plant.core.util.SessionTokenGenerator
 import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.di.UserModel
 import com.a32b.plant.domain.model.AutoLoginResult
@@ -26,7 +27,11 @@ class CheckAutoLoginUseCase @Inject constructor(
             return Result.Success(AutoLoginResult.NotLoggedIn)
         }
 
-        userRepository.startUserSession(user)
+        val token = SessionTokenGenerator.generate()
+        val tokenResult = userRepository.updateSessionToken(uid, token)
+        if (tokenResult is Result.Failure) return tokenResult
+
+        userRepository.startUserSession(user.copy(activeSessionToken = token))
         // TODO: CurrentUser 전역 싱글톤 제거 대상.
         //  아직 CurrentUser를 직접 읽는 화면이 남아 있어 과도기 동안 함께 세팅한다.
         //  모든 화면이 UserRepository로 전환되면 이 줄과 di/CurrentUser.kt를 함께 삭제할 것.
