@@ -107,10 +107,6 @@ class HomeViewModel @Inject constructor(
     private val _tempSelectedPot = MutableStateFlow<Pot?>(null)
     val tempSelectedPot = _tempSelectedPot.asStateFlow()
 
-    //에러 상태
-    private val _isLoginError = MutableStateFlow(false)
-    val isLoginError = _isLoginError.asStateFlow()
-
     //유저 이름 상태
     private val _userName = MutableStateFlow("")
     val userName = _userName.asStateFlow()
@@ -157,9 +153,7 @@ class HomeViewModel @Inject constructor(
 
                 loadActivePot(uid = user.uid, lastSelectedPotId = user.lastSelectedPotId)
                 checkRecoverySession(user.uid)
-            } ?: run {
-                _isLoginError.value = true
-            }
+            } ?: Unit
             loaded()
         }
     }
@@ -171,8 +165,11 @@ class HomeViewModel @Inject constructor(
                 currentUser?.let {
                     _userItem.value = it.item
                     _userName.value = it.nickname
-                    _attendanceUiState.value = it.monthCheck.toAttendanceUiState()
-                }
+
+                    val newState = it.monthCheck.toAttendanceUiState()
+                    _attendanceUiState.update { currentUiState ->
+                        newState.copy(reward = currentUiState.reward)
+                    }                }
             }
         }
     }
@@ -325,7 +322,7 @@ class HomeViewModel @Inject constructor(
                                 reward = decision.reward
                             )
                         }
-                        refreshUserItem(user.uid)
+                        userRepository.getUser(user.uid)
                     }
                     .onFailure { error ->
                         when (error) {
@@ -341,17 +338,6 @@ class HomeViewModel @Inject constructor(
 
     fun dismissAttendanceReward() {
         _attendanceUiState.update { it.copy(reward = null) }
-    }
-
-    private fun refreshUserItem(uid: String) {
-        viewModelScope.launch {
-            userRepository.getUser(uid)
-                .onSuccess { user ->
-                    user?.let {
-                        _userItem.value = it.item
-                    }
-                }
-        }
     }
 
     fun openBoxes(count: Int) {
