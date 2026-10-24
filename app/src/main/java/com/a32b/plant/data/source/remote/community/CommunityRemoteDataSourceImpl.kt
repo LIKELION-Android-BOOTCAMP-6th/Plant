@@ -152,7 +152,7 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         val postRef = db.collection("posts").document(postId)
         val comments = postRef.collection("comments").get().await()
 
-        val commentActivityIds = comments.documents.mapNotNull { it.getString("activityId") }
+        val commentActivityIds = comments.documents.mapNotNull { it.getString("activityId")?.takeIf { id -> id.isNotEmpty() } }
 
         db.runBatch { batch ->
             comments.documents.forEach { commentDoc -> batch.delete(commentDoc.reference) }
