@@ -322,7 +322,6 @@ class HomeViewModel @Inject constructor(
                                 reward = decision.reward
                             )
                         }
-                        userRepository.getUser(user.uid)
                     }
                     .onFailure { error ->
                         when (error) {

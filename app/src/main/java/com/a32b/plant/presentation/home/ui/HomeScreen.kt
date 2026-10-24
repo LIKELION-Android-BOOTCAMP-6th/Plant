@@ -823,7 +823,7 @@ fun BonusBoxOpenDialog(
 
                     OutlinedButton(
                         onClick = { if (count < maxCount) count++ },
-                        enabled = count < maxCount,
+                        enabled = count < maxCount && !isOpening,
                         modifier = Modifier.size(40.dp),
                         contentPadding = PaddingValues(0.dp)
                     ) {
