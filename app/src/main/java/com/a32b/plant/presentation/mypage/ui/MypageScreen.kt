@@ -1,7 +1,9 @@
 package com.a32b.plant.presentation.mypage.ui
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.net.Uri
 import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.Image
@@ -258,7 +260,15 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                 context.showToast("준비 중입니다.")
             },
             onPrivacyClick = {
-                context.showToast("준비 중입니다.")
+                try {
+                    val intent = Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse("https://plant-82b09.web.app/privacy-policy.html")
+                    )
+                    context.startActivity(intent)
+                } catch (e: ActivityNotFoundException) {
+                    context.showToast("브라우저를 열 수 없습니다.")
+                }
             },
             onLogoutClick = {
                 showLogoutDialog = true
