@@ -111,8 +111,8 @@ class UserRepositoryImpl @Inject constructor(
             onFailure = { e -> Result.Failure(handleError(e, "첫 로그인 완료 처리 실패")) }
         )
 
-    override suspend fun updateDarkMode(user: User): Result<Unit> = safeRunCatching {
-        settingsLocalDataSource.updateDarkMode(user.isDarkMode)
+    override suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit> = safeRunCatching {
+        settingsLocalDataSource.updateDarkMode(isDarkMode)
     }.fold(
         onSuccess = { Result.Success(Unit) },
         onFailure = { e ->

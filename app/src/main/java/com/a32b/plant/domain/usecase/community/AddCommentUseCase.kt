@@ -26,7 +26,9 @@ class AddCommentUseCase @Inject constructor(
                 user = CommentUser(user.uid, user.nickname, user.profileImg),
                 content = content,
                 activityId = "",
-                createdAt = null
+                createdAt = null,
+                reportCount = 0,
+                isHidden = false
             ),
             activity = CommunityActivity.comment(
                 uid = user.uid, title = title, targetId = postId, content = content, commentId = ""

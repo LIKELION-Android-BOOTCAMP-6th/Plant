@@ -33,7 +33,11 @@ data class CommentDto(
     @get:PropertyName("activityId") @set:PropertyName("activityId")
     var activityId: String = "",
     @get:PropertyName("createdAt") @set:PropertyName("createdAt")
-    var createdAt: Timestamp? = Timestamp.now()
+    var createdAt: Timestamp? = Timestamp.now(),
+    @get:PropertyName("reportCount") @set:PropertyName("reportCount")
+    var reportCount: Int = 0,
+    @get:PropertyName("isHidden") @set:PropertyName("isHidden")
+    var isHidden: Boolean = false,
 )
 data class PostDto(
     @DocumentId
@@ -67,4 +71,8 @@ data class PostDto(
     var isShared: Boolean? = false,
     @get:PropertyName("updatedAt") @set:PropertyName("updatedAt")
     var updatedAt: Timestamp? = null,
+    @get:PropertyName("reportCount") @set:PropertyName("reportCount")
+    var reportCount: Int = 0,
+    @get:PropertyName("isHidden") @set:PropertyName("isHidden")
+    var isHidden: Boolean = false,
 )

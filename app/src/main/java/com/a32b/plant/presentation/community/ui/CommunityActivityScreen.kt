@@ -44,6 +44,7 @@ import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.domain.type.ActivityType
 import com.a32b.plant.presentation.community.viewmodel.CommunityActivityEvent
 import com.a32b.plant.presentation.community.viewmodel.CommunityActivityViewModel
+import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.core.component.TagGroup
 import com.a32b.plant.presentation.core.extension.showToast
@@ -66,6 +67,25 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                 }
             }
         }
+    }
+
+    if (uiState.isDeleteDialogShown) {
+        val (text, semiText) = when (uiState.selected) {
+            ActivityType.LIKE -> "선택한 좋아요를 취소하시겠습니까?" to null
+            ActivityType.BOOKMARK -> "선택한 북마크를 취소하시겠습니까?" to null
+            else -> "선택한 항목을 삭제하시겠습니까?" to "삭제된 데이터는 복구할 수 없습니다."
+        }
+        ConfirmDialog(
+            text = text,
+            semiText = semiText,
+            onDismiss = { viewModel.hideDeleteDialog() },
+            onConfirm = {
+                viewModel.hideDeleteDialog()
+                viewModel.deleteSelected()
+            },
+            textStyle = MaterialTheme.typography.titleMedium,
+            buttonTextStyle = MaterialTheme.typography.labelLarge
+        )
     }
 
     Surface(
@@ -95,7 +115,7 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                     ) {
                         if (uiState.selectedIds.isNotEmpty()) {
                             TextButton(
-                                onClick = { viewModel.deleteSelected() },
+                                onClick = { viewModel.showDeleteDialog() },
                                 contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
                             ) {
                                 Text(

@@ -1,6 +1,7 @@
 package com.a32b.plant.data.source.remote.community
 
 import android.util.Log
+import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.data.mapper.toDto
 import com.a32b.plant.data.model.CommentDto
 import com.a32b.plant.data.model.CommunityActivityDto
@@ -54,7 +55,7 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         if (snapshot.metadata.isFromCache && snapshot.isEmpty) throw AppError.Network()
 
         return snapshot.documents.mapNotNull { doc ->
-            runCatching { doc.toObject(PostDto::class.java) }
+            safeRunCatching { doc.toObject(PostDto::class.java) }
                 .onFailure { e -> Log.e("CommunityRemoteDS", "게시글 파싱 실패: ${doc.id}", e) }
                 .getOrNull()
         }
@@ -79,7 +80,7 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         if (snapshot.metadata.isFromCache && snapshot.isEmpty) throw AppError.Network()
 
         return snapshot.documents.mapNotNull { doc ->
-            runCatching { doc.toObject(PostDto::class.java) }
+            safeRunCatching { doc.toObject(PostDto::class.java) }
                 .onFailure { e -> Log.e("CommunityRemoteDS", "게시글 파싱 실패: ${doc.id}", e) }
                 .getOrNull()
         }
@@ -145,59 +146,46 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
                 )
                 .await()
         }
-
-        db.collection("activities").document(getActivityId(postId))
-            .update("title", title)
-            .await()
     }
 
-    override suspend fun deletePost(postId: String, activityId: String) {
+    override suspend fun deletePost(postId: String): List<String> {
         val postRef = db.collection("posts").document(postId)
-
-        // 1. 하위 컬렉션 comments 문서 삭제
         val comments = postRef.collection("comments").get().await()
-        for (commentDoc in comments.documents) {
-            commentDoc.reference.delete().await()
-        }
 
-        // 2. 게시글 자신의 activity만 삭제 (댓글/좋아요는 남의 활동 기록이라 건드리지 않음)
-        deleteActivity(DeleteActivityRequest.ById(activityId))
+        val commentActivityIds = comments.documents.mapNotNull { it.getString("activityId")?.takeIf { id -> id.isNotEmpty() } }
 
-        // 3. 게시글 문서 삭제
-        postRef.delete().await()
+        db.runBatch { batch ->
+            comments.documents.forEach { commentDoc -> batch.delete(commentDoc.reference) }
+            batch.delete(postRef)
+        }.await()
+
+        return commentActivityIds
     }
 
-    override suspend fun toggleLike(postId: String, uid: String, title: String): Boolean {
+    override suspend fun toggleLike(postId: String, uid: String): Boolean {
         val postRef = db.collection("posts").document(postId)
 
         // 트랜잭션 안에서 likedBy를 직접 읽어 좋아요/취소 방향을 서버가 자체 결정
         // → 다른 기기에서 상태가 바뀌어도 잘못된 방향으로 flip되지 않음
-        val wasLiked = db.runTransaction { txn ->
+        return db.runTransaction { txn ->
             val snapshot = txn.get(postRef)
-            val current = snapshot.getLong("likeCount") ?: 0L
             @Suppress("UNCHECKED_CAST")
             val likedBy = (snapshot.get("likedBy") as? List<String>) ?: emptyList()
             val already = uid in likedBy
 
             if (already) {
-                val newCount = (current - 1).coerceAtLeast(0)
                 txn.update(postRef, mapOf(
                     "likedBy" to FieldValue.arrayRemove(uid),
-                    "likeCount" to newCount
+                    "likeCount" to FieldValue.increment(-1L)
                 ))
             } else {
                 txn.update(postRef, mapOf(
                     "likedBy" to FieldValue.arrayUnion(uid),
-                    "likeCount" to current + 1
+                    "likeCount" to FieldValue.increment(1L)
                 ))
             }
             already
         }.await()
-
-        if (wasLiked) deleteActivity(DeleteActivityRequest.ByLike(uid, postId))
-        else setLikedActivity(uid, postId, title)
-
-        return wasLiked
     }
 
     override suspend fun addComment(postId: String, comment: Comment, activity: CommunityActivity) {
@@ -208,14 +196,12 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         val commentWithAct = comment.copy(activityId = activityRef.id, commentId = commentRef.id)
         val activityWithCo = activity.copy(targetId = postId, commentId = commentRef.id)
 
+        val postRef = commentRef.parent.parent!!
         db.runBatch { batch ->
             batch.set(commentRef, commentWithAct.toDto())
             batch.set(activityRef, activityWithCo.toDto())
+            batch.update(postRef, "commentCount", FieldValue.increment(1))
         }.await()
-
-        db.collection("posts").document(postId)
-            .update("commentCount", FieldValue.increment(1))
-            .await()
     }
 
     override suspend fun updateComment(postId: String, commentId: String, newContent: String) {
@@ -223,44 +209,45 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             .collection("comments").document(commentId)
             .update("content", newContent)
             .await()
+    }
 
-        db.collection("activities").whereEqualTo("commentId", commentId)
+    override suspend fun updateActivityComment(commentId: String, content: String) {
+        db.collection("activities")
+            .whereEqualTo("commentId", commentId)
             .get()
             .await()
             .documents
-            .firstOrNull()?.reference?.update("comment", newContent)?.await()
+            .firstOrNull()?.reference?.update("comment", content)?.await()
     }
 
-    override suspend fun deleteComment(postId: String, commentId: String) {
-        val commentDoc = db.collection("posts").document(postId)
+    override suspend fun deleteComment(postId: String, commentId: String): String? {
+        val commentRef = db.collection("posts").document(postId)
             .collection("comments").document(commentId)
+        val postRef = commentRef.parent.parent!!
 
-        // activityId가 있으면 activity도 삭제
-        val activityId = commentDoc.get().await().getString("activityId")
+        // exists() 체크 → delete() → commentCount 감소를 트랜잭션으로 묶어 TOCTOU 방지 + 포스트 부재 시 NOT_FOUND 방어
+        return db.runTransaction { txn ->
+            val commentSnapshot = txn.get(commentRef)
+            if (!commentSnapshot.exists()) return@runTransaction null
 
-        commentDoc.delete().await()
-
-        if (!activityId.isNullOrEmpty()) {
-            deleteActivity(DeleteActivityRequest.ById(activityId))
-        }
-
-        db.collection("posts").document(postId)
-            .update("commentCount", FieldValue.increment(-1))
-            .await()
+            val postSnapshot = txn.get(postRef)
+            val actId = commentSnapshot.getString("activityId")
+            txn.delete(commentRef)
+            if (postSnapshot.exists()) {
+                txn.update(postRef, "commentCount", FieldValue.increment(-1))
+            }
+            actId
+        }.await()
     }
 
-    private suspend fun getActivityId(postId: String): String {
-        return db.collection("posts").document(postId)
+    override suspend fun updateActivityTitle(postId: String, title: String) {
+        db.collection("activities")
+            .whereEqualTo("targetId", postId)
+            .whereEqualTo("type", ActivityType.POST)
             .get()
             .await()
-            .getString("activityId") ?: ""
-    }
-
-    private suspend fun setLikedActivity(uid: String, postId: String, title: String) {
-        val data = CommunityActivity.like(uid = uid, title = title, targetId = postId).toDto()
-        db.collection("activities")
-            .add(data)
-            .await()
+            .documents
+            .firstOrNull()?.reference?.update("title", title)?.await()
     }
 
     override fun observeActivity(uid: String, selected: String): Flow<List<CommunityActivityDto>> = callbackFlow {
@@ -276,7 +263,7 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
                 }
 
                 val activities = snapshots?.documents?.mapNotNull { doc ->
-                    runCatching { doc.toObject(CommunityActivityDto::class.java)}.getOrNull()
+                    safeRunCatching { doc.toObject(CommunityActivityDto::class.java) }.getOrNull()
                 } ?: emptyList()
 
                 trySend(activities)
@@ -286,53 +273,33 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
 
     }
 
-    override suspend fun deleteActivity(activityId : String){
-        deleteActivity(DeleteActivityRequest.ById(activityId))
+    override suspend fun deleteActivity(activityId: String) {
+        db.collection("activities")
+            .document(activityId)
+            .delete()
+            .await()
     }
 
-    sealed interface DeleteActivityRequest{
-        data class ById(val id: String) : DeleteActivityRequest
-        data class ByLike(val uid: String, val targetId: String) : DeleteActivityRequest
-        data class ByBookmark(val uid: String, val targetId: String) : DeleteActivityRequest
+    override suspend fun deleteActivityByType(uid: String, targetId: String, type: String) {
+        db.collection("activities")
+            .whereEqualTo("uid", uid)
+            .whereEqualTo("targetId", targetId)
+            .whereEqualTo("type", type)
+            .get()
+            .await()
+            .documents
+            .forEach { it.reference.delete().await() }
     }
 
-    private suspend fun deleteActivity(request: DeleteActivityRequest){
-        when(request){
-            is DeleteActivityRequest.ById -> {
-                db.collection("activities")
-                    .document(request.id)
-                    .delete()
-                    .await()
-            }
-            is DeleteActivityRequest.ByLike -> {
-                db.collection("activities")
-                    .whereEqualTo("uid", request.uid)
-                    .whereEqualTo("targetId", request.targetId)
-                    .whereEqualTo("type", ActivityType.LIKE)
-                    .get()
-                    .await()
-                    .documents
-                    .forEach { it.reference.delete().await() }
-            }
-            is DeleteActivityRequest.ByBookmark -> {
-                db.collection("activities")
-                    .whereEqualTo("uid", request.uid)
-                    .whereEqualTo("targetId", request.targetId)
-                    .whereEqualTo("type", ActivityType.BOOKMARK)
-                    .get()
-                    .await()
-                    .documents
-                    .forEach { it.reference.delete().await() }
-            }
-        }
+    override suspend fun createActivity(activity: CommunityActivity) {
+        db.collection("activities").add(activity.toDto()).await()
     }
 
-    override suspend fun toggleBookmark(postId: String, uid: String, title: String): Boolean {
+    override suspend fun toggleBookmark(postId: String, uid: String): Boolean {
         val postRef = db.collection("posts").document(postId)
 
-        val wasBookmarked = db.runTransaction { txn ->
+        return db.runTransaction { txn ->
             val snapshot = txn.get(postRef)
-            val current = snapshot.getLong("bookmarkCount") ?: 0L
             @Suppress("UNCHECKED_CAST")
             val bookmarkedBy = (snapshot.get("bookmarkedBy") as? List<String>) ?: emptyList()
             val already = uid in bookmarkedBy
@@ -340,24 +307,16 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             if (already) {
                 txn.update(postRef, mapOf(
                     "bookmarkedBy" to FieldValue.arrayRemove(uid),
-                    "bookmarkCount" to (current - 1).coerceAtLeast(0)
+                    "bookmarkCount" to FieldValue.increment(-1L)
                 ))
             } else {
                 txn.update(postRef, mapOf(
                     "bookmarkedBy" to FieldValue.arrayUnion(uid),
-                    "bookmarkCount" to current + 1
+                    "bookmarkCount" to FieldValue.increment(1L)
                 ))
             }
             already
         }.await()
-
-        if (wasBookmarked) deleteActivity(DeleteActivityRequest.ByBookmark(uid, postId))
-        else {
-            val data = CommunityActivity.bookmark(uid = uid, title = title, targetId = postId).toDto()
-            db.collection("activities").add(data).await()
-        }
-
-        return wasBookmarked
     }
 
     override suspend fun findCommentIdByActivityId(postId: String, activityId: String): String? {

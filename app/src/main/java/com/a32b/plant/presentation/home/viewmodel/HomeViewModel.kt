@@ -107,10 +107,6 @@ class HomeViewModel @Inject constructor(
     private val _tempSelectedPot = MutableStateFlow<Pot?>(null)
     val tempSelectedPot = _tempSelectedPot.asStateFlow()
 
-    //에러 상태
-    private val _isLoginError = MutableStateFlow(false)
-    val isLoginError = _isLoginError.asStateFlow()
-
     //유저 이름 상태
     private val _userName = MutableStateFlow("")
     val userName = _userName.asStateFlow()

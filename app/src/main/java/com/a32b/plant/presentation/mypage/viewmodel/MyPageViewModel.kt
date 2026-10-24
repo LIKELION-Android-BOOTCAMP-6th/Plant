@@ -6,10 +6,10 @@ import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
+import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.usecase.auth.SignOutUseCase
 import com.a32b.plant.domain.usecase.mypage.GetProfileImageLevelListUseCase
 import com.a32b.plant.domain.usecase.mypage.ObserveDarkModeUseCase
-import com.a32b.plant.domain.usecase.mypage.UpdateDarkModeUseCase
 import com.a32b.plant.domain.usecase.mypage.UpdateProfileUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -48,7 +48,7 @@ class MyPageViewModel @Inject constructor(
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     private val getProfileImageLevelListUseCase: GetProfileImageLevelListUseCase,
     private val signOutUseCase: SignOutUseCase,
-    private val updateDarkModeUseCase: UpdateDarkModeUseCase,
+    private val userRepository: UserRepository,
     private val updateProfileUseCase: UpdateProfileUseCase,
     private val observeDarkModeUseCase: ObserveDarkModeUseCase
 ) : BaseViewModel() {
@@ -69,7 +69,7 @@ class MyPageViewModel @Inject constructor(
             }
             // 사용자가 확인된 경우에만 설정을 읽고, 읽은 뒤 화면을 표시한다.
             observeDarkMode()
-        }
+        } ?: loaded()
     }
 
     private fun observeDarkMode() {
@@ -145,7 +145,7 @@ class MyPageViewModel @Inject constructor(
         _uiState.update { it.copy(isDarkModeUpdating = true) }
 
         viewModelScope.launch {
-            updateDarkModeUseCase(isDarkMode)
+            userRepository.updateDarkMode(isDarkMode)
                 .onSuccess {
                     _uiState.update {
                         it.copy(

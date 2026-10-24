@@ -143,7 +143,20 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
 
             Spacer(modifier = Modifier.height(30.dp))
             Text("${TimeFormatter.formatToTimeOnly(startTime)} ~", style = MaterialTheme.typography.bodyMedium, fontSize = 13.sp,)
-            SetTimer(uiState.timer)
+            SetTimer(
+                time = uiState.timer,
+                color = if (uiState.goalCheckMode == StudyingGoalCheckMode.FINISH) MaterialTheme.colorScheme.error else Color.Unspecified
+            )
+
+            Box(modifier = Modifier.height(20.dp), contentAlignment = Alignment.Center) {
+                if (!uiState.isStudying && uiState.goalCheckMode == null && !uiState.isGoalInputDialogShown) {
+                    Text(
+                        text = "일시정지",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(10.dp))
 
@@ -194,16 +207,15 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
             studyLogs = uiState.studyLog.map { it.log },
             onDismiss = {
                 viewModel.onGoalInputDialogChange(false)
-                if (uiState.isEditing) viewModel.onIsEditingChanged(false, null)
             },
             onConfirm = {
                 viewModel.setStudyLog(it)
                 viewModel.onGoalInputDialogChange(false)
             },
-            onConfirmEdit = {
-                viewModel.onStudyLogChanged(index = uiState.logIndex ?: 0, log = it )
+            onConfirmEdit = confirmEdit@{ log ->
+                val index = uiState.logIndex ?: return@confirmEdit
+                viewModel.onStudyLogChanged(index = index, log = log)
                 viewModel.onGoalInputDialogChange(false)
-                viewModel.onIsEditingChanged(false, index = null)
             }
         )
     }
@@ -211,10 +223,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
         StudyingGoalCheckDialog(
             mode = it,
             studyLog = uiState.studyLog,
-            onEdit = { index ->
-                viewModel.onIsEditingChanged(index = index, value = true)
-                viewModel.onGoalInputDialogChange(true)
-             },
+            onEdit = { index -> viewModel.onStartEditing(index) },
             onCompleted = {index, isCompleted ->
                 viewModel.onStudyLogChanged(index, isCompleted)
             },
@@ -257,7 +266,7 @@ fun StudyStatusBadge(tag: String, title: String){
 }
 
 @Composable
-fun SetTimer(time: Long){
+fun SetTimer(time: Long, color: Color = Color.Unspecified){
     Box(modifier = Modifier.size(250.dp)
         .padding(16.dp),
         contentAlignment = Alignment.Center){
@@ -267,7 +276,7 @@ fun SetTimer(time: Long){
             modifier = Modifier.matchParentSize(),
             contentScale = ContentScale.Fit
         )
-        Text(text = "${TimeFormatter.formatToDigitalClock(time)}", style = MaterialTheme.typography.titleLarge,)
+        Text(text = "${TimeFormatter.formatToDigitalClock(time)}", style = MaterialTheme.typography.titleLarge, color = color)
     }
 }
 @Composable

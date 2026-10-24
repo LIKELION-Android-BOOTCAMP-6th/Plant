@@ -14,6 +14,7 @@ import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.CommunityRepository
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
+import com.a32b.plant.domain.type.ActivityType
 import com.a32b.plant.core.extension.toLong
 import com.a32b.plant.core.extension.toTimestamp
 import com.google.firebase.firestore.FirebaseFirestoreException
@@ -107,45 +108,87 @@ class CommunityRepositoryImpl @Inject constructor(
         }
     )
 
-    override suspend fun updatePost(isShared: Boolean, postId: String, title: String, content: String?, tag: Tag?): Result<Unit> = safeRunCatching {
-        communityRemoteDataSource.updatePost(isShared, postId, title, content, tag?.toDto())
-    }.fold(
-        onSuccess = { Result.Success(Unit) },
-        onFailure = { e ->
+    override suspend fun updatePost(isShared: Boolean, postId: String, title: String, content: String?, tag: Tag?): Result<Unit> {
+        safeRunCatching {
+            communityRemoteDataSource.updatePost(isShared, postId, title, content, tag?.toDto())
+        }.onFailure { e ->
             Log.e("Community", "게시글 수정 실패", e)
-            Result.Failure(handleError(e, "게시글 수정에 실패했습니다.", isWrite = true))
+            return Result.Failure(handleError(e, "게시글 수정에 실패했습니다.", isWrite = true))
         }
-    )
 
-    override suspend fun deletePost(postId: String, activityId : String): Result<Unit> = safeRunCatching {
-        communityRemoteDataSource.deletePost(postId, activityId)
-    }.fold(
-        onSuccess = { Result.Success(Unit) },
-        onFailure = { e ->
-            Log.e("Community", "게시글 삭제 실패", e)
-            Result.Failure(handleError(e, "게시글 삭제에 실패했습니다.", isWrite = true))
-        }
-    )
+        safeRunCatching { communityRemoteDataSource.updateActivityTitle(postId, title) }
+            .onFailure { Log.e("Community", "activity title 업데이트 실패 (게시글은 수정됨): postId=$postId", it) }
 
-    override suspend fun toggleLike(postId: String, uid: String, title: String): Result<Boolean> = safeRunCatching {
-        communityRemoteDataSource.toggleLike(postId, uid, title)
-    }.fold(
-        onSuccess = { Result.Success(it) },
-        onFailure = { e ->
-            Log.e("Community", "좋아요 처리 실패", e)
-            Result.Failure(handleError(e, "좋아요 처리에 실패했습니다.", isWrite = true))
-        }
-    )
+        return Result.Success(Unit)
+    }
 
-    override suspend fun toggleBookmark(postId: String, uid: String, title: String): Result<Boolean> = safeRunCatching {
-        communityRemoteDataSource.toggleBookmark(postId, uid, title)
-    }.fold(
-        onSuccess = { Result.Success(it) },
-        onFailure = { e ->
-            Log.e("Community", "북마크 처리 실패", e)
-            Result.Failure(handleError(e, "북마크 처리에 실패했습니다.", isWrite = true))
+    override suspend fun deletePost(postId: String, activityId: String): Result<Unit> {
+        val commentActivityIds = safeRunCatching {
+            communityRemoteDataSource.deletePost(postId)
+        }.fold(
+            onSuccess = { it },
+            onFailure = { e ->
+                Log.e("Community", "게시글 삭제 실패", e)
+                return Result.Failure(handleError(e, "게시글 삭제에 실패했습니다.", isWrite = true))
+            }
+        )
+
+        commentActivityIds.forEach { commentActivityId ->
+            safeRunCatching { communityRemoteDataSource.deleteActivity(commentActivityId) }
+                .onFailure { Log.e("Community", "댓글 activity 삭제 실패 (게시글은 삭제됨): $commentActivityId", it) }
         }
-    )
+
+        if (activityId.isNotEmpty()) {
+            safeRunCatching { communityRemoteDataSource.deleteActivity(activityId) }
+                .onFailure { Log.e("Community", "activity 삭제 실패 (게시글은 삭제됨): $activityId", it) }
+        }
+
+        return Result.Success(Unit)
+    }
+
+    override suspend fun toggleLike(postId: String, uid: String, title: String): Result<Boolean> {
+        val wasLiked = safeRunCatching {
+            communityRemoteDataSource.toggleLike(postId, uid)
+        }.fold(
+            onSuccess = { Result.Success(it) },
+            onFailure = { e ->
+                Log.e("Community", "좋아요 처리 실패", e)
+                return Result.Failure(handleError(e, "좋아요 처리에 실패했습니다.", isWrite = true))
+            }
+        ).let { (it as Result.Success).data }
+
+        if (wasLiked) {
+            safeRunCatching { communityRemoteDataSource.deleteActivityByType(uid, postId, ActivityType.LIKE) }
+                .onFailure { Log.e("Community", "좋아요 activity 삭제 실패 (좋아요는 취소됨): postId=$postId", it) }
+        } else {
+            safeRunCatching { communityRemoteDataSource.createActivity(CommunityActivity.like(uid = uid, title = title, targetId = postId)) }
+                .onFailure { Log.e("Community", "좋아요 activity 생성 실패 (좋아요는 추가됨): postId=$postId", it) }
+        }
+
+        return Result.Success(wasLiked)
+    }
+
+    override suspend fun toggleBookmark(postId: String, uid: String, title: String): Result<Boolean> {
+        val wasBookmarked = safeRunCatching {
+            communityRemoteDataSource.toggleBookmark(postId, uid)
+        }.fold(
+            onSuccess = { Result.Success(it) },
+            onFailure = { e ->
+                Log.e("Community", "북마크 처리 실패", e)
+                return Result.Failure(handleError(e, "북마크 처리에 실패했습니다.", isWrite = true))
+            }
+        ).let { (it as Result.Success).data }
+
+        if (wasBookmarked) {
+            safeRunCatching { communityRemoteDataSource.deleteActivityByType(uid, postId, ActivityType.BOOKMARK) }
+                .onFailure { Log.e("Community", "북마크 activity 삭제 실패 (북마크는 취소됨): postId=$postId", it) }
+        } else {
+            safeRunCatching { communityRemoteDataSource.createActivity(CommunityActivity.bookmark(uid = uid, title = title, targetId = postId)) }
+                .onFailure { Log.e("Community", "북마크 activity 생성 실패 (북마크는 추가됨): postId=$postId", it) }
+        }
+
+        return Result.Success(wasBookmarked)
+    }
 
     override suspend fun addComment(postId: String, comment: Comment, activity: CommunityActivity): Result<Unit> = safeRunCatching {
         communityRemoteDataSource.addComment(postId, comment, activity)
@@ -157,25 +200,38 @@ class CommunityRepositoryImpl @Inject constructor(
         }
     )
 
-    override suspend fun updateComment(postId: String, commentId: String, newContent: String): Result<Unit> = safeRunCatching {
-        communityRemoteDataSource.updateComment(postId, commentId, newContent)
-    }.fold(
-        onSuccess = { Result.Success(Unit) },
-        onFailure = { e ->
+    override suspend fun updateComment(postId: String, commentId: String, newContent: String): Result<Unit> {
+        safeRunCatching {
+            communityRemoteDataSource.updateComment(postId, commentId, newContent)
+        }.onFailure { e ->
             Log.e("Community", "댓글 수정 실패", e)
-            Result.Failure(handleError(e, "댓글 수정에 실패했습니다.", isWrite = true))
+            return Result.Failure(handleError(e, "댓글 수정에 실패했습니다.", isWrite = true))
         }
-    )
 
-    override suspend fun deleteComment(postId: String, commentId: String): Result<Unit> = safeRunCatching {
-        communityRemoteDataSource.deleteComment(postId, commentId)
-    }.fold(
-        onSuccess = { Result.Success(Unit) },
-        onFailure = { e ->
-            Log.e("Community", "댓글 삭제 실패", e)
-            Result.Failure(handleError(e, "댓글 삭제에 실패했습니다.", isWrite = true))
+        safeRunCatching { communityRemoteDataSource.updateActivityComment(commentId, newContent) }
+            .onFailure { Log.e("Community", "activity comment 업데이트 실패 (댓글은 수정됨): commentId=$commentId", it) }
+
+        return Result.Success(Unit)
+    }
+
+    override suspend fun deleteComment(postId: String, commentId: String): Result<Unit> {
+        val activityId = safeRunCatching {
+            communityRemoteDataSource.deleteComment(postId, commentId)
+        }.fold(
+            onSuccess = { Result.Success(it) },
+            onFailure = { e ->
+                Log.e("Community", "댓글 삭제 실패", e)
+                return Result.Failure(handleError(e, "댓글 삭제에 실패했습니다.", isWrite = true))
+            }
+        ).let { (it as Result.Success).data }
+
+        if (!activityId.isNullOrEmpty()) {
+            safeRunCatching { communityRemoteDataSource.deleteActivity(activityId) }
+                .onFailure { Log.e("Community", "activity 삭제 실패 (댓글은 삭제됨): $activityId", it) }
         }
-    )
+
+        return Result.Success(Unit)
+    }
 
     override fun observeActivity(selected: String): Flow<List<CommunityActivity>> {
         if (currentUid.isEmpty()) {

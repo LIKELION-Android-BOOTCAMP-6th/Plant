@@ -18,6 +18,6 @@ data class StudyLogEmbedDto(
     var startedAt: Long = 0L,
     @get:PropertyName("id") @set:PropertyName("id")
     var id: String = "",
-    @get:PropertyName("isSelected") @set:PropertyName("isSelected")
+    @get:PropertyName("selected") @set:PropertyName("selected")
     var isSelected: Boolean = false
 )

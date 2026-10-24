@@ -1,7 +1,6 @@
 package com.a32b.plant.presentation.studying.ui
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,7 +20,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Divider
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -37,7 +35,7 @@ import androidx.compose.ui.window.Dialog
 import com.a32b.plant.R
 import com.a32b.plant.presentation.core.type.StudyingGoalCheckMode
 import com.a32b.plant.presentation.studying.viewmodel.StudyLogUi
-import com.a32b.plant.presentation.theme.sub3
+
 
 @Composable
 fun StudyingGoalCheckDialog(
@@ -48,8 +46,6 @@ fun StudyingGoalCheckDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    val showEditButton = mode != StudyingGoalCheckMode.INTERRUPTED
-    val showActionRow = mode != StudyingGoalCheckMode.CHECK
     Dialog(onDismiss) {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -61,7 +57,7 @@ fun StudyingGoalCheckDialog(
             ) {
                 Box(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "학습 목표",
+                        text = if (mode == StudyingGoalCheckMode.FINISH) "학습 종료" else "학습 목표",
                         style = MaterialTheme.typography.titleSmall,
                         modifier = Modifier.align(Alignment.Center)
                     )
@@ -79,7 +75,6 @@ fun StudyingGoalCheckDialog(
                     ) {
                         itemsIndexed(studyLog){ index, item ->
                             StudyLogItem(
-                                isInterrupted = !showEditButton,
                                 log = item,
                                 onEdit = { onEdit(index) },
                                 onCompleted = {onCompleted(index, it)}
@@ -95,33 +90,46 @@ fun StudyingGoalCheckDialog(
                     }
                 }
 
-                if (showEditButton){
-                    TextButton(onClick = {onEdit(-1)}) {
-                        Text(
-                            "추가하기",
-                            style = MaterialTheme.typography.bodySmall,
-                            textDecoration = TextDecoration.Underline
-                        )
-                    }
+                TextButton(onClick = { onEdit(-1) }) {
+                    Text(
+                        "추가하기",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textDecoration = TextDecoration.Underline
+                    )
                 }
 
-
-                if (showActionRow){
-                    Row(modifier = Modifier.fillMaxWidth().padding(7.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                when (mode) {
+                    StudyingGoalCheckMode.FINISH -> {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(7.dp),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Button(
+                                onClick = onDismiss,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.height(33.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.outline)
+                            ) { Text("취소", style = MaterialTheme.typography.bodySmall) }
+                            Spacer(Modifier.width(8.dp))
+                            Button(
+                                onClick = onConfirm,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.height(33.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(0.7f))
+                            ) { Text("종료", style = MaterialTheme.typography.bodySmall) }
+                        }
+                    }
+                    StudyingGoalCheckMode.CHECK -> {
                         Button(
                             onClick = onDismiss,
                             shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.outline)
-                        ) { Text("취소", style = MaterialTheme.typography.bodySmall)}
-
-                        Button(
-                            onClick = onConfirm,
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(0.7f))
-                        ) { Text( if(showEditButton) "종료" else "저장", style = MaterialTheme.typography.bodySmall )}
+                            modifier = Modifier
+                                .align(Alignment.End)
+                                .padding(end = 7.dp, bottom = 7.dp)
+                                .height(33.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                        ) { Text("닫기", style = MaterialTheme.typography.bodySmall) }
                     }
                 }
             }
@@ -130,17 +138,15 @@ fun StudyingGoalCheckDialog(
 }
 
 @Composable
-fun StudyLogItem(isInterrupted: Boolean, log: StudyLogUi, onEdit: () -> Unit, onCompleted: (Boolean) -> Unit ){
+fun StudyLogItem(log: StudyLogUi, onEdit: () -> Unit, onCompleted: (Boolean) -> Unit ){
     Row(
         modifier = Modifier.fillMaxWidth()
             .clickable{onCompleted(!log.isCompleted)}
             .padding(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (!isInterrupted) {
-            Checkbox(checked = log.isCompleted, onCheckedChange = onCompleted)
-            Spacer(modifier = Modifier.width(7.dp))
-        }
+        Checkbox(checked = log.isCompleted, onCheckedChange = onCompleted)
+        Spacer(modifier = Modifier.width(7.dp))
         Text(
             text = log.log,
             style = MaterialTheme.typography.bodyMedium,
@@ -148,19 +154,14 @@ fun StudyLogItem(isInterrupted: Boolean, log: StudyLogUi, onEdit: () -> Unit, on
             textDecoration = if (log.isCompleted) TextDecoration.LineThrough else TextDecoration.None
         )
         Spacer(Modifier.weight(1f))
-
-        if(!isInterrupted){
-            IconButton(
-                onClick = onEdit,
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.ic_edit),
-                    contentDescription = "edit",
-                    modifier = Modifier.size(17.dp).padding(end = 5.dp)
-                )
-            }
+        IconButton(
+            onClick = onEdit,
+        ) {
+            Image(
+                painter = painterResource(R.drawable.ic_edit),
+                contentDescription = "edit",
+                modifier = Modifier.size(17.dp).padding(end = 5.dp)
+            )
         }
-
-
     }
 }

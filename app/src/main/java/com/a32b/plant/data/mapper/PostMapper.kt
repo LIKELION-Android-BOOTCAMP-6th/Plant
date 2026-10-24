@@ -28,7 +28,9 @@ fun CommentDto.toDomain() : Comment = Comment(
     user = user.toDomain(),
     content = content,
     activityId = activityId,
-    createdAt = createdAt.toLong()
+    createdAt = createdAt.toLong(),
+    reportCount = reportCount,
+    isHidden = isHidden
 )
 fun StudyLogEmbedDto.toDomain(): StudyLog = StudyLog(
     title = title,
@@ -66,7 +68,9 @@ fun PostDto.toDomain(uid: String, comments: List<Comment>) : Post = Post(
     studyLogs = studyLogs?.map { it.toDomain() },
     isShared = isShared,
     comments = comments,
-    updatedAt = updatedAt?.toDate()?.time
+    updatedAt = updatedAt?.toDate()?.time,
+    reportCount = reportCount,
+    isHidden = isHidden
 )
 
 /**

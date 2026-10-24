@@ -14,12 +14,19 @@ import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.repository.CommunityRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
+import com.a32b.plant.domain.type.ReportReason
 import com.a32b.plant.domain.usecase.community.AddCommentUseCase
+import com.a32b.plant.domain.usecase.community.CreateCommunityReportUseCase
 import com.a32b.plant.domain.usecase.community.ToggleBookmarkUseCase
 import com.a32b.plant.domain.usecase.community.ToggleLikeUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -49,7 +56,18 @@ data class CommunityDetailUiState(
     val editingCommentText: String = "",
 
     // 댓글 삭제 대상 ID
-    val deletingCommentId: String? = null
+    val deletingCommentId: String? = null,
+
+    val isInitialLoading: Boolean = true,
+    val isPostNotFound: Boolean = false,
+
+    // 신고 BottomSheet
+    val showReportSheet: Boolean = false,
+    val reportTargetType: String = "",
+    val reportTargetId: String = "",
+    val selectedReportReason: ReportReason? = null,
+    val reportDetailText: String = "",
+    val isReportSubmitting: Boolean = false
 )
 
 sealed class CommunityDetailEvent {
@@ -63,6 +81,7 @@ class CommunityDetailViewModel @Inject constructor(
     private val addCommentUseCase: AddCommentUseCase,
     private val toggleLikeUseCase: ToggleLikeUseCase,
     private val toggleBookmarkUseCase: ToggleBookmarkUseCase,
+    private val createCommunityReportUseCase: CreateCommunityReportUseCase,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -88,6 +107,9 @@ class CommunityDetailViewModel @Inject constructor(
     // 좋아요/북마크 디바운스 상태
     private var likeDebounceJob: Job? = null
     private var bookmarkDebounceJob: Job? = null
+    // delay 구간에서만 true — 재진입 차단 + commitXXX() 시작 직전 false로 해제
+    private var likePendingCommit = false
+    private var bookmarkPendingCommit = false
 
     init {
         ensureCurrentUserUseCase { user -> _uiState.update { it.copy(currentUid = user.uid, currentNickname = user.nickname, currentProfileImg = user.profileImg) } }
@@ -104,12 +126,17 @@ class CommunityDetailViewModel @Inject constructor(
                 .onSuccess { post ->
                     _post.value = post
                     onIsSharedChange()
+                    if (post == null) {
+                        _uiState.update { it.copy(isPostNotFound = true) }
+                    }
                 }
                 .onFailure { e -> sendToast(e.message) }
 
             commentsDeferred.await()
                 .onSuccess { comments -> _uiState.update { it.copy(commentList = comments) } }
                 .onFailure { e -> sendToast(e.message) }
+
+            _uiState.update { it.copy(isInitialLoading = false) }
         }
     }
 
@@ -131,6 +158,9 @@ class CommunityDetailViewModel @Inject constructor(
                 .onSuccess { post ->
                     _post.value = post
                     onIsSharedChange()
+                    if (post == null) {
+                        _uiState.update { it.copy(isPostNotFound = true) }
+                    }
                 }
                 .onFailure { e -> sendToast(e.message) }
 
@@ -191,6 +221,7 @@ class CommunityDetailViewModel @Inject constructor(
     fun toggleLike() {
         val currentPost = _post.value ?: return
         if (currentPost.author.id == _uiState.value.currentUid) return
+        if (likePendingCommit) return
 
         // 낙관적 UI: 로컬 즉시 토글
         val newIsLiked = !currentPost.isLiked
@@ -200,16 +231,19 @@ class CommunityDetailViewModel @Inject constructor(
             likeCount = (currentPost.likeCount + delta).coerceAtLeast(0)
         )
 
-        // 디바운스: 이전 타이머 취소하고 새로 시작
-        likeDebounceJob?.cancel()
+        likePendingCommit = true
         likeDebounceJob = viewModelScope.launch {
             delay(LIKE_DEBOUNCE)
+            // onCleared()가 먼저 실행됐다면 flag가 이미 false → 중복 커밋 방지
+            if (!likePendingCommit) return@launch
+            likePendingCommit = false
             commitLike()
         }
     }
 
     fun toggleBookmark() {
         val currentPost = _post.value ?: return
+        if (bookmarkPendingCommit) return
 
         val newIsBookmarked = !currentPost.isBookmarked
         val delta = if (newIsBookmarked) 1 else -1
@@ -218,26 +252,41 @@ class CommunityDetailViewModel @Inject constructor(
             bookmarkCount = (currentPost.bookmarkCount + delta).coerceAtLeast(0)
         )
 
-        bookmarkDebounceJob?.cancel()
+        bookmarkPendingCommit = true
         bookmarkDebounceJob = viewModelScope.launch {
             delay(BOOKMARK_DEBOUNCE)
+            if (!bookmarkPendingCommit) return@launch
+            bookmarkPendingCommit = false
             commitBookmark()
         }
     }
 
     private suspend fun commitBookmark() {
         val post = _post.value ?: return
-        toggleBookmarkUseCase(postId, post.title)
-            .onSuccess { wasBookmarked ->
+        val localIsBookmarked = post.isBookmarked
+        // NonCancellable: viewModelScope 취소(화면 이탈) 후에도 Firestore 쓰기가 완료되도록 보장 (Case B)
+        withContext(NonCancellable) {
+            toggleBookmarkUseCase(postId, post.title)
+        }.onSuccess { wasBookmarked ->
                 val serverFinal = !wasBookmarked
-                if (_post.value?.isBookmarked != serverFinal) {
-                    _post.value = _post.value?.copy(isBookmarked = serverFinal)
+                // 커밋 이후 사용자가 또 탭했다면(localIsBookmarked != 현재값) 덮어쓰지 않음
+                // → 다른 기기에서 상태가 바뀐 케이스만 보정
+                if (_post.value?.isBookmarked == localIsBookmarked && _post.value?.isBookmarked != serverFinal) {
+                    val delta = if (serverFinal) 1 else -1
+                    _post.value = _post.value?.copy(
+                        isBookmarked = serverFinal,
+                        bookmarkCount = ((_post.value?.bookmarkCount ?: 0) + delta).coerceAtLeast(0)
+                    )
                 }
             }
             .onFailure { e ->
                 when (e) {
-                    is AppError.UnknownUser -> Unit
+                    is AppError.UnknownUser -> {
+                        // onCleared 경로(viewModelScope 취소됨): 화면 없으므로 세션 복구 불필요
+                        if (viewModelScope.isActive) ensureCurrentUserUseCase()
+                    }
                     else -> {
+                        // 화면 이탈 후 실행(onCleared 경로)이면 viewModelScope가 취소돼 sendToast/refresh는 no-op
                         sendToast(e.message)
                         refresh()
                     }
@@ -247,19 +296,31 @@ class CommunityDetailViewModel @Inject constructor(
 
     private suspend fun commitLike() {
         val post = _post.value ?: return
-        toggleLikeUseCase(postId, post.author.id, post.title)
-            .onSuccess { wasLiked ->
+        val localIsLiked = post.isLiked
+        // NonCancellable: viewModelScope 취소(화면 이탈) 후에도 Firestore 쓰기가 완료되도록 보장 (Case B)
+        withContext(NonCancellable) {
+            toggleLikeUseCase(postId, post.author.id, post.title)
+        }.onSuccess { wasLiked ->
                 // 서버가 실제로 반영한 최종 상태 (wasLiked=true이면 취소됐으니 최종은 false)
                 val serverFinal = !wasLiked
-                if (_post.value?.isLiked != serverFinal) {
-                    // 다른 기기에서 상태가 바뀐 케이스 → 서버 기준으로 UI 정정
-                    _post.value = _post.value?.copy(isLiked = serverFinal)
+                // 커밋 이후 사용자가 또 탭했다면(localIsLiked != 현재값) 덮어쓰지 않음
+                // → 다른 기기에서 상태가 바뀐 케이스만 보정
+                if (_post.value?.isLiked == localIsLiked && _post.value?.isLiked != serverFinal) {
+                    val delta = if (serverFinal) 1 else -1
+                    _post.value = _post.value?.copy(
+                        isLiked = serverFinal,
+                        likeCount = ((_post.value?.likeCount ?: 0) + delta).coerceAtLeast(0)
+                    )
                 }
             }
             .onFailure { e ->
                 when (e) {
-                    is AppError.UnknownUser -> Unit
+                    is AppError.UnknownUser -> {
+                        // onCleared 경로(viewModelScope 취소됨): 화면 없으므로 세션 복구 불필요
+                        if (viewModelScope.isActive) ensureCurrentUserUseCase()
+                    }
                     else -> {
+                        // 화면 이탈 후 실행(onCleared 경로)이면 viewModelScope가 취소돼 sendToast/refresh는 no-op
                         sendToast(e.message)
                         // 정확한 롤백값을 모르므로 서버 상태 재조회로 정합성 확보
                         refresh()
@@ -332,6 +393,97 @@ class CommunityDetailViewModel @Inject constructor(
                 }
             _uiState.update { it.copy(deletingCommentId = null) }
             refresh()
+        }
+    }
+
+    override fun onCleared() {
+        // 디바운스 delay 중 화면 이탈 시 viewModelScope가 취소되기 전에 펜딩 커밋을 독립 스코프로 실행 (Case A)
+        // flag를 먼저 false로 리셋 → delay가 이미 만료돼 큐에 올라간 debounce 연속체가
+        // if (!likePendingCommit) guard에 걸려 중복 커밋하지 않도록 방지
+        if (likePendingCommit) {
+            likePendingCommit = false
+            likeDebounceJob?.cancel()
+            CoroutineScope(SupervisorJob()).launch { commitLike() }
+        }
+        if (bookmarkPendingCommit) {
+            bookmarkPendingCommit = false
+            bookmarkDebounceJob?.cancel()
+            CoroutineScope(SupervisorJob()).launch { commitBookmark() }
+        }
+        super.onCleared()
+    }
+
+    fun openPostReportSheet() {
+        _uiState.update {
+            it.copy(
+                showReportSheet = true,
+                reportTargetType = "post",
+                reportTargetId = postId,
+                selectedReportReason = null,
+                reportDetailText = ""
+            )
+        }
+    }
+
+    fun openCommentReportSheet(commentId: String) {
+        _uiState.update {
+            it.copy(
+                showReportSheet = true,
+                reportTargetType = "comment",
+                reportTargetId = commentId,
+                selectedReportReason = null,
+                reportDetailText = ""
+            )
+        }
+    }
+
+    fun closeReportSheet() {
+        _uiState.update { it.copy(showReportSheet = false) }
+    }
+
+    fun selectReportReason(reason: ReportReason) {
+        _uiState.update {
+            it.copy(
+                selectedReportReason = reason,
+                reportDetailText = if (reason == ReportReason.OTHER) it.reportDetailText else ""
+            )
+        }
+    }
+
+    fun onReportDetailChange(text: String) {
+        _uiState.update { it.copy(reportDetailText = text) }
+    }
+
+    fun submitReport() {
+        val state = _uiState.value
+        val reason = state.selectedReportReason ?: return
+        if (state.isReportSubmitting) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isReportSubmitting = true) }
+
+            val parentPostId = if (state.reportTargetType == "comment") postId else null
+
+            createCommunityReportUseCase(
+                targetType = state.reportTargetType,
+                targetId = state.reportTargetId,
+                parentPostId = parentPostId,
+                reason = reason,
+                detail = state.reportDetailText
+            )
+                .onSuccess {
+                    _uiState.update { it.copy(showReportSheet = false) }
+                    sendToast("신고가 접수되었습니다.")
+                    refresh()
+                }
+                .onFailure { e ->
+                    when (e) {
+                        is AppError.UnknownUser -> Unit
+                        else -> sendToast(e.message)
+                    }
+                }
+
+            _uiState.update { it.copy(isReportSubmitting = false) }
         }
     }
 
