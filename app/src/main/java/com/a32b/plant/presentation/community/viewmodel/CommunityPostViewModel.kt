@@ -13,6 +13,7 @@ import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.community.CreatePostUseCase
+import com.a32b.plant.domain.usecase.community.PostCooldownManager
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import com.a32b.plant.domain.usecase.studyLog.GetSelectedStudyLogUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -48,11 +49,11 @@ sealed class CommunityPostEvent{
 class CommunityPostViewModel @Inject constructor(
     private val repository: CommunityRepository,
     private val createPostUseCase: CreatePostUseCase,
+    private val postCooldownManager: PostCooldownManager,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     private val getSelectedStudyLogUseCase: GetSelectedStudyLogUseCase,
     savedStateHandle: SavedStateHandle,
-
-    ) : ViewModel() {
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CommunityPostUiState())
     val uiState = _uiState.asStateFlow()
@@ -182,7 +183,14 @@ class CommunityPostViewModel @Inject constructor(
                     onComplete(false)
                 }
             } else {
-                // 새 글 작성 모드
+                // 새 글 작성 모드 — 30초 쿨다운 검증
+                if (!postCooldownManager.canPost()) {
+                    val remaining = postCooldownManager.getRemainingSeconds()
+                    sendToast("게시글 작성은 ${remaining}초 후에 가능합니다")
+                    _uiState.update { it.copy(isSubmitting = false) }
+                    return@launch
+                }
+
                 withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
                     createPostUseCase(
                         isShared = isShared,
@@ -192,6 +200,7 @@ class CommunityPostViewModel @Inject constructor(
                         tag = selectedTag
                     )
                 }.onSuccess { newPostId ->
+                    postCooldownManager.recordPost()
                     postId = newPostId
                     onComplete(true)
                     _eventChannel.send(CommunityPostEvent.NavigateToDetail(newPostId))
