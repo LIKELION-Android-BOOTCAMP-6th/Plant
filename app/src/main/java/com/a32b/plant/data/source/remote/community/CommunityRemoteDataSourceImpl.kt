@@ -10,6 +10,7 @@ import com.a32b.plant.data.model.TagDto
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.CommunityActivity
+import com.a32b.plant.domain.type.ActivityType
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
@@ -145,10 +146,6 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
                 )
                 .await()
         }
-
-        db.collection("activities").document(getActivityId(postId))
-            .update("title", title)
-            .await()
     }
 
     override suspend fun deletePost(postId: String) {
@@ -209,12 +206,15 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             .collection("comments").document(commentId)
             .update("content", newContent)
             .await()
+    }
 
-        db.collection("activities").whereEqualTo("commentId", commentId)
+    override suspend fun updateActivityComment(commentId: String, content: String) {
+        db.collection("activities")
+            .whereEqualTo("commentId", commentId)
             .get()
             .await()
             .documents
-            .firstOrNull()?.reference?.update("comment", newContent)?.await()
+            .firstOrNull()?.reference?.update("comment", content)?.await()
     }
 
     override suspend fun deleteComment(postId: String, commentId: String): String? {
@@ -237,11 +237,14 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         }.await()
     }
 
-    private suspend fun getActivityId(postId: String): String {
-        return db.collection("posts").document(postId)
+    override suspend fun updateActivityTitle(postId: String, title: String) {
+        db.collection("activities")
+            .whereEqualTo("targetId", postId)
+            .whereEqualTo("type", ActivityType.POST)
             .get()
             .await()
-            .getString("activityId") ?: ""
+            .documents
+            .firstOrNull()?.reference?.update("title", title)?.await()
     }
 
     override fun observeActivity(uid: String, selected: String): Flow<List<CommunityActivityDto>> = callbackFlow {

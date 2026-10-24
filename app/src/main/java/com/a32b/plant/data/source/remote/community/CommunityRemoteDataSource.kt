@@ -30,6 +30,7 @@ interface CommunityRemoteDataSource {
 
     suspend fun savePost(post: PostDto, activity: CommunityActivityDto): String
     suspend fun updatePost(isShared: Boolean, postId: String, title: String, content: String?, tag: TagDto?)
+    suspend fun updateActivityTitle(postId: String, title: String)
     suspend fun deletePost(postId: String)
 
     suspend fun toggleLike(postId: String, uid: String): Boolean
@@ -37,6 +38,7 @@ interface CommunityRemoteDataSource {
 
     suspend fun addComment(postId : String, comment: Comment, activity: CommunityActivity)
     suspend fun updateComment(postId: String, commentId: String, newContent: String)
+    suspend fun updateActivityComment(commentId: String, content: String)
     suspend fun deleteComment(postId: String, commentId: String): String?
 
     fun observeActivity(uid: String, selected: String): Flow<List<CommunityActivityDto>>
