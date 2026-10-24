@@ -123,11 +123,19 @@ class CommunityRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deletePost(postId: String, activityId: String): Result<Unit> {
-        safeRunCatching {
+        val commentActivityIds = safeRunCatching {
             communityRemoteDataSource.deletePost(postId)
-        }.onFailure { e ->
-            Log.e("Community", "게시글 삭제 실패", e)
-            return Result.Failure(handleError(e, "게시글 삭제에 실패했습니다.", isWrite = true))
+        }.fold(
+            onSuccess = { it },
+            onFailure = { e ->
+                Log.e("Community", "게시글 삭제 실패", e)
+                return Result.Failure(handleError(e, "게시글 삭제에 실패했습니다.", isWrite = true))
+            }
+        )
+
+        commentActivityIds.forEach { commentActivityId ->
+            safeRunCatching { communityRemoteDataSource.deleteActivity(commentActivityId) }
+                .onFailure { Log.e("Community", "댓글 activity 삭제 실패 (게시글은 삭제됨): $commentActivityId", it) }
         }
 
         if (activityId.isNotEmpty()) {

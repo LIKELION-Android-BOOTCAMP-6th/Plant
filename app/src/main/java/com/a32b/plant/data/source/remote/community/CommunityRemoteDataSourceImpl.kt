@@ -148,20 +148,18 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun deletePost(postId: String) {
+    override suspend fun deletePost(postId: String): List<String> {
         val postRef = db.collection("posts").document(postId)
         val comments = postRef.collection("comments").get().await()
 
+        val commentActivityIds = comments.documents.mapNotNull { it.getString("activityId") }
+
         db.runBatch { batch ->
-            comments.documents.forEach { commentDoc ->
-                batch.delete(commentDoc.reference)
-                val activityId = commentDoc.getString("activityId")
-                if (!activityId.isNullOrEmpty()) {
-                    batch.delete(db.collection("activities").document(activityId))
-                }
-            }
+            comments.documents.forEach { commentDoc -> batch.delete(commentDoc.reference) }
             batch.delete(postRef)
         }.await()
+
+        return commentActivityIds
     }
 
     override suspend fun toggleLike(postId: String, uid: String): Boolean {
