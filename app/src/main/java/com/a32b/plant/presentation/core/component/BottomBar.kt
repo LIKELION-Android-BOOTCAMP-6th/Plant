@@ -42,7 +42,7 @@ fun BottomBar(navController: NavController, enabled: Boolean = true) {
             modifier = Modifier
                 .fillMaxWidth()
                 .alpha(if (enabled) 1f else 0.38f),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically
         ) {
             val isHomeSelected = currentDestination?.hasRoute<Routes.HomeMain>() == true
@@ -147,7 +147,7 @@ private fun BottomBarItem(
     ) {
         Image(
             painter = painterResource(id = iconRes),
-            contentDescription = label,
+            contentDescription = null,
             modifier = Modifier.size(21.dp),
             colorFilter = ColorFilter.tint(tintColor)
         )
