@@ -24,6 +24,7 @@ class SignOutUseCase @Inject constructor(
     suspend fun invokeWithTokenClear() {
         val uid = userRepository.currentUser.value?.uid
         if (uid != null) {
+            // 실패해도 로컬 로그아웃은 진행한다. 잔존 토큰은 다음 로그인 시 덮어쓰인다.
             userRepository.updateSessionToken(uid, null)
         }
         invoke()

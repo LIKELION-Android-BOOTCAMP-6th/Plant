@@ -75,10 +75,19 @@ class UserRepositoryImpl @Inject constructor(
                 // 여기서 흡수한다. (endUserSession으로 정상 종료되는 경로와는 별개의 방어선)
                 .catch { e -> Log.e("UserRepository", "currentUser 실시간 구독 실패: ${e.message}", e) }
                 .collect { dto ->
-                    if (dto == null) return@collect
+                    if (dto == null) {
+                        // Firestore 유저 문서가 삭제된 경우. 리스너를 먼저 종료해야
+                        // 이후 스냅샷에서 이벤트가 반복 발생하지 않는다.
+                        endUserSession()
+                        sessionExpiredNotifier.notifySessionExpired(SessionExpiredReason.USER_NOT_FOUND)
+                        return@collect
+                    }
                     val remoteToken = dto.activeSessionToken
                     val currentToken = localSessionToken
                     if (currentToken != null && remoteToken != null && currentToken != remoteToken) {
+                        // 리스너를 먼저 종료해야 이후 스냅샷에서 이벤트가 반복 발생하지 않는다.
+                        // MainActivity도 signOutUseCase()를 통해 endUserSession()을 재호출하나
+                        // 멱등적이므로 문제없다. authRepository.signOut()은 그쪽에서 처리된다.
                         endUserSession()
                         sessionExpiredNotifier.notifySessionExpired(SessionExpiredReason.DUPLICATE_LOGIN)
                         return@collect
