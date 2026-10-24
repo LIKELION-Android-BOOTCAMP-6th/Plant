@@ -3,19 +3,21 @@ package com.a32b.plant.presentation.core.component
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -23,108 +25,130 @@ import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.presentation.theme.sub_green2
 
 @Composable
-fun BottomBar(navController: NavController, enabled: Boolean = true){
+fun BottomBar(navController: NavController, enabled: Boolean = true) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    val size = 23
-    Surface(modifier = Modifier
-        .fillMaxWidth()
-        .navigationBarsPadding(),
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        color = MaterialTheme.colorScheme.surface) {
-        Row(modifier = Modifier.fillMaxWidth().height(68.dp).alpha(if (enabled) 1f else 0.38f),
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding(),
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .alpha(if (enabled) 1f else 0.38f),
             horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically) {
-
-            //커뮤니티인지 확인 하고 맞으면 커뮤니티 셀렉티드 이미지로 변경
-            val isCommunitySelected = currentDestination?.hasRoute<Routes.CommunityList>() == true
-            Image(
-                painter = painterResource(id = if(isCommunitySelected) R.drawable.ic_bottom_community_selected else R.drawable.ic_bottom_community_normal),
-                contentDescription = "COMMUNITY",
-                modifier = Modifier
-                    .weight(1f)
-                    .size(size.dp)
-                    .clickable(enabled = enabled) {
-                        if (!isCommunitySelected) {  // ★
-                            navController.navigate(Routes.CommunityList) {
-                                popUpTo(Routes.HomeMain) { inclusive = false }
-                                launchSingleTop = true
-                            }
-                        }
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val isHomeSelected = currentDestination?.hasRoute<Routes.HomeMain>() == true
+            BottomBarItem(
+                iconRes = R.drawable.ic_bottom_home_normal,
+                label = "홈",
+                selected = isHomeSelected,
+                enabled = enabled
+            ) {
+                if (!isHomeSelected) {
+                    navController.navigate(Routes.HomeMain) {
+                        popUpTo(Routes.HomeMain) { inclusive = false }
+                        launchSingleTop = true
                     }
-            )
+                }
+            }
 
             val isPotSelected = currentDestination?.hasRoute<Routes.PotList>() == true
-            Image(
-                painter = painterResource(id = if(isPotSelected) R.drawable.ic_bottom_pot_selected else R.drawable.ic_bottom_pot_normal),
-                contentDescription = "POTLIST",
-                modifier = Modifier
-                    .weight(1f)
-                    .size(size.dp)
-                    .clickable(enabled = enabled) {
-                        if (!isPotSelected) {  // ★
-                            navController.navigate(Routes.PotList) {
-                                popUpTo(Routes.HomeMain) { inclusive = false }
-                                launchSingleTop = true
-                            }
-                        }
+            BottomBarItem(
+                iconRes = R.drawable.ic_bottom_pot_normal,
+                label = "화분",
+                selected = isPotSelected,
+                enabled = enabled
+            ) {
+                if (!isPotSelected) {
+                    navController.navigate(Routes.PotList) {
+                        popUpTo(Routes.HomeMain) { inclusive = false }
+                        launchSingleTop = true
                     }
-            )
+                }
+            }
 
-            val isHomeSelected = currentDestination?.hasRoute<Routes.HomeMain>() == true
-            Image(
-                painter = painterResource(id = if(isHomeSelected) R.drawable.ic_bottom_home_selected else R.drawable.ic_bottom_home_normal),
-                contentDescription = "HOME",
-                modifier = Modifier
-                    .weight(1f)
-                    .size(size.dp)
-                    .clickable(enabled = enabled) {
-                        if (!isHomeSelected) {  // ★
-                            navController.navigate(Routes.HomeMain) {
-                                popUpTo(Routes.HomeMain) { inclusive = false }
-                                launchSingleTop = true
-                            }
-                        }
+            val isCommunitySelected = currentDestination?.hasRoute<Routes.CommunityList>() == true
+            BottomBarItem(
+                iconRes = R.drawable.ic_bottom_community_normal,
+                label = "커뮤니티",
+                selected = isCommunitySelected,
+                enabled = enabled
+            ) {
+                if (!isCommunitySelected) {
+                    navController.navigate(Routes.CommunityList) {
+                        popUpTo(Routes.HomeMain) { inclusive = false }
+                        launchSingleTop = true
                     }
-            )
+                }
+            }
 
             val isReportSelected = currentDestination?.hasRoute<Routes.Report>() == true
-            Image(
-                painter = painterResource(id = if(isReportSelected) R.drawable.ic_bottom_report_selected else R.drawable.ic_bottom_report_normal),
-                contentDescription = "REPORT",
-                modifier = Modifier
-                    .weight(1f)
-                    .size(size.dp)
-                    .clickable(enabled = enabled) {
-                        if (!isReportSelected) {  // ★
-                            navController.navigate(Routes.Report) {
-                                popUpTo(Routes.HomeMain) { inclusive = false }
-                                launchSingleTop = true
-                            }
-                        }
+            BottomBarItem(
+                iconRes = R.drawable.ic_bottom_report_normal,
+                label = "리포트",
+                selected = isReportSelected,
+                enabled = enabled
+            ) {
+                if (!isReportSelected) {
+                    navController.navigate(Routes.Report) {
+                        popUpTo(Routes.HomeMain) { inclusive = false }
+                        launchSingleTop = true
                     }
-            )
-
+                }
+            }
 
             val isMyPageSelected = currentDestination?.hasRoute<Routes.Mypage>() == true
-            Image(
-                painter = painterResource(id = if(isMyPageSelected) R.drawable.ic_bottom_mypage_selected else R.drawable.ic_bottom_mypage_normal),
-                contentDescription = "MYPAGE",
-                modifier = Modifier
-                    .weight(1f)
-                    .size(size.dp)
-                    .clickable(enabled = enabled) {
-                        if (!isMyPageSelected) {  // ★
-                            navController.navigate(Routes.Mypage) {
-                                popUpTo(Routes.HomeMain) { inclusive = false }
-                                launchSingleTop = true
-                            }
-                        }
+            BottomBarItem(
+                iconRes = R.drawable.ic_bottom_mypage_normal,
+                label = "마이페이지",
+                selected = isMyPageSelected,
+                enabled = enabled
+            ) {
+                if (!isMyPageSelected) {
+                    navController.navigate(Routes.Mypage) {
+                        popUpTo(Routes.HomeMain) { inclusive = false }
+                        launchSingleTop = true
                     }
-            )
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun BottomBarItem(
+    iconRes: Int,
+    label: String,
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    val tintColor = if (selected) sub_green2 else MaterialTheme.colorScheme.onSurfaceVariant
+    Column(
+        modifier = Modifier
+            .clickable(enabled = enabled) { onClick() }
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Image(
+            painter = painterResource(id = iconRes),
+            contentDescription = label,
+            modifier = Modifier.size(20.dp),
+            colorFilter = ColorFilter.tint(tintColor)
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = tintColor
+        )
     }
 }
