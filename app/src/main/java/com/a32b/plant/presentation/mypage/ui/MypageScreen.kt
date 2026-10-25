@@ -1,7 +1,6 @@
 package com.a32b.plant.presentation.mypage.ui
 
 import android.app.Activity
-import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -123,6 +122,13 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                     navController.navigate(Routes.SignIn) {
                         popUpTo(0) { inclusive = true }
                     }
+                is MyPageEvent.OpenUrl -> {
+                    try {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(event.url)))
+                    } catch (error: Exception) {
+                        context.showToast("브라우저 앱을 찾을 수 없습니다.")
+                    }
+                }
             }
         }
     }
@@ -138,6 +144,16 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                     navController.navigate(Routes.SignIn) {
                         popUpTo(0) { inclusive = true }
                     }
+
+                is DeleteAccountEvent.OpenGoogleAccountSettings -> {
+                    val intent = Intent(Settings.ACTION_ADD_ACCOUNT)
+                    intent.putExtra("account_types", arrayOf("com.google"))
+                    try {
+                        context.startActivity(intent)
+                    } catch (error: Exception) {
+                        context.showToast("계정 추가 설정을 열 수 없습니다.")
+                    }
+                }
 
                 is DeleteAccountEvent.RequestGoogleReauth -> {
                     // 구글 재인증: Credential Manager로 idToken 획득 후 ViewModel에 전달
@@ -165,9 +181,7 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                         } catch (e: NoCredentialException) {
                             deleteViewModel.cancelLoading()
                             context.showToast("기기에 등록된 Google 계정이 없습니다.")
-                            val intent = Intent(Settings.ACTION_ADD_ACCOUNT)
-                            intent.putExtra("account_types", arrayOf("com.google"))
-                            context.startActivity(intent)
+                            deleteViewModel.openGoogleAccountSettings()
                         } catch (e: CancellationException) {
                             deleteViewModel.cancelLoading()
                             throw e
@@ -259,17 +273,7 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
             onTermsClick = {
                 context.showToast("준비 중입니다.")
             },
-            onPrivacyClick = {
-                try {
-                    val intent = Intent(
-                        Intent.ACTION_VIEW,
-                        Uri.parse("https://plant-82b09.web.app/privacy-policy.html")
-                    )
-                    context.startActivity(intent)
-                } catch (e: ActivityNotFoundException) {
-                    context.showToast("브라우저를 열 수 없습니다.")
-                }
-            },
+            onPrivacyClick = { viewModel.onPrivacyPolicyClick() },
             onLogoutClick = {
                 showLogoutDialog = true
             },

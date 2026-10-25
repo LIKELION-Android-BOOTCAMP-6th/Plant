@@ -24,6 +24,7 @@ sealed class DeleteAccountEvent {
     data class ShowToast(val message: String) : DeleteAccountEvent()
     object NavigateToSignIn : DeleteAccountEvent()
     object RequestGoogleReauth : DeleteAccountEvent()
+    object OpenGoogleAccountSettings : DeleteAccountEvent()
 }
 
 @HiltViewModel
@@ -48,6 +49,12 @@ class DeleteAccountViewModel @Inject constructor(
 
     fun cancelLoading() {
         _uiState.update { it.copy(isLoading = false) }
+    }
+
+    fun openGoogleAccountSettings() {
+        viewModelScope.launch {
+            _eventChannel.send(DeleteAccountEvent.OpenGoogleAccountSettings)
+        }
     }
 
     /** 구글 유저: idToken으로 재인증 후 삭제 (idToken은 Screen에서 Credential Manager로 획득) */
