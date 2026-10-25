@@ -230,6 +230,8 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                                 .fillMaxWidth()
                                 .height(48.dp)
                                 .clickable {
+                                    if (!viewModel.tryStartGoogleSignIn()) return@clickable
+
                                     coroutineScope.launch {
                                         val googleIdOption = GetSignInWithGoogleOption.Builder(webClientId)
                                             .build()
@@ -249,7 +251,9 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
 
                                         } catch (e: GetCredentialCancellationException) {
                                             // 사용자가 계정 선택창을 닫은 경우 무시
+                                            viewModel.cancelGoogleSignIn()
                                         } catch (e: NoCredentialException) {
+                                            viewModel.cancelGoogleSignIn()
                                             Toast.makeText(
                                                 context,
                                                 "기기에 등록된 Google 계정이 없습니다. 설정에서 계정을 추가해주세요.",
@@ -259,6 +263,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                                             intent.putExtra("account_types", arrayOf("com.google"))
                                             context.startActivity(intent)
                                         } catch (e: Exception) {
+                                            viewModel.cancelGoogleSignIn()
                                             Log.e("SignIn", "구글 로그인 에러: ${e.message}", e)
                                             Toast.makeText(context, "구글 로그인에 실패했습니다.\n다시 시도해주세요.", Toast.LENGTH_SHORT).show()
                                         }

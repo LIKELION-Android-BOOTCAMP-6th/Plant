@@ -46,11 +46,17 @@ class SignInViewModel @Inject constructor(
         _uiState.update { it.copy(nicknameInput = value, nicknameError = null) }
     }
 
-    fun handleGoogleSignIn(idToken: String) {
-        if (_uiState.value.isLoading) return
-
+    fun tryStartGoogleSignIn(): Boolean {
+        if (_uiState.value.isLoading) return false
         _uiState.update { it.copy(isLoading = true) }
+        return true
+    }
 
+    fun cancelGoogleSignIn() {
+        _uiState.update { it.copy(isLoading = false) }
+    }
+
+    fun handleGoogleSignIn(idToken: String) {
         viewModelScope.launch {
             signInWithGoogleUseCase(idToken)
                 .onSuccess { result -> handleLoginSuccess(result.uid, result.nickname, result.isFirstLogin) }
