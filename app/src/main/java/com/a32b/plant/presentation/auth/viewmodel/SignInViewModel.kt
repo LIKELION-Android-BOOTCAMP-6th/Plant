@@ -47,6 +47,8 @@ class SignInViewModel @Inject constructor(
     }
 
     fun handleGoogleSignIn(idToken: String) {
+        if (_uiState.value.isLoading) return
+
         _uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
