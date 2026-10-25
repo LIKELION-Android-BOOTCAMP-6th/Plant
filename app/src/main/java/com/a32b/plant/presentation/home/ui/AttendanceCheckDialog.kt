@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -105,11 +104,7 @@ private fun AttendanceDialogContent(
                     enabled = !uiState.isChecking,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        "나가기",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = LocalContentColor.current
-                    )
+                    Text("나가기", style = MaterialTheme.typography.bodyMedium)
                 }
             }
             if (uiState.isChecking) {
