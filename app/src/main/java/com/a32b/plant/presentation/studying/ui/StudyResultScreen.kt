@@ -80,13 +80,15 @@ fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewMo
                     verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = {navController.popBackStack()}) {
                         Image(painter = painterResource(R.drawable.ic_study_result_close),
-                            contentDescription = "닫기")
+                            contentDescription = "닫기",
+                            modifier = Modifier.size(24.dp))
                     }
                     IconButton(onClick = {
                         viewModel.onDialogShow()
                     }) {
                         Image(painter = painterResource(R.drawable.ic_study_result_download),
-                            contentDescription = "이미지 저장하기")
+                            contentDescription = "이미지 저장하기",
+                            modifier = Modifier.size(20.dp))
                     }
                 }
 
