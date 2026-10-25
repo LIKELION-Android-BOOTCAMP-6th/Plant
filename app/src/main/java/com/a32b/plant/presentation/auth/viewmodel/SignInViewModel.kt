@@ -70,6 +70,8 @@ class SignInViewModel @Inject constructor(
     }
 
     fun confirmNickname() {
+        if (_uiState.value.isNicknameLoading) return
+
         val nickname = _uiState.value.nicknameInput.trim()
 
         if (nickname.length !in 2..10) {
