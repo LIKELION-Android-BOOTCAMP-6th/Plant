@@ -57,6 +57,8 @@ class SignInViewModel @Inject constructor(
     }
 
     fun handleGoogleSignIn(idToken: String) {
+        if (!_uiState.value.isLoading) return // tryStartGoogleSignIn()을 거치지 않은 호출 방어
+
         viewModelScope.launch {
             signInWithGoogleUseCase(idToken)
                 .onSuccess { result -> handleLoginSuccess(result.uid, result.nickname, result.isFirstLogin) }
