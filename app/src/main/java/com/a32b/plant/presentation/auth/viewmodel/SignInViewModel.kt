@@ -57,7 +57,7 @@ class SignInViewModel @Inject constructor(
     }
 
     fun handleGoogleSignIn(idToken: String) {
-        if (!_uiState.value.isLoading) return // tryStartGoogleSignIn()을 거치지 않은 호출 방어
+        if (!_uiState.value.isLoading) return // 현재 호출부에서는 항상 true라 실질적으로 안 타지만, tryStartGoogleSignIn() 없이 직접 호출하는 경로가 생기면 signInWithGoogleUseCase 중복 호출을 막아주는 가드라 지우지 말 것
 
         viewModelScope.launch {
             signInWithGoogleUseCase(idToken)
