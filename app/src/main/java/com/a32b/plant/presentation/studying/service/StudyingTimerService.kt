@@ -97,7 +97,7 @@ class StudyingTimerService : Service() {
         NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Plant 학습 중")
             .setContentText(TimeFormatter.formatToDigitalClock(ms))
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
