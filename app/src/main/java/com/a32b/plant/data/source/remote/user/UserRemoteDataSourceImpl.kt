@@ -8,6 +8,7 @@ import com.a32b.plant.domain.model.AttendanceReward
 import com.a32b.plant.domain.type.ItemType
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -71,8 +72,9 @@ class UserRemoteDataSourceImpl @Inject constructor(
             .await()
     }
 
+    // 오프라인 캐시만으로 중복 여부를 판단하지 않도록 서버 응답을 요구한다.
     override suspend fun isNicknameTaken(nickname: String): Boolean {
-        val doc = db.collection("nicknames").document(nickname).get().await()
+        val doc = db.collection("nicknames").document(nickname).get(Source.SERVER).await()
         return doc.exists()
     }
 

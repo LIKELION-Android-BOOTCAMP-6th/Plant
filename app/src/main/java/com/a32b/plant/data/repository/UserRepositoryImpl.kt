@@ -169,7 +169,7 @@ class UserRepositoryImpl @Inject constructor(
         userRemoteDataSource.isNicknameTaken(nickname)
     }.fold(
         onSuccess = { Result.Success(it) },
-        onFailure = { e -> Result.Failure(handleError(e, "닉네임 중복 검사 실패")) }
+        onFailure = { e -> Result.Failure(handleNicknameCheckError(e)) }
     )
 
     override suspend fun registerNickname(nickname: String): Result<Unit> = safeRunCatching {
@@ -239,6 +239,20 @@ class UserRepositoryImpl @Inject constructor(
             }
             is FirebaseNetworkException -> AppError.Network()
             else -> AppError.Custom("출석 처리 실패")
+        }
+    }
+
+    private fun handleNicknameCheckError(e: Throwable): AppError {
+        Log.e("UserRepository", "닉네임 중복 검사 실패: ${e.message}", e)
+
+        return when (e) {
+            is FirebaseFirestoreException -> when (e.code) {
+                FirebaseFirestoreException.Code.UNAVAILABLE,
+                FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
+                else -> AppError.Custom("닉네임 중복 검사 실패")
+            }
+            is FirebaseNetworkException -> AppError.Network()
+            else -> AppError.Custom("닉네임 중복 검사 실패")
         }
     }
 }
