@@ -181,7 +181,7 @@ class CommunityDetailViewModel @Inject constructor(
 
         if (_uiState.value.isCommentSubmitting) return
         if (_uiState.value.comment.isBlank()) {
-            sendToast("댓글을 입력해주세요")
+            sendToast("댓글 내용을 입력해주세요")
             return
         }
 
