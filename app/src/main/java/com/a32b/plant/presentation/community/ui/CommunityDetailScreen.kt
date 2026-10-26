@@ -390,7 +390,7 @@ fun CommunityDetailScreen(
                                 isOwner = commentData.user.uid == uiState.currentUid,
                                 isEditing = uiState.editingCommentId == commentData.commentId,
                                 editingText = uiState.editingCommentText,
-                                isEditSubmitting = uiState.isEditCommentSubmitting,
+                                isEditSubmitting = commentData.commentId in uiState.editingSubmittingCommentIds,
                                 onEditTextChange = { viewModel.onEditCommentTextChange(it) },
                                 onEditStart = { viewModel.startEditComment(commentData) },
                                 onEditSubmit = { viewModel.submitEditComment() },
@@ -468,6 +468,7 @@ fun CommentRow(
                         onValueChange = { input ->
                             limitLength(input, maxLength, context, onEditTextChange)
                         },
+                        readOnly = isEditSubmitting,
                         modifier = Modifier.fillMaxWidth(),
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -494,11 +495,11 @@ fun CommentRow(
                             )
                         ) {
                             Text(
-                                "저장",
+                                if (isEditSubmitting) "저장 중" else "저장",
                                 style = MaterialTheme.typography.labelLarge
                             )
                         }
-                        TextButton(onClick = onEditCancel) {
+                        TextButton(onClick = onEditCancel, enabled = !isEditSubmitting) {
                             Text(
                                 "취소",
                                 style = MaterialTheme.typography.labelLarge

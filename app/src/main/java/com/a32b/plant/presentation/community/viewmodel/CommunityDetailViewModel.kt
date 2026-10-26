@@ -54,7 +54,8 @@ data class CommunityDetailUiState(
     // 댓글 수정 상태
     val editingCommentId: String? = null,
     val editingCommentText: String = "",
-    val isEditCommentSubmitting: Boolean = false,
+    // 저장 요청이 진행 중인 commentId 모음 — 여러 댓글을 번갈아 수정해도 각자 독립적으로 추적
+    val editingSubmittingCommentIds: Set<String> = emptySet(),
 
     // 댓글 삭제 대상 ID
     val deletingCommentId: String? = null,
@@ -368,14 +369,14 @@ class CommunityDetailViewModel @Inject constructor(
     fun submitEditComment() {
         val state = _uiState.value
         val commentId = state.editingCommentId ?: return
-        if (state.isEditCommentSubmitting) return
+        if (commentId in state.editingSubmittingCommentIds) return
         if (state.editingCommentText.isBlank()) {
             editBlankToastJob = sendBlankCommentToastIfNeeded(editBlankToastJob)
             return
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isEditCommentSubmitting = true) }
+            _uiState.update { it.copy(editingSubmittingCommentIds = it.editingSubmittingCommentIds + commentId) }
 
             withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
                 repository.updateComment(postId, commentId, state.editingCommentText)
@@ -387,7 +388,13 @@ class CommunityDetailViewModel @Inject constructor(
                     }
                 }
             _uiState.update {
-                it.copy(editingCommentId = null, editingCommentText = "", isEditCommentSubmitting = false)
+                // 응답을 받는 동안 다른 댓글 수정으로 전환됐다면 그 상태를 덮어쓰지 않음
+                val stillEditingSame = it.editingCommentId == commentId
+                it.copy(
+                    editingCommentId = if (stillEditingSame) null else it.editingCommentId,
+                    editingCommentText = if (stillEditingSame) "" else it.editingCommentText,
+                    editingSubmittingCommentIds = it.editingSubmittingCommentIds - commentId
+                )
             }
             refresh()
         }
