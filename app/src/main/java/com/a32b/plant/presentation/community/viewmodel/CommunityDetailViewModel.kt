@@ -378,6 +378,9 @@ class CommunityDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(editingSubmittingCommentIds = it.editingSubmittingCommentIds + commentId) }
 
+            // updateComment()가 safeRunCatching으로 감싸져 항상 Result를 반환한다는 전제로,
+            // 아래 editingSubmittingCommentIds 제거가 항상 실행됨. 이 함수가 예외를 던지도록 바뀌면
+            // commentId가 Set에 영구히 남아 해당 댓글의 저장/취소 버튼이 계속 비활성 상태로 고정됨
             withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
                 repository.updateComment(postId, commentId, state.editingCommentText)
             }
