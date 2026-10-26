@@ -61,7 +61,7 @@ fun ReportScreen(
             containerColor = MaterialTheme.colorScheme.background
         ) { paddingValues ->
             ReportContent(
-                modifier = Modifier.padding(paddingValues),
+                modifier = Modifier.padding(top = paddingValues.calculateTopPadding()),
                 state = state,
                 onPreviousMonth = viewModel::previousMonth,
                 onNextMonth = viewModel::nextMonth,
