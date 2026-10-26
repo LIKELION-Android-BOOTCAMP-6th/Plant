@@ -109,9 +109,11 @@ class StudyingTimerService : Service() {
 
     // 알림 탭 시 기존 MainActivity를 재사용해 학습 화면으로 복귀시킨다.
     // 싱글 액티비티 구조라 SINGLE_TOP만으로 Compose NavController 백스택이 그대로 유지된다.
+    // NEW_TASK: 프로세스가 종료되어 태스크가 없는 상태에서도 PendingIntent가 안정적으로 실행되도록 함.
+    // (CLEAR_TASK는 절대 추가하지 말 것 — 기존 백스택이 초기화되어 일시정지 상태가 날아감)
     private val contentIntent: PendingIntent by lazy {
         val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
         }
         PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
     }
