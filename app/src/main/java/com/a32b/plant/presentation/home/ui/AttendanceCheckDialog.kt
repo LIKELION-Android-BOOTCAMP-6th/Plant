@@ -18,6 +18,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,10 +46,11 @@ fun AttendanceCheckDialog(
     onDismiss: () -> Unit
 ) {
     Dialog(
-        onDismissRequest = onDismiss,
+        // 출석 처리 중에는 바깥 터치·뒤로가기로 닫히지 않게 한다.
+        onDismissRequest = { if (!uiState.isChecking) onDismiss() },
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        AttendanceDialogContent(uiState, onCheckClick)
+        AttendanceDialogContent(uiState, onCheckClick, onDismiss)
     }
 }
 
@@ -56,7 +58,8 @@ fun AttendanceCheckDialog(
 @Composable
 private fun AttendanceDialogContent(
     uiState: AttendanceUiState = AttendanceUiState(),
-    onCheckClick: () -> Unit = {}
+    onCheckClick: () -> Unit = {},
+    onDismiss: () -> Unit = {}
 ) {
     Surface(
         modifier = Modifier
@@ -94,6 +97,14 @@ private fun AttendanceDialogContent(
                         .padding(top = 24.dp)
                 ) {
                     Text(uiState.buttonText, style = MaterialTheme.typography.bodyMedium)
+                }
+
+                TextButton(
+                    onClick = onDismiss,
+                    enabled = !uiState.isChecking,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("나가기", style = MaterialTheme.typography.bodyMedium)
                 }
             }
             if (uiState.isChecking) {
