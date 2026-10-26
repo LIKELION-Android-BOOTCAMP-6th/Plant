@@ -23,7 +23,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -35,7 +34,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.a32b.plant.R
@@ -78,7 +76,7 @@ fun StudyingGoalInputDialog(
                 }
         ) {
             Column(
-                modifier = Modifier.padding(top = 10.dp, bottom = 5.dp),
+                modifier = Modifier.padding(top = 10.dp, bottom = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
 
@@ -172,6 +170,7 @@ fun StudyingGoalInputDialog(
 
                 Row(
                     modifier = Modifier.padding(horizontal = 13.dp).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
@@ -185,7 +184,8 @@ fun StudyingGoalInputDialog(
                         },
                         enabled = localLogs.size < maxLogSize || isEditing,
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.height(33.dp),
+                        modifier = Modifier.weight(1f).height(33.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.outline)
                     ) { Text(if (isEditing) "취소" else "추가", style = MaterialTheme.typography.bodySmall) }
 
@@ -204,44 +204,27 @@ fun StudyingGoalInputDialog(
 
                         },
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.height(33.dp).padding(start = 10.dp),
+                        modifier = Modifier.weight(1f).height(33.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error.copy(0.3f))
                     ) { Text("삭제", style = MaterialTheme.typography.bodySmall) }
-
-
-                    Spacer(Modifier.weight(1f))
 
                     Button(
                         onClick = {if (isEditing) onConfirmEdit(localLogs[index]) else onConfirm(localLogs.toList())},
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.height(33.dp),
+                        modifier = Modifier.weight(1f).height(33.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(0.7f))
                     ) { Text("완료", style = MaterialTheme.typography.bodySmall)}
 
                     if (!isEditing){
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(start = 6.dp)
-                        ) {
-                            TextButton(
-                                onClick = onDismiss,
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                                modifier = Modifier.height(33.dp)
-                            ) {
-                                Text(
-                                    "닫기",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.outline,
-                                    textDecoration = TextDecoration.Underline
-                                )
-                            }
-
-                            Text(
-                                "다음에 입력하기",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline
-                            )
-                        }
+                        Button(
+                            onClick = onDismiss,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f).height(33.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.outline.copy(0.4f))
+                        ) { Text("닫기", style = MaterialTheme.typography.bodySmall) }
                     }
                 }
             }
