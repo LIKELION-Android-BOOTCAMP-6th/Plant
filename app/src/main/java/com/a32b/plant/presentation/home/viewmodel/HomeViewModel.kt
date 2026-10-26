@@ -307,31 +307,33 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _attendanceUiState.update { it.copy(isChecking = true) }
 
-            ensureCurrentUserUseCase { user ->
-                userRepository.checkAttendance(user.uid)
-                    .onSuccess { decision ->
-                        _attendanceUiState.update {
-                            it.copy(
-                                count = decision.newCount,
-                                buttonText = if (decision.isMonthCompleted) {
-                                    "이번 달 출석 완료"
-                                } else {
-                                    "오늘 출석 완료"
-                                },
-                                isAttendanceCompleted = true,
-                                reward = decision.reward
-                            )
+            try {
+                ensureCurrentUserUseCase { user ->
+                    userRepository.checkAttendance(user.uid)
+                        .onSuccess { decision ->
+                            _attendanceUiState.update {
+                                it.copy(
+                                    count = decision.newCount,
+                                    buttonText = if (decision.isMonthCompleted) {
+                                        "이번 달 출석 완료"
+                                    } else {
+                                        "오늘 출석 완료"
+                                    },
+                                    isAttendanceCompleted = true,
+                                    reward = decision.reward
+                                )
+                            }
                         }
-                    }
-                    .onFailure { error ->
-                        when (error) {
-                            is AppError.UnknownUser -> ensureCurrentUserUseCase()
-                            else -> _eventChannel.send(HomeEvent.ShowToast(error.message))
+                        .onFailure { error ->
+                            when (error) {
+                                is AppError.UnknownUser -> ensureCurrentUserUseCase()
+                                else -> _eventChannel.send(HomeEvent.ShowToast(error.message))
+                            }
                         }
-                    }
+                }
+            } finally {
+                _attendanceUiState.update { it.copy(isChecking = false) }
             }
-
-            _attendanceUiState.update { it.copy(isChecking = false) }
         }
     }
 
