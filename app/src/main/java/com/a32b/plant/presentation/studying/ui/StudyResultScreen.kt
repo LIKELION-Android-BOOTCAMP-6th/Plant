@@ -1,6 +1,8 @@
 package com.a32b.plant.presentation.studying.ui
 
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.view.View
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -41,7 +43,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.view.drawToBitmap
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.a32b.plant.R
@@ -288,7 +289,18 @@ fun captureBitmap(content: @Composable () -> Unit): () -> Bitmap{
     val context = LocalContext.current
     val composeView = remember { ComposeView(context) }
 
-    fun captureBitmap(): Bitmap = composeView.drawToBitmap()
+    fun captureBitmap(): Bitmap {
+        val width = composeView.width.takeIf { it > 0 } ?: context.resources.displayMetrics.widthPixels
+        val widthSpec = View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY)
+        // 화면 높이로 측정하면 긴 로그가 잘려서 캡처되므로, 높이는 무제한으로 재측정해 전체 콘텐츠를 담는다
+        val heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        composeView.measure(widthSpec, heightSpec)
+        composeView.layout(0, 0, composeView.measuredWidth, composeView.measuredHeight)
+
+        val bitmap = Bitmap.createBitmap(composeView.measuredWidth, composeView.measuredHeight, Bitmap.Config.ARGB_8888)
+        composeView.draw(Canvas(bitmap))
+        return bitmap
+    }
 
     AndroidView(
         factory = {composeView.apply { setContent { content.invoke() } }}
