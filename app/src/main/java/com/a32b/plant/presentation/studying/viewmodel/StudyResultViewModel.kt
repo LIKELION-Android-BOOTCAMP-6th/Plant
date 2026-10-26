@@ -34,6 +34,7 @@ data class StudyResultUiState(
     val tag: String = "",
     val title: String = "",
     val log: List<String> = emptyList(),
+    val completed: List<Boolean> = emptyList(),
     val time: Long = 0L,
     val level: String = ""
 )
@@ -55,6 +56,7 @@ class StudyResultViewModel @Inject constructor(
                 tag = route.tag,
                 title = route.title,
                 log = route.log,
+                completed = route.completed,
                 time = route.time,
                 level = route.level
             )

@@ -91,9 +91,10 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
                         tag = event.tag,
                         title = event.title,
                         log = event.log,
+                        completed = event.completed,
                         time = event.time,
                         potId = event.potId,
-                        uiState.level
+                        level = uiState.level
                     )){
                         popUpTo(Routes.HomeMain) { inclusive = false }
                     }

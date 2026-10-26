@@ -65,6 +65,7 @@ sealed class StudyingEvent{
         val tag: String,
         val title: String,
         val log: List<String>,
+        val completed: List<Boolean>,
         val time: Long,
         val potId: String,
         val level: String
@@ -393,7 +394,7 @@ class StudyingViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO){
 
             val result = withTimeoutOrNull(5.seconds){
-                finishStudyingUseCase(potId, timestamp, _uiState.value.studyLog.map { it.log }, _uiState.value.timer, _uiState.value.startedAt)
+                finishStudyingUseCase(potId, timestamp, _uiState.value.studyLog.map { it.log }, _uiState.value.studyLog.map { it.isCompleted }, _uiState.value.timer, _uiState.value.startedAt)
                     .onSuccess { clearSession() }
                     .onFailure { e ->
                         when (e){
@@ -417,6 +418,7 @@ class StudyingViewModel @Inject constructor(
                     potId = potId,
                     title = _uiState.value.title,
                     log = _uiState.value.studyLog.map { it.log },
+                    completed = _uiState.value.studyLog.map { it.isCompleted },
                     time = _uiState.value.timer,
                     level = _uiState.value.level
                 ))

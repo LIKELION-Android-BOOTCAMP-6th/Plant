@@ -227,14 +227,9 @@ fun StudyPlanDetailScreen(
                 }
                 // 선택 로그 존재 -> 다이얼로그 표출
                 selectedStudyLog?.let { log ->
-                    ConfirmDialog(
-                        text = "상세 공부 기록",
-                        semiText = log.contents.joinToString("\n") { "• $it" } +
-                                "\n\n공부 시간: ${TimeFormatter.formatToDigitalClock(log.studyingTime)}",
-                        onDismiss = { viewModel.onDismissLogDialog() },
-                        onConfirm = { viewModel.onDismissLogDialog() },
-                        isSingleBtn = true,
-                        confirmBtnText = "닫기"
+                    StudyLogDetailDialog(
+                        log = log,
+                        ondismiss = { viewModel.onDismissLogDialog() }
                     )
                 }
                 // 삭제 확인 다이얼로그
@@ -423,22 +418,39 @@ fun StudyRecordCard(
             Spacer(modifier = Modifier.height(6.dp))
 
             // 학습 상세 내용 -> 2줄 제한
-            val combinedContent = log.contents.take(2).joinToString("\n") { "• $it" }
-                val finalContent = if (log.contents.size > 2) {
-                    "$combinedContent\n..."
-                } else {
-                    combinedContent                }
-
-                if(combinedContent.isNotEmpty()){
-                    Text(
-                        text = finalContent,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.fillMaxWidth(),
-
-                        // 표시 줄 수
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis
-                    )
+            val previewContents = log.contents.take(2)
+                if (previewContents.isNotEmpty()) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        previewContents.forEachIndexed { index, content ->
+                            val isCompleted = log.completedContents.getOrNull(index) == true
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "• $content",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (isCompleted) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.weight(1f, fill = false),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                if (isCompleted) {
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "완료",
+                                        tint = MaterialTheme.colorScheme.onSecondary,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
+                            }
+                        }
+                        if (log.contents.size > 2) {
+                            Text(
+                                text = "...",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
                 }
             }
         }

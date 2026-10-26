@@ -14,9 +14,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -57,7 +61,7 @@ fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewMo
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val capture = captureBitmap {
-        StudyResultContent(uiState.timestamp, uiState.tag, uiState.title, uiState.log, uiState.level, uiState.time, reward = null)
+        StudyResultContent(uiState.timestamp, uiState.tag, uiState.title, uiState.log, uiState.completed, uiState.level, uiState.time, reward = null)
     }
     var showConfetti by remember { mutableStateOf(true) }
 
@@ -92,7 +96,7 @@ fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewMo
                     }
                 }
 
-                StudyResultContent(uiState.timestamp, uiState.tag, uiState.title, uiState.log, uiState.level, uiState.time, uiState.reward)
+                StudyResultContent(uiState.timestamp, uiState.tag, uiState.title, uiState.log, uiState.completed, uiState.level, uiState.time, uiState.reward)
 
             }
 
@@ -122,6 +126,7 @@ fun StudyResultContent(
     tag: String,
     title: String,
     log: List<String>,
+    completed: List<Boolean>,
     level: String,
     time: Long,
     reward: StudyReward?
@@ -147,8 +152,28 @@ fun StudyResultContent(
                 Text(modifier = Modifier.padding(start = 12.dp),
                     text = "[$tag] $title", style = MaterialTheme.typography.titleSmall,)
 
-                log.forEach { text ->
-                    Text("- $text", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 22.dp, top = 10.dp, bottom = 10.dp),)
+                log.forEachIndexed { index, text ->
+                    val isCompleted = completed.getOrNull(index) == true
+                    Row(
+                        modifier = Modifier.padding(start = 22.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "- $text",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (isCompleted) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        if (isCompleted) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "완료",
+                                tint = MaterialTheme.colorScheme.onSecondary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
                 }
 
                 Column(modifier = Modifier.fillMaxWidth()
