@@ -44,6 +44,7 @@ import androidx.core.view.drawToBitmap
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.a32b.plant.R
+import com.a32b.plant.core.extension.isCompletedAt
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyReward
 import com.a32b.plant.domain.type.ItemType
@@ -153,7 +154,7 @@ fun StudyResultContent(
                     text = "[$tag] $title", style = MaterialTheme.typography.titleSmall,)
 
                 log.forEachIndexed { index, text ->
-                    val isCompleted = completed.getOrNull(index) == true
+                    val isCompleted = completed.isCompletedAt(index)
                     Row(
                         modifier = Modifier.padding(start = 22.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
                         verticalAlignment = Alignment.CenterVertically

@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.core.extension.isCompletedAt
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.presentation.theme.fontColorSub
 import androidx.compose.ui.window.Dialog
@@ -422,7 +423,7 @@ fun StudyRecordCard(
                 if (previewContents.isNotEmpty()) {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         previewContents.forEachIndexed { index, content ->
-                            val isCompleted = log.completedContents.getOrNull(index) == true
+                            val isCompleted = log.completedContents.isCompletedAt(index)
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     text = "• $content",

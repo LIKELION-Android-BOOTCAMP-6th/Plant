@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.a32b.plant.core.extension.isCompletedAt
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.presentation.theme.fontColorSub
@@ -104,7 +105,7 @@ fun StudyLogDetailDialog(
 
                     Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                         log.contents.forEachIndexed { index, content ->
-                            val isCompleted = log.completedContents.getOrNull(index) == true
+                            val isCompleted = log.completedContents.isCompletedAt(index)
                             Row(
                                 modifier = Modifier.padding(vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically
@@ -118,7 +119,7 @@ fun StudyLogDetailDialog(
                                     text = content,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = if (isCompleted) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f, fill = false)
                                 )
                                 if (isCompleted) {
                                     Spacer(modifier = Modifier.width(6.dp))

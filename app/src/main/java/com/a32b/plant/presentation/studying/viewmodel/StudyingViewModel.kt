@@ -394,7 +394,14 @@ class StudyingViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO){
 
             val result = withTimeoutOrNull(5.seconds){
-                finishStudyingUseCase(potId, timestamp, _uiState.value.studyLog.map { it.log }, _uiState.value.studyLog.map { it.isCompleted }, _uiState.value.timer, _uiState.value.startedAt)
+                finishStudyingUseCase(
+                    potId = potId,
+                    timestamp = timestamp,
+                    log = _uiState.value.studyLog.map { it.log },
+                    completed = _uiState.value.studyLog.map { it.isCompleted },
+                    time = _uiState.value.timer,
+                    startedAt = _uiState.value.startedAt
+                )
                     .onSuccess { clearSession() }
                     .onFailure { e ->
                         when (e){
