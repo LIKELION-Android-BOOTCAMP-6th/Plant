@@ -5,6 +5,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -31,7 +32,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
@@ -39,7 +39,6 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.a32b.plant.R
-import com.a32b.plant.presentation.theme.sub3
 
 @Composable
 fun StudyingGoalInputDialog(
@@ -219,28 +218,30 @@ fun StudyingGoalInputDialog(
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(0.7f))
                     ) { Text("완료", style = MaterialTheme.typography.bodySmall)}
 
-                }
+                    if (!isEditing){
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(start = 6.dp)
+                        ) {
+                            TextButton(
+                                onClick = onDismiss,
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                modifier = Modifier.height(33.dp)
+                            ) {
+                                Text(
+                                    "닫기",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.outline,
+                                    textDecoration = TextDecoration.Underline
+                                )
+                            }
 
-                if (!isEditing){
-                    Spacer(Modifier.height(12.dp))
-
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        TextButton(onClick = onDismiss) {
                             Text(
-                                "닫기",
+                                "다음에 입력하기",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline,
-                                textDecoration = TextDecoration.Underline
+                                color = MaterialTheme.colorScheme.outline
                             )
                         }
-
-                        Text(
-                            "다음에 입력하기",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline
-                        )
                     }
                 }
             }
