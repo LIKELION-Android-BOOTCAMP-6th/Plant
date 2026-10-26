@@ -179,7 +179,11 @@ class CommunityDetailViewModel @Inject constructor(
 
     fun addComment() {
 
-        if (_uiState.value.comment.isBlank() || _uiState.value.isCommentSubmitting) return
+        if (_uiState.value.isCommentSubmitting) return
+        if (_uiState.value.comment.isBlank()) {
+            sendToast("댓글을 입력해주세요")
+            return
+        }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isCommentSubmitting = true) }

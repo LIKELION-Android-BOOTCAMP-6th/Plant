@@ -616,7 +616,12 @@ fun CommentInputSection(
                     modifier = Modifier
                         .height(28.dp)
                         .padding(top = 4.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (text.isBlank())
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                        else
+                            MaterialTheme.colorScheme.primary
+                    ),
                     shape = RoundedCornerShape(4.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
                 ) {
