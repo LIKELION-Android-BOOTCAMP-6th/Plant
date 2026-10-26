@@ -1,5 +1,8 @@
 package com.a32b.plant.presentation.studying.ui
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.view.View
@@ -290,7 +293,9 @@ fun captureBitmap(content: @Composable () -> Unit): () -> Bitmap{
     val composeView = remember { ComposeView(context) }
 
     fun captureBitmap(): Bitmap {
-        val width = composeView.width.takeIf { it > 0 } ?: context.resources.displayMetrics.widthPixels
+        val width = composeView.width.takeIf { it > 0 }
+            ?: context.findActivity()?.window?.decorView?.width?.takeIf { it > 0 }
+            ?: context.resources.displayMetrics.widthPixels
         val widthSpec = View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY)
         // 화면 높이로 측정하면 긴 로그가 잘려서 캡처되므로, 높이는 무제한으로 재측정해 전체 콘텐츠를 담는다
         val heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
@@ -307,4 +312,10 @@ fun captureBitmap(content: @Composable () -> Unit): () -> Bitmap{
     )
 
     return ::captureBitmap
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
