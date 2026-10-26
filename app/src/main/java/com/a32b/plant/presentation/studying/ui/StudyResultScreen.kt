@@ -8,14 +8,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Card
@@ -62,7 +63,7 @@ fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewMo
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val capture = captureBitmap {
-        StudyResultContent(uiState.timestamp, uiState.tag, uiState.title, uiState.log, uiState.completed, uiState.level, uiState.time, reward = null)
+        StudyResultContent(uiState.timestamp, uiState.tag, uiState.title, uiState.log, uiState.completed, uiState.level, uiState.time, reward = null, scrollable = false)
     }
     var showConfetti by remember { mutableStateOf(true) }
 
@@ -130,56 +131,68 @@ fun StudyResultContent(
     completed: List<Boolean>,
     level: String,
     time: Long,
-    reward: StudyReward?
+    reward: StudyReward?,
+    scrollable: Boolean = true
 ) {
-    Surface(modifier = Modifier.fillMaxSize(),
+    val screenModifier = if (scrollable) Modifier.fillMaxSize() else Modifier.fillMaxWidth()
+    val scrollState = rememberScrollState()
+
+    Surface(modifier = screenModifier,
         color = MaterialTheme.colorScheme.background
     ) {
-        Column(modifier = Modifier.fillMaxSize().padding(10.dp),
+        Column(modifier = screenModifier.padding(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(modifier = Modifier.height(17.dp))
 
             Text(timestamp , style = MaterialTheme.typography.titleSmall , fontSize = 22.sp)
             Spacer(modifier = Modifier.height(13.dp))
 
-            Card(modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(7.dp),
+            val cardModifier = Modifier.fillMaxWidth()
+                .then(if (scrollable) Modifier.weight(1f) else Modifier)
+                .padding(7.dp)
+
+            Card(modifier = cardModifier,
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant
                 ),
                 shape = RoundedCornerShape(20.dp)
 
             ) {
-                Spacer(modifier = Modifier.height(22.dp))
-                Text(modifier = Modifier.padding(start = 12.dp),
-                    text = "[$tag] $title", style = MaterialTheme.typography.titleSmall,)
+                val contentModifier = Modifier.fillMaxWidth()
+                    .then(if (scrollable) Modifier.verticalScroll(scrollState) else Modifier)
 
-                log.forEachIndexed { index, text ->
-                    val isCompleted = completed.isCompletedAt(index)
-                    Row(
-                        modifier = Modifier.padding(start = 22.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "- $text",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (isCompleted) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
-                        if (isCompleted) {
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = "완료",
-                                tint = MaterialTheme.colorScheme.onSecondary,
-                                modifier = Modifier.size(14.dp)
+                Column(modifier = contentModifier,
+                    horizontalAlignment = Alignment.CenterHorizontally) {
+                    Spacer(modifier = Modifier.height(22.dp))
+                    Text(modifier = Modifier.padding(start = 12.dp),
+                        text = "[$tag] $title", style = MaterialTheme.typography.titleSmall,)
+
+                    log.forEachIndexed { index, text ->
+                        val isCompleted = completed.isCompletedAt(index)
+                        Row(
+                            modifier = Modifier.padding(start = 22.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "- $text",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (isCompleted) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f, fill = false)
                             )
+                            if (isCompleted) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "완료",
+                                    tint = MaterialTheme.colorScheme.onSecondary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
                         }
                     }
-                }
 
-                Column(modifier = Modifier.fillMaxWidth()
-                    ,horizontalAlignment = Alignment.CenterHorizontally) {
-                    ProfileImage(level, 200)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    ProfileImage(level, 150)
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(TimeFormatter.formatToDigitalClock(time), style = MaterialTheme.typography.titleLarge, fontSize = 50.sp,)
@@ -189,7 +202,7 @@ fun StudyResultContent(
                         StudyRewardSection(reward)
                     }
 
-                    Spacer(modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.height(16.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(painter = painterResource(id = R.drawable.logo_plant),
                             contentDescription = "logo",
