@@ -41,6 +41,7 @@ data class MyPageUiState(
 
 sealed class MyPageEvent {
     object NavigateToSignIn : MyPageEvent()// 로그인화면 보내기용 ************
+    data class OpenUrl(val url: String) : MyPageEvent()
 }
 
 @HiltViewModel
@@ -52,6 +53,10 @@ class MyPageViewModel @Inject constructor(
     private val updateProfileUseCase: UpdateProfileUseCase,
     private val observeDarkModeUseCase: ObserveDarkModeUseCase
 ) : BaseViewModel() {
+    companion object {
+        private const val PRIVACY_POLICY_URL = "https://plant-82b09.web.app/privacy-policy.html"
+    }
+
     private val _uiState = MutableStateFlow(MyPageUiState())
     val uiState = _uiState.asStateFlow()
 
@@ -163,6 +168,12 @@ class MyPageViewModel @Inject constructor(
         viewModelScope.launch {
             signOutUseCase.invokeWithTokenClear()
             _eventChannel.send(MyPageEvent.NavigateToSignIn)
+        }
+    }
+
+    fun onPrivacyPolicyClick() {
+        viewModelScope.launch {
+            _eventChannel.send(MyPageEvent.OpenUrl(PRIVACY_POLICY_URL))
         }
     }
 }

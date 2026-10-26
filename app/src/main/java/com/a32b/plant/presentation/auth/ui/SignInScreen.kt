@@ -37,9 +37,11 @@ import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.auth.viewmodel.SignInEvent
 import com.a32b.plant.presentation.auth.viewmodel.SignInViewModel
+import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.theme.LocalIsDarkTheme
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 @Composable
@@ -216,13 +218,11 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                 ) {
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    if (uiState.isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(32.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
                         Image(
                             painter = painterResource(id = R.drawable.ic_auth_google),
                             contentDescription = "Google 로그인",
@@ -230,6 +230,8 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                                 .fillMaxWidth()
                                 .height(48.dp)
                                 .clickable {
+                                    if (!viewModel.tryStartGoogleSignIn()) return@clickable
+
                                     coroutineScope.launch {
                                         val googleIdOption = GetSignInWithGoogleOption.Builder(webClientId)
                                             .build()
@@ -249,7 +251,9 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
 
                                         } catch (e: GetCredentialCancellationException) {
                                             // 사용자가 계정 선택창을 닫은 경우 무시
+                                            viewModel.cancelGoogleSignIn()
                                         } catch (e: NoCredentialException) {
+                                            viewModel.cancelGoogleSignIn()
                                             Toast.makeText(
                                                 context,
                                                 "기기에 등록된 Google 계정이 없습니다. 설정에서 계정을 추가해주세요.",
@@ -258,7 +262,12 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                                             val intent = Intent(Settings.ACTION_ADD_ACCOUNT)
                                             intent.putExtra("account_types", arrayOf("com.google"))
                                             context.startActivity(intent)
+                                        } catch (e: CancellationException) {
+                                            // 화면 이탈 등으로 코루틴이 취소된 경우: 가드만 풀어주고 취소는 그대로 전파
+                                            viewModel.cancelGoogleSignIn()
+                                            throw e
                                         } catch (e: Exception) {
+                                            viewModel.cancelGoogleSignIn()
                                             Log.e("SignIn", "구글 로그인 에러: ${e.message}", e)
                                             Toast.makeText(context, "구글 로그인에 실패했습니다.\n다시 시도해주세요.", Toast.LENGTH_SHORT).show()
                                         }
@@ -266,6 +275,10 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                                 },
                             contentScale = ContentScale.Fit
                         )
+
+                        if (uiState.isLoading) {
+                            LoadingBox(modifier = Modifier.matchParentSize())
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(32.dp))

@@ -65,7 +65,7 @@ fun BottomBar(navController: NavController, enabled: Boolean = true) {
             BottomBarItem(
                 modifier = Modifier.weight(1f),
                 iconRes = R.drawable.ic_bottom_pot_normal,
-                label = "화분",
+                label = "내 화분",
                 selected = isPotSelected,
                 enabled = enabled
             ) {
