@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 
@@ -42,10 +43,10 @@ fun ConfirmDialog(
                 modifier = Modifier.padding(22.dp)) {
                 Spacer(modifier = Modifier.height(10.dp))
 
-                Text(text, style = textStyle ?: MaterialTheme.typography.titleSmall)
+                Text(text, style = textStyle ?: MaterialTheme.typography.titleMedium)
                 semiText?.let {
                     Spacer(modifier = Modifier.height(9.dp))
-                    Text(semiText, style = MaterialTheme.typography.bodyMedium)
+                    Text(semiText, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
                 }
 
                 Spacer(modifier = Modifier.height(22.dp))
