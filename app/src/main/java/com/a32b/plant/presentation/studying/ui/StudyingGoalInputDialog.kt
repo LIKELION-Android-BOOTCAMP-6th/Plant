@@ -222,14 +222,25 @@ fun StudyingGoalInputDialog(
                 }
 
                 if (!isEditing){
-                    TextButton(onClick = onDismiss) {
+                    Spacer(Modifier.height(12.dp))
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        TextButton(onClick = onDismiss) {
+                            Text(
+                                "닫기",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline,
+                                textDecoration = TextDecoration.Underline
+                            )
+                        }
+
                         Text(
                             "다음에 입력하기",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            textDecoration = TextDecoration.Underline
+                            color = MaterialTheme.colorScheme.outline
                         )
-                        Spacer(Modifier.weight(1f))
                     }
                 }
             }
