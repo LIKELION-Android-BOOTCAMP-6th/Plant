@@ -2,6 +2,7 @@ package com.a32b.plant.presentation.studying.service
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
@@ -9,6 +10,7 @@ import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import com.a32b.plant.R
 import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.presentation.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -98,11 +100,21 @@ class StudyingTimerService : Service() {
             .setContentTitle("Plant 학습 중")
             .setContentText(TimeFormatter.formatToDigitalClock(ms))
             .setSmallIcon(R.drawable.ic_notification)
+            .setContentIntent(contentIntent)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()
+
+    // 알림 탭 시 기존 MainActivity를 재사용해 학습 화면으로 복귀시킨다.
+    // 싱글 액티비티 구조라 SINGLE_TOP만으로 Compose NavController 백스택이 그대로 유지된다.
+    private val contentIntent: PendingIntent by lazy {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+    }
 
     private fun updateNotification(ms: Long) {
         val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
