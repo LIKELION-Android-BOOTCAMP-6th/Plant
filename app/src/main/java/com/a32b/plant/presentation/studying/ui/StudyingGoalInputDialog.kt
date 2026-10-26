@@ -184,9 +184,12 @@ fun StudyingGoalInputDialog(
                         },
                         enabled = localLogs.size < maxLogSize || isEditing,
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f).height(33.dp),
+                        modifier = Modifier.weight(1f).height(38.dp),
                         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.outline)
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.outline,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
                     ) { Text(if (isEditing) "취소" else "추가", style = MaterialTheme.typography.bodySmall) }
 
                     Button(
@@ -204,26 +207,35 @@ fun StudyingGoalInputDialog(
 
                         },
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f).height(33.dp),
+                        modifier = Modifier.weight(1f).height(38.dp),
                         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error.copy(0.3f))
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error.copy(0.3f),
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
                     ) { Text("삭제", style = MaterialTheme.typography.bodySmall) }
 
                     Button(
                         onClick = {if (isEditing) onConfirmEdit(localLogs[index]) else onConfirm(localLogs.toList())},
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f).height(33.dp),
+                        modifier = Modifier.weight(1f).height(38.dp),
                         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(0.7f))
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary.copy(0.7f),
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
                     ) { Text("완료", style = MaterialTheme.typography.bodySmall)}
 
                     if (!isEditing){
                         Button(
                             onClick = onDismiss,
                             shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f).height(33.dp),
+                            modifier = Modifier.weight(1f).height(38.dp),
                             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.outline.copy(0.4f))
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
                         ) { Text("닫기", style = MaterialTheme.typography.bodySmall) }
                     }
                 }
