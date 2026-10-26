@@ -390,6 +390,7 @@ fun CommunityDetailScreen(
                                 isOwner = commentData.user.uid == uiState.currentUid,
                                 isEditing = uiState.editingCommentId == commentData.commentId,
                                 editingText = uiState.editingCommentText,
+                                isEditSubmitting = uiState.isEditCommentSubmitting,
                                 onEditTextChange = { viewModel.onEditCommentTextChange(it) },
                                 onEditStart = { viewModel.startEditComment(commentData) },
                                 onEditSubmit = { viewModel.submitEditComment() },
@@ -413,6 +414,7 @@ fun CommentRow(
     isOwner: Boolean,
     isEditing: Boolean,
     editingText: String,
+    isEditSubmitting: Boolean = false,
     onEditTextChange: (String) -> Unit,
     onEditStart: () -> Unit,
     onEditSubmit: () -> Unit,
@@ -481,10 +483,18 @@ fun CommentRow(
 
                     )
                     Row {
-                        TextButton(onClick = onEditSubmit) {
+                        TextButton(
+                            onClick = onEditSubmit,
+                            enabled = !isEditSubmitting,
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = if (editingText.isBlank())
+                                    MaterialTheme.colorScheme.onSurface
+                                else
+                                    MaterialTheme.colorScheme.primary
+                            )
+                        ) {
                             Text(
                                 "저장",
-                                color = MaterialTheme.colorScheme.primary,
                                 style = MaterialTheme.typography.labelLarge
                             )
                         }
@@ -610,7 +620,8 @@ fun CommentInputSection(
                 Button(
                     onClick = {
                         onSend()
-                        focus.clearFocus()
+                        // blank 제출 시에는 Toast 안내만 띄우고 포커스는 유지해 바로 이어서 입력 가능하게 함
+                        if (text.isNotBlank()) focus.clearFocus()
                     },
                     enabled = !isSubmitting,
                     modifier = Modifier
@@ -618,9 +629,15 @@ fun CommentInputSection(
                         .padding(top = 4.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (text.isBlank())
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                            MaterialTheme.colorScheme.tertiaryContainer
                         else
-                            MaterialTheme.colorScheme.primary
+                            MaterialTheme.colorScheme.primary,
+                        contentColor = if (text.isBlank())
+                            MaterialTheme.colorScheme.onSurface
+                        else
+                            MaterialTheme.colorScheme.onPrimary,
+                        disabledContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurface
                     ),
                     shape = RoundedCornerShape(4.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
@@ -628,7 +645,6 @@ fun CommentInputSection(
                     Text(
                         if (isSubmitting) "등록 중" else "등록",
 //                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onPrimary,
                         style = MaterialTheme.typography.labelMedium
                     )
                 }
