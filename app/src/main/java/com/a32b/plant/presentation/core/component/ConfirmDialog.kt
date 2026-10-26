@@ -26,6 +26,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 
+private const val DIALOG_CONTENT_MAX_HEIGHT_RATIO = 0.5f
+
 @Composable
 fun ConfirmDialog(
     text: String,
@@ -46,7 +48,7 @@ fun ConfirmDialog(
                 modifier = Modifier.padding(22.dp)) {
                 Spacer(modifier = Modifier.height(10.dp))
 
-                val maxContentHeight = LocalConfiguration.current.screenHeightDp.dp * 0.5f
+                val maxContentHeight = LocalConfiguration.current.screenHeightDp.dp * DIALOG_CONTENT_MAX_HEIGHT_RATIO
                 Column(horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .heightIn(max = maxContentHeight)
