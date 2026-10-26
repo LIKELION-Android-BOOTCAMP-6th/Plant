@@ -54,6 +54,8 @@ data class CommunityDetailUiState(
     // 댓글 수정 상태
     val editingCommentId: String? = null,
     val editingCommentText: String = "",
+    // 저장 요청이 진행 중인 commentId 모음 — 여러 댓글을 번갈아 수정해도 각자 독립적으로 추적
+    val editingSubmittingCommentIds: Set<String> = emptySet(),
 
     // 댓글 삭제 대상 ID
     val deletingCommentId: String? = null,
@@ -89,6 +91,8 @@ class CommunityDetailViewModel @Inject constructor(
     companion object {
         private val LIKE_DEBOUNCE = 500.milliseconds
         private val BOOKMARK_DEBOUNCE = 500.milliseconds
+        private val BLANK_COMMENT_TOAST_DEBOUNCE = 1000.milliseconds
+        private const val BLANK_COMMENT_MESSAGE = "댓글 내용을 입력해주세요"
     }
 
     private val _uiState = MutableStateFlow(CommunityDetailUiState())
@@ -110,6 +114,10 @@ class CommunityDetailViewModel @Inject constructor(
     // delay 구간에서만 true — 재진입 차단 + commitXXX() 시작 직전 false로 해제
     private var likePendingCommit = false
     private var bookmarkPendingCommit = false
+
+    // blank 상태에서 연타 시 Toast가 줄줄이 쌓이는 것을 막기 위한 디바운스
+    private var commentBlankToastJob: Job? = null
+    private var editBlankToastJob: Job? = null
 
     init {
         ensureCurrentUserUseCase { user -> _uiState.update { it.copy(currentUid = user.uid, currentNickname = user.nickname, currentProfileImg = user.profileImg) } }
@@ -177,9 +185,20 @@ class CommunityDetailViewModel @Inject constructor(
     fun openDeleteDialog() { _showDeleteDialog.value = true }
     fun closeDeleteDialog() { _showDeleteDialog.value = false }
 
+    // 진행 중인 디바운스 Job이 있으면 Toast를 다시 보내지 않고 그 Job을 유지, 없으면 새로 보내고 새 Job을 반환
+    private fun sendBlankCommentToastIfNeeded(job: Job?): Job {
+        if (job?.isActive == true) return job
+        sendToast(BLANK_COMMENT_MESSAGE)
+        return viewModelScope.launch { delay(BLANK_COMMENT_TOAST_DEBOUNCE) }
+    }
+
     fun addComment() {
 
-        if (_uiState.value.comment.isBlank() || _uiState.value.isCommentSubmitting) return
+        if (_uiState.value.isCommentSubmitting) return
+        if (_uiState.value.comment.isBlank()) {
+            commentBlankToastJob = sendBlankCommentToastIfNeeded(commentBlankToastJob)
+            return
+        }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isCommentSubmitting = true) }
@@ -350,9 +369,18 @@ class CommunityDetailViewModel @Inject constructor(
     fun submitEditComment() {
         val state = _uiState.value
         val commentId = state.editingCommentId ?: return
-        if (state.editingCommentText.isBlank()) return
+        if (commentId in state.editingSubmittingCommentIds) return
+        if (state.editingCommentText.isBlank()) {
+            editBlankToastJob = sendBlankCommentToastIfNeeded(editBlankToastJob)
+            return
+        }
 
         viewModelScope.launch {
+            _uiState.update { it.copy(editingSubmittingCommentIds = it.editingSubmittingCommentIds + commentId) }
+
+            // updateComment()가 safeRunCatching으로 감싸져 항상 Result를 반환한다는 전제로,
+            // 아래 editingSubmittingCommentIds 제거가 항상 실행됨. 이 함수가 예외를 던지도록 바뀌면
+            // commentId가 Set에 영구히 남아 해당 댓글의 저장/취소 버튼이 계속 비활성 상태로 고정됨
             withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
                 repository.updateComment(postId, commentId, state.editingCommentText)
             }
@@ -362,7 +390,15 @@ class CommunityDetailViewModel @Inject constructor(
                         else -> sendToast(e.message)
                     }
                 }
-            _uiState.update { it.copy(editingCommentId = null, editingCommentText = "") }
+            _uiState.update {
+                // 응답을 받는 동안 다른 댓글 수정으로 전환됐다면 그 상태를 덮어쓰지 않음
+                val stillEditingSame = it.editingCommentId == commentId
+                it.copy(
+                    editingCommentId = if (stillEditingSame) null else it.editingCommentId,
+                    editingCommentText = if (stillEditingSame) "" else it.editingCommentText,
+                    editingSubmittingCommentIds = it.editingSubmittingCommentIds - commentId
+                )
+            }
             refresh()
         }
     }
