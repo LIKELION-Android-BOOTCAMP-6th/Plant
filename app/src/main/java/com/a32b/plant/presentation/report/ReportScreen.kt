@@ -1,5 +1,6 @@
 package com.a32b.plant.presentation.report
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -8,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -50,13 +52,17 @@ fun ReportScreen(
     LoadableScreen(viewModel = viewModel) {
         Scaffold(
             topBar = {
-                Text(
-                    "리포트",
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 16.dp, top = 16.dp, end = 16.dp),
-                    style = MaterialTheme.typography.displayLarge
-                )
+                        .padding(start = 16.dp, top = 16.dp, end = 16.dp)
+                ) {
+                    Text(
+                        "리포트",
+                        style = MaterialTheme.typography.displayLarge,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
             },
             containerColor = MaterialTheme.colorScheme.background
         ) { paddingValues ->
