@@ -6,6 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.util.NETWORK_SLOW_MESSAGE
 import com.a32b.plant.core.util.withSlowNotice
+import com.a32b.plant.domain.community.PostUpdate
+import com.a32b.plant.domain.community.PostUpdateNotifier
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.CommunityRepository
@@ -52,6 +54,7 @@ class CommunityPostViewModel @Inject constructor(
     private val postCooldownManager: PostCooldownManager,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     private val getSelectedStudyLogUseCase: GetSelectedStudyLogUseCase,
+    private val postUpdateNotifier: PostUpdateNotifier,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -174,6 +177,16 @@ class CommunityPostViewModel @Inject constructor(
                         tag = if (isShared) null else selectedTag
                     )
                 }.onSuccess {
+                    // 목록 화면 복귀 시 서버 재조회 없이 변경된 제목/내용/태그가 즉시 반영되도록 알림
+                    postUpdateNotifier.notifyPostUpdated(
+                        PostUpdate(
+                            postId = postId!!,
+                            title = _uiState.value.title,
+                            content = if (isShared) _uiState.value.extraContent else _uiState.value.content,
+                            tag = if (isShared) null else selectedTag,
+                            updatedAt = System.currentTimeMillis()
+                        )
+                    )
                     _eventChannel.send(CommunityPostEvent.ShowToast("수정되었습니다!"))
                     _eventChannel.send(CommunityPostEvent.NavigateToDetail(postId!!))
                 }.onFailure { e ->

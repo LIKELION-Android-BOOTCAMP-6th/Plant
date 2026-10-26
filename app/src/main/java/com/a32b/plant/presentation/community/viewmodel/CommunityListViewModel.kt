@@ -3,6 +3,8 @@ package com.a32b.plant.presentation.community.viewmodel
 import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
+import com.a32b.plant.domain.community.PostUpdateObserver
+import com.a32b.plant.domain.community.applyUpdate
 import com.a32b.plant.domain.model.Post
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.CommunityRepository
@@ -49,7 +51,8 @@ sealed class CommunityListEvent {
 
 @HiltViewModel
 class CommunityListViewModel @Inject constructor(
-    private val repository: CommunityRepository
+    private val repository: CommunityRepository,
+    private val postUpdateObserver: PostUpdateObserver
 ) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(CommunityListUiState())
@@ -72,6 +75,25 @@ class CommunityListViewModel @Inject constructor(
     init {
         fetchTags()
         loadInitial()
+        observePostUpdates()
+    }
+
+    // 상세 화면에서의 상호작용 결과를 목록 화면에 즉시 반영 (서버 재조회 없이 로컬 패치)
+    private fun observePostUpdates() {
+        viewModelScope.launch {
+            postUpdateObserver.event.collect { update ->
+                _uiState.update { state ->
+                    state.copy(
+                        posts = state.posts.map { post ->
+                            if (post.postId == update.postId) post.applyUpdate(update) else post
+                        },
+                        searchResults = state.searchResults.map { post ->
+                            if (post.postId == update.postId) post.applyUpdate(update) else post
+                        }
+                    )
+                }
+            }
+        }
     }
 
     // 태그 목록 조회 (필터 시트용)

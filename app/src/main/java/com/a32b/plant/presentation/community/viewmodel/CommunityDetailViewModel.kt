@@ -7,6 +7,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.util.NETWORK_SLOW_MESSAGE
 import com.a32b.plant.core.util.withSlowNotice
+import com.a32b.plant.domain.community.PostUpdate
+import com.a32b.plant.domain.community.PostUpdateNotifier
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.Post
@@ -85,6 +87,7 @@ class CommunityDetailViewModel @Inject constructor(
     private val toggleBookmarkUseCase: ToggleBookmarkUseCase,
     private val createCommunityReportUseCase: CreateCommunityReportUseCase,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
+    private val postUpdateNotifier: PostUpdateNotifier,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -168,6 +171,9 @@ class CommunityDetailViewModel @Inject constructor(
                     onIsSharedChange()
                     if (post == null) {
                         _uiState.update { it.copy(isPostNotFound = true) }
+                    } else {
+                        // 댓글 작성/삭제/수정, 신고, 좋아요·북마크 보정 등 상호작용 결과를 목록 화면에 즉시 반영
+                        notifyPostChanged(post)
                     }
                 }
                 .onFailure { e -> sendToast(e.message) }
@@ -245,9 +251,11 @@ class CommunityDetailViewModel @Inject constructor(
         // 낙관적 UI: 로컬 즉시 토글
         val newIsLiked = !currentPost.isLiked
         val delta = if (newIsLiked) 1 else -1
-        _post.value = currentPost.copy(
-            isLiked = newIsLiked,
-            likeCount = (currentPost.likeCount + delta).coerceAtLeast(0)
+        val newLikeCount = (currentPost.likeCount + delta).coerceAtLeast(0)
+        _post.value = currentPost.copy(isLiked = newIsLiked, likeCount = newLikeCount)
+        // 목록 화면 복귀 시 서버 재조회 없이 즉시 반영되도록 낙관적 결과를 바로 알림
+        postUpdateNotifier.notifyPostUpdated(
+            PostUpdate(postId = postId, isLiked = newIsLiked, likeCount = newLikeCount)
         )
 
         likePendingCommit = true
@@ -266,9 +274,10 @@ class CommunityDetailViewModel @Inject constructor(
 
         val newIsBookmarked = !currentPost.isBookmarked
         val delta = if (newIsBookmarked) 1 else -1
-        _post.value = currentPost.copy(
-            isBookmarked = newIsBookmarked,
-            bookmarkCount = (currentPost.bookmarkCount + delta).coerceAtLeast(0)
+        val newBookmarkCount = (currentPost.bookmarkCount + delta).coerceAtLeast(0)
+        _post.value = currentPost.copy(isBookmarked = newIsBookmarked, bookmarkCount = newBookmarkCount)
+        postUpdateNotifier.notifyPostUpdated(
+            PostUpdate(postId = postId, isBookmarked = newIsBookmarked, bookmarkCount = newBookmarkCount)
         )
 
         bookmarkPendingCommit = true
@@ -292,9 +301,10 @@ class CommunityDetailViewModel @Inject constructor(
                 // → 다른 기기에서 상태가 바뀐 케이스만 보정
                 if (_post.value?.isBookmarked == localIsBookmarked && _post.value?.isBookmarked != serverFinal) {
                     val delta = if (serverFinal) 1 else -1
-                    _post.value = _post.value?.copy(
-                        isBookmarked = serverFinal,
-                        bookmarkCount = ((_post.value?.bookmarkCount ?: 0) + delta).coerceAtLeast(0)
+                    val correctedCount = ((_post.value?.bookmarkCount ?: 0) + delta).coerceAtLeast(0)
+                    _post.value = _post.value?.copy(isBookmarked = serverFinal, bookmarkCount = correctedCount)
+                    postUpdateNotifier.notifyPostUpdated(
+                        PostUpdate(postId = postId, isBookmarked = serverFinal, bookmarkCount = correctedCount)
                     )
                 }
             }
@@ -326,9 +336,10 @@ class CommunityDetailViewModel @Inject constructor(
                 // → 다른 기기에서 상태가 바뀐 케이스만 보정
                 if (_post.value?.isLiked == localIsLiked && _post.value?.isLiked != serverFinal) {
                     val delta = if (serverFinal) 1 else -1
-                    _post.value = _post.value?.copy(
-                        isLiked = serverFinal,
-                        likeCount = ((_post.value?.likeCount ?: 0) + delta).coerceAtLeast(0)
+                    val correctedCount = ((_post.value?.likeCount ?: 0) + delta).coerceAtLeast(0)
+                    _post.value = _post.value?.copy(isLiked = serverFinal, likeCount = correctedCount)
+                    postUpdateNotifier.notifyPostUpdated(
+                        PostUpdate(postId = postId, isLiked = serverFinal, likeCount = correctedCount)
                     )
                 }
             }
@@ -525,6 +536,23 @@ class CommunityDetailViewModel @Inject constructor(
 
     private fun sendToast(message: String) {
         viewModelScope.launch { _eventChannel.send(CommunityDetailEvent.ShowToast(message)) }
+    }
+
+    private fun notifyPostChanged(post: Post) {
+        postUpdateNotifier.notifyPostUpdated(
+            PostUpdate(
+                postId = post.postId,
+                isLiked = post.isLiked,
+                likeCount = post.likeCount,
+                isBookmarked = post.isBookmarked,
+                bookmarkCount = post.bookmarkCount,
+                commentCount = post.commentCount,
+                title = post.title,
+                content = post.content,
+                tag = post.tag,
+                updatedAt = post.updatedAt
+            )
+        )
     }
 
 }
