@@ -68,8 +68,10 @@ class CommunityListViewModel @Inject constructor(
     private var loadMoreJob: Job? = null
     private var searchJob: Job? = null
 
-    // postId → 로컬 패치가 적용된 시각. silentRefresh()의 서버 응답이 이보다 먼저 시작된 쿼리라면
-    // 아직 그 변경을 반영하지 못한 "오래된" 응답이므로, 패치를 덮어쓰지 않도록 보호하는 데 사용
+    // postId → 로컬 패치가 적용된 시각. TTL(LOCAL_PATCH_PROTECTION_WINDOW_MS) 내에는
+    // silentRefresh()의 서버 응답이 이 패치를 덮어쓰지 않도록 보호하는 데 사용.
+    // 쓰기(패치)와 읽기(쿼리) 중 어느 쪽이 서버에 먼저 반영됐는지는 클라이언트에서 판별할 수 없으므로
+    // queryStartedAt과의 선후 비교 없이 순수 TTL로만 판단한다
     private val recentLocalPatches = mutableMapOf<String, Long>()
     // 마지막으로 서버와 완전히 동기화된(= posts를 서버 응답으로 통째로 교체한) 시각
     private var lastSyncedAt = 0L
@@ -115,14 +117,12 @@ class CommunityListViewModel @Inject constructor(
         }
     }
 
-    // silentRefresh() 전용: queryStartedAt 이후 로컬 패치가 적용된 post는 서버의 오래된 응답으로 덮어쓰지 않고 현재 값을 유지
-    private fun mergeWithLocalPatches(serverPosts: List<Post>, currentPosts: List<Post>, queryStartedAt: Long): List<Post> {
+    // silentRefresh() 전용: TTL 내에 로컬 패치가 적용된 post는 서버의 오래된 응답으로 덮어쓰지 않고 현재 값을 유지
+    private fun mergeWithLocalPatches(serverPosts: List<Post>, currentPosts: List<Post>): List<Post> {
         val now = System.currentTimeMillis()
         return serverPosts.map { serverPost ->
             val patchedAt = recentLocalPatches[serverPost.postId]
-            val isProtected = patchedAt != null &&
-                patchedAt >= queryStartedAt &&
-                now - patchedAt < LOCAL_PATCH_PROTECTION_WINDOW_MS
+            val isProtected = patchedAt != null && now - patchedAt < LOCAL_PATCH_PROTECTION_WINDOW_MS
             if (isProtected) {
                 currentPosts.find { it.postId == serverPost.postId } ?: serverPost
             } else {
@@ -330,8 +330,6 @@ class CommunityListViewModel @Inject constructor(
         // → isLoadingMore=true가 고착될 수 있으므로 명시적으로 초기화
         _uiState.update { it.copy(isLoadingMore = false) }
         hasPendingInteractionSinceLastSync = false
-        // 이 쿼리 시작 시점 이후에 들어온 로컬 패치는, 이 쿼리의 응답이 아직 반영하지 못한 "오래된" 값일 수 있으므로 보호 대상
-        val queryStartedAt = System.currentTimeMillis()
         loadJob = viewModelScope.launch(Dispatchers.IO) {
             val state = _uiState.value
             // 현재 로드된 게시글 수만큼 재로드해 스크롤 위치와 목록을 보존
@@ -343,17 +341,26 @@ class CommunityListViewModel @Inject constructor(
                     tagIds = state.selected.map { it.id },
                     sharedOnly = state.isSharedShown
                 )
-            } ?: return@launch
+            }
+
+            if (pageResult == null) {
+                // 타임아웃 → 이번 동기화는 실패한 것이므로 다음 ON_RESUME에서 재시도할 수 있도록 플래그 복구
+                hasPendingInteractionSinceLastSync = true
+                return@launch
+            }
 
             pageResult.onSuccess { page ->
                 lastSyncedAt = System.currentTimeMillis()
                 _uiState.update { current ->
                     current.copy(
-                        posts = mergeWithLocalPatches(page.items, current.posts, queryStartedAt),
+                        posts = mergeWithLocalPatches(page.items, current.posts),
                         cursor = page.nextCursor,
                         hasMore = page.hasMore
                     )
                 }
+            }.onFailure {
+                // 네트워크 실패 → 다음 ON_RESUME에서 재시도할 수 있도록 플래그 복구
+                hasPendingInteractionSinceLastSync = true
             }
         }
     }
