@@ -18,15 +18,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -57,6 +53,7 @@ import com.a32b.plant.presentation.core.component.ConfettiOverlay
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.core.component.ProfileImage
+import com.a32b.plant.presentation.core.component.StudyGoalItem
 import com.a32b.plant.presentation.core.extension.resId
 import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.studying.viewmodel.StudyResultEvent
@@ -172,27 +169,11 @@ fun StudyResultContent(
                         text = "[$tag] $title", style = MaterialTheme.typography.titleSmall,)
 
                     log.forEachIndexed { index, text ->
-                        val isCompleted = completed.isCompletedAt(index)
-                        Row(
-                            modifier = Modifier.padding(start = 22.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "- $text",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = if (isCompleted) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.weight(1f, fill = false)
-                            )
-                            if (isCompleted) {
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = "완료",
-                                    tint = MaterialTheme.colorScheme.onSecondary,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                        }
+                        StudyGoalItem(
+                            text = text,
+                            isCompleted = completed.isCompletedAt(index),
+                            modifier = Modifier.padding(start = 22.dp, end = 12.dp, top = 10.dp, bottom = 10.dp)
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))

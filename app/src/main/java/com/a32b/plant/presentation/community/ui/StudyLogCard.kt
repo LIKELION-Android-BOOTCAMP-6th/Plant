@@ -1,28 +1,21 @@
 package com.a32b.plant.presentation.community.ui
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.a32b.plant.core.extension.isCompletedAt
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyLog
+import com.a32b.plant.presentation.core.component.StudyGoalItem
 
 @Composable
 fun StudyLogCard(studyLogs: List<StudyLog>) {
@@ -38,28 +31,13 @@ fun StudyLogCard(studyLogs: List<StudyLog>) {
                     fontSize = 15.sp
                 )
                 log.contents.forEachIndexed { index, content ->
-                    val isCompleted = log.completedContents.isCompletedAt(index)
-                    Row(
+                    StudyGoalItem(
+                        text = content,
+                        isCompleted = log.completedContents.isCompletedAt(index),
                         modifier = Modifier.padding(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            content,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontSize = 13.sp,
-                            color = if (isCompleted) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
-                        if (isCompleted) {
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = "완료",
-                                tint = MaterialTheme.colorScheme.onSecondary,
-                                modifier = Modifier.size(14.dp)
-                            )
-                        }
-                    }
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                        iconSize = 14.dp
+                    )
                 }
             }
         }
