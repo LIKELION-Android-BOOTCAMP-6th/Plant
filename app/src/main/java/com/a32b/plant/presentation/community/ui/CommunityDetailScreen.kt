@@ -55,6 +55,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -98,7 +99,7 @@ import kotlinx.coroutines.launch
 // (헤더+태그+본문 item, 구분선+아이콘 item, 댓글 입력창 item 순으로 고정)
 private const val COMMENT_INPUT_ITEM_INDEX = 2
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun CommunityDetailScreen(
     navController: NavController, viewModel: CommunityDetailViewModel = hiltViewModel()
@@ -116,28 +117,43 @@ fun CommunityDetailScreen(
 
     val listState = rememberLazyListState()
     var isCommentFieldFocused by remember { mutableStateOf(false) }
-    val imeBottomPx = WindowInsets.ime.getBottom(LocalDensity.current)
+    val commentInputRequester = remember { BringIntoViewRequester() }
 
     // 댓글 입력창 포커스 + 키보드 노출 시, 입력창이 리스트 최상단으로 오도록 스크롤해
     // 입력창~키보드 사이에 기존 댓글들이 자연스럽게 보이게 함 (일반적인 커뮤니티 앱 동작과 동일)
     //
-    // animateScrollToItem은 애니메이션 도중(imeBottomPx 변경) 재호출되면 진행 중이던
-    // 스크롤 애니메이션이 취소되고 처음부터 다시 시작되어 버벅임이 발생한다. 반면
-    // scrollToItem은 애니메이션 없이 즉시 위치를 맞추므로, 키보드 애니메이션 프레임마다
-    // 재호출해도 취소·재시작 비용이 없다. 매 프레임 재호출을 유지해 키보드가 완전히
-    // 열릴 때까지 계속 보정하면서도, 스크롤 자체는 키보드의 시스템 애니메이션에 묻어가
-    // 버벅임 없이 자연스럽게 보인다.
+    // 이전에는 WindowInsets.ime 높이를 화면 최상단에서 읽어 키보드 애니메이션 프레임마다
+    // 화면 전체가 recompose되고 LaunchedEffect가 취소·재시작되며 scrollToItem을 반복 호출해
+    // 버벅였다(#412). 이제 ime 객체만 잡아두고 높이는 effect 안(snapshotFlow)에서만 읽으며,
+    // "키보드가 열려 있는지(열리는 중 포함)"만 derivedStateOf로 뽑아 key로 써서 키보드가 열리고 닫힐 때만
+    // recompose/재시작되게 한다. 이모지 키보드 전환처럼 열린 상태에서 높이만 바뀌는 경우는
+    // key가 바뀌지 않아 사용자가 스크롤해둔 위치를 되돌리지 않는다.
     //
-    // imeBottomPx가 이번 포커스에서 지금까지 본 최댓값(maxImeBottomPx)을 갱신할 때만 보정한다.
-    // 키보드가 열리는 동안에는 imeBottomPx가 계속 커지므로 매 프레임 정상적으로 보정되지만,
-    // 키보드가 완전히 열린 뒤 이모지 키보드 전환 등으로 높이가 같거나 줄어드는 변화에는
-    // 반응하지 않아, 타이핑 중 사용자가 일부러 스크롤해둔 위치를 불필요하게 되돌리지 않는다.
-    var maxImeBottomPx by remember(isCommentFieldFocused) { mutableStateOf(0) }
-    LaunchedEffect(isCommentFieldFocused, imeBottomPx) {
-        if (isCommentFieldFocused && imeBottomPx > 0 && imeBottomPx >= maxImeBottomPx) {
-            maxImeBottomPx = imeBottomPx
-            listState.scrollToItem(COMMENT_INPUT_ITEM_INDEX)
-        }
+    // 스크롤은 키보드가 열릴 때마다 최대 2번만 한다:
+    // (a) 열리기 시작할 때 scrollToItem 1번 - 입력창이 리스트 최상단에 오면 LazyColumn은 상단 기준으로
+    //     위치를 유지하므로, 이후 imePadding으로 viewport가 줄어들어도 매 프레임 보정할 필요가 없다.
+    // (b) 키보드 애니메이션이 끝난 뒤 입력 카드 bringIntoView 1번 - 댓글이 적어 입력창을 최상단까지
+    //     못 올린 경우, LazyColumn 내장 "포커스 입력란 유지" 스크롤은 TextField까지만 보이게 해
+    //     아래 등록 버튼·글자수가 가려질 수 있어 카드 전체를 마무리 보정한다. 이미 보이면 아무 동작도 하지 않음.
+    val density = LocalDensity.current
+    val imeInsets = WindowInsets.ime
+    val imeTargetInsets = WindowInsets.imeAnimationTarget
+    val isImeVisible by remember(density, imeTargetInsets) {
+        derivedStateOf { imeTargetInsets.getBottom(density) > 0 }
+    }
+    LaunchedEffect(isCommentFieldFocused, isImeVisible) {
+        if (!isCommentFieldFocused || !isImeVisible) return@LaunchedEffect
+
+        // (a) 자식 코루틴으로 실행해, 내장 스크롤에 선점돼 취소(MutationInterruptedException)돼도 (b)까지 막히지 않게 한다.
+        launch { listState.scrollToItem(COMMENT_INPUT_ITEM_INDEX) }
+
+        // 키보드 애니메이션 종료 대기 + 줄어든 viewport가 레이아웃에 반영될 한 프레임 대기
+        snapshotFlow { imeInsets.getBottom(density) >= imeTargetInsets.getBottom(density) }.first { it }
+        withFrameNanos { }
+
+        // (b) bringIntoView()가 CancellationException 외의 예외(예: requester에 연결된 노드가 없는 경우의
+        // IllegalStateException)를 던지면 LaunchedEffect가 죽을 수 있어 safeRunCatching으로 흡수한다.
+        safeRunCatching { commentInputRequester.bringIntoView() }
     }
 
     LaunchedEffect(Unit) {
@@ -424,7 +440,8 @@ fun CommunityDetailScreen(
                                 isSubmitting = uiState.isCommentSubmitting,
                                 onTextChange = { viewModel.onCommentChange(it) },
                                 onSend = { viewModel.addComment() },
-                                onFocusChanged = { isCommentFieldFocused = it }
+                                onFocusChanged = { isCommentFieldFocused = it },
+                                modifier = Modifier.bringIntoViewRequester(commentInputRequester)
                             )
                             Spacer(modifier = Modifier.height(20.dp))
                         }
@@ -643,6 +660,7 @@ fun CommentInputSection(
     nickname: String,
     profileImg: String,
     text: String,
+    modifier: Modifier = Modifier,
     isSubmitting: Boolean = false,
     onTextChange: (String) -> Unit,
     onSend: () -> Unit,
@@ -657,7 +675,7 @@ fun CommentInputSection(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         elevation = CardDefaults.elevatedCardElevation(1.dp)
     ) {
         Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp)) {
