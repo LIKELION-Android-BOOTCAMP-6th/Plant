@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -184,7 +185,12 @@ private fun ReportCalendarDate(
     hasRecord: Boolean,
     onClick: () -> Unit
 ) {
-    val circleColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer
+    val todayCircleAlpha = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) 0.5f else 0.15f
+    val circleColor = when {
+        isSelected -> MaterialTheme.colorScheme.primary
+        isToday -> MaterialTheme.colorScheme.primary.copy(alpha = todayCircleAlpha)
+        else -> MaterialTheme.colorScheme.primaryContainer
+    }
     val description = buildString {
         append("${date.year}년 ${date.monthValue}월 ${date.dayOfMonth}일")
         if (isToday) append(", 오늘")
@@ -203,11 +209,7 @@ private fun ReportCalendarDate(
             date.dayOfMonth.toString(),
             modifier = Modifier.align(Alignment.Center),
             style = MaterialTheme.typography.bodyMedium,
-            color = when {
-                isSelected -> MaterialTheme.colorScheme.onPrimary
-                isToday -> MaterialTheme.colorScheme.primary
-                else -> Color.Unspecified
-            }
+            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color.Unspecified
         )
         if (hasRecord) {
             Box(
