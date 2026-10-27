@@ -428,7 +428,7 @@ fun StudyRecordCard(
                                 text = content,
                                 isCompleted = log.completedContents.isCompletedAt(index),
                                 style = MaterialTheme.typography.bodySmall,
-                                iconSize = 12.dp,
+                                iconSize = 8.dp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
