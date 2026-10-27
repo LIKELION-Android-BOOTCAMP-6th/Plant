@@ -115,7 +115,6 @@ fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewMo
             onDismiss = {viewModel.onDialogDismiss()},
             onConfirm = {
                 viewModel.saveBitmapToGallery(context, capture.invoke())
-                context.showToast("저장이 완료됐습니다!")
                 viewModel.onDialogDismiss()
             })
 
