@@ -121,8 +121,15 @@ fun CommunityDetailScreen(
     // 재호출해도 취소·재시작 비용이 없다. 매 프레임 재호출을 유지해 키보드가 완전히
     // 열릴 때까지 계속 보정하면서도, 스크롤 자체는 키보드의 시스템 애니메이션에 묻어가
     // 버벅임 없이 자연스럽게 보인다.
+    //
+    // imeBottomPx가 이번 포커스에서 지금까지 본 최댓값(maxImeBottomPx)을 갱신할 때만 보정한다.
+    // 키보드가 열리는 동안에는 imeBottomPx가 계속 커지므로 매 프레임 정상적으로 보정되지만,
+    // 키보드가 완전히 열린 뒤 이모지 키보드 전환 등으로 높이가 같거나 줄어드는 변화에는
+    // 반응하지 않아, 타이핑 중 사용자가 일부러 스크롤해둔 위치를 불필요하게 되돌리지 않는다.
+    var maxImeBottomPx by remember(isCommentFieldFocused) { mutableStateOf(0) }
     LaunchedEffect(isCommentFieldFocused, imeBottomPx) {
-        if (isCommentFieldFocused && imeBottomPx > 0) {
+        if (isCommentFieldFocused && imeBottomPx > 0 && imeBottomPx >= maxImeBottomPx) {
+            maxImeBottomPx = imeBottomPx
             listState.scrollToItem(COMMENT_INPUT_ITEM_INDEX)
         }
     }
@@ -459,16 +466,22 @@ fun CommentRow(
     val maxLength = 100
     val editActionsBringIntoViewRequester = remember { BringIntoViewRequester() }
     var isEditFieldFocused by remember { mutableStateOf(false) }
-    val imeBottomPx = WindowInsets.ime.getBottom(LocalDensity.current)
 
     LaunchedEffect(isEditing) {
         if (!isEditing) isEditFieldFocused = false
     }
-    // imeBottomPx를 key로 둬서 키보드 애니메이션 프레임마다 재호출 → 애니메이션 도중 좌표가
-    // 바뀌어도 매번 다시 보정되어 애니메이션이 끝난 뒤에도 가려지는 현상을 방지
-    LaunchedEffect(isEditing, isEditFieldFocused, imeBottomPx) {
-        if (isEditing && isEditFieldFocused && imeBottomPx > 0) {
-            editActionsBringIntoViewRequester.bringIntoView()
+
+    // WindowInsets.ime를 읽으면 이 컴포저블이 키보드 애니메이션 프레임마다 재구성(recompose)됨.
+    // isEditing일 때만 읽도록 가둬서, 수정 중이 아닌 댓글 행들이 다른 입력창(예: 맨 아래
+    // 새 댓글 입력창)의 키보드 애니메이션에 끌려 불필요하게 재구성되는 것을 방지한다.
+    if (isEditing) {
+        val imeBottomPx = WindowInsets.ime.getBottom(LocalDensity.current)
+        // imeBottomPx를 key로 둬서 키보드 애니메이션 프레임마다 재호출 → 애니메이션 도중 좌표가
+        // 바뀌어도 매번 다시 보정되어 애니메이션이 끝난 뒤에도 가려지는 현상을 방지
+        LaunchedEffect(isEditFieldFocused, imeBottomPx) {
+            if (isEditFieldFocused && imeBottomPx > 0) {
+                editActionsBringIntoViewRequester.bringIntoView()
+            }
         }
     }
 
