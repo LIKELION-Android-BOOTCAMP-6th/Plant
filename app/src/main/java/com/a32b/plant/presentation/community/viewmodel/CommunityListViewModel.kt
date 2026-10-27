@@ -3,6 +3,8 @@ package com.a32b.plant.presentation.community.viewmodel
 import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
+import com.a32b.plant.domain.community.PostUpdateObserver
+import com.a32b.plant.domain.community.applyUpdate
 import com.a32b.plant.domain.model.Post
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.CommunityRepository
@@ -49,7 +51,8 @@ sealed class CommunityListEvent {
 
 @HiltViewModel
 class CommunityListViewModel @Inject constructor(
-    private val repository: CommunityRepository
+    private val repository: CommunityRepository,
+    private val postUpdateObserver: PostUpdateObserver
 ) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(CommunityListUiState())
@@ -65,13 +68,67 @@ class CommunityListViewModel @Inject constructor(
     private var loadMoreJob: Job? = null
     private var searchJob: Job? = null
 
+    // postId → 로컬 패치가 적용된 시각. TTL(LOCAL_PATCH_PROTECTION_WINDOW_MS) 내에는
+    // silentRefresh()의 서버 응답이 이 패치를 덮어쓰지 않도록 보호하는 데 사용.
+    // 쓰기(패치)와 읽기(쿼리) 중 어느 쪽이 서버에 먼저 반영됐는지는 클라이언트에서 판별할 수 없으므로
+    // queryStartedAt과의 선후 비교 없이 순수 TTL로만 판단한다
+    private val recentLocalPatches = mutableMapOf<String, Long>()
+    // 마지막으로 서버와 완전히 동기화된(= posts를 서버 응답으로 통째로 교체한) 시각
+    private var lastSyncedAt = 0L
+    // 마지막 동기화 이후 상세 화면에서의 상호작용(PostUpdate)이 있었는지 — 없으면 ON_RESUME 시 불필요한 재조회를 생략
+    private var hasPendingInteractionSinceLastSync = false
+
     companion object {
         private const val PAGE_SIZE = CommunityConstants.POST_PAGE_SIZE
+        // 로컬 패치 보호 유지 시간 — 디바운스(500ms) + 서버 쓰기 왕복을 넉넉히 덮는 안전 마진.
+        // 실패한 커밋까지 영구히 보호하지 않도록 TTL로만 동작 (시간이 지나면 서버 값을 다시 신뢰)
+        private const val LOCAL_PATCH_PROTECTION_WINDOW_MS = 5_000L
+        // 상호작용이 전혀 없어도, 다른 사용자의 변경사항을 놓치지 않기 위한 최소 백그라운드 재동기화 주기
+        private const val BACKGROUND_RESYNC_INTERVAL_MS = 60_000L
     }
 
     init {
         fetchTags()
         loadInitial()
+        observePostUpdates()
+    }
+
+    // 상세 화면에서의 상호작용 결과를 목록 화면에 즉시 반영 (서버 재조회 없이 로컬 패치)
+    private fun observePostUpdates() {
+        viewModelScope.launch {
+            postUpdateObserver.event.collect { update ->
+                val now = System.currentTimeMillis()
+                recentLocalPatches[update.postId] = now
+                // 만료된 기록 정리 — map이 무한정 커지는 것 방지
+                recentLocalPatches.entries.removeAll { now - it.value >= LOCAL_PATCH_PROTECTION_WINDOW_MS }
+                hasPendingInteractionSinceLastSync = true
+
+                _uiState.update { state ->
+                    state.copy(
+                        posts = state.posts.map { post ->
+                            if (post.postId == update.postId) post.applyUpdate(update) else post
+                        },
+                        searchResults = state.searchResults.map { post ->
+                            if (post.postId == update.postId) post.applyUpdate(update) else post
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    // silentRefresh() 전용: TTL 내에 로컬 패치가 적용된 post는 서버의 오래된 응답으로 덮어쓰지 않고 현재 값을 유지
+    private fun mergeWithLocalPatches(serverPosts: List<Post>, currentPosts: List<Post>): List<Post> {
+        val now = System.currentTimeMillis()
+        return serverPosts.map { serverPost ->
+            val patchedAt = recentLocalPatches[serverPost.postId]
+            val isProtected = patchedAt != null && now - patchedAt < LOCAL_PATCH_PROTECTION_WINDOW_MS
+            if (isProtected) {
+                currentPosts.find { it.postId == serverPost.postId } ?: serverPost
+            } else {
+                serverPost
+            }
+        }
     }
 
     // 태그 목록 조회 (필터 시트용)
@@ -103,6 +160,8 @@ class CommunityListViewModel @Inject constructor(
 
             pageResult.onSuccess { page ->
                 Log.d("CommunityListVM", "loadInitial 성공: ${page.items.size}개 로드, hasMore=${page.hasMore}, nextCursor=${page.nextCursor}")
+                lastSyncedAt = System.currentTimeMillis()
+                hasPendingInteractionSinceLastSync = false
                 _uiState.update {
                     it.copy(
                         posts = page.items,
@@ -179,6 +238,8 @@ class CommunityListViewModel @Inject constructor(
             } ?: Result.Failure(AppError.Network())
 
             pageResult.onSuccess { page ->
+                lastSyncedAt = System.currentTimeMillis()
+                hasPendingInteractionSinceLastSync = false
                 // suppressLoadMore=true 먼저 세팅 → recomposition 타이밍에 loadMore 끼어들기 원천 차단
                 _uiState.update {
                     it.copy(
@@ -250,8 +311,14 @@ class CommunityListViewModel @Inject constructor(
     }
 
     // 화면 복귀(Resume) 시 호출 — 초기 로딩 전에는 무시
+    // 마지막 동기화 이후 상호작용이 없었다면(= 상세 화면에서 아무것도 바뀌지 않았다면) 불필요한 재조회를 생략.
+    // 단, 다른 사용자의 변경사항을 영원히 놓치지 않도록 일정 주기(BACKGROUND_RESYNC_INTERVAL_MS)마다는 강제로 재동기화
     fun refreshOnResume() {
-        if (_uiState.value.hasLoadedOnce) silentRefresh()
+        if (!_uiState.value.hasLoadedOnce) return
+        val dueForBackgroundSync = System.currentTimeMillis() - lastSyncedAt >= BACKGROUND_RESYNC_INTERVAL_MS
+        if (hasPendingInteractionSinceLastSync || dueForBackgroundSync) {
+            silentRefresh()
+        }
     }
 
     // PullToRefresh 인디케이터 없이 백그라운드로 조용히 갱신 (화면 복귀 전용)
@@ -262,6 +329,7 @@ class CommunityListViewModel @Inject constructor(
         // loadMoreJob 취소 시 코루틴이 CancellationException으로 종료되어 onFailure가 실행되지 않음
         // → isLoadingMore=true가 고착될 수 있으므로 명시적으로 초기화
         _uiState.update { it.copy(isLoadingMore = false) }
+        hasPendingInteractionSinceLastSync = false
         loadJob = viewModelScope.launch(Dispatchers.IO) {
             val state = _uiState.value
             // 현재 로드된 게시글 수만큼 재로드해 스크롤 위치와 목록을 보존
@@ -273,16 +341,26 @@ class CommunityListViewModel @Inject constructor(
                     tagIds = state.selected.map { it.id },
                     sharedOnly = state.isSharedShown
                 )
-            } ?: return@launch
+            }
+
+            if (pageResult == null) {
+                // 타임아웃 → 이번 동기화는 실패한 것이므로 다음 ON_RESUME에서 재시도할 수 있도록 플래그 복구
+                hasPendingInteractionSinceLastSync = true
+                return@launch
+            }
 
             pageResult.onSuccess { page ->
-                _uiState.update {
-                    it.copy(
-                        posts = page.items,
+                lastSyncedAt = System.currentTimeMillis()
+                _uiState.update { current ->
+                    current.copy(
+                        posts = mergeWithLocalPatches(page.items, current.posts),
                         cursor = page.nextCursor,
                         hasMore = page.hasMore
                     )
                 }
+            }.onFailure {
+                // 네트워크 실패 → 다음 ON_RESUME에서 재시도할 수 있도록 플래그 복구
+                hasPendingInteractionSinceLastSync = true
             }
         }
     }
