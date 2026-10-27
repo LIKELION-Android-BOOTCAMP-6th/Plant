@@ -114,10 +114,16 @@ fun CommunityDetailScreen(
 
     // 댓글 입력창 포커스 + 키보드 노출 시, 입력창이 리스트 최상단으로 오도록 스크롤해
     // 입력창~키보드 사이에 기존 댓글들이 자연스럽게 보이게 함 (일반적인 커뮤니티 앱 동작과 동일)
-    // imeBottomPx를 key로 둬서 키보드 애니메이션 프레임마다 재호출 → 애니메이션 도중에도 보정됨
+    //
+    // animateScrollToItem은 애니메이션 도중(imeBottomPx 변경) 재호출되면 진행 중이던
+    // 스크롤 애니메이션이 취소되고 처음부터 다시 시작되어 버벅임이 발생한다. 반면
+    // scrollToItem은 애니메이션 없이 즉시 위치를 맞추므로, 키보드 애니메이션 프레임마다
+    // 재호출해도 취소·재시작 비용이 없다. 매 프레임 재호출을 유지해 키보드가 완전히
+    // 열릴 때까지 계속 보정하면서도, 스크롤 자체는 키보드의 시스템 애니메이션에 묻어가
+    // 버벅임 없이 자연스럽게 보인다.
     LaunchedEffect(isCommentFieldFocused, imeBottomPx) {
         if (isCommentFieldFocused && imeBottomPx > 0) {
-            listState.animateScrollToItem(COMMENT_INPUT_ITEM_INDEX)
+            listState.scrollToItem(COMMENT_INPUT_ITEM_INDEX)
         }
     }
 

@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -153,7 +154,14 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     ) { innerPadding ->
-                        Box(modifier = Modifier.padding(innerPadding)) {
+                        // Modifier.padding()은 inset을 소비하지 않아, 하위 화면의 Scaffold나
+                        // imePadding() 등이 같은 시스템 인셋(내비바 등)을 중복으로 더하게 됨.
+                        // consumeWindowInsets로 여기서 소비해 하위에서 중복 적용되지 않도록 한다.
+                        Box(
+                            modifier = Modifier
+                                .padding(innerPadding)
+                                .consumeWindowInsets(innerPadding)
+                        ) {
                             PlantAppNavigation(navController = navController, viewModel = viewModel)
                         }
                     }
