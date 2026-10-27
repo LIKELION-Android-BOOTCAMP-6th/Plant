@@ -6,6 +6,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -480,9 +481,15 @@ fun CommentRow(
     //
     // BringIntoViewRequester.bringIntoView()는 애니메이션 기반 스크롤이라 키보드 애니메이션
     // 프레임마다 재호출하면 진행 중이던 애니메이션이 취소되고 처음부터 다시 시작돼 버벅임이
-    // 발생한다(#380과 동일 원인). CommentInputSection과 동일하게, 이 댓글 item을 리스트
-    // 최상단으로 scrollToItem(애니메이션 없이 즉시 이동)해 저장/취소 버튼이 키보드 위로
-    // 보이게 하는 방식으로 대체한다.
+    // 발생한다(#380과 동일 원인).
+    //
+    // CommentInputSection의 scrollToItem(index) 방식(댓글 입력창을 항상 리스트 최상단에 고정)을
+    // 그대로 쓰면, 이 댓글 item이 화면 중간/아래 어디에 있더라도 포커스 즉시 맨 위로 큰 거리를
+    // 순간 이동시켜 버벅임처럼 보인다. 입력창은 댓글 영역 맨 위에 있어 탭하기 전 이미 상단
+    // 근처인 경우가 많아 이동 거리가 작지만, 수정 아이콘은 리스트 어디에나 있을 수 있어 거리가
+    // 커질 수 있기 때문이다. 대신 layoutInfo로 이 item이 키보드에 가려지는 만큼만 최소 거리로
+    // scrollBy(애니메이션 없는 즉시 스크롤)해, 이미 보이는 댓글은 움직이지 않고 가려지는
+    // 댓글만 필요한 만큼만 따라가도록 한다.
     if (isEditing) {
         val imeBottomPx = WindowInsets.ime.getBottom(LocalDensity.current)
         // imeBottomPx가 이번 포커스에서 지금까지 본 최댓값을 갱신할 때만 보정해, 키보드가
@@ -491,7 +498,18 @@ fun CommentRow(
         LaunchedEffect(isEditFieldFocused, imeBottomPx) {
             if (isEditFieldFocused && imeBottomPx > 0 && imeBottomPx >= maxImeBottomPx) {
                 maxImeBottomPx = imeBottomPx
-                listState.scrollToItem(itemIndex)
+                val layoutInfo = listState.layoutInfo
+                val itemInfo = layoutInfo.visibleItemsInfo.find { it.index == itemIndex }
+                if (itemInfo == null) {
+                    // 아직 리스트에 측정되지 않은 상태(예: 최초 포커스 프레임) - 맨 위 고정으로 폴백
+                    listState.scrollToItem(itemIndex)
+                } else {
+                    val itemBottom = itemInfo.offset + itemInfo.size
+                    val overflow = itemBottom - layoutInfo.viewportEndOffset
+                    if (overflow > 0) {
+                        listState.scrollBy(overflow.toFloat())
+                    }
+                }
             }
         }
     }
