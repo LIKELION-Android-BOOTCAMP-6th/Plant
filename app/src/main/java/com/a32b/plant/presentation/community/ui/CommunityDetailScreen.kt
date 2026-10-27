@@ -230,7 +230,7 @@ fun CommunityDetailScreen(
                 ) {
                     val isPostBlind = currentPost.isHidden || currentPost.reportCount >= 5
 
-                    // 댓글 입력창에 포커스가 가면 listState.animateScrollToItem(COMMENT_INPUT_ITEM_INDEX)로
+                    // 댓글 입력창에 포커스가 가면 listState.scrollToItem(COMMENT_INPUT_ITEM_INDEX)로
                     // 스크롤하므로, 헤더+태그+본문을 하나의 item으로 합쳐 댓글 입력창의 인덱스를
                     // isPostBlind/studyLogs 유무와 무관하게 고정값(0: 헤더, 1: 구분선+아이콘, 2: 댓글 입력창)으로 유지한다.
                     LazyColumn(
