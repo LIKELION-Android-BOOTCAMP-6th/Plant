@@ -8,7 +8,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,7 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -64,6 +63,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
@@ -417,7 +417,6 @@ fun CommunityDetailScreen(
 }
 
 // CommentRow에 인라인 편집 모드 + 수정/삭제 아이콘 추가
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CommentRow(
     comment: Comment,
@@ -436,13 +435,15 @@ fun CommentRow(
     val maxLength = 100
     val editActionsBringIntoViewRequester = remember { BringIntoViewRequester() }
     var isEditFieldFocused by remember { mutableStateOf(false) }
-    val isImeVisible = WindowInsets.isImeVisible
+    val imeBottomPx = WindowInsets.ime.getBottom(LocalDensity.current)
 
     LaunchedEffect(isEditing) {
         if (!isEditing) isEditFieldFocused = false
     }
-    LaunchedEffect(isEditing, isEditFieldFocused, isImeVisible) {
-        if (isEditing && isEditFieldFocused && isImeVisible) {
+    // imeBottomPx를 key로 둬서 키보드 애니메이션 프레임마다 재호출 → 애니메이션 도중 좌표가
+    // 바뀌어도 매번 다시 보정되어 애니메이션이 끝난 뒤에도 가려지는 현상을 방지
+    LaunchedEffect(isEditing, isEditFieldFocused, imeBottomPx) {
+        if (isEditing && isEditFieldFocused && imeBottomPx > 0) {
             editActionsBringIntoViewRequester.bringIntoView()
         }
     }
@@ -568,7 +569,6 @@ fun CommentRow(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CommentInputSection(
     nickname: String,
@@ -583,10 +583,12 @@ fun CommentInputSection(
     val focus = LocalFocusManager.current
     val sendActionsBringIntoViewRequester = remember { BringIntoViewRequester() }
     var isCommentFieldFocused by remember { mutableStateOf(false) }
-    val isImeVisible = WindowInsets.isImeVisible
+    val imeBottomPx = WindowInsets.ime.getBottom(LocalDensity.current)
 
-    LaunchedEffect(isCommentFieldFocused, isImeVisible) {
-        if (isCommentFieldFocused && isImeVisible) {
+    // imeBottomPx를 key로 둬서 키보드 애니메이션 프레임마다 재호출 → 애니메이션 도중 좌표가
+    // 바뀌어도 매번 다시 보정되어 애니메이션이 끝난 뒤에도 가려지는 현상을 방지
+    LaunchedEffect(isCommentFieldFocused, imeBottomPx) {
+        if (isCommentFieldFocused && imeBottomPx > 0) {
             sendActionsBringIntoViewRequester.bringIntoView()
         }
     }
