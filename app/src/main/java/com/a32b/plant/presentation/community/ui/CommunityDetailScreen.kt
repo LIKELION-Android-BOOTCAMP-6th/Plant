@@ -125,7 +125,7 @@ fun CommunityDetailScreen(
     // 이전에는 WindowInsets.ime 높이를 화면 최상단에서 읽어 키보드 애니메이션 프레임마다
     // 화면 전체가 recompose되고 LaunchedEffect가 취소·재시작되며 scrollToItem을 반복 호출해
     // 버벅였다(#412). 이제 ime 객체만 잡아두고 높이는 effect 안(snapshotFlow)에서만 읽으며,
-    // "키보드가 열리는 중인지"만 derivedStateOf로 뽑아 key로 써서 키보드가 열리고 닫힐 때만
+    // "키보드가 열려 있는지(열리는 중 포함)"만 derivedStateOf로 뽑아 key로 써서 키보드가 열리고 닫힐 때만
     // recompose/재시작되게 한다. 이모지 키보드 전환처럼 열린 상태에서 높이만 바뀌는 경우는
     // key가 바뀌지 않아 사용자가 스크롤해둔 위치를 되돌리지 않는다.
     //
@@ -138,11 +138,11 @@ fun CommunityDetailScreen(
     val density = LocalDensity.current
     val imeInsets = WindowInsets.ime
     val imeTargetInsets = WindowInsets.imeAnimationTarget
-    val isImeOpening by remember(density) {
+    val isImeVisible by remember(density, imeTargetInsets) {
         derivedStateOf { imeTargetInsets.getBottom(density) > 0 }
     }
-    LaunchedEffect(isCommentFieldFocused, isImeOpening) {
-        if (!isCommentFieldFocused || !isImeOpening) return@LaunchedEffect
+    LaunchedEffect(isCommentFieldFocused, isImeVisible) {
+        if (!isCommentFieldFocused || !isImeVisible) return@LaunchedEffect
 
         // (a) 자식 코루틴으로 실행해, 내장 스크롤에 선점돼 취소(MutationInterruptedException)돼도 (b)까지 막히지 않게 한다.
         launch { listState.scrollToItem(COMMENT_INPUT_ITEM_INDEX) }
@@ -660,11 +660,11 @@ fun CommentInputSection(
     nickname: String,
     profileImg: String,
     text: String,
+    modifier: Modifier = Modifier,
     isSubmitting: Boolean = false,
     onTextChange: (String) -> Unit,
     onSend: () -> Unit,
-    onFocusChanged: (Boolean) -> Unit = {},
-    modifier: Modifier = Modifier
+    onFocusChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     val maxLength = 100
