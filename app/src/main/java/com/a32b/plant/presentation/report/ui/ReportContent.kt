@@ -1,6 +1,8 @@
 package com.a32b.plant.presentation.report.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,7 +36,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import com.a32b.plant.R
@@ -186,6 +187,7 @@ private fun ReportCalendarDate(
     onClick: () -> Unit
 ) {
     val circleColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer
+    val circleBorder = if (isToday && !isSelected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null
     val description = buildString {
         append("${date.year}년 ${date.monthValue}월 ${date.dayOfMonth}일")
         if (isToday) append(", 오늘")
@@ -199,18 +201,13 @@ private fun ReportCalendarDate(
             .clickable(onClick = onClick)
             .semantics { contentDescription = description }
             .background(circleColor)
+            .then(if (circleBorder != null) Modifier.border(circleBorder, CircleShape) else Modifier)
     ) {
         Text(
             date.dayOfMonth.toString(),
             modifier = Modifier.align(Alignment.Center),
-            style = MaterialTheme.typography.bodyMedium.copy(
-                textDecoration = if (isToday) TextDecoration.Underline else null
-            ),
-            color = when {
-                isSelected -> MaterialTheme.colorScheme.onPrimary
-                isToday -> MaterialTheme.colorScheme.primary
-                else -> Color.Unspecified
-            }
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color.Unspecified
         )
         if (hasRecord) {
             Box(
