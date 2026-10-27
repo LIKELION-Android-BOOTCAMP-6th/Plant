@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.a32b.plant.presentation.studyPlanDetail.viewmodel.StudyPlanDetailViewModel
 import com.a32b.plant.R
@@ -23,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.core.component.StudyGoalItem
 import com.a32b.plant.core.extension.isCompletedAt
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.presentation.theme.fontColorSub
@@ -423,26 +425,14 @@ fun StudyRecordCard(
                 if (previewContents.isNotEmpty()) {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         previewContents.forEachIndexed { index, content ->
-                            val isCompleted = log.completedContents.isCompletedAt(index)
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "• $content",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = if (isCompleted) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.weight(1f, fill = false),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                if (isCompleted) {
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = "완료",
-                                        tint = MaterialTheme.colorScheme.onSecondary,
-                                        modifier = Modifier.size(12.dp)
-                                    )
-                                }
-                            }
+                            StudyGoalItem(
+                                text = content,
+                                isCompleted = log.completedContents.isCompletedAt(index),
+                                style = MaterialTheme.typography.bodySmall,
+                                iconSize = 7.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                         if (log.contents.size > 2) {
                             Text(
