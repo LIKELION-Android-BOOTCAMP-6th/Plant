@@ -109,7 +109,7 @@ fun StudyLogDetailDialog(
                                 isCompleted = log.completedContents.isCompletedAt(index),
                                 modifier = Modifier.padding(vertical = 4.dp),
                                 style = MaterialTheme.typography.bodySmall,
-                                iconSize = 8.dp
+                                iconSize = 7.dp
                             )
                         }
                     }

@@ -30,7 +30,7 @@ fun StudyGoalItem(
     isCompleted: Boolean,
     modifier: Modifier = Modifier,
     style: TextStyle = MaterialTheme.typography.bodyMedium,
-    iconSize: Dp = 10.dp,
+    iconSize: Dp = 9.dp,
     maxLines: Int = Int.MAX_VALUE,
     overflow: TextOverflow = TextOverflow.Clip
 ) {
