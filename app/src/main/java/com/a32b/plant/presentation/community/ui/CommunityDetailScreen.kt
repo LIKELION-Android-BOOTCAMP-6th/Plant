@@ -598,7 +598,9 @@ fun CommentInputSection(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .bringIntoViewRequester(sendActionsBringIntoViewRequester),
         elevation = CardDefaults.elevatedCardElevation(1.dp)
     ) {
         Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp)) {
@@ -646,9 +648,7 @@ fun CommentInputSection(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .bringIntoViewRequester(sendActionsBringIntoViewRequester),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
