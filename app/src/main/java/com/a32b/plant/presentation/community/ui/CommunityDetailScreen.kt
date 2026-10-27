@@ -8,20 +8,25 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -49,7 +54,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
@@ -409,6 +417,7 @@ fun CommunityDetailScreen(
 }
 
 // CommentRow에 인라인 편집 모드 + 수정/삭제 아이콘 추가
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CommentRow(
     comment: Comment,
@@ -425,6 +434,18 @@ fun CommentRow(
 ) {
     val context = LocalContext.current
     val maxLength = 100
+    val editActionsBringIntoViewRequester = remember { BringIntoViewRequester() }
+    var isEditFieldFocused by remember { mutableStateOf(false) }
+    val isImeVisible = WindowInsets.isImeVisible
+
+    LaunchedEffect(isEditing) {
+        if (!isEditing) isEditFieldFocused = false
+    }
+    LaunchedEffect(isEditing, isEditFieldFocused, isImeVisible) {
+        if (isEditing && isEditFieldFocused && isImeVisible) {
+            editActionsBringIntoViewRequester.bringIntoView()
+        }
+    }
 
     Row(verticalAlignment = Alignment.Top) {
         ProfileImage(comment.user.profileImg, 24)
@@ -470,7 +491,9 @@ fun CommentRow(
                             limitLength(input, maxLength, context, onEditTextChange)
                         },
                         readOnly = isEditSubmitting,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { isEditFieldFocused = it.isFocused },
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -484,7 +507,7 @@ fun CommentRow(
                         textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
 
                     )
-                    Row {
+                    Row(modifier = Modifier.bringIntoViewRequester(editActionsBringIntoViewRequester)) {
                         TextButton(
                             onClick = onEditSubmit,
                             enabled = !isEditSubmitting,
@@ -545,6 +568,7 @@ fun CommentRow(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CommentInputSection(
     nickname: String,
@@ -557,6 +581,16 @@ fun CommentInputSection(
     val context = LocalContext.current
     val maxLength = 100
     val focus = LocalFocusManager.current
+    val sendActionsBringIntoViewRequester = remember { BringIntoViewRequester() }
+    var isCommentFieldFocused by remember { mutableStateOf(false) }
+    val isImeVisible = WindowInsets.isImeVisible
+
+    LaunchedEffect(isCommentFieldFocused, isImeVisible) {
+        if (isCommentFieldFocused && isImeVisible) {
+            sendActionsBringIntoViewRequester.bringIntoView()
+        }
+    }
+
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -582,7 +616,8 @@ fun CommentInputSection(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp),
+                    .padding(top = 8.dp)
+                    .onFocusChanged { isCommentFieldFocused = it.isFocused },
                 placeholder = {
                     Text(
                         "댓글을 남겨보세요...",
@@ -609,7 +644,9 @@ fun CommentInputSection(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .bringIntoViewRequester(sendActionsBringIntoViewRequester),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
