@@ -78,11 +78,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.type.ReportReason
 import com.a32b.plant.presentation.community.viewmodel.CommunityDetailEvent
@@ -502,28 +502,14 @@ fun CommentRow(
             // (a) 시작 시 1회 - 자식 코루틴으로 실행해, 내장 스크롤에 선점돼 취소돼도 (b)까지 막히지 않게 한다.
             // bringIntoView()가 CancellationException 외의 예외(예: requester에 연결된 노드가 없는 경우의
             // IllegalStateException)를 던지면 launch의 부모(이 LaunchedEffect)까지 전파돼 죽을 수 있어 흡수한다.
-            launch {
-                try {
-                    editAreaRequester.bringIntoView()
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    // 무시 - 스크롤 보정 실패가 편집 기능 자체를 막으면 안 됨
-                }
-            }
+            launch { safeRunCatching { editAreaRequester.bringIntoView() } }
 
             // 키보드 애니메이션 종료 대기 + 줄어든 viewport가 레이아웃에 반영될 한 프레임 대기
             snapshotFlow { imeInsets.getBottom(density) }.first { it >= imeTargetPx }
             withFrameNanos { }
 
             // (b) 종료 후 1회 - 이미 보이면 아무 동작도 하지 않음
-            try {
-                editAreaRequester.bringIntoView()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                // 무시 - 스크롤 보정 실패가 편집 기능 자체를 막으면 안 됨
-            }
+            safeRunCatching { editAreaRequester.bringIntoView() }
         }
     }
 
