@@ -23,14 +23,13 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -88,13 +87,12 @@ fun ReportContent(
         }
 
         if (scrollState.canScrollForward) {
-            Surface(
+            Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 8.dp),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.background,
-                shadowElevation = 1.dp
+                    .padding(bottom = 8.dp)
+                    .shadow(1.dp, CircleShape)
+                    .background(MaterialTheme.colorScheme.background, CircleShape)
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_down),
@@ -185,7 +183,7 @@ private fun ReportCalendarDate(
     hasRecord: Boolean,
     onClick: () -> Unit
 ) {
-    val todayCircleAlpha = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) 0.5f else 0.15f
+    val todayCircleAlpha = if (LocalIsDarkTheme.current) 0.5f else 0.15f
     val circleColor = when {
         isSelected -> MaterialTheme.colorScheme.primary
         isToday -> MaterialTheme.colorScheme.primary.copy(alpha = todayCircleAlpha)
