@@ -176,6 +176,7 @@ fun CommunityDetailScreen(
                 modifier = Modifier
                     .padding(innerPadding)
                     .fillMaxSize()
+                    .imePadding()
                     .padding(horizontal = 10.dp)
                     .background(MaterialTheme.colorScheme.background)
             ) {
