@@ -23,10 +23,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -424,13 +423,16 @@ fun CommunityDetailScreen(
                         }
 
                         // CommentRow에 수정/삭제 기능 파라미터 전달
-                        items(uiState.commentList) { commentData ->
+                        // itemsIndexed로 각 댓글의 LazyColumn item 인덱스를 구해 CommentRow에 전달 (인라인 수정 시 스크롤 보정용)
+                        itemsIndexed(uiState.commentList) { index, commentData ->
                             CommentRow(
                                 comment = commentData,
                                 isOwner = commentData.user.uid == uiState.currentUid,
                                 isEditing = uiState.editingCommentId == commentData.commentId,
                                 editingText = uiState.editingCommentText,
                                 isEditSubmitting = commentData.commentId in uiState.editingSubmittingCommentIds,
+                                listState = listState,
+                                itemIndex = COMMENT_INPUT_ITEM_INDEX + 1 + index,
                                 onEditTextChange = { viewModel.onEditCommentTextChange(it) },
                                 onEditStart = { viewModel.startEditComment(commentData) },
                                 onEditSubmit = { viewModel.submitEditComment() },
@@ -455,6 +457,8 @@ fun CommentRow(
     isEditing: Boolean,
     editingText: String,
     isEditSubmitting: Boolean = false,
+    listState: LazyListState,
+    itemIndex: Int,
     onEditTextChange: (String) -> Unit,
     onEditStart: () -> Unit,
     onEditSubmit: () -> Unit,
@@ -464,7 +468,6 @@ fun CommentRow(
 ) {
     val context = LocalContext.current
     val maxLength = 100
-    val editActionsBringIntoViewRequester = remember { BringIntoViewRequester() }
     var isEditFieldFocused by remember { mutableStateOf(false) }
 
     LaunchedEffect(isEditing) {
@@ -474,13 +477,21 @@ fun CommentRow(
     // WindowInsets.ime를 읽으면 이 컴포저블이 키보드 애니메이션 프레임마다 재구성(recompose)됨.
     // isEditing일 때만 읽도록 가둬서, 수정 중이 아닌 댓글 행들이 다른 입력창(예: 맨 아래
     // 새 댓글 입력창)의 키보드 애니메이션에 끌려 불필요하게 재구성되는 것을 방지한다.
+    //
+    // BringIntoViewRequester.bringIntoView()는 애니메이션 기반 스크롤이라 키보드 애니메이션
+    // 프레임마다 재호출하면 진행 중이던 애니메이션이 취소되고 처음부터 다시 시작돼 버벅임이
+    // 발생한다(#380과 동일 원인). CommentInputSection과 동일하게, 이 댓글 item을 리스트
+    // 최상단으로 scrollToItem(애니메이션 없이 즉시 이동)해 저장/취소 버튼이 키보드 위로
+    // 보이게 하는 방식으로 대체한다.
     if (isEditing) {
         val imeBottomPx = WindowInsets.ime.getBottom(LocalDensity.current)
-        // imeBottomPx를 key로 둬서 키보드 애니메이션 프레임마다 재호출 → 애니메이션 도중 좌표가
-        // 바뀌어도 매번 다시 보정되어 애니메이션이 끝난 뒤에도 가려지는 현상을 방지
+        // imeBottomPx가 이번 포커스에서 지금까지 본 최댓값을 갱신할 때만 보정해, 키보드가
+        // 완전히 열린 뒤 높이가 같거나 줄어드는 변화(이모지 키보드 전환 등)에는 반응하지 않는다.
+        var maxImeBottomPx by remember(isEditFieldFocused) { mutableStateOf(0) }
         LaunchedEffect(isEditFieldFocused, imeBottomPx) {
-            if (isEditFieldFocused && imeBottomPx > 0) {
-                editActionsBringIntoViewRequester.bringIntoView()
+            if (isEditFieldFocused && imeBottomPx > 0 && imeBottomPx >= maxImeBottomPx) {
+                maxImeBottomPx = imeBottomPx
+                listState.scrollToItem(itemIndex)
             }
         }
     }
@@ -545,7 +556,7 @@ fun CommentRow(
                         textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
 
                     )
-                    Row(modifier = Modifier.bringIntoViewRequester(editActionsBringIntoViewRequester)) {
+                    Row {
                         TextButton(
                             onClick = onEditSubmit,
                             enabled = !isEditSubmitting,
