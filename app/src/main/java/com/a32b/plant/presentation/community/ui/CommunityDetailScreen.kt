@@ -501,7 +501,8 @@ fun CommentRow(
 
             // (a) 시작 시 1회 - 자식 코루틴으로 실행해, 내장 스크롤에 선점돼 취소돼도 (b)까지 막히지 않게 한다.
             // bringIntoView()가 CancellationException 외의 예외(예: requester에 연결된 노드가 없는 경우의
-            // IllegalStateException)를 던지면 launch의 부모(이 LaunchedEffect)까지 전파돼 죽을 수 있어 흡수한다.
+            // IllegalStateException)를 던지면 launch의 부모(이 LaunchedEffect)까지 전파돼 죽을 수 있어
+            // safeRunCatching으로 흡수한다(CancellationException은 재전파, 그 외는 Throwable까지 무시).
             launch { safeRunCatching { editAreaRequester.bringIntoView() } }
 
             // 키보드 애니메이션 종료 대기 + 줄어든 viewport가 레이아웃에 반영될 한 프레임 대기
