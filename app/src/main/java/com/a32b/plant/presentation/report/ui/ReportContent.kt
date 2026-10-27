@@ -1,8 +1,6 @@
 package com.a32b.plant.presentation.report.ui
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
@@ -55,31 +54,52 @@ fun ReportContent(
     onTabSelected: (ReportTab) -> Unit,
     onRetry: () -> Unit
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        ReportCalendar(
-            state = state,
-            onPreviousMonth = onPreviousMonth,
-            onNextMonth = onNextMonth,
-            onDateSelected = onDateSelected
-        )
-        ReportTabs(state.tab, onTabSelected)
+    val scrollState = rememberScrollState()
 
-        when {
-            state.isLoading -> LoadingBox(Modifier.fillMaxWidth().height(200.dp))
-            state.loadError -> ReportFailure("기록을 불러오지 못했어요", onRetry)
-            state.tab == ReportTab.DAILY -> {
-                val report = state.dailyReport
-                if (report != null) DailyReportContent(report)
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            ReportCalendar(
+                state = state,
+                onPreviousMonth = onPreviousMonth,
+                onNextMonth = onNextMonth,
+                onDateSelected = onDateSelected
+            )
+            ReportTabs(state.tab, onTabSelected)
+
+            when {
+                state.isLoading -> LoadingBox(Modifier.fillMaxWidth().height(200.dp))
+                state.loadError -> ReportFailure("기록을 불러오지 못했어요", onRetry)
+                state.tab == ReportTab.DAILY -> {
+                    val report = state.dailyReport
+                    if (report != null) DailyReportContent(report)
+                }
+                else -> {
+                    val report = state.monthlyReport
+                    if (report != null) MonthlyReportContent(report)
+                }
             }
-            else -> {
-                val report = state.monthlyReport
-                if (report != null) MonthlyReportContent(report)
+        }
+
+        if (scrollState.canScrollForward) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 8.dp)
+                    .shadow(1.dp, CircleShape)
+                    .background(MaterialTheme.colorScheme.background, CircleShape)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_down),
+                    contentDescription = null,
+                    modifier = Modifier.size(23.dp),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
             }
         }
     }
@@ -137,7 +157,7 @@ private fun ReportCalendar(
             Row(Modifier.fillMaxWidth()) {
                 repeat(7) { weekday ->
                     val day = week * 7 + weekday - firstWeekday + 1
-                    Box(Modifier.weight(1f).height(48.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.weight(1f).height(40.dp), contentAlignment = Alignment.Center) {
                         if (day in 1..month.lengthOfMonth()) {
                             val date = month.atDay(day)
                             ReportCalendarDate(
@@ -163,37 +183,44 @@ private fun ReportCalendarDate(
     hasRecord: Boolean,
     onClick: () -> Unit
 ) {
-    val circleColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer
-    val circleBorder = if (isToday && !isSelected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null
+    val todayCircleAlpha = if (LocalIsDarkTheme.current) 0.5f else 0.15f
+    val circleColor = when {
+        isSelected -> MaterialTheme.colorScheme.primary
+        isToday -> MaterialTheme.colorScheme.primary.copy(alpha = todayCircleAlpha)
+        else -> MaterialTheme.colorScheme.primaryContainer
+    }
     val description = buildString {
         append("${date.year}년 ${date.monthValue}월 ${date.dayOfMonth}일")
         if (isToday) append(", 오늘")
         if (isSelected) append(", 선택됨")
         append(if (hasRecord) ", 기록 있음" else ", 기록 없음")
     }
-    Column(
+    Box(
         modifier = Modifier
-            .fillMaxSize()
+            .size(40.dp)
+            .clip(CircleShape)
             .clickable(onClick = onClick)
-            .semantics { contentDescription = description },
-        horizontalAlignment = Alignment.CenterHorizontally
+            .semantics { contentDescription = description }
+            .background(circleColor)
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(circleColor)
-                .then(if (circleBorder != null) Modifier.border(circleBorder, CircleShape) else Modifier),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                date.dayOfMonth.toString(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color.Unspecified
+        Text(
+            date.dayOfMonth.toString(),
+            modifier = Modifier.align(Alignment.Center),
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color.Unspecified
+        )
+        if (hasRecord) {
+            Box(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 2.dp)
+                    .size(6.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isSelected) MaterialTheme.colorScheme.onPrimary
+                        else MaterialTheme.colorScheme.tertiary
+                    )
             )
-        }
-        Box(Modifier.height(8.dp), contentAlignment = Alignment.Center) {
-            if (hasRecord) Box(Modifier.size(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.tertiary))
         }
     }
 }
@@ -265,5 +292,5 @@ fun ReportCard(
 
 @Composable
 fun ReportPeriodTitle(date: LocalDate) {
-    Text(TimeFormatter.formatWithDayOfWeek(date.atStartOfDay()), style = MaterialTheme.typography.titleLarge)
+    Text(TimeFormatter.formatWithDayOfWeek(date.atStartOfDay()), style = MaterialTheme.typography.titleMedium)
 }
