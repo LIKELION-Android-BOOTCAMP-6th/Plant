@@ -22,7 +22,10 @@
             android:label="@string/app_name"
             android:theme="@style/Theme.Plant"
             android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
             >
+<!--            edge-to-edge + imePadding 조합에서 시스템 adjustPan이 겹쳐 키보드 위 빈 공간/버벅임이 생기므로 adjustResize로 키보드 처리를 Compose에 위임-->
+
 <!--            세로 고정용 screenOrientation-->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

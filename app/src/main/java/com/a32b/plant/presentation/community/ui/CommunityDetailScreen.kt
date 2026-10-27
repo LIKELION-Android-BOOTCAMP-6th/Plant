@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imeAnimationTarget
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.offset
@@ -58,6 +60,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
@@ -74,9 +78,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import kotlinx.coroutines.flow.first
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.type.ReportReason
 import com.a32b.plant.presentation.community.viewmodel.CommunityDetailEvent
@@ -448,6 +454,7 @@ fun CommunityDetailScreen(
 }
 
 // CommentRow에 인라인 편집 모드 + 수정/삭제 아이콘 추가
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CommentRow(
     comment: Comment,
@@ -464,24 +471,46 @@ fun CommentRow(
 ) {
     val context = LocalContext.current
     val maxLength = 100
-    val editActionsBringIntoViewRequester = remember { BringIntoViewRequester() }
     var isEditFieldFocused by remember { mutableStateOf(false) }
 
     LaunchedEffect(isEditing) {
         if (!isEditing) isEditFieldFocused = false
     }
 
-    // WindowInsets.ime를 읽으면 이 컴포저블이 키보드 애니메이션 프레임마다 재구성(recompose)됨.
-    // isEditing일 때만 읽도록 가둬서, 수정 중이 아닌 댓글 행들이 다른 입력창(예: 맨 아래
-    // 새 댓글 입력창)의 키보드 애니메이션에 끌려 불필요하게 재구성되는 것을 방지한다.
+    // 키보드가 올라와 포커스된 입력란이 가려지면 LazyColumn에 내장된 "포커스 입력란 유지" 스크롤이
+    // 자동으로 개입한다. LazyList 스크롤은 MutatorMutex로 한 번에 하나만 실행되므로, 직접
+    // listState.animateScrollBy()로 스크롤하면 이 내장 스크롤에 선점돼 취소된다(아래쪽 댓글처럼
+    // 입력란 자체가 가려지는 경우에만 재현). 내장 스크롤은 입력란(커서)만 보이게 할 뿐 그 아래
+    // 저장/취소 버튼은 신경 쓰지 않아 버튼이 가려진 채로 남는다.
+    //
+    // bringIntoView()는 내장 스크롤과 같은 처리기가 받아 함께 계산하므로 서로 선점하지 않는다.
+    // TextField+저장/취소 Row 전체를 요청 영역으로 잡아 버튼까지 보이게 한다. 매 프레임 호출하면
+    // 버벅이므로(#380), 포커스당 최대 2번만 호출한다: (a) 키보드가 열리기 시작할 때 1번,
+    // (b) 키보드 애니메이션이 끝난 뒤(위쪽 댓글처럼 (a) 시점엔 보였지만 viewport가 줄며 가려진
+    // 경우를 마무리 보정) 1번.
+    val editAreaRequester = remember { BringIntoViewRequester() }
     if (isEditing) {
-        val imeBottomPx = WindowInsets.ime.getBottom(LocalDensity.current)
-        // imeBottomPx를 key로 둬서 키보드 애니메이션 프레임마다 재호출 → 애니메이션 도중 좌표가
-        // 바뀌어도 매번 다시 보정되어 애니메이션이 끝난 뒤에도 가려지는 현상을 방지
-        LaunchedEffect(isEditFieldFocused, imeBottomPx) {
-            if (isEditFieldFocused && imeBottomPx > 0) {
-                editActionsBringIntoViewRequester.bringIntoView()
-            }
+        val density = LocalDensity.current
+        // ime 객체만 잡아두고 실제 높이는 effect 안에서 읽어, 키보드 애니메이션 프레임마다
+        // recompose되지 않게 한다.
+        val imeInsets = WindowInsets.ime
+        val imeTargetPx = WindowInsets.imeAnimationTarget.getBottom(density)
+
+        LaunchedEffect(isEditFieldFocused, imeTargetPx) {
+            if (!isEditFieldFocused || imeTargetPx <= 0) return@LaunchedEffect
+
+            // (a) 시작 시 1회 - 자식 코루틴으로 실행해, 내장 스크롤에 선점돼 취소돼도 (b)까지 막히지 않게 한다.
+            // bringIntoView()가 CancellationException 외의 예외(예: requester에 연결된 노드가 없는 경우의
+            // IllegalStateException)를 던지면 launch의 부모(이 LaunchedEffect)까지 전파돼 죽을 수 있어
+            // safeRunCatching으로 흡수한다(CancellationException은 재전파, 그 외는 Throwable까지 무시).
+            launch { safeRunCatching { editAreaRequester.bringIntoView() } }
+
+            // 키보드 애니메이션 종료 대기 + 줄어든 viewport가 레이아웃에 반영될 한 프레임 대기
+            snapshotFlow { imeInsets.getBottom(density) }.first { it >= imeTargetPx }
+            withFrameNanos { }
+
+            // (b) 종료 후 1회 - 이미 보이면 아무 동작도 하지 않음
+            safeRunCatching { editAreaRequester.bringIntoView() }
         }
     }
 
@@ -522,61 +551,64 @@ fun CommentRow(
                         color = MaterialTheme.colorScheme.onSecondary
                     )
                 } else if (isEditing) {
-                    // 인라인 편집 모드
-                    TextField(
-                        value = editingText,
-                        onValueChange = { input ->
-                            limitLength(input, maxLength, context, onEditTextChange)
-                        },
-                        readOnly = isEditSubmitting,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .onFocusChanged { isEditFieldFocused = it.isFocused },
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            cursorColor = MaterialTheme.colorScheme.primary
-                        ),
-                        shape = RoundedCornerShape(8.dp),
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
+                    // 인라인 편집 모드 - TextField + 저장/취소 Row를 하나의 영역으로 묶어
+                    // bringIntoView() 요청 시 버튼까지 함께 화면에 보이게 한다.
+                    Column(modifier = Modifier.bringIntoViewRequester(editAreaRequester)) {
+                        TextField(
+                            value = editingText,
+                            onValueChange = { input ->
+                                limitLength(input, maxLength, context, onEditTextChange)
+                            },
+                            readOnly = isEditSubmitting,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onFocusChanged { isEditFieldFocused = it.isFocused },
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                cursorColor = MaterialTheme.colorScheme.primary
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
 
-                    )
-                    Row(modifier = Modifier.bringIntoViewRequester(editActionsBringIntoViewRequester)) {
-                        TextButton(
-                            onClick = onEditSubmit,
-                            enabled = !isEditSubmitting,
-                            colors = ButtonDefaults.textButtonColors(
-                                contentColor = if (editingText.isBlank())
-                                    MaterialTheme.colorScheme.onSurface
-                                else
-                                    MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Text(
-                                if (isEditSubmitting) "저장 중" else "저장",
-                                style = MaterialTheme.typography.labelLarge
-                            )
-                        }
-                        TextButton(onClick = onEditCancel, enabled = !isEditSubmitting) {
-                            Text(
-                                "취소",
-                                style = MaterialTheme.typography.labelLarge
-                            )
-                        }
-                        Spacer(modifier = Modifier.weight(1f))
-                        Text(
-                            "${editingText.length} / $maxLength",
-                            color = if (editingText.length >= maxLength)
-                                MaterialTheme.colorScheme.error
-                            else
-                                MaterialTheme.colorScheme.onSurface,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(end = 20.dp)
                         )
+                        Row {
+                            TextButton(
+                                onClick = onEditSubmit,
+                                enabled = !isEditSubmitting,
+                                colors = ButtonDefaults.textButtonColors(
+                                    contentColor = if (editingText.isBlank())
+                                        MaterialTheme.colorScheme.onSurface
+                                    else
+                                        MaterialTheme.colorScheme.primary
+                                )
+                            ) {
+                                Text(
+                                    if (isEditSubmitting) "저장 중" else "저장",
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
+                            TextButton(onClick = onEditCancel, enabled = !isEditSubmitting) {
+                                Text(
+                                    "취소",
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
+                            Spacer(modifier = Modifier.weight(1f))
+                            Text(
+                                "${editingText.length} / $maxLength",
+                                color = if (editingText.length >= maxLength)
+                                    MaterialTheme.colorScheme.error
+                                else
+                                    MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(end = 20.dp)
+                            )
+                        }
                     }
                 } else {
                     Text(
