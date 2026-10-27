@@ -117,6 +117,10 @@ class CommunityDetailViewModel @Inject constructor(
     // delay 구간에서만 true — 재진입 차단 + commitXXX() 시작 직전 false로 해제
     private var likePendingCommit = false
     private var bookmarkPendingCommit = false
+    // commitXXX()가 실제 서버 호출 중인 구간에서만 true — refresh()가 아직 커밋되지 않은 값을 서버의 이전 값으로 덮어쓰는 것을 막기 위함
+    // (likePendingCommit은 디바운스 호출 직전 false가 되므로, 그 이후 실제 네트워크 왕복 구간은 이 플래그로 별도 보호)
+    private var likeCommitInFlight = false
+    private var bookmarkCommitInFlight = false
 
     // blank 상태에서 연타 시 Toast가 줄줄이 쌓이는 것을 막기 위한 디바운스
     private var commentBlankToastJob: Job? = null
@@ -166,14 +170,25 @@ class CommunityDetailViewModel @Inject constructor(
             val commentsDeferred = async { repository.getComments(postId) }
 
             postDeferred.await()
-                .onSuccess { post ->
-                    _post.value = post
-                    onIsSharedChange()
-                    if (post == null) {
+                .onSuccess { fetchedPost ->
+                    if (fetchedPost == null) {
+                        _post.value = null
+                        onIsSharedChange()
                         _uiState.update { it.copy(isPostNotFound = true) }
                     } else {
+                        // 좋아요/북마크가 디바운스 대기 중이거나 서버 커밋이 진행 중이면, 아직 반영되지 않은
+                        // 서버의 이전 값으로 덮어쓰지 않고 로컬에서 들고 있던 값을 그대로 유지한다.
+                        val current = _post.value
+                        val merged = fetchedPost.copy(
+                            isLiked = if (isLikeUncommitted()) current?.isLiked ?: fetchedPost.isLiked else fetchedPost.isLiked,
+                            likeCount = if (isLikeUncommitted()) current?.likeCount ?: fetchedPost.likeCount else fetchedPost.likeCount,
+                            isBookmarked = if (isBookmarkUncommitted()) current?.isBookmarked ?: fetchedPost.isBookmarked else fetchedPost.isBookmarked,
+                            bookmarkCount = if (isBookmarkUncommitted()) current?.bookmarkCount ?: fetchedPost.bookmarkCount else fetchedPost.bookmarkCount
+                        )
+                        _post.value = merged
+                        onIsSharedChange()
                         // 댓글 작성/삭제/수정, 신고, 좋아요·북마크 보정 등 상호작용 결과를 목록 화면에 즉시 반영
-                        notifyPostChanged(post)
+                        notifyPostChanged(merged)
                     }
                 }
                 .onFailure { e -> sendToast(e.message) }
@@ -292,72 +307,85 @@ class CommunityDetailViewModel @Inject constructor(
     private suspend fun commitBookmark() {
         val post = _post.value ?: return
         val localIsBookmarked = post.isBookmarked
-        // NonCancellable: viewModelScope 취소(화면 이탈) 후에도 Firestore 쓰기가 완료되도록 보장 (Case B)
-        withContext(NonCancellable) {
-            toggleBookmarkUseCase(postId, post.title)
-        }.onSuccess { wasBookmarked ->
-                val serverFinal = !wasBookmarked
-                // 커밋 이후 사용자가 또 탭했다면(localIsBookmarked != 현재값) 덮어쓰지 않음
-                // → 다른 기기에서 상태가 바뀐 케이스만 보정
-                if (_post.value?.isBookmarked == localIsBookmarked && _post.value?.isBookmarked != serverFinal) {
-                    val delta = if (serverFinal) 1 else -1
-                    val correctedCount = ((_post.value?.bookmarkCount ?: 0) + delta).coerceAtLeast(0)
-                    _post.value = _post.value?.copy(isBookmarked = serverFinal, bookmarkCount = correctedCount)
-                    postUpdateNotifier.notifyPostUpdated(
-                        PostUpdate(postId = postId, isBookmarked = serverFinal, bookmarkCount = correctedCount)
-                    )
-                }
-            }
-            .onFailure { e ->
-                when (e) {
-                    is AppError.UnknownUser -> {
-                        // onCleared 경로(viewModelScope 취소됨): 화면 없으므로 세션 복구 불필요
-                        if (viewModelScope.isActive) ensureCurrentUserUseCase()
-                    }
-                    else -> {
-                        // 화면 이탈 후 실행(onCleared 경로)이면 viewModelScope가 취소돼 sendToast/refresh는 no-op
-                        sendToast(e.message)
-                        refresh()
+        bookmarkCommitInFlight = true
+        try {
+            // NonCancellable: viewModelScope 취소(화면 이탈) 후에도 Firestore 쓰기가 완료되도록 보장 (Case B)
+            withContext(NonCancellable) {
+                toggleBookmarkUseCase(postId, post.title)
+            }.onSuccess { wasBookmarked ->
+                    val serverFinal = !wasBookmarked
+                    // 커밋 이후 사용자가 또 탭했다면(localIsBookmarked != 현재값) 덮어쓰지 않음
+                    // → 다른 기기에서 상태가 바뀐 케이스만 보정
+                    if (_post.value?.isBookmarked == localIsBookmarked && _post.value?.isBookmarked != serverFinal) {
+                        val delta = if (serverFinal) 1 else -1
+                        val correctedCount = ((_post.value?.bookmarkCount ?: 0) + delta).coerceAtLeast(0)
+                        _post.value = _post.value?.copy(isBookmarked = serverFinal, bookmarkCount = correctedCount)
+                        postUpdateNotifier.notifyPostUpdated(
+                            PostUpdate(postId = postId, isBookmarked = serverFinal, bookmarkCount = correctedCount)
+                        )
                     }
                 }
-            }
+                .onFailure { e ->
+                    when (e) {
+                        is AppError.UnknownUser -> {
+                            // onCleared 경로(viewModelScope 취소됨): 화면 없으므로 세션 복구 불필요
+                            if (viewModelScope.isActive) ensureCurrentUserUseCase()
+                        }
+                        else -> {
+                            // 화면 이탈 후 실행(onCleared 경로)이면 viewModelScope가 취소돼 sendToast/refresh는 no-op
+                            sendToast(e.message)
+                            refresh()
+                        }
+                    }
+                }
+        } finally {
+            bookmarkCommitInFlight = false
+        }
     }
 
     private suspend fun commitLike() {
         val post = _post.value ?: return
         val localIsLiked = post.isLiked
-        // NonCancellable: viewModelScope 취소(화면 이탈) 후에도 Firestore 쓰기가 완료되도록 보장 (Case B)
-        withContext(NonCancellable) {
-            toggleLikeUseCase(postId, post.author.id, post.title)
-        }.onSuccess { wasLiked ->
-                // 서버가 실제로 반영한 최종 상태 (wasLiked=true이면 취소됐으니 최종은 false)
-                val serverFinal = !wasLiked
-                // 커밋 이후 사용자가 또 탭했다면(localIsLiked != 현재값) 덮어쓰지 않음
-                // → 다른 기기에서 상태가 바뀐 케이스만 보정
-                if (_post.value?.isLiked == localIsLiked && _post.value?.isLiked != serverFinal) {
-                    val delta = if (serverFinal) 1 else -1
-                    val correctedCount = ((_post.value?.likeCount ?: 0) + delta).coerceAtLeast(0)
-                    _post.value = _post.value?.copy(isLiked = serverFinal, likeCount = correctedCount)
-                    postUpdateNotifier.notifyPostUpdated(
-                        PostUpdate(postId = postId, isLiked = serverFinal, likeCount = correctedCount)
-                    )
-                }
-            }
-            .onFailure { e ->
-                when (e) {
-                    is AppError.UnknownUser -> {
-                        // onCleared 경로(viewModelScope 취소됨): 화면 없으므로 세션 복구 불필요
-                        if (viewModelScope.isActive) ensureCurrentUserUseCase()
-                    }
-                    else -> {
-                        // 화면 이탈 후 실행(onCleared 경로)이면 viewModelScope가 취소돼 sendToast/refresh는 no-op
-                        sendToast(e.message)
-                        // 정확한 롤백값을 모르므로 서버 상태 재조회로 정합성 확보
-                        refresh()
+        likeCommitInFlight = true
+        try {
+            // NonCancellable: viewModelScope 취소(화면 이탈) 후에도 Firestore 쓰기가 완료되도록 보장 (Case B)
+            withContext(NonCancellable) {
+                toggleLikeUseCase(postId, post.author.id, post.title)
+            }.onSuccess { wasLiked ->
+                    // 서버가 실제로 반영한 최종 상태 (wasLiked=true이면 취소됐으니 최종은 false)
+                    val serverFinal = !wasLiked
+                    // 커밋 이후 사용자가 또 탭했다면(localIsLiked != 현재값) 덮어쓰지 않음
+                    // → 다른 기기에서 상태가 바뀐 케이스만 보정
+                    if (_post.value?.isLiked == localIsLiked && _post.value?.isLiked != serverFinal) {
+                        val delta = if (serverFinal) 1 else -1
+                        val correctedCount = ((_post.value?.likeCount ?: 0) + delta).coerceAtLeast(0)
+                        _post.value = _post.value?.copy(isLiked = serverFinal, likeCount = correctedCount)
+                        postUpdateNotifier.notifyPostUpdated(
+                            PostUpdate(postId = postId, isLiked = serverFinal, likeCount = correctedCount)
+                        )
                     }
                 }
-            }
+                .onFailure { e ->
+                    when (e) {
+                        is AppError.UnknownUser -> {
+                            // onCleared 경로(viewModelScope 취소됨): 화면 없으므로 세션 복구 불필요
+                            if (viewModelScope.isActive) ensureCurrentUserUseCase()
+                        }
+                        else -> {
+                            // 화면 이탈 후 실행(onCleared 경로)이면 viewModelScope가 취소돼 sendToast/refresh는 no-op
+                            sendToast(e.message)
+                            // 정확한 롤백값을 모르므로 서버 상태 재조회로 정합성 확보
+                            refresh()
+                        }
+                    }
+                }
+        } finally {
+            likeCommitInFlight = false
+        }
     }
+
+    private fun isLikeUncommitted() = likePendingCommit || likeCommitInFlight
+    private fun isBookmarkUncommitted() = bookmarkPendingCommit || bookmarkCommitInFlight
 
     // 댓글 수정 관련 함수
     fun startEditComment(comment: Comment) {
