@@ -25,6 +25,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -55,31 +56,53 @@ fun ReportContent(
     onTabSelected: (ReportTab) -> Unit,
     onRetry: () -> Unit
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        ReportCalendar(
-            state = state,
-            onPreviousMonth = onPreviousMonth,
-            onNextMonth = onNextMonth,
-            onDateSelected = onDateSelected
-        )
-        ReportTabs(state.tab, onTabSelected)
+    val scrollState = rememberScrollState()
 
-        when {
-            state.isLoading -> LoadingBox(Modifier.fillMaxWidth().height(200.dp))
-            state.loadError -> ReportFailure("기록을 불러오지 못했어요", onRetry)
-            state.tab == ReportTab.DAILY -> {
-                val report = state.dailyReport
-                if (report != null) DailyReportContent(report)
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            ReportCalendar(
+                state = state,
+                onPreviousMonth = onPreviousMonth,
+                onNextMonth = onNextMonth,
+                onDateSelected = onDateSelected
+            )
+            ReportTabs(state.tab, onTabSelected)
+
+            when {
+                state.isLoading -> LoadingBox(Modifier.fillMaxWidth().height(200.dp))
+                state.loadError -> ReportFailure("기록을 불러오지 못했어요", onRetry)
+                state.tab == ReportTab.DAILY -> {
+                    val report = state.dailyReport
+                    if (report != null) DailyReportContent(report)
+                }
+                else -> {
+                    val report = state.monthlyReport
+                    if (report != null) MonthlyReportContent(report)
+                }
             }
-            else -> {
-                val report = state.monthlyReport
-                if (report != null) MonthlyReportContent(report)
+        }
+
+        if (scrollState.canScrollForward) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 8.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.background,
+                shadowElevation = 1.dp
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_down),
+                    contentDescription = "아래로 스크롤",
+                    modifier = Modifier.size(23.dp),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
             }
         }
     }
@@ -137,7 +160,7 @@ private fun ReportCalendar(
             Row(Modifier.fillMaxWidth()) {
                 repeat(7) { weekday ->
                     val day = week * 7 + weekday - firstWeekday + 1
-                    Box(Modifier.weight(1f).height(48.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.weight(1f).height(40.dp), contentAlignment = Alignment.Center) {
                         if (day in 1..month.lengthOfMonth()) {
                             val date = month.atDay(day)
                             ReportCalendarDate(
@@ -171,29 +194,33 @@ private fun ReportCalendarDate(
         if (isSelected) append(", 선택됨")
         append(if (hasRecord) ", 기록 있음" else ", 기록 없음")
     }
-    Column(
+    Box(
         modifier = Modifier
-            .fillMaxSize()
+            .size(40.dp)
+            .clip(CircleShape)
             .clickable(onClick = onClick)
-            .semantics { contentDescription = description },
-        horizontalAlignment = Alignment.CenterHorizontally
+            .semantics { contentDescription = description }
+            .background(circleColor)
+            .then(if (circleBorder != null) Modifier.border(circleBorder, CircleShape) else Modifier)
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(circleColor)
-                .then(if (circleBorder != null) Modifier.border(circleBorder, CircleShape) else Modifier),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                date.dayOfMonth.toString(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color.Unspecified
+        Text(
+            date.dayOfMonth.toString(),
+            modifier = Modifier.align(Alignment.Center),
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color.Unspecified
+        )
+        if (hasRecord) {
+            Box(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 2.dp)
+                    .size(6.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isSelected) MaterialTheme.colorScheme.onPrimary
+                        else MaterialTheme.colorScheme.tertiary
+                    )
             )
-        }
-        Box(Modifier.height(8.dp), contentAlignment = Alignment.Center) {
-            if (hasRecord) Box(Modifier.size(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.tertiary))
         }
     }
 }
