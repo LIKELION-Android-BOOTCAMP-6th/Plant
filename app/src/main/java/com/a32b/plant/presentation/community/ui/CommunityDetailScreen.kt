@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
@@ -87,6 +88,10 @@ import com.a32b.plant.presentation.core.component.TagChip
 import com.a32b.plant.presentation.core.extension.showToast
 import kotlinx.coroutines.launch
 
+// LazyColumn에서 게시글 헤더/태그/본문을 하나의 item으로 합친 뒤의 댓글 입력창 item 인덱스
+// (헤더+태그+본문 item, 구분선+아이콘 item, 댓글 입력창 item 순으로 고정)
+private const val COMMENT_INPUT_ITEM_INDEX = 2
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CommunityDetailScreen(
@@ -102,6 +107,19 @@ fun CommunityDetailScreen(
 
     val isLikedByMe = postState?.isLiked == true
     val isBookmarkedByMe = postState?.isBookmarked == true
+
+    val listState = rememberLazyListState()
+    var isCommentFieldFocused by remember { mutableStateOf(false) }
+    val imeBottomPx = WindowInsets.ime.getBottom(LocalDensity.current)
+
+    // 댓글 입력창 포커스 + 키보드 노출 시, 입력창이 리스트 최상단으로 오도록 스크롤해
+    // 입력창~키보드 사이에 기존 댓글들이 자연스럽게 보이게 함 (일반적인 커뮤니티 앱 동작과 동일)
+    // imeBottomPx를 key로 둬서 키보드 애니메이션 프레임마다 재호출 → 애니메이션 도중에도 보정됨
+    LaunchedEffect(isCommentFieldFocused, imeBottomPx) {
+        if (isCommentFieldFocused && imeBottomPx > 0) {
+            listState.animateScrollToItem(COMMENT_INPUT_ITEM_INDEX)
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.event.collect { event ->
@@ -197,7 +215,15 @@ fun CommunityDetailScreen(
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     elevation = CardDefaults.elevatedCardElevation(1.dp)
                 ) {
-                    LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 24.dp)) {
+                    val isPostBlind = currentPost.isHidden || currentPost.reportCount >= 5
+
+                    // 댓글 입력창에 포커스가 가면 listState.animateScrollToItem(COMMENT_INPUT_ITEM_INDEX)로
+                    // 스크롤하므로, 헤더+태그+본문을 하나의 item으로 합쳐 댓글 입력창의 인덱스를
+                    // isPostBlind/studyLogs 유무와 무관하게 고정값(0: 헤더, 1: 구분선+아이콘, 2: 댓글 입력창)으로 유지한다.
+                    LazyColumn(
+                        state = listState,
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 24.dp)
+                    ) {
 
                         item {
                             Box(
@@ -241,8 +267,7 @@ fun CommunityDetailScreen(
 //                                fontSize = 12.sp
                                 )
                             }
-                        }
-                        item {
+
                             Spacer(modifier = Modifier.height(6.dp))
                             Row(modifier = Modifier.offset(x = (-3).dp)) {
                                 if (currentPost.isShared ?: false) TagChip("공유", 12)
@@ -251,11 +276,7 @@ fun CommunityDetailScreen(
                             }
                             Spacer(modifier = Modifier.height(20.dp))
 
-                        }
-
-                        val isPostBlind = currentPost.isHidden || currentPost.reportCount >= 5
-                        if (isPostBlind) {
-                            item {
+                            if (isPostBlind) {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -268,14 +289,10 @@ fun CommunityDetailScreen(
                                         color = MaterialTheme.colorScheme.onSecondary
                                     )
                                 }
-                            }
-                        } else {
-                            if (!currentPost.studyLogs.isNullOrEmpty()) {
-                                item {
+                            } else {
+                                if (!currentPost.studyLogs.isNullOrEmpty()) {
                                     StudyLogCard(currentPost.studyLogs)
                                 }
-                            }
-                            item {
                                 if (!currentPost.studyLogs.isNullOrEmpty() && !currentPost.content.isNullOrBlank()) {
                                     Spacer(modifier = Modifier.height(16.dp))
                                 }
@@ -387,7 +404,8 @@ fun CommunityDetailScreen(
                                 text = uiState.comment,
                                 isSubmitting = uiState.isCommentSubmitting,
                                 onTextChange = { viewModel.onCommentChange(it) },
-                                onSend = { viewModel.addComment() }
+                                onSend = { viewModel.addComment() },
+                                onFocusChanged = { isCommentFieldFocused = it }
                             )
                             Spacer(modifier = Modifier.height(20.dp))
                         }
@@ -576,31 +594,19 @@ fun CommentInputSection(
     text: String,
     isSubmitting: Boolean = false,
     onTextChange: (String) -> Unit,
-    onSend: () -> Unit
+    onSend: () -> Unit,
+    onFocusChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     val maxLength = 100
     val focus = LocalFocusManager.current
-    val sendActionsBringIntoViewRequester = remember { BringIntoViewRequester() }
-    var isCommentFieldFocused by remember { mutableStateOf(false) }
-    val imeBottomPx = WindowInsets.ime.getBottom(LocalDensity.current)
-
-    // imeBottomPx를 key로 둬서 키보드 애니메이션 프레임마다 재호출 → 애니메이션 도중 좌표가
-    // 바뀌어도 매번 다시 보정되어 애니메이션이 끝난 뒤에도 가려지는 현상을 방지
-    LaunchedEffect(isCommentFieldFocused, imeBottomPx) {
-        if (isCommentFieldFocused && imeBottomPx > 0) {
-            sendActionsBringIntoViewRequester.bringIntoView()
-        }
-    }
 
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         shape = RoundedCornerShape(12.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .bringIntoViewRequester(sendActionsBringIntoViewRequester),
+        modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.elevatedCardElevation(1.dp)
     ) {
         Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp)) {
@@ -621,7 +627,7 @@ fun CommentInputSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp)
-                    .onFocusChanged { isCommentFieldFocused = it.isFocused },
+                    .onFocusChanged { onFocusChanged(it.isFocused) },
                 placeholder = {
                     Text(
                         "댓글을 남겨보세요...",
