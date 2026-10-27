@@ -35,8 +35,8 @@ fun StudyLogCard(studyLogs: List<StudyLog>) {
                         text = content,
                         isCompleted = log.completedContents.isCompletedAt(index),
                         modifier = Modifier.padding(10.dp),
-                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                        iconSize = 8.dp
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 18.sp),
+                        iconSize = 8.sp
                     )
                 }
             }

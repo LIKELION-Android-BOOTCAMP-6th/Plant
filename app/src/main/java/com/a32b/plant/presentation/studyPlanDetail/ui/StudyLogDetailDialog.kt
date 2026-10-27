@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.a32b.plant.core.extension.isCompletedAt
 import com.a32b.plant.core.util.TimeFormatter
@@ -109,7 +110,7 @@ fun StudyLogDetailDialog(
                                 isCompleted = log.completedContents.isCompletedAt(index),
                                 modifier = Modifier.padding(vertical = 4.dp),
                                 style = MaterialTheme.typography.bodySmall,
-                                iconSize = 7.dp
+                                iconSize = 7.sp
                             )
                         }
                     }

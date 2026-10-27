@@ -19,9 +19,12 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.isSpecified
+import androidx.compose.ui.unit.sp
+
+// 글꼴 크기를 작게 설정해도 빈 원 테두리가 보이도록 하는 아이콘 최소 크기
+private val MinIconSize = 6.dp
 
 // 학습 목표 한 줄 - 완료: 채워진 원 / 미완료: 빈 원 아이콘을 항목 앞에 표시
 @Composable
@@ -30,7 +33,8 @@ fun StudyGoalItem(
     isCompleted: Boolean,
     modifier: Modifier = Modifier,
     style: TextStyle = MaterialTheme.typography.bodyMedium,
-    iconSize: Dp = 9.dp,
+    // 시스템 글꼴 크기 설정에 맞춰 텍스트와 함께 커지도록 sp 단위로 받음
+    iconSize: TextUnit = 9.sp,
     maxLines: Int = Int.MAX_VALUE,
     overflow: TextOverflow = TextOverflow.Clip
 ) {
@@ -43,20 +47,24 @@ fun StudyGoalItem(
             trim = LineHeightStyle.Trim.None
         )
     )
+    // em 단위는 toDp() 변환이 불가능해 크래시가 나므로 sp일 때만 변환
+    val iconSizeDp = with(LocalDensity.current) {
+        (if (iconSize.isSp) iconSize.toDp() else MinIconSize).coerceAtLeast(MinIconSize)
+    }
     val firstLineHeight = with(LocalDensity.current) {
-        if (style.lineHeight.isSpecified) style.lineHeight.toDp() else iconSize
+        if (style.lineHeight.isSp) style.lineHeight.toDp() else iconSizeDp
     }
 
     Row(modifier = modifier, verticalAlignment = Alignment.Top) {
         Box(
-            modifier = Modifier.height(maxOf(firstLineHeight, iconSize)),
+            modifier = Modifier.height(maxOf(firstLineHeight, iconSizeDp)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = if (isCompleted) Icons.Filled.Circle else Icons.Outlined.RadioButtonUnchecked,
                 contentDescription = if (isCompleted) "완료" else "미완료",
                 tint = color,
-                modifier = Modifier.size(iconSize)
+                modifier = Modifier.size(iconSizeDp)
             )
         }
         Spacer(modifier = Modifier.width(6.dp))

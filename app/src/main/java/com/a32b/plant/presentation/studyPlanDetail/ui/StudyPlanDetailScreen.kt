@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.a32b.plant.presentation.studyPlanDetail.viewmodel.StudyPlanDetailViewModel
 import com.a32b.plant.R
@@ -428,7 +429,7 @@ fun StudyRecordCard(
                                 text = content,
                                 isCompleted = log.completedContents.isCompletedAt(index),
                                 style = MaterialTheme.typography.bodySmall,
-                                iconSize = 7.dp,
+                                iconSize = 7.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )

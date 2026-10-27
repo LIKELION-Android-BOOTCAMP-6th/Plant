@@ -6,7 +6,6 @@ import android.content.ContextWrapper
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.view.View
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -116,7 +115,7 @@ fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewMo
             onDismiss = {viewModel.onDialogDismiss()},
             onConfirm = {
                 viewModel.saveBitmapToGallery(context, capture.invoke())
-                Toast.makeText(context,"저장이 완료됐습니다!", Toast.LENGTH_SHORT).show()
+                context.showToast("저장이 완료됐습니다!")
                 viewModel.onDialogDismiss()
             })
 
