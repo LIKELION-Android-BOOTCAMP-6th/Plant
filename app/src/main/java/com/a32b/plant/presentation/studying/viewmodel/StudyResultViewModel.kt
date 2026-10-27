@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -102,6 +103,8 @@ class StudyResultViewModel @Inject constructor(
             put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
             put(MediaStore.Images.Media.MIME_TYPE, "image/png")
             put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+            // 쓰는 도중에는 갤러리에 노출되지 않도록 숨김 (완료되지 못한 항목은 시스템이 정리)
+            put(MediaStore.Images.Media.IS_PENDING, 1)
         }
 
         viewModelScope.launch {
@@ -109,13 +112,20 @@ class StudyResultViewModel @Inject constructor(
             val isSaved = withContext(Dispatchers.IO) {
                 var uri: Uri? = null
                 safeRunCatching {
-                    uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-                    val stream = uri?.let { resolver.openOutputStream(it) }
-                    stream?.use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) } == true
-                }.getOrDefault(false).also { saved ->
-                    // 쓰기에 실패하면 갤러리에 빈 이미지 항목이 남지 않도록 삭제
-                    if (!saved) uri?.let { safeRunCatching { resolver.delete(it, null, null) } }
-                }
+                    val insertedUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                        ?: error("갤러리 항목 생성 실패")
+                    uri = insertedUri
+                    val stream = resolver.openOutputStream(insertedUri) ?: error("출력 스트림 열기 실패")
+                    val isWritten = stream.use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                    if (!isWritten) error("PNG 쓰기 실패")
+                    // 쓰기가 끝나면 숨김 해제
+                    val pendingCleared = ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }
+                    if (resolver.update(insertedUri, pendingCleared, null, null) <= 0) error("숨김 해제 실패")
+                }.onFailure { e ->
+                    Log.e("StudyResultVM", "이미지 저장 실패: ${e.message}", e)
+                    // 실패하면 갤러리에 빈 이미지 항목이 남지 않도록 삭제
+                    uri?.let { safeRunCatching { resolver.delete(it, null, null) } }
+                }.isSuccess
             }
             _uiState.update { it.copy(isLoading = false) }
             _event.send(StudyResultEvent.ShowToast(if (isSaved) "저장이 완료됐습니다!" else "이미지 저장에 실패했습니다."))
