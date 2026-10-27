@@ -98,7 +98,7 @@ fun ReportContent(
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_down),
-                    contentDescription = "아래로 스크롤",
+                    contentDescription = null,
                     modifier = Modifier.size(23.dp),
                     tint = MaterialTheme.colorScheme.onSurface
                 )
