@@ -222,12 +222,6 @@ class CommunityRepositoryImpl @Inject constructor(
             return Result.Failure(handleError(e, "댓글 수정에 실패했습니다.", isWrite = true))
         }
 
-        // activityId를 모르는 기존 댓글은 batch로 묶을 수 없어 조회 후 별도로 수정 (이 경로만 비원자적)
-        if (!hasActivityId) {
-            safeRunCatching { communityRemoteDataSource.updateActivityComment(commentId, newContent) }
-                .onFailure { Log.e("Community", "activity comment 업데이트 실패 (댓글은 수정됨): commentId=$commentId", it) }
-        }
-
         return Result.Success(Unit)
     }
 
