@@ -31,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
@@ -59,6 +60,8 @@ fun StudyingGoalInputDialog(
     }
     var index by remember { mutableIntStateOf(initialIndex) }
     val currentText = localLogs.getOrElse(index) { "" }
+    val canGoPrev = index > 0
+    val canGoNext = index < localLogs.size - 1
 
     val focusManager = LocalFocusManager.current
 
@@ -103,9 +106,11 @@ fun StudyingGoalInputDialog(
                         IconButton(
                             onClick = {
                                 focusManager.clearFocus()
-                                if (index > 0) index--
+                                if (canGoPrev) index--
                             },
-                            enabled = index > 0
+                            enabled = canGoPrev,
+                            // 자리는 유지해야 입력창 너비가 변하지 않으므로 숨김은 alpha로 처리
+                            modifier = Modifier.alpha(if (canGoPrev) 1f else 0f)
                         ) {
                             Image(
                                 painter = painterResource(R.drawable.ic_left),
@@ -155,9 +160,10 @@ fun StudyingGoalInputDialog(
                         IconButton(
                             onClick = {
                                 focusManager.clearFocus()
-                                if (index < 10) index++
+                                if (canGoNext) index++
                             },
-                            enabled = index < localLogs.size - 1
+                            enabled = canGoNext,
+                            modifier = Modifier.alpha(if (canGoNext) 1f else 0f)
                         ) {
                             Image(
                                 painter = painterResource(R.drawable.ic_right),
