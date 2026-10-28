@@ -448,8 +448,10 @@ fun PostCard(post: Post, isLiked: Boolean, isBookmarked: Boolean = false, onClic
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
 
                 Text(
-                    text = if (post.isBlind) CommunityConstants.BLIND_CONTENT_MESSAGE else post.title,
+                    text = if (post.isBlind) CommunityConstants.BLIND_TITLE_MESSAGE else post.title,
                     style = MaterialTheme.typography.titleMedium,
+                    // 블라인드 문구는 실제 제목과 구분되도록 힌트 색으로 표시
+                    color = if (post.isBlind) MaterialTheme.colorScheme.onSecondary else Color.Unspecified,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)

@@ -315,8 +315,10 @@ fun CommunityDetailScreen(
                                         )
                                     }
                                     Text(
-                                        if (isPostBlind) CommunityConstants.BLIND_CONTENT_MESSAGE else currentPost.title,
+                                        if (isPostBlind) CommunityConstants.BLIND_TITLE_MESSAGE else currentPost.title,
                                         style = MaterialTheme.typography.titleLarge,
+                                        // 블라인드 문구는 실제 제목과 구분되도록 힌트 색으로 표시
+                                        color = if (isPostBlind) MaterialTheme.colorScheme.onSecondary else Color.Unspecified,
                                         modifier = Modifier.padding(horizontal = 46.dp),
                                         textAlign = TextAlign.Center
                                     )
