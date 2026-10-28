@@ -74,6 +74,32 @@ fun StudyPlanDetailScreen(
     val context = LocalContext.current
 
     LoadableScreen(viewModel) {
+        // potInfo는 위임 프로퍼티라 null 체크 후에도 스마트 캐스트가 안 되므로 로컬 변수로 받음
+        val pot = potInfo
+        // 로딩 완료 후에도 null이면 조회 실패 또는 화분 없음 — 수정/삭제 버튼이 눌리지 않도록 안내 화면만 표시
+        // (다시 시도는 학습 기록 구독이 중복 생성되므로 제공하지 않음)
+        if (pot == null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "화분 정보를 불러오지 못했습니다.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    TextButton(onClick = { navController.popBackStack() }) {
+                        Text("돌아가기")
+                    }
+                }
+            }
+            return@LoadableScreen
+        }
+
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -85,11 +111,9 @@ fun StudyPlanDetailScreen(
                         actionIconContentColor = MaterialTheme.colorScheme.onSurface,
                     ),
                     title = {
-                        potInfo?.let {
-                            Text("[${it.tagName}] ${it.name}",
-                                style = MaterialTheme.typography.titleMedium,
-                            )
-                        } ?: Text("로딩 중...", style = MaterialTheme.typography.titleMedium)
+                        Text("[${pot.tagName}] ${pot.name}",
+                            style = MaterialTheme.typography.titleMedium,
+                        )
                     },
                     navigationIcon = {
                             //뒤로 가기
@@ -149,10 +173,10 @@ fun StudyPlanDetailScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp),
-                        enabled = potInfo?.isCompleted == false,
+                        enabled = !pot.isCompleted,
                         onClick = { viewModel.setCompleteDialogShown(true) },
                     ) {
-                        Text(if (potInfo?.isCompleted == true) "완료된 학습" else "학습 완료하기", style = MaterialTheme.typography.bodyMedium)
+                        Text(if (pot.isCompleted) "완료된 학습" else "학습 완료하기", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
@@ -340,9 +364,7 @@ fun StudyPlanDetailScreen(
                             onDismiss = { viewModel.setCompleteDialogShown(false) },
                             onConfirm = {
                                 viewModel.completeStudyPlan {
-                                    val potName = potInfo?.name ?: "화분"
-
-                                    context.showToast("\"$potName\"화분의 학습을 완료했어요!")
+                                    context.showToast("\"${pot.name}\"화분의 학습을 완료했어요!")
                                     navController.popBackStack()
                                 }
                             }
