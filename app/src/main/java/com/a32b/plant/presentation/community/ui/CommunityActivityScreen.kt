@@ -115,16 +115,16 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                             modifier = Modifier.align(Alignment.CenterEnd),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (uiState.selectedIds.isNotEmpty()) {
+                            if (uiState.selectedCount > 0) {
                                 TextButton(
                                     onClick = { viewModel.showDeleteDialog() },
                                     contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
                                 ) {
                                     Text(
                                         when (uiState.selected) {
-                                            ActivityType.LIKE -> "좋아요 취소(${uiState.selectedIds.size})"
-                                            ActivityType.BOOKMARK -> "북마크 취소(${uiState.selectedIds.size})"
-                                            else -> "삭제(${uiState.selectedIds.size})"
+                                            ActivityType.LIKE -> "좋아요 취소(${uiState.selectedCount})"
+                                            ActivityType.BOOKMARK -> "북마크 취소(${uiState.selectedCount})"
+                                            else -> "삭제(${uiState.selectedCount})"
                                         },
                                         color = MaterialTheme.colorScheme.error,
                                         style = MaterialTheme.typography.bodyMedium

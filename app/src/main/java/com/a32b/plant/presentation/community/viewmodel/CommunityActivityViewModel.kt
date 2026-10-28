@@ -26,7 +26,12 @@ data class CommunityActivityUiState(
     val isSelectionMode: Boolean = false,
     val selectedIds: Set<String> = emptySet(),
     val isDeleteDialogShown: Boolean = false
-)
+) {
+    // 화면에 보이는 항목 중 선택된 개수. selectedIds를 직접 깎지 않는 이유:
+    // Firestore 삭제는 로컬에서 먼저 반영되므로, 서버가 거절해 항목이 다시 나타나도 선택이 유지되어야 함
+    val selectedCount: Int
+        get() = activities.count { it.id in selectedIds }
+}
 sealed class CommunityActivityEvent {
     data class NavigateToCommunityDetail(val postId: String) : CommunityActivityEvent()
     data class ShowToast(val message: String) : CommunityActivityEvent()
@@ -57,11 +62,7 @@ class CommunityActivityViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             repository.observeActivity(selected)
                 .collect { list ->
-                    // 일부 삭제 실패 후 선택 모드가 유지될 때, 이미 지워진 항목이 선택 개수에 남지 않도록 정리
-                    _uiState.update { state ->
-                        val ids = list.map { it.id }.toSet()
-                        state.copy(isLoading = false, activities = list, selectedIds = state.selectedIds intersect ids)
-                    }
+                    _uiState.update { it.copy(isLoading = false, activities = list) }
                     loaded() // BaseViewModel: 최초 방출 시 LoadableScreen 해제 (탭 전환 로딩은 LoadingBox)
                 }
             // 구독 실패로 방출 없이 Flow가 끝난 경우에도 로딩 해제 → 빈 상태 UI 표시
@@ -109,8 +110,10 @@ class CommunityActivityViewModel @Inject constructor(
                 }
                 .onFailure { e ->
                     _uiState.update { it.copy(isLoading = false) }
-                    // 세션 만료는 ensureCurrentUserUseCase에서 이미 알림을 보냈으므로 토스트 생략
-                    if (e !is AppError.UnknownUser) sendToast(e.message)
+                    when (e) {
+                        is AppError.UnknownUser -> Unit // UseCase 내부 ensureCurrentUserUseCase에서 이미 세션 만료 알림 발송
+                        else -> sendToast(e.message)
+                    }
                 }
         }
     }

@@ -16,6 +16,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -337,7 +338,9 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         return snapshot.documents.firstOrNull()?.id
     }
 
-    override suspend fun isPostExist(postId: String): Boolean = db.collection("posts").document(postId).get().await().exists()
+    // 서버 조회 강제: 오프라인이면 UNAVAILABLE로 바로 실패시켜, 뒤이은 삭제(쓰기)가 서버 응답을 무한 대기하지 않게 함
+    // (캐시 조회를 허용하면 오프라인에서도 통과 → 쓰기 await()가 온라인 복귀 전까지 끝나지 않아 로딩이 풀리지 않음)
+    override suspend fun isPostExist(postId: String): Boolean = db.collection("posts").document(postId).get(Source.SERVER).await().exists()
 
     override suspend fun isCommentExist(postId: String, commentId: String): Boolean =
         db.collection("posts").document(postId).collection("comments").document(commentId).get().await().exists()

@@ -1,6 +1,5 @@
 package com.a32b.plant.domain.usecase.community
 
-import android.util.Log
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.domain.repository.CommunityRepository
@@ -76,7 +75,7 @@ class DeleteActivitiesUseCase @Inject constructor(
             // 세션 만료 — 알림은 이미 발송됐으므로 삭제 실패 토스트 없이 UnknownUser만 전달
             Result.Failure(AppError.UnknownUser())
         } else {
-            Log.e("Community", "활동 삭제 실패 ${failures.size}건: ${failures.map { it.error }}")
+            // 실패 로그는 각 Repository 메서드에서 이미 남김 (Domain 레이어는 Android 의존 없이 유지)
             Result.Failure(
                 AppError.Unknown(
                     message = "${activities.size}개 중 ${failures.size}개 삭제에 실패했습니다."
