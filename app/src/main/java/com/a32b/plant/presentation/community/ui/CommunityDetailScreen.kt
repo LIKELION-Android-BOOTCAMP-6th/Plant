@@ -89,6 +89,7 @@ import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.type.ReportReason
+import com.a32b.plant.presentation.community.CommunityConstants
 import com.a32b.plant.presentation.community.viewmodel.CommunityDetailEvent
 import com.a32b.plant.presentation.community.viewmodel.CommunityDetailViewModel
 import com.a32b.plant.presentation.core.component.ConfirmDialog
@@ -286,7 +287,7 @@ fun CommunityDetailScreen(
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         elevation = CardDefaults.elevatedCardElevation(1.dp)
                     ) {
-                        val isPostBlind = currentPost.isHidden || currentPost.reportCount >= 5
+                        val isPostBlind = currentPost.isBlind
 
                         // 댓글 입력창에 포커스가 가면 listState.scrollToItem(COMMENT_INPUT_ITEM_INDEX)로
                         // 스크롤하므로, 헤더+태그+본문을 하나의 item으로 합쳐 댓글 입력창의 인덱스를
@@ -314,7 +315,7 @@ fun CommunityDetailScreen(
                                         )
                                     }
                                     Text(
-                                        currentPost.title,
+                                        if (isPostBlind) CommunityConstants.BLIND_CONTENT_MESSAGE else currentPost.title,
                                         style = MaterialTheme.typography.titleLarge,
                                         modifier = Modifier.padding(horizontal = 46.dp),
                                         textAlign = TextAlign.Center
@@ -355,7 +356,7 @@ fun CommunityDetailScreen(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
-                                            "신고가 접수되어 숨김 처리된 콘텐츠입니다.",
+                                            CommunityConstants.BLIND_CONTENT_MESSAGE,
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSecondary
                                         )
@@ -438,14 +439,17 @@ fun CommunityDetailScreen(
                                     Spacer(modifier = Modifier.weight(1f))
 
                                     if (currentPost.author.id == uiState.currentUid) {
-                                        IconButton(onClick = {
-                                            navController.navigate(Routes.CommunityPost(postId = currentPost.postId))
-                                        }) {
-                                            Icon(
-                                                painterResource(id = R.drawable.ic_edit), null,
-                                                tint = MaterialTheme.colorScheme.onSurface,
-                                                modifier = Modifier.size(18.dp)
-                                            )
+                                        // 블라인드된 게시글은 수정 화면에서 원래 제목/본문이 다시 보이므로 수정 진입 차단 (삭제는 허용)
+                                        if (!isPostBlind) {
+                                            IconButton(onClick = {
+                                                navController.navigate(Routes.CommunityPost(postId = currentPost.postId))
+                                            }) {
+                                                Icon(
+                                                    painterResource(id = R.drawable.ic_edit), null,
+                                                    tint = MaterialTheme.colorScheme.onSurface,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
                                         }
                                         IconButton(onClick = { viewModel.openDeleteDialog() }) {
                                             Icon(
@@ -612,7 +616,7 @@ fun CommentRow(
                 Spacer(modifier = Modifier.height(7.dp))
                 if (isCommentBlind) {
                     Text(
-                        "신고가 접수되어 숨김 처리된 콘텐츠입니다.",
+                        CommunityConstants.BLIND_CONTENT_MESSAGE,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSecondary
                     )

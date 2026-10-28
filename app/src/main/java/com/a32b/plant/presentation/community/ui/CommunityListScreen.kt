@@ -67,6 +67,7 @@ import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.Post
+import com.a32b.plant.presentation.community.CommunityConstants
 import com.a32b.plant.presentation.community.viewmodel.CommunityListEvent
 import com.a32b.plant.presentation.community.viewmodel.CommunityListViewModel
 import com.a32b.plant.presentation.core.component.LoadableScreen
@@ -447,7 +448,7 @@ fun PostCard(post: Post, isLiked: Boolean, isBookmarked: Boolean = false, onClic
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
 
                 Text(
-                    text = post.title,
+                    text = if (post.isBlind) CommunityConstants.BLIND_CONTENT_MESSAGE else post.title,
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

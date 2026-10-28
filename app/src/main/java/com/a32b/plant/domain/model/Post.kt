@@ -34,6 +34,9 @@ data class Post(
     val reportCount: Int,
     val isHidden: Boolean
 ){
+    // 숨김 처리됐거나 신고가 5회 이상 누적된 게시글 — 화면에서 제목/본문 대신 블라인드 문구를 표시하고 검색에서도 제외
+    val isBlind: Boolean get() = isHidden || reportCount >= 5
+
     companion object{
         fun createOriginal(author: PostAuthor, title: String, content: String, tag: Tag) = Post(
             postId = "",
