@@ -72,9 +72,14 @@ class CommunityPostViewModel @Inject constructor(
 
     init {
         fetchTags()
+        // 공유 모드(potId 존재): 학습 기록 로드 후 getStudyLog()에서 loaded()
         onIsSharedChange()
-        // 수정 모드: 기존 게시글 로드 후 loaded() / 신규 작성: 불러올 데이터가 없으므로 즉시 loaded()
-        postId?.let { getPost(it) } ?: loaded()
+        when {
+            // 수정 모드: 기존 게시글 로드 후 getPost()에서 loaded()
+            postId != null -> getPost(postId!!)
+            // 일반 신규 작성: 불러올 데이터가 없으므로 즉시 loaded()
+            potId == null -> loaded()
+        }
     }
     fun onIsTagSheetShownChange() {
         if (!_uiState.value.isShared) {
@@ -123,19 +128,24 @@ class CommunityPostViewModel @Inject constructor(
         }
     }
 
-    fun getStudyLog() {
-        val currentPotId = potId ?: return
-        val currentStudyLogIds = studyLogIds ?: return
+    // 모든 종료 경로에서 loaded() 호출 — 빠지면 공유 모드 진입 시 무한 로딩
+    private fun getStudyLog() {
+        val currentPotId = potId ?: return loaded()
+        val currentStudyLogIds = studyLogIds ?: return loaded()
         //개별 학습 기록 공유 시
         viewModelScope.launch(Dispatchers.IO) {
             val user = when (val result = ensureCurrentUserUseCase()) {
                 is Result.Success -> result.data
-                is Result.Failure -> return@launch // 세션 만료는 UseCase 내부에서 이미 알림
+                is Result.Failure -> {
+                    loaded()
+                    return@launch // 세션 만료는 UseCase 내부에서 이미 알림
+                }
             }
             val logs = currentStudyLogIds.mapNotNull { id ->
                 getSelectedStudyLogUseCase(user.uid, currentPotId, id)
             }
             _uiState.update { it.copy(studyLogs = logs) }
+            loaded() // BaseViewModel: 학습 기록 로드 후 LoadableScreen 해제
         }
     }
     fun getTags(list: List<Tag>) = _uiState.update { it.copy(tags = list) }
