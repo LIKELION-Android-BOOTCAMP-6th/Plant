@@ -44,6 +44,8 @@ interface CommunityRepository {
 
     fun observeActivity(selected: String): Flow<List<CommunityActivity>>
     suspend fun deleteActivity(activityId : String): Result<Unit>
+    /** 연결된 댓글이 이미 없는 activity 정리용 — 이미 지워진 문서라 거절돼도 목적(activity 제거)이 달성된 것으로 보고 성공 처리 */
+    suspend fun deleteOrphanedActivity(activityId: String): Result<Unit>
 
     suspend fun findCommentItByActivityId(postId : String, activityId: String) : Result<String?>
     suspend fun isPostExist(postId: String) : Result<Boolean>

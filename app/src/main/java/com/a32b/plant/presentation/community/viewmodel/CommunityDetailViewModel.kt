@@ -476,9 +476,7 @@ class CommunityDetailViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 // 댓글·activity 삭제는 repository의 트랜잭션 하나로 처리돼 화면 이탈과 무관하게 완료된다.
-                // NonCancellable은 삭제 성공 후 목록 화면의 댓글 수 갱신 알림을 이탈 후에도 보내기 위한 용도.
-                // 트랜잭션은 SDK 큐에 쌓이지 않아 오프라인이면 실패하는 것으로 알려져 있어 대기가 무한정 이어지지 않는 것으로 보지만,
-                // Android SDK에서 실제 대기 시간은 확인하지 못함 (이탈 후 ViewModel이 남는 시간의 상한)
+                // NonCancellable은 이탈 후에도 삭제 성공 시 목록 화면의 댓글 수 갱신 알림을 보내기 위한 용도.
                 withContext(NonCancellable) {
                     withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
                         repository.deleteComment(postId, commentId)

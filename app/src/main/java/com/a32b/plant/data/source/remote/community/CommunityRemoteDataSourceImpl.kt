@@ -338,4 +338,7 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
     }
 
     override suspend fun isPostExist(postId: String): Boolean = db.collection("posts").document(postId).get().await().exists()
+
+    override suspend fun isCommentExist(postId: String, commentId: String): Boolean =
+        db.collection("posts").document(postId).collection("comments").document(commentId).get().await().exists()
 }

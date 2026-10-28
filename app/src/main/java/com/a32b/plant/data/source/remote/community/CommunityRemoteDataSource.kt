@@ -47,6 +47,7 @@ interface CommunityRemoteDataSource {
 
     fun observeActivity(uid: String, selected: String): Flow<List<CommunityActivityDto>>
     suspend fun deleteActivity(activityId: String)
+    suspend fun isCommentExist(postId: String, commentId: String): Boolean
     suspend fun deleteActivityByType(uid: String, targetId: String, type: String)
     suspend fun createActivity(activity: CommunityActivity)
 

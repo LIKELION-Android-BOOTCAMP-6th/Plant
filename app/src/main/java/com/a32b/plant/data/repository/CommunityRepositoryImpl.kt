@@ -216,6 +216,9 @@ class CommunityRepositoryImpl @Inject constructor(
         // 한계: 오프라인에서 저장하고 화면을 이탈한 뒤 연결이 복구되면 서버가 batch를 거절하는데,
         //       이때는 코루틴이 이미 사라져 이 재시도가 실행되지 않아 수정이 반영되지 않는다 (activity 문서가 없는 댓글에 한함)
         if (hasActivityId && result.exceptionOrNull().isMissingOrDenied()) {
+            // 댓글 자체가 이미 지워진 경우에도 같은 코드로 거절되므로, 재시도 전에 구분 (읽기는 규칙상 문서가 없어도 허용됨)
+            if (isCommentGone(postId, commentId)) return commentGoneFailure(commentId)
+
             Log.w("Community", "수정할 activity가 없어 댓글 본문만 수정: commentId=$commentId, activityId=$activityId")
             result = safeRunCatching {
                 communityRemoteDataSource.updateComment(postId, commentId, newContent, null)
@@ -223,11 +226,21 @@ class CommunityRepositoryImpl @Inject constructor(
         }
 
         result.onFailure { e ->
+            if (e.isMissingOrDenied() && isCommentGone(postId, commentId)) return commentGoneFailure(commentId)
             Log.e("Community", "댓글 수정 실패", e)
             return Result.Failure(handleError(e, "댓글 수정에 실패했습니다.", isWrite = true))
         }
 
         return Result.Success(Unit)
+    }
+
+    // 존재 여부 확인 자체가 실패하면(네트워크 등) "사라졌다"고 단정하지 않고 false로 둠
+    private suspend fun isCommentGone(postId: String, commentId: String): Boolean =
+        safeRunCatching { communityRemoteDataSource.isCommentExist(postId, commentId) }.getOrNull() == false
+
+    private fun commentGoneFailure(commentId: String): Result.Failure {
+        Log.w("Community", "수정하려는 댓글이 이미 삭제됨: commentId=$commentId")
+        return Result.Failure(AppError.Custom("이미 삭제된 댓글입니다."))
     }
 
     private fun Throwable?.isMissingOrDenied() =
@@ -280,6 +293,22 @@ class CommunityRepositoryImpl @Inject constructor(
         }
     )
 
+
+    override suspend fun deleteOrphanedActivity(activityId: String): Result<Unit> = safeRunCatching {
+        communityRemoteDataSource.deleteActivity(activityId)
+    }.fold(
+        onSuccess = { Result.Success(Unit) },
+        onFailure = { e ->
+            if (e.isMissingOrDenied()) {
+                // 다른 기기에서 먼저 지운 경우 — 없는 문서의 삭제는 보안 규칙(resource.data 참조)에 의해 PERMISSION_DENIED로 거절될 수 있음
+                Log.w("Community", "이미 없는 activity라 삭제를 성공으로 처리: $activityId", e)
+                Result.Success(Unit)
+            } else {
+                Log.e("Community", "고아 activity 삭제 실패", e)
+                Result.Failure(handleError(e, "오류가 발생했습니다.\n잠시 후 다시 시도해주세요."))
+            }
+        }
+    )
 
     override suspend fun isPostExist(postId: String): Result<Boolean> = safeRunCatching {
         communityRemoteDataSource.isPostExist(postId)
