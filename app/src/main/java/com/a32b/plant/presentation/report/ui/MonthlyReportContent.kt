@@ -1,17 +1,22 @@
 package com.a32b.plant.presentation.report.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -22,11 +27,18 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.MonthlyReport
+import com.a32b.plant.presentation.theme.LocalIsDarkTheme
 
 @Composable
 fun MonthlyReportContent(report: MonthlyReport) {
     val containerColor = reportCardContainerColor()
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        ReportSummaryMetrics(
+            totalMillis = report.totalMillis,
+            studyCount = report.studyCount,
+            streakDays = report.longestStreakDays,
+            streakLabel = "최장 연속"
+        )
         Text("${report.month.year}년 ${report.month.monthValue}월", style = MaterialTheme.typography.titleLarge)
         ReportCard(spacing = 12.dp, containerColor = containerColor) {
             ReportField("총 공부 시간", TimeFormatter.formatToKoreanDuration(report.totalMillis), emphasized = true, caption = "시작일 기준")
@@ -57,7 +69,11 @@ fun MonthlyReportContent(report: MonthlyReport) {
 private fun MonthlyDailyGraph(report: MonthlyReport) {
     val upper = reportAxisUpperMillis(report.dailyTotals.maxOf { it.totalMillis })
     val gridColor = MaterialTheme.colorScheme.outline
-    val barColor = MaterialTheme.colorScheme.tertiary
+    val barColor = if (LocalIsDarkTheme.current) {
+        MaterialTheme.colorScheme.surface
+    } else {
+        MaterialTheme.colorScheme.tertiary
+    }
     // 눈금은 상한의 4등분이라 항상 분 단위다. 0 눈금만 "0초" 대신 "0"으로 둔다.
     val tickLabels = (0..4).map { tick ->
         if (tick == 0) "0" else TimeFormatter.formatToKoreanDuration((upper * tick / 4).toLong())
@@ -74,6 +90,9 @@ private fun MonthlyDailyGraph(report: MonthlyReport) {
     val plotTop = labelHeight / 2
     val plotBottom = graphHeight - labelHeight - 8.dp
     val plotHeight = plotBottom - plotTop
+    val barWidth = 12.dp
+    val barGap = 8.dp
+    val horizontalScrollState = rememberScrollState()
     val voiceDescription = report.dailyTotals.joinToString(", ", prefix = "날짜별 공부 시간. ") {
         "${it.date.dayOfMonth}일 ${TimeFormatter.formatToKoreanDuration(it.totalMillis)}"
     }
@@ -81,11 +100,10 @@ private fun MonthlyDailyGraph(report: MonthlyReport) {
     val dayLabelWidth = with(density) {
         labels.maxOf { textMeasurer.measure(it.toString(), labelStyle).size.width }.toDp()
     } + 2.dp
+    val barSlotWidth = maxOf(barWidth + barGap, dayLabelWidth + 4.dp)
 
-    BoxWithConstraints(Modifier.fillMaxWidth().height(graphHeight).semantics { contentDescription = voiceDescription }) {
-        val plotWidth = maxWidth - axisWidth
-        val count = report.dailyTotals.size
-        Canvas(Modifier.fillMaxWidth().height(graphHeight)) {
+    Box(Modifier.fillMaxWidth().height(graphHeight).semantics { contentDescription = voiceDescription }) {
+        Canvas(Modifier.matchParentSize()) {
             val left = axisWidth.toPx()
             val plotHeightPx = plotHeight.toPx()
             val bottom = plotBottom.toPx()
@@ -93,39 +111,47 @@ private fun MonthlyDailyGraph(report: MonthlyReport) {
                 val y = bottom - tick * plotHeightPx / 4f
                 drawLine(gridColor, Offset(left, y), Offset(size.width, y), strokeWidth = 1.dp.toPx())
             }
-            val slot = (size.width - left) / count
-            report.dailyTotals.forEachIndexed { index, daily ->
-                if (daily.totalMillis > 0L) {
-                    val barHeight = (daily.totalMillis.toDouble() / upper * plotHeightPx).toFloat()
-                    val barWidth = (slot - 2.dp.toPx()).coerceAtLeast(1.dp.toPx())
-                    drawRect(
-                        color = barColor,
-                        topLeft = Offset(left + slot * index + (slot - barWidth) / 2f, bottom - barHeight),
-                        size = Size(barWidth, barHeight)
+        }
+        Row(Modifier.fillMaxWidth().fillMaxHeight()) {
+            Box(Modifier.width(axisWidth).fillMaxHeight()) {
+                for (tick in 0..4) {
+                    Text(
+                        tickLabels[tick],
+                        modifier = Modifier.offset(y = plotBottom - plotHeight * (tick / 4f) - labelHeight / 2).width(labelWidth),
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1
                     )
                 }
             }
-        }
-        for (tick in 0..4) {
-            Text(
-                tickLabels[tick],
-                modifier = Modifier.offset(y = plotBottom - plotHeight * (tick / 4f) - labelHeight / 2).width(labelWidth),
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1
-            )
-        }
-        labels.forEach { day ->
-            val slot = plotWidth / count
-            // coerceIn은 폭이 좁아 하한 > 상한이 되면 예외라서 나눠 호출한다(이때 라벨은 왼쪽 경계에 겹침).
-            val x = (axisWidth + slot * (day - 0.5f) - dayLabelWidth / 2)
-                .coerceAtMost(maxWidth - dayLabelWidth)
-                .coerceAtLeast(axisWidth)
-            Text(
-                day.toString(),
-                modifier = Modifier.offset(x = x, y = plotBottom + 8.dp).width(dayLabelWidth),
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1
-            )
+            Row(
+                modifier = Modifier.weight(1f).fillMaxHeight().horizontalScroll(horizontalScrollState)
+            ) {
+                report.dailyTotals.forEach { daily ->
+                    Box(Modifier.width(barSlotWidth).fillMaxHeight()) {
+                        Canvas(Modifier.matchParentSize()) {
+                            if (daily.totalMillis > 0L) {
+                                val barHeight = (daily.totalMillis.toDouble() / upper * plotHeight.toPx()).toFloat()
+                                drawRect(
+                                    color = barColor,
+                                    topLeft = Offset((barSlotWidth - barWidth).toPx() / 2f, plotBottom.toPx() - barHeight),
+                                    size = Size(barWidth.toPx(), barHeight)
+                                )
+                            }
+                        }
+                        if (daily.date.dayOfMonth in labels) {
+                            Text(
+                                daily.date.dayOfMonth.toString(),
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .offset(y = plotBottom + 8.dp)
+                                    .width(dayLabelWidth),
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }

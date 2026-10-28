@@ -37,7 +37,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import com.a32b.plant.R
-import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.report.viewmodel.ReportTab
 import com.a32b.plant.presentation.report.viewmodel.ReportUiState
@@ -288,9 +287,4 @@ fun ReportCard(
     ) {
         Column(Modifier.fillMaxWidth().padding(padding), verticalArrangement = Arrangement.spacedBy(spacing), content = content)
     }
-}
-
-@Composable
-fun ReportPeriodTitle(date: LocalDate) {
-    Text(TimeFormatter.formatWithDayOfWeek(date.atStartOfDay()), style = MaterialTheme.typography.titleMedium)
 }
