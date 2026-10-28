@@ -2,6 +2,7 @@ package com.a32b.plant.presentation.community.ui
 
 import android.content.Context
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -154,6 +155,16 @@ fun CommunityDetailScreen(
         // (b) bringIntoView()가 CancellationException 외의 예외(예: requester에 연결된 노드가 없는 경우의
         // IllegalStateException)를 던지면 LaunchedEffect가 죽을 수 있어 safeRunCatching으로 흡수한다.
         safeRunCatching { commentInputRequester.bringIntoView() }
+    }
+
+    // 댓글 수정 중 뒤로가기 시 화면을 나가지 않고 수정만 취소
+    // (키보드가 열려 있으면 첫 번째 뒤로가기는 시스템이 키보드를 닫는 데 사용)
+    // 저장 요청 중에는 비활성화해 평소처럼 화면을 나가게 함
+    val editingCommentId = uiState.editingCommentId
+    BackHandler(
+        enabled = editingCommentId != null && editingCommentId !in uiState.editingSubmittingCommentIds
+    ) {
+        viewModel.cancelEditComment()
     }
 
     LaunchedEffect(Unit) {
@@ -603,7 +614,9 @@ fun CommentRow(
                             textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
 
                         )
-                        Row {
+                        // TextButton 최소 높이(40dp)로 Row가 높아지므로 세로 가운데 정렬해
+                        // 글자수 표시가 TextField에 붙지 않게 한다.
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             TextButton(
                                 onClick = onEditSubmit,
                                 enabled = !isEditSubmitting,
@@ -616,13 +629,13 @@ fun CommentRow(
                             ) {
                                 Text(
                                     if (isEditSubmitting) "저장 중" else "저장",
-                                    style = MaterialTheme.typography.labelLarge
+                                    style = MaterialTheme.typography.labelMedium
                                 )
                             }
                             TextButton(onClick = onEditCancel, enabled = !isEditSubmitting) {
                                 Text(
                                     "취소",
-                                    style = MaterialTheme.typography.labelLarge
+                                    style = MaterialTheme.typography.labelMedium
                                 )
                             }
                             Spacer(modifier = Modifier.weight(1f))
