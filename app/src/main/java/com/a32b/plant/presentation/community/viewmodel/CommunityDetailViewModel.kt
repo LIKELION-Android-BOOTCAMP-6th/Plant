@@ -63,6 +63,8 @@ data class CommunityDetailUiState(
     val deletingCommentId: String? = null,
 
     val isPostNotFound: Boolean = false,
+    // 최초 게시글 조회 실패 — 게시글이 없는 상태에서만 의미 있음 (refresh 실패로는 true가 되지 않음)
+    val isLoadFailed: Boolean = false,
 
     // 신고 BottomSheet
     val showReportSheet: Boolean = false,
@@ -144,7 +146,10 @@ class CommunityDetailViewModel @Inject constructor(
                         _uiState.update { it.copy(isPostNotFound = true) }
                     }
                 }
-                .onFailure { e -> sendToast(e.message) }
+                .onFailure { e ->
+                    _uiState.update { it.copy(isLoadFailed = true) }
+                    sendToast(e.message)
+                }
 
             commentsDeferred.await()
                 .onSuccess { comments -> _uiState.update { it.copy(commentList = comments) } }
@@ -170,6 +175,8 @@ class CommunityDetailViewModel @Inject constructor(
 
             postDeferred.await()
                 .onSuccess { fetchedPost ->
+                    // 조회 자체는 성공 → "다시 시도"로 복구된 경우 실패 상태 해제 (실패 경로에서는 건드리지 않음)
+                    _uiState.update { it.copy(isLoadFailed = false) }
                     if (fetchedPost == null) {
                         _post.value = null
                         onIsSharedChange()

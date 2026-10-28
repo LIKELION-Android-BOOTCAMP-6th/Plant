@@ -206,7 +206,8 @@ fun CommunityDetailScreen(
                 containerColor = MaterialTheme.colorScheme.background,
             ) { innerPadding ->
                 if (postState == null) {
-                    if (uiState.isPostNotFound) {
+                    // 삭제된 게시글 / 조회 실패 — 빈 화면에서는 뒤로가기·당겨서 새로고침이 불가능하므로 안내 UI 표시
+                    if (uiState.isPostNotFound || uiState.isLoadFailed) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -215,13 +216,24 @@ fun CommunityDetailScreen(
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = "삭제된 게시글입니다.",
+                                    text = if (uiState.isPostNotFound) "삭제된 게시글입니다." else "게시글을 불러오지 못했습니다.",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSecondary
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
-                                TextButton(onClick = { navController.popBackStack() }) {
-                                    Text("돌아가기")
+                                Row {
+                                    if (!uiState.isPostNotFound) {
+                                        // 새로고침 중 연타로 refresh()가 중복 실행되지 않도록 비활성화
+                                        TextButton(
+                                            onClick = { viewModel.refresh() },
+                                            enabled = !uiState.isRefreshing
+                                        ) {
+                                            Text("다시 시도")
+                                        }
+                                    }
+                                    TextButton(onClick = { navController.popBackStack() }) {
+                                        Text("돌아가기")
+                                    }
                                 }
                             }
                         }

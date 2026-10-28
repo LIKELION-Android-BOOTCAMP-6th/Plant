@@ -46,6 +46,7 @@ data class CommunityPostUiState(
 sealed class CommunityPostEvent{
     data class NavigateToDetail(val postId: String) : CommunityPostEvent()
     data class ShowToast(val message: String) : CommunityPostEvent()
+    object NavigateBack : CommunityPostEvent()
 }
 @HiltViewModel
 class CommunityPostViewModel @Inject constructor(
@@ -113,9 +114,15 @@ class CommunityPostViewModel @Inject constructor(
     // ✅ 기존 글을 불러오는 함수
     private fun getPost(postId: String) {
         viewModelScope.launch(Dispatchers.IO) {
+            // 수정할 대상을 못 불러오면 빈 폼으로 기존 글을 덮어쓸 수 있으므로 이전 화면으로 복귀
+            // 토스트가 화면 이탈 전에 처리되도록 sendToast(launch) 대신 순서대로 직접 send
             repository.getPostDetail(postId)
                 .onSuccess { post ->
-                    post ?: return@onSuccess
+                    if (post == null) {
+                        _eventChannel.send(CommunityPostEvent.ShowToast("삭제된 게시글입니다."))
+                        _eventChannel.send(CommunityPostEvent.NavigateBack)
+                        return@onSuccess
+                    }
                     if (post.isShared?:false){
                         _uiState.update { it.copy(isShared = true, postId = post.postId, title = post.title, studyLogs = post.studyLogs, selected = post.tag, extraContent = post.content) }
                     }
@@ -123,7 +130,11 @@ class CommunityPostViewModel @Inject constructor(
                         _uiState.update { it.copy( postId = post.postId,title = post.title, content = post.content, selected = post.tag) }
                     }
                 }
-                .onFailure { e -> Log.e("CommunityPostVM", "게시글 조회 실패: ${e.message}") }
+                .onFailure { e ->
+                    // 실패 로그는 Repository에서 이미 기록
+                    _eventChannel.send(CommunityPostEvent.ShowToast(e.message))
+                    _eventChannel.send(CommunityPostEvent.NavigateBack)
+                }
             loaded() // BaseViewModel: 성공/실패 모두 조회 시도 후 LoadableScreen 해제
         }
     }

@@ -73,6 +73,9 @@ class StudyResultViewModel @Inject constructor(
     val event = _event.receiveAsFlow()
 
     init {
+        // 결과 데이터는 이전 화면에서 전달받은 값이라 즉시 표시, 보상은 도착 시 표시
+        // (보상 지급은 오프라인에서 완료되지 않을 수 있으므로 화면 로딩과 분리)
+        loaded()
         loadReward()
     }
 
@@ -91,7 +94,6 @@ class StudyResultViewModel @Inject constructor(
                         else -> _event.send(StudyResultEvent.ShowToast(error.message))
                     }
                 }
-            loaded() // BaseViewModel: 성공/실패 모두 보상 조회 시도 후 LoadableScreen 해제
         }
     }
 

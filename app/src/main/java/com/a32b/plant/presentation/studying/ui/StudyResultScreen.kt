@@ -76,7 +76,6 @@ fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewMo
         }
     }
 
-    // 컨페티는 콘텐츠가 노출되는 시점에 재생되도록 LoadableScreen 안에 둠
     LoadableScreen(viewModel) {
         Box(modifier = Modifier.fillMaxSize()){
             Surface(modifier = Modifier.fillMaxSize(),

@@ -81,6 +81,7 @@ fun CommunityPostScreen(
                 }
 
                 is CommunityPostEvent.ShowToast -> context.showToast(event.message)
+                is CommunityPostEvent.NavigateBack -> navController.popBackStack()
             }
         }
     }
