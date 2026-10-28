@@ -37,12 +37,17 @@ interface CommunityRemoteDataSource {
     suspend fun toggleBookmark(postId: String, uid: String): Boolean
 
     suspend fun addComment(postId : String, comment: Comment, activity: CommunityActivity)
-    suspend fun updateComment(postId: String, commentId: String, newContent: String)
-    suspend fun updateActivityComment(commentId: String, content: String)
-    suspend fun deleteComment(postId: String, commentId: String): String?
+    /** activityId가 있으면 댓글 본문과 activity 문구를 batch 한 번으로 함께 수정, null이면 본문만 수정 */
+    suspend fun updateComment(postId: String, commentId: String, newContent: String, activityId: String?)
+    /**
+     * 댓글 삭제 + 댓글 수 감소를 하나의 트랜잭션으로 처리. deleteActivity가 true면 연결된 activity 삭제도 같은 트랜잭션에 포함
+     * @return 이번 호출이 실제로 댓글을 지웠으면 true, 이미 없던 댓글이면 false
+     */
+    suspend fun deleteComment(postId: String, commentId: String, deleteActivity: Boolean): Boolean
 
     fun observeActivity(uid: String, selected: String): Flow<List<CommunityActivityDto>>
     suspend fun deleteActivity(activityId: String)
+    suspend fun isCommentExist(postId: String, commentId: String): Boolean
     suspend fun deleteActivityByType(uid: String, targetId: String, type: String)
     suspend fun createActivity(activity: CommunityActivity)
 

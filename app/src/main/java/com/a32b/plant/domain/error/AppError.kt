@@ -13,6 +13,10 @@ sealed class AppError : Throwable() {
     data class Upload(override val message: String = "저장에 실패했습니다.") : AppError()
     data class Local(override val message: String = "로컬 저장 실패") : AppError()
     data class Permission(override val message: String = "권한이 없습니다.") : AppError()
+    data class NicknameTaken(override val message: String = "사용 중인 닉네임입니다.") : AppError()
     data class Custom(override val message: String) : AppError()
     data class Debug(override val message: String) : AppError() //외부로 노출하지 않고 조용히 처리하는 오류일 경우
 }
+
+// 수정하려던 댓글이 이미 삭제된 경우의 안내 문구 — Repository(에러)와 ViewModel(사전 확인)이 함께 사용
+const val COMMENT_ALREADY_DELETED_MESSAGE = "이미 삭제된 댓글입니다."

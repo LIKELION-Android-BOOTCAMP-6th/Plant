@@ -33,8 +33,14 @@ class DeleteActivitiesUseCase @Inject constructor(
                                         is Result.Failure -> return@async Result.Failure(r.error)
                                     }
                                     //조회 실패든 뭐든 commentId가 널이라면 삭제 안 함
+                                    // return@async: 바깥 when(activity.type)에 else가 없어 값이 Unit이 되므로, 결과를 직접 반환해야 실패가 집계됨
                                     cId?.let {
-                                        repository.deleteComment(activity.targetId, it)
+                                        return@async when (val r = repository.deleteComment(activity.targetId, it)) {
+                                            // 댓글이 이미 없던 경우(false) — 이전 버그 등으로 activity만 남은 고아 데이터이므로 직접 정리
+                                            // (댓글 조회가 null인 위 경우는 오프라인 캐시 오판 위험이 있어 기존대로 삭제하지 않음)
+                                            is Result.Success -> if (r.data) Result.Success(Unit) else repository.deleteOrphanedActivity(activity.id)
+                                            is Result.Failure -> r
+                                        }
                                     }
 
                                 }

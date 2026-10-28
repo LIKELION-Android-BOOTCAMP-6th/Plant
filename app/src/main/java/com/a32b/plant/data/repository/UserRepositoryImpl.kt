@@ -5,6 +5,7 @@ import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.mapper.toDto
 import com.a32b.plant.data.source.local.SettingsLocalDataSource
+import com.a32b.plant.data.source.remote.user.CompleteFirstLoginResult
 import com.a32b.plant.data.source.remote.user.UserRemoteDataSource
 import com.a32b.plant.di.qualifier.ApplicationScope
 import com.a32b.plant.domain.error.AppError
@@ -29,8 +30,11 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
+
+private const val COMPLETE_FIRST_LOGIN_TIMEOUT_MS = 10_000L
 
 @Singleton
 class UserRepositoryImpl @Inject constructor(
@@ -135,10 +139,26 @@ class UserRepositoryImpl @Inject constructor(
 
     override suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit> =
         safeRunCatching {
-            userRemoteDataSource.completeFirstLogin(uid, nickname)
+            // 연결이 불안정하면 트랜잭션이 재시도하며 길어질 수 있어 상한을 둔다.
+            // 시간 초과(null)는 네트워크 에러로 취급하며, 서버에 뒤늦게 반영돼도 재시도 시 AlreadyCompleted로 성공 처리된다.
+            withTimeoutOrNull(COMPLETE_FIRST_LOGIN_TIMEOUT_MS) {
+                userRemoteDataSource.completeFirstLogin(uid, nickname)
+            }
         }.fold(
-            onSuccess = { Result.Success(Unit) },
-            onFailure = { e -> Result.Failure(handleError(e, "첫 로그인 완료 처리 실패")) }
+            onSuccess = { completion ->
+                when (completion) {
+                    CompleteFirstLoginResult.Completed,
+                    CompleteFirstLoginResult.AlreadyCompleted -> Result.Success(Unit)
+
+                    CompleteFirstLoginResult.NicknameTaken -> Result.Failure(AppError.NicknameTaken())
+
+                    null -> {
+                        Log.w("UserRepository", "첫 로그인 완료 처리 시간 초과 (${COMPLETE_FIRST_LOGIN_TIMEOUT_MS}ms)")
+                        Result.Failure(AppError.Network())
+                    }
+                }
+            },
+            onFailure = { e -> Result.Failure(handleCompleteFirstLoginError(e)) }
         )
 
     override suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit> = safeRunCatching {
@@ -239,6 +259,22 @@ class UserRepositoryImpl @Inject constructor(
             }
             is FirebaseNetworkException -> AppError.Network()
             else -> AppError.Custom("출석 처리 실패")
+        }
+    }
+
+    private fun handleCompleteFirstLoginError(e: Throwable): AppError {
+        Log.e("UserRepository", "첫 로그인 완료 처리 실패: ${e.message}", e)
+
+        return when (e) {
+            is FirebaseFirestoreException -> when (e.code) {
+                FirebaseFirestoreException.Code.UNAVAILABLE,
+                FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
+
+                else -> AppError.Custom("닉네임 설정에 실패했습니다.")
+            }
+
+            is FirebaseNetworkException -> AppError.Network()
+            else -> AppError.Custom("닉네임 설정에 실패했습니다.")
         }
     }
 
