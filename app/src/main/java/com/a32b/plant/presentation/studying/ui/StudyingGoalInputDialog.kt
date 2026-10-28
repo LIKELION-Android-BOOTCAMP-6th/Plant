@@ -63,7 +63,7 @@ fun StudyingGoalInputDialog(
     var index by remember(localLogs) { mutableIntStateOf(initialIndex.coerceIn(0, localLogs.lastIndex)) }
     val currentText = localLogs.getOrElse(index) { "" }
     val canGoPrev = index > 0
-    val canGoNext = index < localLogs.size - 1
+    val canGoNext = index < localLogs.lastIndex
 
     val focusManager = LocalFocusManager.current
 
