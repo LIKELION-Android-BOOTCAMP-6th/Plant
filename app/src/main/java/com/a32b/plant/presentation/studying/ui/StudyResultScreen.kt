@@ -50,6 +50,7 @@ import com.a32b.plant.domain.model.StudyReward
 import com.a32b.plant.domain.type.ItemType
 import com.a32b.plant.presentation.core.component.ConfettiOverlay
 import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.component.StudyGoalItem
@@ -75,38 +76,41 @@ fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewMo
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()){
-        Surface(modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
-        ) {
-            Column(modifier = Modifier.fillMaxSize().padding(10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally) {
-                Row(modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = {navController.popBackStack()}) {
-                        Image(painter = painterResource(R.drawable.ic_study_result_close),
-                            contentDescription = "닫기",
-                            modifier = Modifier.size(24.dp))
+    // 컨페티는 콘텐츠가 노출되는 시점에 재생되도록 LoadableScreen 안에 둠
+    LoadableScreen(viewModel) {
+        Box(modifier = Modifier.fillMaxSize()){
+            Surface(modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                Column(modifier = Modifier.fillMaxSize().padding(10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally) {
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = {navController.popBackStack()}) {
+                            Image(painter = painterResource(R.drawable.ic_study_result_close),
+                                contentDescription = "닫기",
+                                modifier = Modifier.size(24.dp))
+                        }
+                        IconButton(onClick = {
+                            viewModel.onDialogShow()
+                        }) {
+                            Image(painter = painterResource(R.drawable.ic_study_result_download),
+                                contentDescription = "이미지 저장하기",
+                                modifier = Modifier.size(20.dp))
+                        }
                     }
-                    IconButton(onClick = {
-                        viewModel.onDialogShow()
-                    }) {
-                        Image(painter = painterResource(R.drawable.ic_study_result_download),
-                            contentDescription = "이미지 저장하기",
-                            modifier = Modifier.size(20.dp))
-                    }
-                }
 
-                StudyResultContent(uiState.timestamp, uiState.tag, uiState.title, uiState.log, uiState.completed, uiState.level, uiState.time, uiState.reward)
+                    StudyResultContent(uiState.timestamp, uiState.tag, uiState.title, uiState.log, uiState.completed, uiState.level, uiState.time, uiState.reward)
+
+                }
 
             }
 
+            if (showConfetti) ConfettiOverlay(onFinished = {showConfetti = false})
+            if (uiState.isLoading) LoadingBox()
+
         }
-
-        if (showConfetti) ConfettiOverlay(onFinished = {showConfetti = false})
-        if (uiState.isLoading) LoadingBox()
-
     }
 
 

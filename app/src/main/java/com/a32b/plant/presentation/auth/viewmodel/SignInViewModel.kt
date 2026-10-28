@@ -1,7 +1,7 @@
 package com.a32b.plant.presentation.auth.viewmodel
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.auth.SetNicknameUseCase
@@ -32,7 +32,7 @@ sealed class SignInEvent {
 class SignInViewModel @Inject constructor(
     private val signInWithGoogleUseCase: SignInWithGoogleUseCase,
     private val setNicknameUseCase: SetNicknameUseCase
-) : ViewModel() {
+) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(SignInUiState())
     val uiState = _uiState.asStateFlow()
@@ -41,6 +41,10 @@ class SignInViewModel @Inject constructor(
     val events = _eventChannel.receiveAsFlow()
 
     private var loggedInUid: String = ""
+
+    init {
+        loaded() // 초기에 불러올 데이터가 없으므로 LoadableScreen 로딩 없이 즉시 로그인 UI 표시
+    }
 
     fun onNicknameChange(value: String) {
         _uiState.update { it.copy(nicknameInput = value, nicknameError = null) }

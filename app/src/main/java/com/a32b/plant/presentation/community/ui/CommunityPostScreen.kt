@@ -48,6 +48,7 @@ import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.community.viewmodel.CommunityPostEvent
 import com.a32b.plant.presentation.community.viewmodel.CommunityPostViewModel
 import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.TagSheet
 import com.a32b.plant.presentation.core.extension.showToast
 
@@ -66,9 +67,7 @@ fun CommunityPostScreen(
 
     val uiState by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(postId, Unit) {
-        postId?.let { viewModel.getPost(postId) }
-
+    LaunchedEffect(Unit) {
         viewModel.event.collect { event ->
             when (event) {
                 is CommunityPostEvent.NavigateToDetail -> {
@@ -93,145 +92,147 @@ fun CommunityPostScreen(
         }
     }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            PostTopBar(
-                isEditMode = postId != null,
-                isSubmitting = uiState.isSubmitting,
-                onBackClick = {
-                    viewModel.onIsDismissDialogShowChange()
-                },
-                onRegisterClick = {
-                    val isInvalid = uiState.title.isBlank() ||
-                            (uiState.studyLogs == null && uiState.content.isNullOrBlank())
-                    if (isInvalid) {
-                        context.showToast("제목과 내용을 모두 입력해주세요.")
-                    } else if (uiState.selected?.id.isNullOrEmpty()) {
-                        context.showToast("태그를 선택해주세요.")
-                    } else {
-                        viewModel.savePost()
-                    }
-                }
-            )
-        }
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item { Spacer(modifier = Modifier.height(10.dp)) }
-
-            item {
-                Text(
-                    "제목",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                PostInputField(
-                    value = uiState.title,
-                    onValueChange = { viewModel.onTitleChange(it) },
-                    placeholder = "제목을 입력하세요",
-                    singleLine = true,
-                    maxLength = 50
-                )
-            }
-
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(enabled = !uiState.isShared) {
-                            viewModel.onIsTagSheetShownChange()
-                        },
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "태그",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-
-                    if (!uiState.isShared) {
-                        Icon(
-                            painter = painterResource(id = if (uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
-                            contentDescription = "태그박스",
-                            modifier = Modifier
-                                .size(24.dp)
-                                .padding(start = 4.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Text(
-                        text = "${uiState.selected?.name ?: "태그를 선택하세요"}${(if (uiState.isShared) ", 공유" else "")}",
-                        style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.padding(top = 4.dp),
-                        // 공유 모드일 때는 텍스트 색상을 흐리게 하여 수정 불가임을 알림
-                        color = if (uiState.isShared) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface
-                    )
-
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                if (uiState.isTagSheetShown) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    TagSheet(
-                        uiState.tags,
-                        enable = !uiState.isShared,
-                        init = when {
-                            uiState.isShared || !postId.isNullOrEmpty() -> listOfNotNull(uiState.selected)
-                            uiState.selected?.id?.isNotEmpty() == true -> listOfNotNull(uiState.selected)
-                            else -> emptyList()
-                        }
-                    ) { selected ->
-                        if (selected.isNotEmpty()) {
-                            viewModel.onSelectedTagChange(selected[0])
+    LoadableScreen(viewModel) {
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.background,
+            topBar = {
+                PostTopBar(
+                    isEditMode = postId != null,
+                    isSubmitting = uiState.isSubmitting,
+                    onBackClick = {
+                        viewModel.onIsDismissDialogShowChange()
+                    },
+                    onRegisterClick = {
+                        val isInvalid = uiState.title.isBlank() ||
+                                (uiState.studyLogs == null && uiState.content.isNullOrBlank())
+                        if (isInvalid) {
+                            context.showToast("제목과 내용을 모두 입력해주세요.")
+                        } else if (uiState.selected?.id.isNullOrEmpty()) {
+                            context.showToast("태그를 선택해주세요.")
+                        } else {
+                            viewModel.savePost()
                         }
                     }
-                }
-
+                )
             }
+        ) { innerPadding ->
+            LazyColumn(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item { Spacer(modifier = Modifier.height(10.dp)) }
 
-            if (uiState.isShared) {
-                val studyLogs = uiState.studyLogs ?: emptyList()
-                item {
-                    Text("공유 기록", style = MaterialTheme.typography.titleMedium)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    StudyLogCard(studyLogs)
-                }
-                item {
-                    Text("추가 내용", style = MaterialTheme.typography.titleMedium)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    PostInputField(
-                        value = uiState.extraContent,
-                        onValueChange = { viewModel.onExtraContentChange(it) },
-                        placeholder = "공부 기록에 대해 자유롭게 작성해주세요. (선택)",
-                        modifier = Modifier.heightIn(min = 200.dp),
-                        maxLength = 1000
-                    )
-                }
-            } else {
                 item {
                     Text(
-                        "본문",
+                        "제목",
                         style = MaterialTheme.typography.titleMedium
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     PostInputField(
-                        value = uiState.content,
-                        onValueChange = { viewModel.onContentChange(it) },
-                        placeholder = "나누고 싶은 이야기를 적어주세요.\n\n※ 비방이나 욕설은 제재 대상이 될 수 있습니다.",
-                        modifier = Modifier.heightIn(min = 400.dp),
-                        maxLength = 1000
+                        value = uiState.title,
+                        onValueChange = { viewModel.onTitleChange(it) },
+                        placeholder = "제목을 입력하세요",
+                        singleLine = true,
+                        maxLength = 50
                     )
                 }
-            }
 
-            item { Spacer(modifier = Modifier.height(40.dp)) }
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = !uiState.isShared) {
+                                viewModel.onIsTagSheetShownChange()
+                            },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "태그",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+
+                        if (!uiState.isShared) {
+                            Icon(
+                                painter = painterResource(id = if (uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
+                                contentDescription = "태그박스",
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .padding(start = 4.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Text(
+                            text = "${uiState.selected?.name ?: "태그를 선택하세요"}${(if (uiState.isShared) ", 공유" else "")}",
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(top = 4.dp),
+                            // 공유 모드일 때는 텍스트 색상을 흐리게 하여 수정 불가임을 알림
+                            color = if (uiState.isShared) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface
+                        )
+
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    if (uiState.isTagSheetShown) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        TagSheet(
+                            uiState.tags,
+                            enable = !uiState.isShared,
+                            init = when {
+                                uiState.isShared || !postId.isNullOrEmpty() -> listOfNotNull(uiState.selected)
+                                uiState.selected?.id?.isNotEmpty() == true -> listOfNotNull(uiState.selected)
+                                else -> emptyList()
+                            }
+                        ) { selected ->
+                            if (selected.isNotEmpty()) {
+                                viewModel.onSelectedTagChange(selected[0])
+                            }
+                        }
+                    }
+
+                }
+
+                if (uiState.isShared) {
+                    val studyLogs = uiState.studyLogs ?: emptyList()
+                    item {
+                        Text("공유 기록", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        StudyLogCard(studyLogs)
+                    }
+                    item {
+                        Text("추가 내용", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        PostInputField(
+                            value = uiState.extraContent,
+                            onValueChange = { viewModel.onExtraContentChange(it) },
+                            placeholder = "공부 기록에 대해 자유롭게 작성해주세요. (선택)",
+                            modifier = Modifier.heightIn(min = 200.dp),
+                            maxLength = 1000
+                        )
+                    }
+                } else {
+                    item {
+                        Text(
+                            "본문",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        PostInputField(
+                            value = uiState.content,
+                            onValueChange = { viewModel.onContentChange(it) },
+                            placeholder = "나누고 싶은 이야기를 적어주세요.\n\n※ 비방이나 욕설은 제재 대상이 될 수 있습니다.",
+                            modifier = Modifier.heightIn(min = 400.dp),
+                            maxLength = 1000
+                        )
+                    }
+                }
+
+                item { Spacer(modifier = Modifier.height(40.dp)) }
+            }
         }
     }
 

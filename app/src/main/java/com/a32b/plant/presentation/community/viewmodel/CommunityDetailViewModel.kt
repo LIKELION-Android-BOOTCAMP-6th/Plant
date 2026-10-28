@@ -3,8 +3,8 @@ package com.a32b.plant.presentation.community.viewmodel
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.NETWORK_SLOW_MESSAGE
 import com.a32b.plant.core.util.withSlowNotice
 import com.a32b.plant.domain.community.PostUpdate
@@ -62,7 +62,6 @@ data class CommunityDetailUiState(
     // 댓글 삭제 대상 ID
     val deletingCommentId: String? = null,
 
-    val isInitialLoading: Boolean = true,
     val isPostNotFound: Boolean = false,
 
     // 신고 BottomSheet
@@ -89,7 +88,7 @@ class CommunityDetailViewModel @Inject constructor(
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     private val postUpdateNotifier: PostUpdateNotifier,
     savedStateHandle: SavedStateHandle
-) : ViewModel() {
+) : BaseViewModel() {
 
     companion object {
         private val LIKE_DEBOUNCE = 500.milliseconds
@@ -151,7 +150,7 @@ class CommunityDetailViewModel @Inject constructor(
                 .onSuccess { comments -> _uiState.update { it.copy(commentList = comments) } }
                 .onFailure { e -> sendToast(e.message) }
 
-            _uiState.update { it.copy(isInitialLoading = false) }
+            loaded() // BaseViewModel: 성공/실패 모두 최초 시도 후 LoadableScreen 해제
         }
     }
 

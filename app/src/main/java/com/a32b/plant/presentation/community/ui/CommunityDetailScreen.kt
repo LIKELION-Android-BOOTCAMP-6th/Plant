@@ -89,7 +89,7 @@ import com.a32b.plant.domain.type.ReportReason
 import com.a32b.plant.presentation.community.viewmodel.CommunityDetailEvent
 import com.a32b.plant.presentation.community.viewmodel.CommunityDetailViewModel
 import com.a32b.plant.presentation.core.component.ConfirmDialog
-import com.a32b.plant.presentation.core.component.LoadingBox
+import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.component.TagChip
 import com.a32b.plant.presentation.core.extension.showToast
@@ -196,272 +196,270 @@ fun CommunityDetailScreen(
         )
     }
 
-    PullToRefreshBox(
-        isRefreshing = uiState.isRefreshing,
-        onRefresh = { viewModel.refresh() },
-        modifier = Modifier.fillMaxSize()
-    ) {
-        Scaffold(
-            containerColor = MaterialTheme.colorScheme.background,
-        ) { innerPadding ->
-            if (uiState.isInitialLoading) {
-                LoadingBox()
-                return@Scaffold
-            }
-            if (postState == null) {
-                if (uiState.isPostNotFound) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "삭제된 게시글입니다.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSecondary
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            TextButton(onClick = { navController.popBackStack() }) {
-                                Text("돌아가기")
+    LoadableScreen(viewModel) {
+        PullToRefreshBox(
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = { viewModel.refresh() },
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Scaffold(
+                containerColor = MaterialTheme.colorScheme.background,
+            ) { innerPadding ->
+                if (postState == null) {
+                    if (uiState.isPostNotFound) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "삭제된 게시글입니다.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSecondary
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                TextButton(onClick = { navController.popBackStack() }) {
+                                    Text("돌아가기")
+                                }
                             }
                         }
                     }
+                    return@Scaffold
                 }
-                return@Scaffold
-            }
-            val currentPost = postState!!
+                val currentPost = postState!!
 
-            Column(
-                modifier = Modifier
-                    .padding(innerPadding)
-                    .fillMaxSize()
-                    .imePadding()
-                    .padding(horizontal = 10.dp)
-                    .background(MaterialTheme.colorScheme.background)
-            ) {
-                Card(
-                    modifier = Modifier.fillMaxSize(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    elevation = CardDefaults.elevatedCardElevation(1.dp)
+                Column(
+                    modifier = Modifier
+                        .padding(innerPadding)
+                        .fillMaxSize()
+                        .imePadding()
+                        .padding(horizontal = 10.dp)
+                        .background(MaterialTheme.colorScheme.background)
                 ) {
-                    val isPostBlind = currentPost.isHidden || currentPost.reportCount >= 5
-
-                    // 댓글 입력창에 포커스가 가면 listState.scrollToItem(COMMENT_INPUT_ITEM_INDEX)로
-                    // 스크롤하므로, 헤더+태그+본문을 하나의 item으로 합쳐 댓글 입력창의 인덱스를
-                    // isPostBlind/studyLogs 유무와 무관하게 고정값(0: 헤더, 1: 구분선+아이콘, 2: 댓글 입력창)으로 유지한다.
-                    LazyColumn(
-                        state = listState,
-                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 24.dp)
+                    Card(
+                        modifier = Modifier.fillMaxSize(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        elevation = CardDefaults.elevatedCardElevation(1.dp)
                     ) {
+                        val isPostBlind = currentPost.isHidden || currentPost.reportCount >= 5
 
-                        item {
-                            Box(
-                                modifier = Modifier.fillMaxWidth(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                IconButton(
-                                    onClick = { navController.popBackStack() },
-                                    modifier = Modifier
-                                        .size(30.dp)
-                                        .align(Alignment.CenterStart)
-                                ) {
-                                    Image(
-                                        painter = painterResource(R.drawable.ic_backbtn),
-                                        contentDescription = "뒤로가기",
-                                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onBackground)
-                                    )
-                                }
-                                Text(
-                                    currentPost.title,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    modifier = Modifier.padding(horizontal = 46.dp),
-                                    textAlign = TextAlign.Center
-                                )
+                        // 댓글 입력창에 포커스가 가면 listState.scrollToItem(COMMENT_INPUT_ITEM_INDEX)로
+                        // 스크롤하므로, 헤더+태그+본문을 하나의 item으로 합쳐 댓글 입력창의 인덱스를
+                        // isPostBlind/studyLogs 유무와 무관하게 고정값(0: 헤더, 1: 구분선+아이콘, 2: 댓글 입력창)으로 유지한다.
+                        LazyColumn(
+                            state = listState,
+                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 24.dp)
+                        ) {
 
-                            }
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                ProfileImage(currentPost.author.profileImg, 24)
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    currentPost.author.nickname,
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                Spacer(modifier = Modifier.weight(1f))
-                                Text(
-                                    TimeFormatter.formatTimeWithClock(currentPost.createdAt ?: 0) +
-                                            if (currentPost.updatedAt != null) " (수정됨)" else "",
-                                    style = MaterialTheme.typography.labelMedium,
-//                                fontSize = 12.sp
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Row(modifier = Modifier.offset(x = (-3).dp)) {
-                                if (currentPost.isShared ?: false) TagChip("공유", 12)
-
-                                TagChip(currentPost.tag.name, 12)
-                            }
-                            Spacer(modifier = Modifier.height(20.dp))
-
-                            if (isPostBlind) {
+                            item {
                                 Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 24.dp),
+                                    modifier = Modifier.fillMaxWidth(),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(
-                                        "신고가 접수되어 숨김 처리된 콘텐츠입니다.",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSecondary
-                                    )
-                                }
-                            } else {
-                                if (!currentPost.studyLogs.isNullOrEmpty()) {
-                                    StudyLogCard(currentPost.studyLogs)
-                                }
-                                if (!currentPost.studyLogs.isNullOrEmpty() && !currentPost.content.isNullOrBlank()) {
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                }
-                                Text(
-                                    currentPost.content ?: "",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                        }
-
-                        item {
-                            Spacer(modifier = Modifier.height(28.dp))
-
-                            HorizontalDivider(
-                                color =
-                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                            )
-//                            sub3.copy(alpha = 0.5f))
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(min = 48.dp)
-                                    .padding(vertical = 1.dp)
-                            ) {
-                                Icon(
-                                    painterResource(id = R.drawable.ic_community_comment), null,
-                                    tint = MaterialTheme.colorScheme.onSurface,
-//                                tint = Color.Gray
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Text(
-                                    " ${currentPost.commentCount}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    modifier = Modifier.padding(end = 16.dp)
-                                )
-
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.clickable { viewModel.toggleLike() }
-                                ) {
-                                    Icon(
-                                        painterResource(id = if (isLikedByMe) R.drawable.ic_community_like_selected else R.drawable.ic_community_like_normal),
-                                        tint = if (isLikedByMe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.size(18.dp),
-                                        contentDescription = null
-                                    )
-                                    Text(
-                                        " ${currentPost.likeCount}",
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(12.dp))
-
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.clickable { viewModel.toggleBookmark() }
-                                ) {
-                                    Icon(
-                                        painterResource(id = if (isBookmarkedByMe) R.drawable.ic_bookmark_selected else R.drawable.ic_bookmark_normal),
-                                        tint = if (isBookmarkedByMe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.size(18.dp),
-                                        contentDescription = null
-                                    )
-                                    Text(
-                                        " ${currentPost.bookmarkCount}",
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.weight(1f))
-
-                                if (currentPost.author.id == uiState.currentUid) {
-                                    IconButton(onClick = {
-                                        navController.navigate(Routes.CommunityPost(postId = currentPost.postId))
-                                    }) {
-                                        Icon(
-                                            painterResource(id = R.drawable.ic_edit), null,
-                                            tint = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.size(18.dp)
+                                    IconButton(
+                                        onClick = { navController.popBackStack() },
+                                        modifier = Modifier
+                                            .size(30.dp)
+                                            .align(Alignment.CenterStart)
+                                    ) {
+                                        Image(
+                                            painter = painterResource(R.drawable.ic_backbtn),
+                                            contentDescription = "뒤로가기",
+                                            colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onBackground)
                                         )
                                     }
-                                    IconButton(onClick = { viewModel.openDeleteDialog() }) {
-                                        Icon(
-                                            painterResource(id = R.drawable.ic_trash), null,
-                                            tint = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.size(22.dp)
+                                    Text(
+                                        currentPost.title,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        modifier = Modifier.padding(horizontal = 46.dp),
+                                        textAlign = TextAlign.Center
+                                    )
+
+                                }
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    ProfileImage(currentPost.author.profileImg, 24)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        currentPost.author.nickname,
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                    Spacer(modifier = Modifier.weight(1f))
+                                    Text(
+                                        TimeFormatter.formatTimeWithClock(currentPost.createdAt ?: 0) +
+                                                if (currentPost.updatedAt != null) " (수정됨)" else "",
+                                        style = MaterialTheme.typography.labelMedium,
+    //                                fontSize = 12.sp
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Row(modifier = Modifier.offset(x = (-3).dp)) {
+                                    if (currentPost.isShared ?: false) TagChip("공유", 12)
+
+                                    TagChip(currentPost.tag.name, 12)
+                                }
+                                Spacer(modifier = Modifier.height(20.dp))
+
+                                if (isPostBlind) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 24.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            "신고가 접수되어 숨김 처리된 콘텐츠입니다.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSecondary
                                         )
                                     }
-                                } else if (!isPostBlind) {
-                                    IconButton(onClick = { viewModel.openPostReportSheet() }) {
-                                        Icon(
-                                            painter = painterResource(R.drawable.ic_siren_report),
-                                            contentDescription = "신고",
-                                            tint = MaterialTheme.colorScheme.error,
-                                            modifier = Modifier.size(20.dp)
-                                        )
+                                } else {
+                                    if (!currentPost.studyLogs.isNullOrEmpty()) {
+                                        StudyLogCard(currentPost.studyLogs)
                                     }
+                                    if (!currentPost.studyLogs.isNullOrEmpty() && !currentPost.content.isNullOrBlank()) {
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                    }
+                                    Text(
+                                        currentPost.content ?: "",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
                                 }
                             }
-                        }
+
+                            item {
+                                Spacer(modifier = Modifier.height(28.dp))
+
+                                HorizontalDivider(
+                                    color =
+                                        MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                                )
+    //                            sub3.copy(alpha = 0.5f))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = 48.dp)
+                                        .padding(vertical = 1.dp)
+                                ) {
+                                    Icon(
+                                        painterResource(id = R.drawable.ic_community_comment), null,
+                                        tint = MaterialTheme.colorScheme.onSurface,
+    //                                tint = Color.Gray
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        " ${currentPost.commentCount}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        modifier = Modifier.padding(end = 16.dp)
+                                    )
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.clickable { viewModel.toggleLike() }
+                                    ) {
+                                        Icon(
+                                            painterResource(id = if (isLikedByMe) R.drawable.ic_community_like_selected else R.drawable.ic_community_like_normal),
+                                            tint = if (isLikedByMe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.size(18.dp),
+                                            contentDescription = null
+                                        )
+                                        Text(
+                                            " ${currentPost.likeCount}",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.width(12.dp))
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.clickable { viewModel.toggleBookmark() }
+                                    ) {
+                                        Icon(
+                                            painterResource(id = if (isBookmarkedByMe) R.drawable.ic_bookmark_selected else R.drawable.ic_bookmark_normal),
+                                            tint = if (isBookmarkedByMe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.size(18.dp),
+                                            contentDescription = null
+                                        )
+                                        Text(
+                                            " ${currentPost.bookmarkCount}",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.weight(1f))
+
+                                    if (currentPost.author.id == uiState.currentUid) {
+                                        IconButton(onClick = {
+                                            navController.navigate(Routes.CommunityPost(postId = currentPost.postId))
+                                        }) {
+                                            Icon(
+                                                painterResource(id = R.drawable.ic_edit), null,
+                                                tint = MaterialTheme.colorScheme.onSurface,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                        IconButton(onClick = { viewModel.openDeleteDialog() }) {
+                                            Icon(
+                                                painterResource(id = R.drawable.ic_trash), null,
+                                                tint = MaterialTheme.colorScheme.onSurface,
+                                                modifier = Modifier.size(22.dp)
+                                            )
+                                        }
+                                    } else if (!isPostBlind) {
+                                        IconButton(onClick = { viewModel.openPostReportSheet() }) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.ic_siren_report),
+                                                contentDescription = "신고",
+                                                tint = MaterialTheme.colorScheme.error,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
 
 
-                        item {
-                            CommentInputSection(
-                                nickname = uiState.currentNickname,
-                                profileImg = uiState.currentProfileImg,
-                                text = uiState.comment,
-                                isSubmitting = uiState.isCommentSubmitting,
-                                onTextChange = { viewModel.onCommentChange(it) },
-                                onSend = { viewModel.addComment() },
-                                onFocusChanged = { isCommentFieldFocused = it },
-                                modifier = Modifier.bringIntoViewRequester(commentInputRequester)
-                            )
-                            Spacer(modifier = Modifier.height(20.dp))
-                        }
+                            item {
+                                CommentInputSection(
+                                    nickname = uiState.currentNickname,
+                                    profileImg = uiState.currentProfileImg,
+                                    text = uiState.comment,
+                                    isSubmitting = uiState.isCommentSubmitting,
+                                    onTextChange = { viewModel.onCommentChange(it) },
+                                    onSend = { viewModel.addComment() },
+                                    onFocusChanged = { isCommentFieldFocused = it },
+                                    modifier = Modifier.bringIntoViewRequester(commentInputRequester)
+                                )
+                                Spacer(modifier = Modifier.height(20.dp))
+                            }
 
-                        // CommentRow에 수정/삭제 기능 파라미터 전달
-                        items(uiState.commentList) { commentData ->
-                            CommentRow(
-                                comment = commentData,
-                                isOwner = commentData.user.uid == uiState.currentUid,
-                                isEditing = uiState.editingCommentId == commentData.commentId,
-                                editingText = uiState.editingCommentText,
-                                isEditSubmitting = commentData.commentId in uiState.editingSubmittingCommentIds,
-                                onEditTextChange = { viewModel.onEditCommentTextChange(it) },
-                                onEditStart = { viewModel.startEditComment(commentData) },
-                                onEditSubmit = { viewModel.submitEditComment() },
-                                onEditCancel = { viewModel.cancelEditComment() },
-                                onDeleteClick = { viewModel.openCommentDeleteDialog(commentData.commentId) },
-                                onReportClick = { viewModel.openCommentReportSheet(commentData.commentId) }
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
+                            // CommentRow에 수정/삭제 기능 파라미터 전달
+                            items(uiState.commentList) { commentData ->
+                                CommentRow(
+                                    comment = commentData,
+                                    isOwner = commentData.user.uid == uiState.currentUid,
+                                    isEditing = uiState.editingCommentId == commentData.commentId,
+                                    editingText = uiState.editingCommentText,
+                                    isEditSubmitting = commentData.commentId in uiState.editingSubmittingCommentIds,
+                                    onEditTextChange = { viewModel.onEditCommentTextChange(it) },
+                                    onEditStart = { viewModel.startEditComment(commentData) },
+                                    onEditSubmit = { viewModel.submitEditComment() },
+                                    onEditCancel = { viewModel.cancelEditComment() },
+                                    onDeleteClick = { viewModel.openCommentDeleteDialog(commentData.commentId) },
+                                    onReportClick = { viewModel.openCommentReportSheet(commentData.commentId) }
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
                         }
                     }
                 }

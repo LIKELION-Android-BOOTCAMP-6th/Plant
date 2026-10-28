@@ -2,8 +2,8 @@ package com.a32b.plant.presentation.community.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.NETWORK_SLOW_MESSAGE
 import com.a32b.plant.core.util.withSlowNotice
 import com.a32b.plant.domain.community.PostUpdate
@@ -56,7 +56,7 @@ class CommunityPostViewModel @Inject constructor(
     private val getSelectedStudyLogUseCase: GetSelectedStudyLogUseCase,
     private val postUpdateNotifier: PostUpdateNotifier,
     savedStateHandle: SavedStateHandle,
-) : ViewModel() {
+) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(CommunityPostUiState())
     val uiState = _uiState.asStateFlow()
@@ -73,6 +73,8 @@ class CommunityPostViewModel @Inject constructor(
     init {
         fetchTags()
         onIsSharedChange()
+        // 수정 모드: 기존 게시글 로드 후 loaded() / 신규 작성: 불러올 데이터가 없으므로 즉시 loaded()
+        postId?.let { getPost(it) } ?: loaded()
     }
     fun onIsTagSheetShownChange() {
         if (!_uiState.value.isShared) {
@@ -104,7 +106,7 @@ class CommunityPostViewModel @Inject constructor(
         }
     }
     // ✅ 기존 글을 불러오는 함수
-    fun getPost(postId: String) {
+    private fun getPost(postId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.getPostDetail(postId)
                 .onSuccess { post ->
@@ -117,6 +119,7 @@ class CommunityPostViewModel @Inject constructor(
                     }
                 }
                 .onFailure { e -> Log.e("CommunityPostVM", "게시글 조회 실패: ${e.message}") }
+            loaded() // BaseViewModel: 성공/실패 모두 조회 시도 후 LoadableScreen 해제
         }
     }
 

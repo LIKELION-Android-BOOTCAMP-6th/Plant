@@ -8,8 +8,8 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.base.BaseViewModel
 import androidx.navigation.toRoute
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
@@ -52,7 +52,7 @@ sealed class StudyResultEvent {
 class StudyResultViewModel @Inject constructor(
     private val giveStudyRewardUseCase: GiveStudyRewardUseCase,
     savedStateHandle: SavedStateHandle
-) : ViewModel() {
+) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(
         savedStateHandle.toRoute<Routes.StudyResult>().let { route ->
@@ -81,18 +81,17 @@ class StudyResultViewModel @Inject constructor(
 
     private fun loadReward() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
             giveStudyRewardUseCase(_uiState.value.time)
                 .onSuccess { reward ->
-                    _uiState.update { it.copy(isLoading = false, reward = reward) }
+                    _uiState.update { it.copy(reward = reward) }
                 }
                 .onFailure { error ->
-                    _uiState.update { it.copy(isLoading = false) }
                     when (error) {
                         is AppError.UnknownUser -> Unit
                         else -> _event.send(StudyResultEvent.ShowToast(error.message))
                     }
                 }
+            loaded() // BaseViewModel: 성공/실패 모두 보상 조회 시도 후 LoadableScreen 해제
         }
     }
 
