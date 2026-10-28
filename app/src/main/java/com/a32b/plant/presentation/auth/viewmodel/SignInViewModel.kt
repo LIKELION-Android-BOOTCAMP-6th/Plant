@@ -2,10 +2,12 @@ package com.a32b.plant.presentation.auth.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.auth.SetNicknameUseCase
 import com.a32b.plant.domain.usecase.auth.SignInWithGoogleUseCase
+import com.a32b.plant.domain.util.NicknameRule
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,7 +26,7 @@ data class SignInUiState(
 )
 
 sealed class SignInEvent {
-    data class ShowToast(val message: String) : SignInEvent()
+    data class ShowToast(val message: String, val isLong: Boolean) : SignInEvent()
     object NavigateToHome : SignInEvent()
 }
 
@@ -89,6 +91,11 @@ class SignInViewModel @Inject constructor(
             return
         }
 
+        if (!NicknameRule.isUsable(nickname)) {
+            _uiState.update { it.copy(nicknameError = NicknameRule.UNUSABLE_MESSAGE) }
+            return
+        }
+
         _uiState.update { it.copy(isNicknameLoading = true, nicknameError = null) }
 
         viewModelScope.launch {
@@ -99,14 +106,20 @@ class SignInViewModel @Inject constructor(
                     _eventChannel.send(SignInEvent.NavigateToHome)
                 }
                 .onFailure { error ->
+                    // 닉네임 값 자체의 문제(중복)만 입력칸 인라인 에러, 네트워크·저장 실패 등 상황 에러는 토스트
+                    val isInputError = error is AppError.NicknameTaken
                     _uiState.update {
-                        it.copy(nicknameError = error.message, isNicknameLoading = false)
+                        it.copy(
+                            nicknameError = if (isInputError) error.message else null,
+                            isNicknameLoading = false
+                        )
                     }
+                    if (!isInputError) sendToast(error.message, isLong = error is AppError.Network)
                 }
         }
     }
 
-    private fun sendToast(message: String) {
-        viewModelScope.launch { _eventChannel.send(SignInEvent.ShowToast(message)) }
+    private fun sendToast(message: String, isLong: Boolean = false) {
+        viewModelScope.launch { _eventChannel.send(SignInEvent.ShowToast(message, isLong)) }
     }
 }
