@@ -81,7 +81,8 @@ fun CommunityPostScreen(
                 }
 
                 is CommunityPostEvent.ShowToast -> context.showToast(event.message)
-                is CommunityPostEvent.NavigateBack -> navController.popBackStack()
+                // 종료 다이얼로그 확인과 겹쳐도 한 번만 닫히도록 CommunityPost를 대상으로 pop (이미 닫혔으면 무시됨)
+                is CommunityPostEvent.NavigateBack -> navController.popBackStack<Routes.CommunityPost>(inclusive = true)
             }
         }
     }
@@ -243,7 +244,8 @@ fun CommunityPostScreen(
             semiText = "작성된 게시글은 저장되지 않습니다.",
             onDismiss = { viewModel.onIsDismissDialogShowChange() },
             onConfirm = {
-                navController.popBackStack()
+                // NavigateBack 이벤트와 겹쳐도 한 번만 닫히도록 동일하게 CommunityPost를 대상으로 pop
+                navController.popBackStack<Routes.CommunityPost>(inclusive = true)
             }
         )
 }

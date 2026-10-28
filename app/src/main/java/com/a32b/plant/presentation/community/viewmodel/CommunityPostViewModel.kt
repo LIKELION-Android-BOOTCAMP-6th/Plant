@@ -116,6 +116,7 @@ class CommunityPostViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             // 수정할 대상을 못 불러오면 빈 폼으로 기존 글을 덮어쓸 수 있으므로 이전 화면으로 복귀
             // 토스트가 화면 이탈 전에 처리되도록 sendToast(launch) 대신 순서대로 직접 send
+            // 성공 시에만 loaded() — 이탈 경로는 로딩 화면 유지(이탈 애니메이션 중 빈 폼 노출 방지)
             repository.getPostDetail(postId)
                 .onSuccess { post ->
                     if (post == null) {
@@ -129,13 +130,13 @@ class CommunityPostViewModel @Inject constructor(
                     else{
                         _uiState.update { it.copy( postId = post.postId,title = post.title, content = post.content, selected = post.tag) }
                     }
+                    loaded() // BaseViewModel: 기존 글 로드 후 LoadableScreen 해제
                 }
                 .onFailure { e ->
                     // 실패 로그는 Repository에서 이미 기록
                     _eventChannel.send(CommunityPostEvent.ShowToast(e.message))
                     _eventChannel.send(CommunityPostEvent.NavigateBack)
                 }
-            loaded() // BaseViewModel: 성공/실패 모두 조회 시도 후 LoadableScreen 해제
         }
     }
 

@@ -90,7 +90,6 @@ class StudyPlanDetailViewModel @Inject constructor(
         }
     }
     private fun loadPotDetail(): Job? {
-        Log.d("StudyPlanDetailVM", "loadPotDetail called - userId: $userId, potId: $potId")
         if (userId.isEmpty() || potId.isEmpty()){
             Log.e("StudyPlanDetailVM", "ERROR: userId or potId is empty!")
             return null
@@ -99,7 +98,6 @@ class StudyPlanDetailViewModel @Inject constructor(
             safeRunCatching {
                 getPotDetailUseCase(userId,potId)
             }.onSuccess { pot ->
-                Log.d("StudyPlanDetailVM", "Successfully fetched pot result: $pot")
                 _potDetail.value = pot
             }.onFailure { error ->
                 Log.e("StudyPlanDetailVM", "Failed to load pot detail: ${error.message}", error)
