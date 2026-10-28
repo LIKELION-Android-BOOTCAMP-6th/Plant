@@ -25,6 +25,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.credentials.CredentialManager
@@ -227,7 +228,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.primary)
         ) {
-            // 화면이 충분히 크면 시트를 바닥에 붙이고, 작은 화면/가로/큰 글씨에서는 스크롤
+            // 화면이 충분히 크면 카드를 하단에 붙이고, 작은 화면/가로/큰 글씨에서는 스크롤
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -243,8 +244,8 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                // 하단 로그인 시트
-                SignInSheet(
+                // 하단 로그인 카드
+                SignInCard(
                     isLoading = uiState.isLoading,
                     onGoogleSignInClick = startGoogleSignIn
                 )
@@ -264,7 +265,7 @@ private fun BrandSection(modifier: Modifier = Modifier) {
         modifier = modifier.padding(horizontal = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        PotGrowthAnimation(modifier = Modifier.size(160.dp))
+        PotGrowthAnimation(modifier = Modifier.size(130.dp))
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -277,7 +278,7 @@ private fun BrandSection(modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
-            text = "공부할수록 자라는 나만의 식물",
+            text = "공부할수록 자라는 나만의 화분",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.background,
             textAlign = TextAlign.Center
@@ -317,20 +318,22 @@ private fun PotGrowthAnimation(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun SignInSheet(
+private fun SignInCard(
     isLoading: Boolean,
     onGoogleSignInClick: () -> Unit
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+        shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.background
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = 32.dp, vertical = 40.dp),
+                .padding(horizontal = 24.dp, vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -361,7 +364,8 @@ private fun SignInSheet(
 
             Text(
                 text = "로그인 시 서비스 이용약관 및 개인정보처리방침에\n동의하는 것으로 간주됩니다.",
-                style = MaterialTheme.typography.labelMedium,
+                // 가장 작은 타이포(12sp)보다 작게 표시하기 위해 labelMedium(힌트용)을 축소해서 사용
+                style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp, lineHeight = 16.sp),
                 textAlign = TextAlign.Center
             )
         }
