@@ -420,11 +420,11 @@ class CommunityDetailViewModel @Inject constructor(
             // updateComment()가 safeRunCatching으로 감싸져 항상 Result를 반환한다는 전제로,
             // 아래 editingSubmittingCommentIds 제거가 항상 실행됨. 이 함수가 예외를 던지도록 바뀌면
             // commentId가 Set에 영구히 남아 해당 댓글의 저장/취소 버튼이 계속 비활성 상태로 고정됨
-            // NonCancellable: 저장 중 화면 이탈(viewModelScope 취소) 후에도 본문 → activity 문구 수정이 끝까지 완료되도록 보장
-            withContext(NonCancellable) {
-                withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
-                    repository.updateComment(postId, commentId, state.editingCommentText)
-                }
+            // 본문 + activity 문구를 repository가 batch 한 번으로 SDK에 적재하므로, 저장 중 화면을 이탈해
+            // 코루틴이 취소돼도 둘 다 반영된다 (NonCancellable로 대기하면 오프라인에서 ViewModel이 계속 남음)
+            val activityId = state.commentList.firstOrNull { it.commentId == commentId }?.activityId.orEmpty()
+            withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
+                repository.updateComment(postId, commentId, state.editingCommentText, activityId)
             }
                 .onFailure { e ->
                     when (e) {
@@ -460,11 +460,13 @@ class CommunityDetailViewModel @Inject constructor(
         val commentId = _uiState.value.deletingCommentId ?: return
 
         viewModelScope.launch {
-            // NonCancellable: 삭제 중 화면 이탈 후에도 댓글 삭제 → activity 삭제가 끝까지 완료되도록 보장
+            // 댓글·activity 삭제는 repository의 트랜잭션 하나로 처리돼 화면 이탈과 무관하게 완료된다.
+            // NonCancellable은 삭제 성공 후 목록 화면의 댓글 수 갱신 알림을 이탈 후에도 보내기 위한 용도이며,
+            // 트랜잭션은 오프라인이면 큐에 쌓이지 않고 SDK가 재시도 후 실패시키므로 대기가 무한정 이어지지 않는다
             withContext(NonCancellable) {
                 withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
                     repository.deleteComment(postId, commentId)
-                }
+                }.onSuccess { notifyCommentDeleted() }
             }
                 .onFailure { e ->
                     when (e) {
@@ -475,6 +477,15 @@ class CommunityDetailViewModel @Inject constructor(
             _uiState.update { it.copy(deletingCommentId = null) }
             refresh()
         }
+    }
+
+    // 이탈 후에는 refresh()가 실행되지 않아 목록이 삭제된 댓글 수를 모르므로, 로컬 값 기준으로 먼저 알림
+    // (화면에 머물러 있으면 뒤이은 refresh()가 서버 값으로 다시 알려 보정)
+    private fun notifyCommentDeleted() {
+        val post = _post.value ?: return
+        val updatedCount = (post.commentCount - 1).coerceAtLeast(0)
+        _post.value = post.copy(commentCount = updatedCount)
+        postUpdateNotifier.notifyPostUpdated(PostUpdate(postId = postId, commentCount = updatedCount))
     }
 
     override fun onCleared() {

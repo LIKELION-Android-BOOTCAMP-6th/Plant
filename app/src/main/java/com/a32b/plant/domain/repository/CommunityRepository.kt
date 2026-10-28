@@ -38,7 +38,7 @@ interface CommunityRepository {
     suspend fun toggleBookmark(postId: String, uid: String, title: String): Result<Boolean>
 
     suspend fun addComment(postId: String, comment: Comment, activity: CommunityActivity): Result<Unit>
-    suspend fun updateComment(postId: String, commentId: String, newContent: String): Result<Unit>
+    suspend fun updateComment(postId: String, commentId: String, newContent: String, activityId: String): Result<Unit>
     suspend fun deleteComment(postId: String, commentId: String): Result<Unit>
 
     fun observeActivity(selected: String): Flow<List<CommunityActivity>>

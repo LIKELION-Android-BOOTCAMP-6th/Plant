@@ -200,37 +200,64 @@ class CommunityRepositoryImpl @Inject constructor(
         }
     )
 
-    override suspend fun updateComment(postId: String, commentId: String, newContent: String): Result<Unit> {
-        safeRunCatching {
-            communityRemoteDataSource.updateComment(postId, commentId, newContent)
-        }.onFailure { e ->
+    override suspend fun updateComment(postId: String, commentId: String, newContent: String, activityId: String): Result<Unit> {
+        val hasActivityId = activityId.isNotBlank()
+
+        var result = safeRunCatching {
+            communityRemoteDataSource.updateComment(postId, commentId, newContent, activityId.takeIf { hasActivityId })
+        }
+
+        // activity 문서가 이미 없으면 batch 전체가 실패한다. 보안 규칙이 resource.data를 참조하므로
+        // NOT_FOUND가 아니라 PERMISSION_DENIED로 거절될 수 있어 둘 다 보정 대상 — 댓글 본문만이라도 수정되도록 재시도
+        // (진짜 권한 없음이면 재시도도 같은 이유로 실패해 그대로 에러가 반환됨)
+        if (hasActivityId && result.exceptionOrNull().isMissingOrDenied()) {
+            Log.w("Community", "수정할 activity가 없어 댓글 본문만 수정: commentId=$commentId, activityId=$activityId")
+            result = safeRunCatching {
+                communityRemoteDataSource.updateComment(postId, commentId, newContent, null)
+            }
+        }
+
+        result.onFailure { e ->
             Log.e("Community", "댓글 수정 실패", e)
             return Result.Failure(handleError(e, "댓글 수정에 실패했습니다.", isWrite = true))
         }
 
-        safeRunCatching { communityRemoteDataSource.updateActivityComment(commentId, newContent) }
-            .onFailure { Log.e("Community", "activity comment 업데이트 실패 (댓글은 수정됨): commentId=$commentId", it) }
+        // activityId를 모르는 기존 댓글은 batch로 묶을 수 없어 조회 후 별도로 수정 (이 경로만 비원자적)
+        if (!hasActivityId) {
+            safeRunCatching { communityRemoteDataSource.updateActivityComment(commentId, newContent) }
+                .onFailure { Log.e("Community", "activity comment 업데이트 실패 (댓글은 수정됨): commentId=$commentId", it) }
+        }
 
         return Result.Success(Unit)
     }
 
-    override suspend fun deleteComment(postId: String, commentId: String): Result<Unit> {
-        val activityId = safeRunCatching {
-            communityRemoteDataSource.deleteComment(postId, commentId)
-        }.fold(
-            onSuccess = { Result.Success(it) },
-            onFailure = { e ->
-                Log.e("Community", "댓글 삭제 실패", e)
-                return Result.Failure(handleError(e, "댓글 삭제에 실패했습니다.", isWrite = true))
-            }
-        ).let { (it as Result.Success).data }
+    private fun Throwable?.isMissingOrDenied() =
+        this is FirebaseFirestoreException && (
+            code == FirebaseFirestoreException.Code.NOT_FOUND ||
+                code == FirebaseFirestoreException.Code.PERMISSION_DENIED
+            )
 
-        if (!activityId.isNullOrEmpty()) {
-            safeRunCatching { communityRemoteDataSource.deleteActivity(activityId) }
-                .onFailure { Log.e("Community", "activity 삭제 실패 (댓글은 삭제됨): $activityId", it) }
+    override suspend fun deleteComment(postId: String, commentId: String): Result<Unit> {
+        var result = safeRunCatching {
+            communityRemoteDataSource.deleteComment(postId, commentId, deleteActivity = true)
         }
 
-        return Result.Success(Unit)
+        // 지울 activity 문서가 이미 없으면 보안 규칙(resource.data 참조)에 걸려 트랜잭션 전체가 거절될 수 있음
+        // → 댓글 삭제가 막히지 않도록 activity 없이 한 번 더 시도 (진짜 권한 없음이면 재시도도 실패해 에러 반환)
+        if (result.exceptionOrNull().isMissingOrDenied()) {
+            Log.w("Community", "activity 삭제 포함 트랜잭션 실패 — 댓글만 삭제 재시도: commentId=$commentId", result.exceptionOrNull())
+            result = safeRunCatching {
+                communityRemoteDataSource.deleteComment(postId, commentId, deleteActivity = false)
+            }
+        }
+
+        return result.fold(
+            onSuccess = { Result.Success(Unit) },
+            onFailure = { e ->
+                Log.e("Community", "댓글 삭제 실패", e)
+                Result.Failure(handleError(e, "댓글 삭제에 실패했습니다.", isWrite = true))
+            }
+        )
     }
 
     override fun observeActivity(selected: String): Flow<List<CommunityActivity>> {
