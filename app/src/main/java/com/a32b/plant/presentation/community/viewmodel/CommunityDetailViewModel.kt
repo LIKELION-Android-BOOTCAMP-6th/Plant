@@ -134,6 +134,9 @@ class CommunityDetailViewModel @Inject constructor(
     private var commentBlankToastJob: Job? = null
     private var editBlankToastJob: Job? = null
 
+    // 진행 중인 새로고침 — 새로고침이 겹치면 늦게 끝난 이전 결과가 최신 결과를 덮어쓰지 않도록 이전 것을 취소하기 위함
+    private var refreshJob: Job? = null
+
     init {
         ensureCurrentUserUseCase { user -> _uiState.update { it.copy(currentUid = user.uid, currentNickname = user.nickname, currentProfileImg = user.profileImg) } }
         loadInitial()
@@ -172,9 +175,12 @@ class CommunityDetailViewModel @Inject constructor(
             _uiState.update { it.copy(isShared = true) }
     }
 
-    /** pull-to-refresh 전용: 인디케이터를 표시하며 데이터를 다시 불러온다 */
+    /** 게시글·댓글을 다시 불러온다 (당겨서 새로고침 인디케이터 표시). 진행 중인 새로고침은 취소되고 마지막 호출 결과만 반영된다 */
     fun refresh() {
-        viewModelScope.launch {
+        // 취소된 이전 새로고침은 마지막의 isRefreshing = false까지 가지 못하지만,
+        // 아래 새 새로고침이 끝날 때 해제하므로 인디케이터가 계속 도는 상태로 남지 않음
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
             _uiState.update { it.copy(isRefreshing = true) }
 
             val postDeferred = async { repository.getPostDetail(postId) }
