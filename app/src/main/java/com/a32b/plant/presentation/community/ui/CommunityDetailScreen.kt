@@ -98,6 +98,10 @@ import com.a32b.plant.presentation.core.component.TagChip
 import com.a32b.plant.presentation.core.extension.showToast
 import kotlinx.coroutines.launch
 
+// 댓글 작성/수정 입력란 공통 최대 줄 수 - 편집 영역이 키보드 위 공간보다 커지면 bringIntoView로
+// 등록·저장 버튼까지 보이게 할 수 없어 제한한다(#417). 넘으면 입력란 안에서 스크롤된다.
+private const val COMMENT_MAX_LINES = 4
+
 // LazyColumn에서 게시글 헤더/태그/본문을 하나의 item으로 합친 뒤의 댓글 입력창 item 인덱스
 // (헤더+태그+본문 item, 구분선+아이콘 item, 댓글 입력창 item 순으로 고정)
 private const val COMMENT_INPUT_ITEM_INDEX = 2
@@ -626,7 +630,7 @@ fun CommentRow(
                                 limitLength(input, maxLength, context, onEditTextChange)
                             },
                             readOnly = isEditSubmitting,
-                            maxLines = 4,
+                            maxLines = COMMENT_MAX_LINES,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .onFocusChanged { isEditFieldFocused = it.isFocused },
@@ -771,7 +775,7 @@ fun CommentInputSection(
                 ),
                 shape = RoundedCornerShape(8.dp),
                 textStyle = MaterialTheme.typography.bodyMedium,
-                maxLines = 4,
+                maxLines = COMMENT_MAX_LINES,
                 minLines = 1,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Text,
@@ -826,10 +830,11 @@ fun CommentInputSection(
     }
 }
 
-// 키보드가 열린 동안 heightPx()가 이전보다 커질 때만 bringIntoView()를 1번 호출한다(#417).
+// heightPx()가 이전보다 커질 때만 bringIntoView()를 1번 호출한다(#417).
 // 높이는 반드시 람다로 받아 snapshotFlow 안에서만 읽어야 변화를 감지하면서도 recompose되지 않는다.
 // 같은 높이(한 줄 안 타이핑, maxLines 도달 후 입력)나 줄어들 때는 호출하지 않는다.
-// 호출한 LaunchedEffect가 취소될 때까지(키보드 닫힘·포커스 해제) 계속 감지한다.
+// 호출한 LaunchedEffect가 취소될 때까지 계속 감지한다. 키보드가 열려 있을 때만 쓰려면
+// 호출하는 쪽 effect의 key(키보드 노출·포커스 여부)로 제한해야 한다.
 private suspend fun BringIntoViewRequester.bringIntoViewOnHeightGrow(heightPx: () -> Int) {
     var prevHeightPx = heightPx()
     snapshotFlow { heightPx() }.collect { currentPx ->
