@@ -5,9 +5,10 @@ import android.content.Intent
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,12 +17,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,15 +37,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.domain.type.PlantLevel
 import com.a32b.plant.presentation.auth.viewmodel.SignInEvent
 import com.a32b.plant.presentation.auth.viewmodel.SignInViewModel
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.LoadingBox
+import com.a32b.plant.presentation.core.extension.resId
 import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.theme.LocalIsDarkTheme
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -188,120 +192,196 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
         }
     }
 
+    // 구글 계정 선택 → 토큰 획득 → ViewModel 전달 (로그인 로직은 기존과 동일)
+    val startGoogleSignIn: () -> Unit = startGoogleSignIn@{
+        if (!viewModel.tryStartGoogleSignIn()) return@startGoogleSignIn
+
+        coroutineScope.launch {
+            val googleIdOption = GetSignInWithGoogleOption.Builder(webClientId)
+                .build()
+
+            val request = GetCredentialRequest.Builder()
+                .addCredentialOption(googleIdOption)
+                .build()
+
+            try {
+                val result = credentialManager.getCredential(
+                    request = request,
+                    context = context as Activity
+                )
+
+                val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(result.credential.data)
+                viewModel.handleGoogleSignIn(googleIdTokenCredential.idToken)
+
+            } catch (e: GetCredentialCancellationException) {
+                // 사용자가 계정 선택창을 닫은 경우 무시
+                viewModel.cancelGoogleSignIn()
+            } catch (e: NoCredentialException) {
+                viewModel.cancelGoogleSignIn()
+                context.showToast("기기에 등록된 Google 계정이 없습니다. 설정에서 계정을 추가해주세요.")
+                val intent = Intent(Settings.ACTION_ADD_ACCOUNT)
+                intent.putExtra("account_types", arrayOf("com.google"))
+                context.startActivity(intent)
+            } catch (e: CancellationException) {
+                // 화면 이탈 등으로 코루틴이 취소된 경우: 가드만 풀어주고 취소는 그대로 전파
+                viewModel.cancelGoogleSignIn()
+                throw e
+            } catch (e: Exception) {
+                viewModel.cancelGoogleSignIn()
+                Log.e("SignIn", "구글 로그인 에러: ${e.message}", e)
+                context.showToast("구글 로그인에 실패했습니다.\n다시 시도해주세요.")
+            }
+        }
+    }
+
     LoadableScreen(viewModel) {
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.primary)
         ) {
+            // 화면이 충분히 크면 카드를 하단에 붙이고, 작은 화면/큰 글씨에서는 스크롤
+            // (상태바·내비바 여백은 MainActivity Scaffold가 이미 적용·소비하므로 여기서 따로 주지 않음)
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 32.dp),
-                horizontalAlignment = Alignment.Start
+                    .heightIn(min = maxHeight),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.statusBarsPadding())
-                Spacer(modifier = Modifier.height(130.dp))
+                Spacer(modifier = Modifier.weight(1f))
 
-                Text(
-                    text = "Plant",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.background,
-                    fontSize = 40.sp
+                // 상단 브랜드 영역
+                BrandSection(modifier = Modifier.padding(vertical = 32.dp))
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                // 하단 로그인 카드
+                SignInCard(
+                    isLoading = uiState.isLoading,
+                    onGoogleSignInClick = startGoogleSignIn
                 )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = "로그인해서 계속하세요",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.background,
-                    fontSize = 16.sp
-                )
-
-                Spacer(modifier = Modifier.height(30.dp))
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
-                    elevation = CardDefaults.cardElevation(if (isDark) 0.dp else 4.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Spacer(modifier = Modifier.height(32.dp))
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp)
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_auth_google),
-                                contentDescription = "Google 로그인",
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp)
-                                    .clickable {
-                                        if (!viewModel.tryStartGoogleSignIn()) return@clickable
-
-                                        coroutineScope.launch {
-                                            val googleIdOption = GetSignInWithGoogleOption.Builder(webClientId)
-                                                .build()
-
-                                            val request = GetCredentialRequest.Builder()
-                                                .addCredentialOption(googleIdOption)
-                                                .build()
-
-                                            try {
-                                                val result = credentialManager.getCredential(
-                                                    request = request,
-                                                    context = context as Activity
-                                                )
-
-                                                val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(result.credential.data)
-                                                viewModel.handleGoogleSignIn(googleIdTokenCredential.idToken)
-
-                                            } catch (e: GetCredentialCancellationException) {
-                                                // 사용자가 계정 선택창을 닫은 경우 무시
-                                                viewModel.cancelGoogleSignIn()
-                                            } catch (e: NoCredentialException) {
-                                                viewModel.cancelGoogleSignIn()
-                                                context.showToast("기기에 등록된 Google 계정이 없습니다. 설정에서 계정을 추가해주세요.")
-                                                val intent = Intent(Settings.ACTION_ADD_ACCOUNT)
-                                                intent.putExtra("account_types", arrayOf("com.google"))
-                                                context.startActivity(intent)
-                                            } catch (e: CancellationException) {
-                                                // 화면 이탈 등으로 코루틴이 취소된 경우: 가드만 풀어주고 취소는 그대로 전파
-                                                viewModel.cancelGoogleSignIn()
-                                                throw e
-                                            } catch (e: Exception) {
-                                                viewModel.cancelGoogleSignIn()
-                                                Log.e("SignIn", "구글 로그인 에러: ${e.message}", e)
-                                                context.showToast("구글 로그인에 실패했습니다.\n다시 시도해주세요.")
-                                            }
-                                        }
-                                    },
-                                contentScale = ContentScale.Fit
-                            )
-
-                            if (uiState.isLoading) {
-                                LoadingBox(modifier = Modifier.matchParentSize())
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(32.dp))
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
 }
+
+// 화분 성장 단계 이미지 (lv0 → lv6)
+private val potGrowthImages = PlantLevel.entries
+    .filter { it != PlantLevel.DEFAULT }
+    .map { it.resId }
+
+@Composable
+private fun BrandSection(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        PotGrowthAnimation(modifier = Modifier.size(130.dp))
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Plant",
+            style = MaterialTheme.typography.headlineLarge // primary 위 글자색(onPrimary)이 스타일에 지정되어 있음
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = "공부할수록 자라는 나만의 화분",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onPrimary,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+/**
+ * 화분이 lv0 → lv6 으로 자라는 모습을 반복 재생
+ * - 단계마다 일정 시간 머무르고, 마지막 단계(lv6)는 조금 더 오래 보여준 뒤 처음으로 돌아감
+ */
+@Composable
+private fun PotGrowthAnimation(modifier: Modifier = Modifier) {
+    var stepIndex by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            val isLastStep = stepIndex == potGrowthImages.lastIndex
+            delay(if (isLastStep) POT_LAST_STEP_DURATION_MS else POT_STEP_DURATION_MS)
+            stepIndex = (stepIndex + 1) % potGrowthImages.size
+        }
+    }
+
+    Crossfade(
+        targetState = potGrowthImages[stepIndex],
+        modifier = modifier,
+        animationSpec = tween(durationMillis = POT_CROSSFADE_DURATION_MS),
+        label = "PotGrowthAnimation"
+    ) { resId ->
+        Image(
+            painter = painterResource(id = resId),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit
+        )
+    }
+}
+
+@Composable
+private fun SignInCard(
+    isLoading: Boolean,
+    onGoogleSignInClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "간편하게 시작해 보세요",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Box(
+                modifier = Modifier
+                    .widthIn(max = 400.dp) // fillMaxWidth보다 먼저 와야 최대 너비가 적용됨
+                    .fillMaxWidth()
+                    .clip(GoogleSignInButtonShape) // 로딩 오버레이가 버튼 모양 밖으로 나가지 않도록 버튼과 같은 모양 사용
+            ) {
+                GoogleSignInButton(
+                    onClick = onGoogleSignInClick,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // 로그인 진행 중: 버튼 위 로딩 + 터치 차단 (중복 탭은 tryStartGoogleSignIn 가드로도 방지)
+                if (isLoading) {
+                    LoadingBox(modifier = Modifier.matchParentSize())
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "로그인 시 서비스 이용약관 및 개인정보처리방침에\n동의하는 것으로 간주됩니다.",
+                // 가장 작은 타이포(12sp)보다 작게 표시하기 위해 labelMedium(힌트용)을 축소해서 사용
+                style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp, lineHeight = 16.sp),
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+private const val POT_STEP_DURATION_MS = 700L
+private const val POT_LAST_STEP_DURATION_MS = 1600L
+private const val POT_CROSSFADE_DURATION_MS = 400
