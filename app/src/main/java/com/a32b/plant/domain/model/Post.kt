@@ -89,5 +89,8 @@ data class Comment(
     val createdAt: Long?,
     val reportCount: Int,
     val isHidden: Boolean
-)
+) {
+    // 숨김 처리됐거나 신고가 5회 이상 누적된 댓글 — 화면에서 내용 대신 블라인드 문구를 표시
+    val isBlind: Boolean get() = isHidden || reportCount >= 5
+}
 

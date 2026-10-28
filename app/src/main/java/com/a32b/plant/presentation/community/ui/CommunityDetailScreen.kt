@@ -556,7 +556,7 @@ fun CommentRow(
         ProfileImage(comment.user.profileImg, 24)
         Spacer(Modifier.width(5.dp))
         Column(modifier = Modifier.weight(1f)) {
-                val isCommentBlind = comment.isHidden || comment.reportCount >= 5
+                val isCommentBlind = comment.isBlind
                 // 닉네임 + 작성 시간을 한 줄에 표시
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -614,9 +614,11 @@ fun CommentRow(
                             textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
 
                         )
-                        // TextButton 최소 높이(40dp)로 Row가 높아지므로 세로 가운데 정렬해
+                        // TextButton 최소 터치 영역(48dp)으로 Row가 높아지므로 세로 가운데 정렬해
                         // 글자수 표시가 TextField에 붙지 않게 한다.
                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            // labelMedium에 지정된 색(onSecondary)이 TextButton의 contentColor보다 우선하므로
+                            // 아래 contentColor 분기는 글자 색에 반영되지 않는다. 글자 색은 Text의 color로 지정
                             TextButton(
                                 onClick = onEditSubmit,
                                 enabled = !isEditSubmitting,
@@ -629,13 +631,15 @@ fun CommentRow(
                             ) {
                                 Text(
                                     if (isEditSubmitting) "저장 중" else "저장",
-                                    style = MaterialTheme.typography.labelMedium
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                             TextButton(onClick = onEditCancel, enabled = !isEditSubmitting) {
                                 Text(
                                     "취소",
-                                    style = MaterialTheme.typography.labelMedium
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                             Spacer(modifier = Modifier.weight(1f))

@@ -185,7 +185,9 @@ class CommunityDetailViewModel @Inject constructor(
                     if (fetchedPost == null) {
                         _post.value = null
                         onIsSharedChange()
-                        _uiState.update { it.copy(isPostNotFound = true) }
+                        // 삭제된 게시글 안내 화면에서는 수정 UI가 없으므로 수정 상태도 정리
+                        // (남아 있으면 BackHandler가 뒤로가기 1번을 아무 반응 없이 소비함)
+                        _uiState.update { it.copy(isPostNotFound = true, editingCommentId = null, editingCommentText = "") }
                     } else {
                         // 좋아요/북마크가 디바운스 대기 중이거나 서버 커밋이 진행 중이면, 아직 반영되지 않은
                         // 서버의 이전 값으로 덮어쓰지 않고 로컬에서 들고 있던 값을 그대로 유지한다.
@@ -205,7 +207,24 @@ class CommunityDetailViewModel @Inject constructor(
                 .onFailure { e -> sendToast(e.message) }
 
             commentsDeferred.await()
-                .onSuccess { comments -> _uiState.update { it.copy(commentList = comments) } }
+                .onSuccess { comments ->
+                    // 수정 중인 댓글이 다른 곳에서 삭제됐거나 블라인드돼 수정 UI가 사라졌다면 수정 상태도 정리
+                    // (남아 있으면 BackHandler가 뒤로가기 1번을 아무 반응 없이 소비함)
+                    // 저장 완료 후 refresh()는 editingCommentId가 이미 null이라 여기에 해당하지 않음
+                    val editingId = _uiState.value.editingCommentId
+                    val editingComment = editingId?.let { id -> comments.firstOrNull { it.commentId == id } }
+                    val isEditingCommentDeleted = editingId != null && editingComment == null
+                    val shouldCancelEdit = isEditingCommentDeleted || editingComment?.isBlind == true
+
+                    _uiState.update {
+                        if (shouldCancelEdit) {
+                            it.copy(commentList = comments, editingCommentId = null, editingCommentText = "")
+                        } else {
+                            it.copy(commentList = comments)
+                        }
+                    }
+                    if (isEditingCommentDeleted) sendToast(COMMENT_ALREADY_DELETED_MESSAGE)
+                }
                 .onFailure { e -> sendToast(e.message) }
 
             _uiState.update { it.copy(isRefreshing = false) }
