@@ -128,8 +128,10 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            errorContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
+                            errorIndicatorColor = Color.Transparent,
                             focusedTextColor = MaterialTheme.colorScheme.onSurface,
                             unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                             focusedPlaceholderColor = MaterialTheme.colorScheme.onSecondary,
@@ -139,7 +141,17 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                         singleLine = true,
                         shape = RoundedCornerShape(8.dp),
                         isError = uiState.nicknameError != null,
-                        supportingText = uiState.nicknameError?.let { { Text(it) } }
+                        supportingText = uiState.nicknameError?.let {
+                            {
+                                Text(
+                                    text = it,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Start,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))
