@@ -2,8 +2,8 @@ package com.a32b.plant.presentation.community.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.NETWORK_SLOW_MESSAGE
 import com.a32b.plant.core.util.withSlowNotice
 import com.a32b.plant.domain.community.PostUpdate
@@ -46,6 +46,7 @@ data class CommunityPostUiState(
 sealed class CommunityPostEvent{
     data class NavigateToDetail(val postId: String) : CommunityPostEvent()
     data class ShowToast(val message: String) : CommunityPostEvent()
+    object NavigateBack : CommunityPostEvent()
 }
 @HiltViewModel
 class CommunityPostViewModel @Inject constructor(
@@ -56,7 +57,7 @@ class CommunityPostViewModel @Inject constructor(
     private val getSelectedStudyLogUseCase: GetSelectedStudyLogUseCase,
     private val postUpdateNotifier: PostUpdateNotifier,
     savedStateHandle: SavedStateHandle,
-) : ViewModel() {
+) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(CommunityPostUiState())
     val uiState = _uiState.asStateFlow()
@@ -72,7 +73,14 @@ class CommunityPostViewModel @Inject constructor(
 
     init {
         fetchTags()
+        // 공유 모드(potId 존재): 학습 기록 로드 후 getStudyLog()에서 loaded()
         onIsSharedChange()
+        when {
+            // 수정 모드: 기존 게시글 로드 후 getPost()에서 loaded()
+            postId != null -> getPost(postId!!)
+            // 일반 신규 작성: 불러올 데이터가 없으므로 즉시 loaded()
+            potId == null -> loaded()
+        }
     }
     fun onIsTagSheetShownChange() {
         if (!_uiState.value.isShared) {
@@ -104,35 +112,52 @@ class CommunityPostViewModel @Inject constructor(
         }
     }
     // ✅ 기존 글을 불러오는 함수
-    fun getPost(postId: String) {
+    private fun getPost(postId: String) {
         viewModelScope.launch(Dispatchers.IO) {
+            // 수정할 대상을 못 불러오면 빈 폼으로 기존 글을 덮어쓸 수 있으므로 이전 화면으로 복귀
+            // 토스트가 화면 이탈 전에 처리되도록 sendToast(launch) 대신 순서대로 직접 send
+            // 성공 시에만 loaded() — 이탈 경로는 로딩 화면 유지(이탈 애니메이션 중 빈 폼 노출 방지)
             repository.getPostDetail(postId)
                 .onSuccess { post ->
-                    post ?: return@onSuccess
+                    if (post == null) {
+                        _eventChannel.send(CommunityPostEvent.ShowToast("삭제된 게시글입니다."))
+                        _eventChannel.send(CommunityPostEvent.NavigateBack)
+                        return@onSuccess
+                    }
                     if (post.isShared?:false){
                         _uiState.update { it.copy(isShared = true, postId = post.postId, title = post.title, studyLogs = post.studyLogs, selected = post.tag, extraContent = post.content) }
                     }
                     else{
                         _uiState.update { it.copy( postId = post.postId,title = post.title, content = post.content, selected = post.tag) }
                     }
+                    loaded() // BaseViewModel: 기존 글 로드 후 LoadableScreen 해제
                 }
-                .onFailure { e -> Log.e("CommunityPostVM", "게시글 조회 실패: ${e.message}") }
+                .onFailure { e ->
+                    // 실패 로그는 Repository에서 이미 기록
+                    _eventChannel.send(CommunityPostEvent.ShowToast(e.message))
+                    _eventChannel.send(CommunityPostEvent.NavigateBack)
+                }
         }
     }
 
-    fun getStudyLog() {
-        val currentPotId = potId ?: return
-        val currentStudyLogIds = studyLogIds ?: return
+    // 모든 종료 경로에서 loaded() 호출 — 빠지면 공유 모드 진입 시 무한 로딩
+    private fun getStudyLog() {
+        val currentPotId = potId ?: return loaded()
+        val currentStudyLogIds = studyLogIds ?: return loaded()
         //개별 학습 기록 공유 시
         viewModelScope.launch(Dispatchers.IO) {
             val user = when (val result = ensureCurrentUserUseCase()) {
                 is Result.Success -> result.data
-                is Result.Failure -> return@launch // 세션 만료는 UseCase 내부에서 이미 알림
+                is Result.Failure -> {
+                    loaded()
+                    return@launch // 세션 만료는 UseCase 내부에서 이미 알림
+                }
             }
             val logs = currentStudyLogIds.mapNotNull { id ->
                 getSelectedStudyLogUseCase(user.uid, currentPotId, id)
             }
             _uiState.update { it.copy(studyLogs = logs) }
+            loaded() // BaseViewModel: 학습 기록 로드 후 LoadableScreen 해제
         }
     }
     fun getTags(list: List<Tag>) = _uiState.update { it.copy(tags = list) }

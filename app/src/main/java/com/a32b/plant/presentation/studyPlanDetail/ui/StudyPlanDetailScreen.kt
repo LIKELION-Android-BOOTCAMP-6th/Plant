@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.StudyGoalItem
 import com.a32b.plant.core.extension.isCompletedAt
 import com.a32b.plant.core.util.TimeFormatter
@@ -72,279 +73,303 @@ fun StudyPlanDetailScreen(
 
     val context = LocalContext.current
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                windowInsets = WindowInsets(top = 0.dp),
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-                    actionIconContentColor = MaterialTheme.colorScheme.onSurface,
-                ),
-                title = {
-                    potInfo?.let {
-                        Text("[${it.tagName}] ${it.name}",
+    LoadableScreen(viewModel) {
+        // potInfo는 위임 프로퍼티라 null 체크 후에도 스마트 캐스트가 안 되므로 로컬 변수로 받음
+        val pot = potInfo
+        // 로딩 완료 후에도 null이면 조회 실패 또는 화분 없음 — 수정/삭제 버튼이 눌리지 않도록 안내 화면만 표시
+        // (다시 시도는 학습 기록 구독이 중복 생성되므로 제공하지 않음)
+        if (pot == null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "화분 정보를 불러오지 못했습니다.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    TextButton(onClick = { navController.popBackStack() }) {
+                        Text("돌아가기")
+                    }
+                }
+            }
+            return@LoadableScreen
+        }
+
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    windowInsets = WindowInsets(top = 0.dp),
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
+                    title = {
+                        Text("[${pot.tagName}] ${pot.name}",
                             style = MaterialTheme.typography.titleMedium,
                         )
-                    } ?: Text("로딩 중...", style = MaterialTheme.typography.titleMedium)
-                },
-                navigationIcon = {
-                        //뒤로 가기
-                        IconButton(onClick = {
-                            if(isShareMode) viewModel.setShareMode(false)
-                            else navController.popBackStack()
-                        }) {
-                            Icon(
-                                painter = painterResource(
-                                    id = if(isShareMode) R.drawable.ic_study_result_close
-                                        else R.drawable.ic_backbtn
-                                ),
-                                contentDescription = if (isShareMode) "공유 취소" else "뒤로가기",
-                                modifier = Modifier.size(19.dp),
-                            )
+                    },
+                    navigationIcon = {
+                            //뒤로 가기
+                            IconButton(onClick = {
+                                if(isShareMode) viewModel.setShareMode(false)
+                                else navController.popBackStack()
+                            }) {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if(isShareMode) R.drawable.ic_study_result_close
+                                            else R.drawable.ic_backbtn
+                                    ),
+                                    contentDescription = if (isShareMode) "공유 취소" else "뒤로가기",
+                                    modifier = Modifier.size(19.dp),
+                                )
+                            }
+                    },
+                    actions = {
+                        // 수정
+                        if(!isShareMode) {
+                            IconButton(onClick = { viewModel.setEditDialogShown(true) }) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_edit),
+                                    "수정하기",
+                                    modifier = Modifier.size(19.dp)
+                                )
+                            }
+                            IconButton(onClick = { viewModel.setPotDeleteDialogShown(true) }) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_trash),
+                                    "화분 전체 삭제하기",
+                                    modifier = Modifier.size(24.dp)
+    //                                modifier = Modifier.size(19.dp)
+                                )
+                            }
                         }
-                },
-                actions = {
-                    // 수정
-                    if(!isShareMode) {
-                        IconButton(onClick = { viewModel.setEditDialogShown(true) }) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_edit),
-                                "수정하기",
-                                modifier = Modifier.size(19.dp)
-                            )
-                        }
-                        IconButton(onClick = { viewModel.setPotDeleteDialogShown(true) }) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_trash),
-                                "화분 전체 삭제하기",
-                                modifier = Modifier.size(24.dp)
-//                                modifier = Modifier.size(19.dp)
-                            )
+                        IconButton(onClick = { if (!isShareMode) {
+                            viewModel.setShareMode(true)
+                        } else {
+                            // 2. 이미 공유 모드라면 데이터 전송(화면 이동) 수행
+                            viewModel.navigateToCommunityShare(navController)
+                        } }) {
+                            if (isShareMode) {
+                                // 아이콘 벡터와 리소스 처리 분기
+                                Icon(Icons.Default.Check, contentDescription = "확인", modifier = Modifier.size(19.dp), tint = fontColorSub)
+                            } else {
+                                Icon(painterResource(id = R.drawable.ic_share), contentDescription = "공유", modifier = Modifier.size(19.dp))
+                            }
                         }
                     }
-                    IconButton(onClick = { if (!isShareMode) {
-                        viewModel.setShareMode(true)
-                    } else {
-                        // 2. 이미 공유 모드라면 데이터 전송(화면 이동) 수행
-                        viewModel.navigateToCommunityShare(navController)
-                    } }) {
-                        if (isShareMode) {
-                            // 아이콘 벡터와 리소스 처리 분기
-                            Icon(Icons.Default.Check, contentDescription = "확인", modifier = Modifier.size(19.dp), tint = fontColorSub)
-                        } else {
-                            Icon(painterResource(id = R.drawable.ic_share), contentDescription = "공유", modifier = Modifier.size(19.dp))
-                        }
+                )
+            },
+            bottomBar = {
+                // 학습 완료 버튼
+                if(!isShareMode) {
+                    Button(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        enabled = !pot.isCompleted,
+                        onClick = { viewModel.setCompleteDialogShown(true) },
+                    ) {
+                        Text(if (pot.isCompleted) "완료된 학습" else "학습 완료하기", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
-            )
-        },
-        bottomBar = {
-            // 학습 완료 버튼
-            if(!isShareMode) {
-                Button(
+            }
+        ) { innerPadding ->
+            Column(modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+            ) {
+                //전체 선택 체크 박스 + 삭제 버튼
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    enabled = potInfo?.isCompleted == false,
-                    onClick = { viewModel.setCompleteDialogShown(true) },
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(if (potInfo?.isCompleted == true) "완료된 학습" else "학습 완료하기", style = MaterialTheme.typography.bodyMedium)
-                }
-            }
-        }
-    ) { innerPadding ->
-        Column(modifier = Modifier
-            .padding(innerPadding)
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-        ) {
-            //전체 선택 체크 박스 + 삭제 버튼
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (isShareMode) {
-                    if (logs.isNotEmpty()) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.clickable { viewModel.toggleAllSelection(!isAllSelected) }
-                        ) {
-                            //전체 선택
-                            Checkbox(
-                                checked = isAllSelected,
-                                onCheckedChange = { viewModel.toggleAllSelection(it) }
-                            )
-                            Text("전체 선택", style = MaterialTheme.typography.bodyMedium)
-                        }
-                        Spacer(modifier = Modifier.weight(1f))
-                        Text(
-                            text = "${logs.count { it.isSelected }}개 선택됨",
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                }
-            }
-            // 학습 기록 리스트 영역
-            Box(modifier = Modifier.weight(1f)) {
-                //학습 기록 없을 시
-                if (logs.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "아직 학습 기록이 없습니다.",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    }
-                } else {
-                    //학습 기록 리스트
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.background),
-                        contentPadding = PaddingValues(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        items(logs) { record ->
-                            StudyRecordCard(
-                                log = record,
-                                isShareMode = isShareMode,
-                                onSelectionChange = { isSelected ->
-                                    viewModel.onLogSelectionChanged(record.id, isSelected)
-                                },
-                                onCardClick = {
-                                    if (isShareMode) viewModel.onLogSelectionChanged(record.id, !record.isSelected)
-                                    else viewModel.onStudyLogClicked(record)
-                                },
-                                onDeleteClick = {
-                                    viewModel.showDeleteDialog(record.id)
-                                }
-                            )
-                        }
-                    }
-                }
-                // 선택 로그 존재 -> 다이얼로그 표출
-                selectedStudyLog?.let { log ->
-                    StudyLogDetailDialog(
-                        log = log,
-                        ondismiss = { viewModel.onDismissLogDialog() }
-                    )
-                }
-                // 삭제 확인 다이얼로그
-                if (isDeleteDialogShown) {
-                    ConfirmDialog(
-                        text = "기록 삭제",
-                        semiText = "정말로 이 학습 기록을 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.",
-                        onDismiss = { viewModel.dismissDeleteDialog() },
-                        onConfirm = { viewModel.confirmDelete() }
-                    )
-                }
-                // 제목 변경 다이얼로그
-                if (isEditDialogShown) {
-                    Dialog(onDismissRequest = { viewModel.setEditDialogShown(false) }) {
-                        // 공용 다이얼로그와 동일한 모양의 Card 생성
-                        Card(
-                            shape = RoundedCornerShape(30.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer),
-                            elevation = CardDefaults.cardElevation(3.dp)
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.padding(22.dp)
+                    if (isShareMode) {
+                        if (logs.isNotEmpty()) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.clickable { viewModel.toggleAllSelection(!isAllSelected) }
                             ) {
-                                Spacer(modifier = Modifier.height(10.dp))
-
-                                // 제목
-                                Text("제목 변경", style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold)
-
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                // 입력창
-                                OutlinedTextField(
-                                    value = editNameText,
-                                    onValueChange = { editNameText = it },
-                                    textStyle = MaterialTheme.typography.titleMedium,
-                                    placeholder = { Text("화분 이름을 입력하세요", style = MaterialTheme.typography.bodyMedium,) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true,
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = OutlinedTextFieldDefaults.colors(
-//                                        focusedBorderColor = Color(0xFFA5C16C), // 강조색 (primary)
-                                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-//                                        unfocusedBorderColor = Color.LightGray
-                                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                                    )
+                                //전체 선택
+                                Checkbox(
+                                    checked = isAllSelected,
+                                    onCheckedChange = { viewModel.toggleAllSelection(it) }
                                 )
-
-                                Spacer(modifier = Modifier.height(22.dp))
-
-                                // 버튼 영역
-                                Row(modifier = Modifier.fillMaxWidth()) {
-                                    Button(
-                                        onClick = { viewModel.setEditDialogShown(false) },
-                                        modifier = Modifier.height(36.dp).weight(1f),
-                                        shape = RoundedCornerShape(8.dp),
-//                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F3EE)) // sub2 색상 느낌
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.outline,
-                                        )
-                                    ) {
-                                        Text("취소", style = MaterialTheme.typography.bodyMedium,
-//                                            color = Color.Gray)
-                                            color = MaterialTheme.colorScheme.onSecondary)
+                                Text("전체 선택", style = MaterialTheme.typography.bodyMedium)
+                            }
+                            Spacer(modifier = Modifier.weight(1f))
+                            Text(
+                                text = "${logs.count { it.isSelected }}개 선택됨",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
+                }
+                // 학습 기록 리스트 영역
+                Box(modifier = Modifier.weight(1f)) {
+                    //학습 기록 없을 시
+                    if (logs.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "아직 학습 기록이 없습니다.",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+                    } else {
+                        //학습 기록 리스트
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.background),
+                            contentPadding = PaddingValues(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            items(logs) { record ->
+                                StudyRecordCard(
+                                    log = record,
+                                    isShareMode = isShareMode,
+                                    onSelectionChange = { isSelected ->
+                                        viewModel.onLogSelectionChanged(record.id, isSelected)
+                                    },
+                                    onCardClick = {
+                                        if (isShareMode) viewModel.onLogSelectionChanged(record.id, !record.isSelected)
+                                        else viewModel.onStudyLogClicked(record)
+                                    },
+                                    onDeleteClick = {
+                                        viewModel.showDeleteDialog(record.id)
                                     }
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Button(
-                                        onClick = {
-                                            if (editNameText.isNotBlank()) {
-                                                viewModel.updatePotName(editNameText)
-                                            }
-                                        },
-                                        modifier = Modifier.height(36.dp).weight(1f),
-                                        shape = RoundedCornerShape(8.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary
-//                                            Color(0xFFA5C16C)) // primary 색상
+                                )
+                            }
+                        }
+                    }
+                    // 선택 로그 존재 -> 다이얼로그 표출
+                    selectedStudyLog?.let { log ->
+                        StudyLogDetailDialog(
+                            log = log,
+                            ondismiss = { viewModel.onDismissLogDialog() }
+                        )
+                    }
+                    // 삭제 확인 다이얼로그
+                    if (isDeleteDialogShown) {
+                        ConfirmDialog(
+                            text = "기록 삭제",
+                            semiText = "정말로 이 학습 기록을 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.",
+                            onDismiss = { viewModel.dismissDeleteDialog() },
+                            onConfirm = { viewModel.confirmDelete() }
+                        )
+                    }
+                    // 제목 변경 다이얼로그
+                    if (isEditDialogShown) {
+                        Dialog(onDismissRequest = { viewModel.setEditDialogShown(false) }) {
+                            // 공용 다이얼로그와 동일한 모양의 Card 생성
+                            Card(
+                                shape = RoundedCornerShape(30.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer),
+                                elevation = CardDefaults.cardElevation(3.dp)
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.padding(22.dp)
+                                ) {
+                                    Spacer(modifier = Modifier.height(10.dp))
+
+                                    // 제목
+                                    Text("제목 변경", style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold)
+
+                                    Spacer(modifier = Modifier.height(16.dp))
+
+                                    // 입력창
+                                    OutlinedTextField(
+                                        value = editNameText,
+                                        onValueChange = { editNameText = it },
+                                        textStyle = MaterialTheme.typography.titleMedium,
+                                        placeholder = { Text("화분 이름을 입력하세요", style = MaterialTheme.typography.bodyMedium,) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+    //                                        focusedBorderColor = Color(0xFFA5C16C), // 강조색 (primary)
+                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+    //                                        unfocusedBorderColor = Color.LightGray
+                                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
                                         )
-                                    ) {
-                                        Text("확인", style = MaterialTheme.typography.bodyMedium)
+                                    )
+
+                                    Spacer(modifier = Modifier.height(22.dp))
+
+                                    // 버튼 영역
+                                    Row(modifier = Modifier.fillMaxWidth()) {
+                                        Button(
+                                            onClick = { viewModel.setEditDialogShown(false) },
+                                            modifier = Modifier.height(36.dp).weight(1f),
+                                            shape = RoundedCornerShape(8.dp),
+    //                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F3EE)) // sub2 색상 느낌
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.outline,
+                                            )
+                                        ) {
+                                            Text("취소", style = MaterialTheme.typography.bodyMedium,
+    //                                            color = Color.Gray)
+                                                color = MaterialTheme.colorScheme.onSecondary)
+                                        }
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Button(
+                                            onClick = {
+                                                if (editNameText.isNotBlank()) {
+                                                    viewModel.updatePotName(editNameText)
+                                                }
+                                            },
+                                            modifier = Modifier.height(36.dp).weight(1f),
+                                            shape = RoundedCornerShape(8.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary
+    //                                            Color(0xFFA5C16C)) // primary 색상
+                                            )
+                                        ) {
+                                            Text("확인", style = MaterialTheme.typography.bodyMedium)
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
-                // 화분 전체 삭제 다이얼로그
-                if (isPotDeleteDialogShown) {
-                    ConfirmDialog(
-                        text = "화분 삭제",
-                        semiText = "이 화분과 모든 학습 기록이 영구 삭제됩니다.\n정말 삭제하시겠습니까?",
-                        onDismiss = { viewModel.setPotDeleteDialogShown(false) },
-                        onConfirm = { viewModel.confirmDeleteEntirePot { navController.popBackStack() } }
-                    )
-                }
+                    // 화분 전체 삭제 다이얼로그
+                    if (isPotDeleteDialogShown) {
+                        ConfirmDialog(
+                            text = "화분 삭제",
+                            semiText = "이 화분과 모든 학습 기록이 영구 삭제됩니다.\n정말 삭제하시겠습니까?",
+                            onDismiss = { viewModel.setPotDeleteDialogShown(false) },
+                            onConfirm = { viewModel.confirmDeleteEntirePot { navController.popBackStack() } }
+                        )
+                    }
 
-                // 학습 완료 확인 다이얼로그
-                if (isCompleteDialogShown) {
-                    ConfirmDialog(
-                        text = "학습 완료",
-                        semiText = "이 화분의 학습을 최종 완료 하시겠습니까?\n완료 후에는 '기른 나무'에서 확인 가능합니다.",
-                        onDismiss = { viewModel.setCompleteDialogShown(false) },
-                        onConfirm = {
-                            viewModel.completeStudyPlan {
-                                val potName = potInfo?.name ?: "화분"
-
-                                context.showToast("\"$potName\"화분의 학습을 완료했어요!")
-                                navController.popBackStack()
+                    // 학습 완료 확인 다이얼로그
+                    if (isCompleteDialogShown) {
+                        ConfirmDialog(
+                            text = "학습 완료",
+                            semiText = "이 화분의 학습을 최종 완료 하시겠습니까?\n완료 후에는 '기른 나무'에서 확인 가능합니다.",
+                            onDismiss = { viewModel.setCompleteDialogShown(false) },
+                            onConfirm = {
+                                viewModel.completeStudyPlan {
+                                    context.showToast("\"${pot.name}\"화분의 학습을 완료했어요!")
+                                    navController.popBackStack()
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }

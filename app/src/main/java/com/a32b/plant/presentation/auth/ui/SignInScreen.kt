@@ -37,6 +37,7 @@ import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.auth.viewmodel.SignInEvent
 import com.a32b.plant.presentation.auth.viewmodel.SignInViewModel
+import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.theme.LocalIsDarkTheme
@@ -174,118 +175,120 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.primary)
-    ) {
-        Column(
+    LoadableScreen(viewModel) {
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 32.dp),
-            horizontalAlignment = Alignment.Start
+                .background(MaterialTheme.colorScheme.primary)
         ) {
-            Spacer(modifier = Modifier.statusBarsPadding())
-            Spacer(modifier = Modifier.height(130.dp))
-
-            Text(
-                text = "Plant",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.background,
-                fontSize = 40.sp
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = "로그인해서 계속하세요",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.background,
-                fontSize = 16.sp
-            )
-
-            Spacer(modifier = Modifier.height(30.dp))
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
-                elevation = CardDefaults.cardElevation(if (isDark) 0.dp else 4.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 32.dp),
+                horizontalAlignment = Alignment.Start
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.statusBarsPadding())
+                Spacer(modifier = Modifier.height(130.dp))
 
-                    Box(
+                Text(
+                    text = "Plant",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.background,
+                    fontSize = 40.sp
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "로그인해서 계속하세요",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.background,
+                    fontSize = 16.sp
+                )
+
+                Spacer(modifier = Modifier.height(30.dp))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+                    elevation = CardDefaults.cardElevation(if (isDark) 0.dp else 4.dp)
+                ) {
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp)
+                            .padding(horizontal = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_auth_google),
-                            contentDescription = "Google 로그인",
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(48.dp)
-                                .clickable {
-                                    if (!viewModel.tryStartGoogleSignIn()) return@clickable
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_auth_google),
+                                contentDescription = "Google 로그인",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                                    .clickable {
+                                        if (!viewModel.tryStartGoogleSignIn()) return@clickable
 
-                                    coroutineScope.launch {
-                                        val googleIdOption = GetSignInWithGoogleOption.Builder(webClientId)
-                                            .build()
+                                        coroutineScope.launch {
+                                            val googleIdOption = GetSignInWithGoogleOption.Builder(webClientId)
+                                                .build()
 
-                                        val request = GetCredentialRequest.Builder()
-                                            .addCredentialOption(googleIdOption)
-                                            .build()
+                                            val request = GetCredentialRequest.Builder()
+                                                .addCredentialOption(googleIdOption)
+                                                .build()
 
-                                        try {
-                                            val result = credentialManager.getCredential(
-                                                request = request,
-                                                context = context as Activity
-                                            )
+                                            try {
+                                                val result = credentialManager.getCredential(
+                                                    request = request,
+                                                    context = context as Activity
+                                                )
 
-                                            val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(result.credential.data)
-                                            viewModel.handleGoogleSignIn(googleIdTokenCredential.idToken)
+                                                val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(result.credential.data)
+                                                viewModel.handleGoogleSignIn(googleIdTokenCredential.idToken)
 
-                                        } catch (e: GetCredentialCancellationException) {
-                                            // 사용자가 계정 선택창을 닫은 경우 무시
-                                            viewModel.cancelGoogleSignIn()
-                                        } catch (e: NoCredentialException) {
-                                            viewModel.cancelGoogleSignIn()
-                                            context.showToast("기기에 등록된 Google 계정이 없습니다. 설정에서 계정을 추가해주세요.")
-                                            val intent = Intent(Settings.ACTION_ADD_ACCOUNT)
-                                            intent.putExtra("account_types", arrayOf("com.google"))
-                                            context.startActivity(intent)
-                                        } catch (e: CancellationException) {
-                                            // 화면 이탈 등으로 코루틴이 취소된 경우: 가드만 풀어주고 취소는 그대로 전파
-                                            viewModel.cancelGoogleSignIn()
-                                            throw e
-                                        } catch (e: Exception) {
-                                            viewModel.cancelGoogleSignIn()
-                                            Log.e("SignIn", "구글 로그인 에러: ${e.message}", e)
-                                            context.showToast("구글 로그인에 실패했습니다.\n다시 시도해주세요.")
+                                            } catch (e: GetCredentialCancellationException) {
+                                                // 사용자가 계정 선택창을 닫은 경우 무시
+                                                viewModel.cancelGoogleSignIn()
+                                            } catch (e: NoCredentialException) {
+                                                viewModel.cancelGoogleSignIn()
+                                                context.showToast("기기에 등록된 Google 계정이 없습니다. 설정에서 계정을 추가해주세요.")
+                                                val intent = Intent(Settings.ACTION_ADD_ACCOUNT)
+                                                intent.putExtra("account_types", arrayOf("com.google"))
+                                                context.startActivity(intent)
+                                            } catch (e: CancellationException) {
+                                                // 화면 이탈 등으로 코루틴이 취소된 경우: 가드만 풀어주고 취소는 그대로 전파
+                                                viewModel.cancelGoogleSignIn()
+                                                throw e
+                                            } catch (e: Exception) {
+                                                viewModel.cancelGoogleSignIn()
+                                                Log.e("SignIn", "구글 로그인 에러: ${e.message}", e)
+                                                context.showToast("구글 로그인에 실패했습니다.\n다시 시도해주세요.")
+                                            }
                                         }
-                                    }
-                                },
-                            contentScale = ContentScale.Fit
-                        )
+                                    },
+                                contentScale = ContentScale.Fit
+                            )
 
-                        if (uiState.isLoading) {
-                            LoadingBox(modifier = Modifier.matchParentSize())
+                            if (uiState.isLoading) {
+                                LoadingBox(modifier = Modifier.matchParentSize())
+                            }
                         }
+
+                        Spacer(modifier = Modifier.height(32.dp))
                     }
-
-                    Spacer(modifier = Modifier.height(32.dp))
                 }
-            }
 
-            Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(32.dp))
+            }
         }
     }
 }

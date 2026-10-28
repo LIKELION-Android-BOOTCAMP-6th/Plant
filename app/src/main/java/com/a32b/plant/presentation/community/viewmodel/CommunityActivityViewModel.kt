@@ -1,9 +1,9 @@
 package com.a32b.plant.presentation.community.viewmodel
 
-import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.domain.type.ActivityType
 import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.domain.repository.CommunityRepository
@@ -34,7 +34,7 @@ sealed class CommunityActivityEvent {
 class CommunityActivityViewModel @Inject constructor(
     private val repository: CommunityRepository,
     private val deleteActivitiesUseCase: DeleteActivitiesUseCase
-) : ViewModel() {
+) : BaseViewModel() {
     private val _uiState = MutableStateFlow(CommunityActivityUiState())
     val uiState = _uiState.asStateFlow()
 
@@ -57,7 +57,11 @@ class CommunityActivityViewModel @Inject constructor(
             repository.observeActivity(selected)
                 .collect { list ->
                     _uiState.update { it.copy(isLoading = false, activities = list) }
+                    loaded() // BaseViewModel: 최초 방출 시 LoadableScreen 해제 (탭 전환 로딩은 LoadingBox)
                 }
+            // 구독 실패로 방출 없이 Flow가 끝난 경우에도 로딩 해제 → 빈 상태 UI 표시
+            _uiState.update { it.copy(isLoading = false) }
+            loaded()
         }
     }
 

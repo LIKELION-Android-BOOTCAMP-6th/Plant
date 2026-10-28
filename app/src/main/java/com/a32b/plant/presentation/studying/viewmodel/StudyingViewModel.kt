@@ -4,8 +4,8 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.StudyingUser
@@ -85,7 +85,7 @@ class StudyingViewModel @Inject constructor(
     private val finishStudyingUseCase: FinishStudyingUseCase,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     savedStateHandle: SavedStateHandle
-) : ViewModel() {
+) : BaseViewModel() {
     private val _eventChannel = Channel<StudyingEvent>(Channel.BUFFERED)
     val event = _eventChannel.receiveAsFlow()
 
@@ -107,6 +107,9 @@ class StudyingViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             restoreFromLocalBackup()
+            // 로컬 복구 결과(타이머·목표 다이얼로그 표시 여부)가 확정된 뒤 화면 노출
+            // 원격 등록(initStudyingUser)은 화면 표시와 무관하므로 기다리지 않음
+            loaded()
             initStudyingUser()
         }
         onStudyingUsersChange()
