@@ -4,6 +4,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
+import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.type.ActivityType
 import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.domain.repository.CommunityRepository
@@ -56,7 +57,11 @@ class CommunityActivityViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             repository.observeActivity(selected)
                 .collect { list ->
-                    _uiState.update { it.copy(isLoading = false, activities = list) }
+                    // 일부 삭제 실패 후 선택 모드가 유지될 때, 이미 지워진 항목이 선택 개수에 남지 않도록 정리
+                    _uiState.update { state ->
+                        val ids = list.map { it.id }.toSet()
+                        state.copy(isLoading = false, activities = list, selectedIds = state.selectedIds intersect ids)
+                    }
                     loaded() // BaseViewModel: 최초 방출 시 LoadableScreen 해제 (탭 전환 로딩은 LoadingBox)
                 }
             // 구독 실패로 방출 없이 Flow가 끝난 경우에도 로딩 해제 → 빈 상태 UI 표시
@@ -99,12 +104,13 @@ class CommunityActivityViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             deleteActivitiesUseCase(toDelete)
                 .onSuccess {
-                    _uiState.update { it.copy(isSelectionMode = false, selectedIds = emptySet()) }
+                    _uiState.update { it.copy(isLoading = false, isSelectionMode = false, selectedIds = emptySet()) }
                     sendToast("삭제되었습니다.")
                 }
                 .onFailure { e ->
                     _uiState.update { it.copy(isLoading = false) }
-                    sendToast(e.message ?: "삭제에 실패했습니다.")
+                    // 세션 만료는 ensureCurrentUserUseCase에서 이미 알림을 보냈으므로 토스트 생략
+                    if (e !is AppError.UnknownUser) sendToast(e.message)
                 }
         }
     }
