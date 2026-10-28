@@ -16,3 +16,6 @@ sealed class AppError : Throwable() {
     data class Custom(override val message: String) : AppError()
     data class Debug(override val message: String) : AppError() //외부로 노출하지 않고 조용히 처리하는 오류일 경우
 }
+
+// 수정하려던 댓글이 이미 삭제된 경우의 안내 문구 — Repository(에러)와 ViewModel(사전 확인)이 함께 사용
+const val COMMENT_ALREADY_DELETED_MESSAGE = "이미 삭제된 댓글입니다."

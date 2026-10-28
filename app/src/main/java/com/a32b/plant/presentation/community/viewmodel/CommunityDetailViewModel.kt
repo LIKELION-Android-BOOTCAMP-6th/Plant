@@ -10,6 +10,7 @@ import com.a32b.plant.core.util.withSlowNotice
 import com.a32b.plant.domain.community.PostUpdate
 import com.a32b.plant.domain.community.PostUpdateNotifier
 import com.a32b.plant.domain.error.AppError
+import com.a32b.plant.domain.error.COMMENT_ALREADY_DELETED_MESSAGE
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.Post
 import com.a32b.plant.domain.model.StudyLog
@@ -96,7 +97,6 @@ class CommunityDetailViewModel @Inject constructor(
         private val BOOKMARK_DEBOUNCE = 500.milliseconds
         private val BLANK_COMMENT_TOAST_DEBOUNCE = 1000.milliseconds
         private const val BLANK_COMMENT_MESSAGE = "댓글 내용을 입력해주세요"
-        private const val COMMENT_NOT_FOUND_MESSAGE = "이미 삭제된 댓글입니다"
     }
 
     private val _uiState = MutableStateFlow(CommunityDetailUiState())
@@ -423,7 +423,7 @@ class CommunityDetailViewModel @Inject constructor(
         val comment = state.commentList.firstOrNull { it.commentId == commentId }
         if (comment == null) {
             cancelEditComment()
-            sendToast(COMMENT_NOT_FOUND_MESSAGE)
+            sendToast(COMMENT_ALREADY_DELETED_MESSAGE)
             refresh()
             return
         }

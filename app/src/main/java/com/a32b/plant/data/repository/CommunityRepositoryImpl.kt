@@ -6,6 +6,7 @@ import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.mapper.toDto
 import com.a32b.plant.data.source.remote.community.CommunityRemoteDataSource
 import com.a32b.plant.domain.error.AppError
+import com.a32b.plant.domain.error.COMMENT_ALREADY_DELETED_MESSAGE
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.domain.model.Post
@@ -209,6 +210,8 @@ class CommunityRepositoryImpl @Inject constructor(
         var result = safeRunCatching {
             communityRemoteDataSource.updateComment(postId, commentId, newContent, activityId.takeIf { hasActivityId })
         }
+        // 재시도 전에 이미 댓글이 존재함을 확인했다면 실패 후 같은 확인을 반복하지 않기 위한 표시
+        var commentExistenceChecked = false
 
         // activity 문서가 이미 없으면 batch 전체가 실패한다. 보안 규칙이 resource.data를 참조하므로
         // NOT_FOUND가 아니라 PERMISSION_DENIED로 거절될 수 있어 둘 다 보정 대상 — 댓글 본문만이라도 수정되도록 재시도
@@ -218,6 +221,7 @@ class CommunityRepositoryImpl @Inject constructor(
         if (hasActivityId && result.exceptionOrNull().isMissingOrDenied()) {
             // 댓글 자체가 이미 지워진 경우에도 같은 코드로 거절되므로, 재시도 전에 구분 (읽기는 규칙상 문서가 없어도 허용됨)
             if (isCommentGone(postId, commentId)) return commentGoneFailure(commentId)
+            commentExistenceChecked = true
 
             Log.w("Community", "수정할 activity가 없어 댓글 본문만 수정: commentId=$commentId, activityId=$activityId")
             result = safeRunCatching {
@@ -226,7 +230,9 @@ class CommunityRepositoryImpl @Inject constructor(
         }
 
         result.onFailure { e ->
-            if (e.isMissingOrDenied() && isCommentGone(postId, commentId)) return commentGoneFailure(commentId)
+            if (!commentExistenceChecked && e.isMissingOrDenied() && isCommentGone(postId, commentId)) {
+                return commentGoneFailure(commentId)
+            }
             Log.e("Community", "댓글 수정 실패", e)
             return Result.Failure(handleError(e, "댓글 수정에 실패했습니다.", isWrite = true))
         }
@@ -240,7 +246,7 @@ class CommunityRepositoryImpl @Inject constructor(
 
     private fun commentGoneFailure(commentId: String): Result.Failure {
         Log.w("Community", "수정하려는 댓글이 이미 삭제됨: commentId=$commentId")
-        return Result.Failure(AppError.Custom("이미 삭제된 댓글입니다."))
+        return Result.Failure(AppError.Custom(COMMENT_ALREADY_DELETED_MESSAGE))
     }
 
     private fun Throwable?.isMissingOrDenied() =
