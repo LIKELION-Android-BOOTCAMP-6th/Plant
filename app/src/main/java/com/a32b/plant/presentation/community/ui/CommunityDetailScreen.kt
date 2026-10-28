@@ -619,6 +619,7 @@ fun CommentRow(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             // labelMedium에 지정된 색(onSecondary)이 TextButton의 contentColor보다 우선하므로
                             // 아래 contentColor 분기는 글자 색에 반영되지 않는다. 글자 색은 Text의 color로 지정
+                            // (ripple 색에는 반영되므로 분기는 유지)
                             TextButton(
                                 onClick = onEditSubmit,
                                 enabled = !isEditSubmitting,
