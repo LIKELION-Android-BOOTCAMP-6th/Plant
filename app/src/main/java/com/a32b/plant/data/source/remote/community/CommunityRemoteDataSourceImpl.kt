@@ -300,6 +300,16 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             .forEach { it.reference.delete().await() }
     }
 
+    override suspend fun hasActivityByType(uid: String, targetId: String, type: String): Boolean =
+        !db.collection("activities")
+            .whereEqualTo("uid", uid)
+            .whereEqualTo("targetId", targetId)
+            .whereEqualTo("type", type)
+            .limit(1)
+            .get()
+            .await()
+            .isEmpty
+
     override suspend fun createActivity(activity: CommunityActivity) {
         db.collection("activities").add(activity.toDto()).await()
     }
@@ -325,6 +335,31 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
                 ))
             }
             already
+        }.await()
+    }
+
+    override suspend fun removeLike(postId: String, uid: String): Boolean =
+        removeUidFromPost(postId, uid, arrayField = "likedBy", countField = "likeCount")
+
+    override suspend fun removeBookmark(postId: String, uid: String): Boolean =
+        removeUidFromPost(postId, uid, arrayField = "bookmarkedBy", countField = "bookmarkCount")
+
+    // 트랜잭션 안에서 배열을 읽어 uid가 있을 때만 배열 제거 + 카운트 감소를 함께 반영
+    // → 이미 해제된 상태면 post 문서에 쓰지 않으므로 카운트가 어긋나거나 다시 추가되는 일이 없음
+    private suspend fun removeUidFromPost(postId: String, uid: String, arrayField: String, countField: String): Boolean {
+        val postRef = db.collection("posts").document(postId)
+
+        return db.runTransaction { txn ->
+            val snapshot = txn.get(postRef)
+            @Suppress("UNCHECKED_CAST")
+            val uids = (snapshot.get(arrayField) as? List<String>) ?: emptyList()
+            if (uid !in uids) return@runTransaction false
+
+            txn.update(postRef, mapOf(
+                arrayField to FieldValue.arrayRemove(uid),
+                countField to FieldValue.increment(-1L)
+            ))
+            true
         }.await()
     }
 

@@ -116,10 +116,12 @@ class CommunityDetailViewModel @Inject constructor(
     // 좋아요/북마크 디바운스 상태
     private var likeDebounceJob: Job? = null
     private var bookmarkDebounceJob: Job? = null
-    // delay 구간에서만 true — 재진입 차단 + commitXXX() 시작 직전 false로 해제
+    // delay 구간에서만 true — 디바운스 중 재진입 차단(커밋 중은 XXXCommitInFlight가 담당) + commitXXX() 시작 직전 false로 해제
     private var likePendingCommit = false
     private var bookmarkPendingCommit = false
-    // commitXXX()가 실제 서버 호출 중인 구간에서만 true — refresh()가 아직 커밋되지 않은 값을 서버의 이전 값으로 덮어쓰는 것을 막기 위함
+    // commitXXX()가 실제 서버 호출 중인 구간에서만 true
+    // 1. refresh()가 아직 커밋되지 않은 값을 서버의 이전 값으로 덮어쓰는 것을 막기 위함
+    // 2. 커밋 중 탭 차단(toggleLike/toggleBookmark) — 커밋이 겹치면 activity 존재 확인과 삭제가 엇갈려 activity가 사라짐
     // (likePendingCommit은 디바운스 호출 직전 false가 되므로, 그 이후 실제 네트워크 왕복 구간은 이 플래그로 별도 보호)
     private var likeCommitInFlight = false
     private var bookmarkCommitInFlight = false
@@ -291,7 +293,8 @@ class CommunityDetailViewModel @Inject constructor(
     fun toggleLike() {
         val currentPost = _post.value ?: return
         if (currentPost.author.id == _uiState.value.currentUid) return
-        if (likePendingCommit) return
+        // 커밋 진행 중 탭도 무시 — 커밋이 겹치면 다음 커밋의 activity 존재 확인이 이전 커밋이 지울 activity를 보고 생성을 건너뛰어 activity가 사라짐
+        if (isLikeUncommitted()) return
 
         // 낙관적 UI: 로컬 즉시 토글
         val newIsLiked = !currentPost.isLiked
@@ -315,7 +318,8 @@ class CommunityDetailViewModel @Inject constructor(
 
     fun toggleBookmark() {
         val currentPost = _post.value ?: return
-        if (bookmarkPendingCommit) return
+        // 커밋 진행 중 탭도 무시 (toggleLike와 같은 이유)
+        if (isBookmarkUncommitted()) return
 
         val newIsBookmarked = !currentPost.isBookmarked
         val delta = if (newIsBookmarked) 1 else -1

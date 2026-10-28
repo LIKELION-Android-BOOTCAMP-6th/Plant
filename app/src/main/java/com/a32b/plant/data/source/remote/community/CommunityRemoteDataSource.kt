@@ -35,6 +35,12 @@ interface CommunityRemoteDataSource {
 
     suspend fun toggleLike(postId: String, uid: String): Boolean
     suspend fun toggleBookmark(postId: String, uid: String): Boolean
+    /**
+     * 좋아요/북마크 "해제" 전용 — 토글과 달리 없으면 추가하지 않아 여러 번 호출해도 결과가 같음
+     * @return 이번 호출이 실제로 해제했으면 true, 이미 해제된 상태(또는 게시글 없음)라 쓰기를 하지 않았으면 false
+     */
+    suspend fun removeLike(postId: String, uid: String): Boolean
+    suspend fun removeBookmark(postId: String, uid: String): Boolean
 
     suspend fun addComment(postId : String, comment: Comment, activity: CommunityActivity)
     /** activityId가 있으면 댓글 본문과 activity 문구를 batch 한 번으로 함께 수정, null이면 본문만 수정 */
@@ -49,6 +55,7 @@ interface CommunityRemoteDataSource {
     suspend fun deleteActivity(activityId: String)
     suspend fun isCommentExist(postId: String, commentId: String): Boolean
     suspend fun deleteActivityByType(uid: String, targetId: String, type: String)
+    suspend fun hasActivityByType(uid: String, targetId: String, type: String): Boolean
     suspend fun createActivity(activity: CommunityActivity)
 
     suspend fun findCommentIdByActivityId(postId: String, activityId: String): String?

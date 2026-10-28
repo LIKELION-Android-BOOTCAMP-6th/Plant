@@ -162,7 +162,7 @@ class CommunityRepositoryImpl @Inject constructor(
             safeRunCatching { communityRemoteDataSource.deleteActivityByType(uid, postId, ActivityType.LIKE) }
                 .onFailure { Log.e("Community", "좋아요 activity 삭제 실패 (좋아요는 취소됨): postId=$postId", it) }
         } else {
-            safeRunCatching { communityRemoteDataSource.createActivity(CommunityActivity.like(uid = uid, title = title, targetId = postId)) }
+            safeRunCatching { createActivityIfAbsent(CommunityActivity.like(uid = uid, title = title, targetId = postId)) }
                 .onFailure { Log.e("Community", "좋아요 activity 생성 실패 (좋아요는 추가됨): postId=$postId", it) }
         }
 
@@ -184,11 +184,61 @@ class CommunityRepositoryImpl @Inject constructor(
             safeRunCatching { communityRemoteDataSource.deleteActivityByType(uid, postId, ActivityType.BOOKMARK) }
                 .onFailure { Log.e("Community", "북마크 activity 삭제 실패 (북마크는 취소됨): postId=$postId", it) }
         } else {
-            safeRunCatching { communityRemoteDataSource.createActivity(CommunityActivity.bookmark(uid = uid, title = title, targetId = postId)) }
+            safeRunCatching { createActivityIfAbsent(CommunityActivity.bookmark(uid = uid, title = title, targetId = postId)) }
                 .onFailure { Log.e("Community", "북마크 activity 생성 실패 (북마크는 추가됨): postId=$postId", it) }
         }
 
         return Result.Success(wasBookmarked)
+    }
+
+    // 이전 취소 때 activity 삭제가 실패해 남아 있던 activity가 있으면 새로 만들지 않음 — 다시 누를 때마다 중복이 쌓이는 것 방지
+    // (남아 있던 activity를 그대로 쓰므로 '내 활동'에는 처음 눌렀던 시각으로 표시됨)
+    private suspend fun createActivityIfAbsent(activity: CommunityActivity) {
+        if (communityRemoteDataSource.hasActivityByType(activity.uid, activity.targetId, activity.type)) {
+            Log.w("Community", "이미 남아 있는 ${activity.type} activity가 있어 생성 생략: postId=${activity.targetId}")
+            return
+        }
+        communityRemoteDataSource.createActivity(activity)
+    }
+
+    override suspend fun removeLike(postId: String, uid: String): Result<Unit> =
+        removeReaction(postId, uid, ActivityType.LIKE, label = "좋아요") {
+            communityRemoteDataSource.removeLike(postId, uid)
+        }
+
+    override suspend fun removeBookmark(postId: String, uid: String): Result<Unit> =
+        removeReaction(postId, uid, ActivityType.BOOKMARK, label = "북마크") {
+            communityRemoteDataSource.removeBookmark(postId, uid)
+        }
+
+    // 좋아요/북마크 해제 공통 흐름 — type은 remove가 해제하는 대상과 반드시 같아야 함 (다르면 엉뚱한 activity가 지워짐)
+    private suspend fun removeReaction(
+        postId: String,
+        uid: String,
+        type: String,
+        label: String,
+        remove: suspend () -> Boolean
+    ): Result<Unit> {
+        safeRunCatching { remove() }
+            .fold(
+                onSuccess = { removed ->
+                    if (!removed) Log.w("Community", "이미 ${label}가 해제된 상태라 activity만 정리: postId=$postId")
+                },
+                onFailure = { e ->
+                    Log.e("Community", "$label 취소 실패", e)
+                    return Result.Failure(handleError(e, "$label 취소에 실패했습니다.", isWrite = true))
+                }
+            )
+
+        // 해제가 멱등이므로 activity 삭제 실패는 실패로 돌려 재시도하게 함 (재시도해도 다시 좋아요/북마크되지 않음)
+        return safeRunCatching { communityRemoteDataSource.deleteActivityByType(uid, postId, type) }
+            .fold(
+                onSuccess = { Result.Success(Unit) },
+                onFailure = { e ->
+                    Log.e("Community", "$label activity 삭제 실패 (${label}는 해제됨): postId=$postId", e)
+                    Result.Failure(handleError(e, "$label 취소에 실패했습니다.", isWrite = true))
+                }
+            )
     }
 
     override suspend fun addComment(postId: String, comment: Comment, activity: CommunityActivity): Result<Unit> = safeRunCatching {
