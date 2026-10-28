@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -134,7 +135,17 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                         singleLine = true,
                         shape = RoundedCornerShape(8.dp),
                         isError = uiState.nicknameError != null,
-                        supportingText = uiState.nicknameError?.let { { Text(it) } }
+                        supportingText = uiState.nicknameError?.let {
+                            {
+                                Text(
+                                    text = it,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Start,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))
