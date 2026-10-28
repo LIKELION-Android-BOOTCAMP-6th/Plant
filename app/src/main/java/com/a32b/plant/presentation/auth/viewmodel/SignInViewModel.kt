@@ -2,6 +2,7 @@ package com.a32b.plant.presentation.auth.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.auth.SetNicknameUseCase
@@ -99,8 +100,14 @@ class SignInViewModel @Inject constructor(
                     _eventChannel.send(SignInEvent.NavigateToHome)
                 }
                 .onFailure { error ->
-                    _uiState.update {
-                        it.copy(nicknameError = error.message, isNicknameLoading = false)
+                    // 네트워크 에러는 닉네임 값과 무관한 상황 에러 → 토스트, 그 외는 입력칸 인라인 에러
+                    if (error is AppError.Network) {
+                        _uiState.update { it.copy(isNicknameLoading = false) }
+                        sendToast(error.message)
+                    } else {
+                        _uiState.update {
+                            it.copy(nicknameError = error.message, isNicknameLoading = false)
+                        }
                     }
                 }
         }
