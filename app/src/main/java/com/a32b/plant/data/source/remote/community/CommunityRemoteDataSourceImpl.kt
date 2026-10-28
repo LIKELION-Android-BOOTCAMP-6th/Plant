@@ -300,6 +300,16 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             .forEach { it.reference.delete().await() }
     }
 
+    override suspend fun hasActivityByType(uid: String, targetId: String, type: String): Boolean =
+        !db.collection("activities")
+            .whereEqualTo("uid", uid)
+            .whereEqualTo("targetId", targetId)
+            .whereEqualTo("type", type)
+            .limit(1)
+            .get()
+            .await()
+            .isEmpty
+
     override suspend fun createActivity(activity: CommunityActivity) {
         db.collection("activities").add(activity.toDto()).await()
     }

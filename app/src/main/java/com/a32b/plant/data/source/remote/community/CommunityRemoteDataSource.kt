@@ -55,6 +55,7 @@ interface CommunityRemoteDataSource {
     suspend fun deleteActivity(activityId: String)
     suspend fun isCommentExist(postId: String, commentId: String): Boolean
     suspend fun deleteActivityByType(uid: String, targetId: String, type: String)
+    suspend fun hasActivityByType(uid: String, targetId: String, type: String): Boolean
     suspend fun createActivity(activity: CommunityActivity)
 
     suspend fun findCommentIdByActivityId(postId: String, activityId: String): String?
