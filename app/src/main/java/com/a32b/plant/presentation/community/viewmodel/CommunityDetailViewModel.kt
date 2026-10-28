@@ -96,6 +96,7 @@ class CommunityDetailViewModel @Inject constructor(
         private val BOOKMARK_DEBOUNCE = 500.milliseconds
         private val BLANK_COMMENT_TOAST_DEBOUNCE = 1000.milliseconds
         private const val BLANK_COMMENT_MESSAGE = "댓글 내용을 입력해주세요"
+        private const val COMMENT_NOT_FOUND_MESSAGE = "이미 삭제된 댓글입니다"
     }
 
     private val _uiState = MutableStateFlow(CommunityDetailUiState())
@@ -121,6 +122,10 @@ class CommunityDetailViewModel @Inject constructor(
     // (likePendingCommit은 디바운스 호출 직전 false가 되므로, 그 이후 실제 네트워크 왕복 구간은 이 플래그로 별도 보호)
     private var likeCommitInFlight = false
     private var bookmarkCommitInFlight = false
+
+    // 삭제 요청이 진행 중인 댓글 ID — 확인 다이얼로그는 응답 후에야 닫히므로 연타로 인한 중복 삭제/알림을 막기 위함
+    // (다이얼로그를 닫고 다른 댓글을 삭제하는 것은 막지 않도록 댓글별로 관리)
+    private val deletingInFlightCommentIds = mutableSetOf<String>()
 
     // blank 상태에서 연타 시 Toast가 줄줄이 쌓이는 것을 막기 위한 디바운스
     private var commentBlankToastJob: Job? = null
@@ -414,17 +419,25 @@ class CommunityDetailViewModel @Inject constructor(
             return
         }
 
+        // 수정 중 다른 곳에서 삭제돼 목록에서 사라진 댓글 — 저장해도 실패하므로 수정 모드를 닫고 목록을 갱신
+        val comment = state.commentList.firstOrNull { it.commentId == commentId }
+        if (comment == null) {
+            cancelEditComment()
+            sendToast(COMMENT_NOT_FOUND_MESSAGE)
+            refresh()
+            return
+        }
+
         viewModelScope.launch {
+            // 저장 중 화면을 이탈해도 반영되려면 updateComment의 batch가 첫 중단점 전에 SDK에 적재돼야 함
+            // → 이 코루틴에서 updateComment 호출 앞에 suspend 지점을 추가하지 말 것
             _uiState.update { it.copy(editingSubmittingCommentIds = it.editingSubmittingCommentIds + commentId) }
 
             // updateComment()가 safeRunCatching으로 감싸져 항상 Result를 반환한다는 전제로,
             // 아래 editingSubmittingCommentIds 제거가 항상 실행됨. 이 함수가 예외를 던지도록 바뀌면
             // commentId가 Set에 영구히 남아 해당 댓글의 저장/취소 버튼이 계속 비활성 상태로 고정됨
-            // 본문 + activity 문구를 repository가 batch 한 번으로 SDK에 적재하므로, 저장 중 화면을 이탈해
-            // 코루틴이 취소돼도 둘 다 반영된다 (NonCancellable로 대기하면 오프라인에서 ViewModel이 계속 남음)
-            val activityId = state.commentList.firstOrNull { it.commentId == commentId }?.activityId.orEmpty()
             withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
-                repository.updateComment(postId, commentId, state.editingCommentText, activityId)
+                repository.updateComment(postId, commentId, state.editingCommentText, comment.activityId)
             }
                 .onFailure { e ->
                     when (e) {
@@ -458,24 +471,35 @@ class CommunityDetailViewModel @Inject constructor(
     // 댓글 삭제 관련 함수
     fun deleteComment() {
         val commentId = _uiState.value.deletingCommentId ?: return
+        if (!deletingInFlightCommentIds.add(commentId)) return
 
         viewModelScope.launch {
-            // 댓글·activity 삭제는 repository의 트랜잭션 하나로 처리돼 화면 이탈과 무관하게 완료된다.
-            // NonCancellable은 삭제 성공 후 목록 화면의 댓글 수 갱신 알림을 이탈 후에도 보내기 위한 용도이며,
-            // 트랜잭션은 오프라인이면 큐에 쌓이지 않고 SDK가 재시도 후 실패시키므로 대기가 무한정 이어지지 않는다
-            withContext(NonCancellable) {
-                withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
-                    repository.deleteComment(postId, commentId)
-                }.onSuccess { notifyCommentDeleted() }
-            }
-                .onFailure { e ->
-                    when (e) {
-                        is AppError.UnknownUser -> ensureCurrentUserUseCase()
-                        else -> sendToast(e.message)
+            try {
+                // 댓글·activity 삭제는 repository의 트랜잭션 하나로 처리돼 화면 이탈과 무관하게 완료된다.
+                // NonCancellable은 삭제 성공 후 목록 화면의 댓글 수 갱신 알림을 이탈 후에도 보내기 위한 용도.
+                // 트랜잭션은 SDK 큐에 쌓이지 않아 오프라인이면 실패하는 것으로 알려져 있어 대기가 무한정 이어지지 않는 것으로 보지만,
+                // Android SDK에서 실제 대기 시간은 확인하지 못함 (이탈 후 ViewModel이 남는 시간의 상한)
+                withContext(NonCancellable) {
+                    withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
+                        repository.deleteComment(postId, commentId)
                     }
+                        // 이미 다른 곳에서 지워진 댓글이면(false) 댓글 수가 이미 반영됐으므로 알리지 않음
+                        .onSuccess { deleted -> if (deleted) notifyCommentDeleted() }
                 }
-            _uiState.update { it.copy(deletingCommentId = null) }
-            refresh()
+                    .onFailure { e ->
+                        when (e) {
+                            is AppError.UnknownUser -> ensureCurrentUserUseCase()
+                            else -> sendToast(e.message)
+                        }
+                    }
+                // 응답을 받는 동안 다른 댓글의 삭제 다이얼로그로 전환됐다면 그 상태를 닫지 않음
+                _uiState.update {
+                    it.copy(deletingCommentId = if (it.deletingCommentId == commentId) null else it.deletingCommentId)
+                }
+                refresh()
+            } finally {
+                deletingInFlightCommentIds.remove(commentId)
+            }
         }
     }
 

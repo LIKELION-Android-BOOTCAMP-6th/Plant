@@ -202,7 +202,10 @@ class CommunityRepositoryImpl @Inject constructor(
 
     override suspend fun updateComment(postId: String, commentId: String, newContent: String, activityId: String): Result<Unit> {
         val hasActivityId = activityId.isNotBlank()
+        // 모든 댓글은 activityId를 가진다는 전제 — 깨지면 '내 활동' 문구가 갱신되지 않으므로 원인 추적용으로 남김
+        if (!hasActivityId) Log.w("Community", "activityId가 비어 있어 댓글 본문만 수정: commentId=$commentId")
 
+        // 주의: 아래 호출 전에 suspend 지점을 추가하면 화면 이탈(코루틴 취소) 시 batch가 SDK에 적재되지 못한다
         var result = safeRunCatching {
             communityRemoteDataSource.updateComment(postId, commentId, newContent, activityId.takeIf { hasActivityId })
         }
@@ -210,6 +213,8 @@ class CommunityRepositoryImpl @Inject constructor(
         // activity 문서가 이미 없으면 batch 전체가 실패한다. 보안 규칙이 resource.data를 참조하므로
         // NOT_FOUND가 아니라 PERMISSION_DENIED로 거절될 수 있어 둘 다 보정 대상 — 댓글 본문만이라도 수정되도록 재시도
         // (진짜 권한 없음이면 재시도도 같은 이유로 실패해 그대로 에러가 반환됨)
+        // 한계: 오프라인에서 저장하고 화면을 이탈한 뒤 연결이 복구되면 서버가 batch를 거절하는데,
+        //       이때는 코루틴이 이미 사라져 이 재시도가 실행되지 않아 수정이 반영되지 않는다 (activity 문서가 없는 댓글에 한함)
         if (hasActivityId && result.exceptionOrNull().isMissingOrDenied()) {
             Log.w("Community", "수정할 activity가 없어 댓글 본문만 수정: commentId=$commentId, activityId=$activityId")
             result = safeRunCatching {
@@ -231,7 +236,7 @@ class CommunityRepositoryImpl @Inject constructor(
                 code == FirebaseFirestoreException.Code.PERMISSION_DENIED
             )
 
-    override suspend fun deleteComment(postId: String, commentId: String): Result<Unit> {
+    override suspend fun deleteComment(postId: String, commentId: String): Result<Boolean> {
         var result = safeRunCatching {
             communityRemoteDataSource.deleteComment(postId, commentId, deleteActivity = true)
         }
@@ -246,7 +251,7 @@ class CommunityRepositoryImpl @Inject constructor(
         }
 
         return result.fold(
-            onSuccess = { Result.Success(Unit) },
+            onSuccess = { Result.Success(it) },
             onFailure = { e ->
                 Log.e("Community", "댓글 삭제 실패", e)
                 Result.Failure(handleError(e, "댓글 삭제에 실패했습니다.", isWrite = true))

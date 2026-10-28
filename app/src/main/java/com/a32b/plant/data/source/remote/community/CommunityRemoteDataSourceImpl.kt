@@ -215,13 +215,15 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
 
         // 본문과 activity를 한 번의 batch로 묶음 — commit 시점에 SDK 로컬 큐에 원자적으로 적재되므로
         // await() 도중 코루틴이 취소되거나(화면 이탈) 프로세스가 종료돼도 두 문서가 함께 반영된다
+        // 주의: 이 함수는 runBatch 호출 전에 suspend 지점이 없다는 전제 위에서 이탈에 안전하다.
+        //       앞에 withContext/조회/ensureCurrentUser 같은 중단점을 추가하면 이탈 시 쓰기가 통째로 누락될 수 있다
         db.runBatch { batch ->
             batch.update(commentRef, "content", newContent)
             batch.update(db.collection("activities").document(activityId), "comment", newContent)
         }.await()
     }
 
-    override suspend fun deleteComment(postId: String, commentId: String, deleteActivity: Boolean) {
+    override suspend fun deleteComment(postId: String, commentId: String, deleteActivity: Boolean): Boolean {
         val commentRef = db.collection("posts").document(postId)
             .collection("comments").document(commentId)
         val postRef = commentRef.parent.parent!!
@@ -229,9 +231,9 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         // exists() 체크 → delete() → commentCount 감소를 트랜잭션으로 묶어 TOCTOU 방지 + 포스트 부재 시 NOT_FOUND 방어
         // activity 삭제도 같은 트랜잭션에 포함 — 트랜잭션은 await() 취소와 무관하게 SDK에서 끝까지 실행되므로
         // 화면 이탈로 코루틴이 취소돼도 댓글만 지워지고 activity가 남는 상태가 생기지 않는다
-        db.runTransaction { txn ->
+        return db.runTransaction { txn ->
             val commentSnapshot = txn.get(commentRef)
-            if (!commentSnapshot.exists()) return@runTransaction
+            if (!commentSnapshot.exists()) return@runTransaction false
 
             val postSnapshot = txn.get(postRef)
             val actId = commentSnapshot.getString("activityId")
@@ -242,6 +244,7 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             if (deleteActivity && !actId.isNullOrEmpty()) {
                 txn.delete(db.collection("activities").document(actId))
             }
+            true
         }.await()
     }
 
