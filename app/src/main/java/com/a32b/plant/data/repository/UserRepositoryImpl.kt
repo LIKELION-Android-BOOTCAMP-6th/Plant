@@ -192,8 +192,8 @@ class UserRepositoryImpl @Inject constructor(
         onFailure = { e -> Result.Failure(handleNicknameCheckError(e)) }
     )
 
-    override suspend fun registerNickname(nickname: String): Result<Unit> = safeRunCatching {
-        userRemoteDataSource.registerNickname(nickname)
+    override suspend fun registerNickname(uid: String, nickname: String): Result<Unit> = safeRunCatching {
+        userRemoteDataSource.registerNickname(uid, nickname)
     }.fold(
         onSuccess = { Result.Success(Unit) },
         onFailure = { e -> Result.Failure(handleError(e, "닉네임 등록 실패")) }

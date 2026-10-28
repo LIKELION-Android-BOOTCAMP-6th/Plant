@@ -35,7 +35,8 @@ interface UserRepository {
     suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit>
     suspend fun updateProfile(user: User): Result<Unit>
     suspend fun isNicknameTaken(nickname: String): Result<Boolean>
-    suspend fun registerNickname(nickname: String): Result<Unit>
+    /** 닉네임 선점 문서에 소유자 uid를 함께 저장한다. 보안 규칙상 소유자만 삭제할 수 있다. */
+    suspend fun registerNickname(uid: String, nickname: String): Result<Unit>
     suspend fun deleteNickname(nickname: String): Result<Unit>
     suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success>
     suspend fun updateSessionToken(uid: String, token: String?): Result<Unit>
