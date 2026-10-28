@@ -29,8 +29,11 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
+
+private const val COMPLETE_FIRST_LOGIN_TIMEOUT_MS = 10_000L
 
 @Singleton
 class UserRepositoryImpl @Inject constructor(
@@ -135,9 +138,15 @@ class UserRepositoryImpl @Inject constructor(
 
     override suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit> =
         safeRunCatching {
-            userRemoteDataSource.completeFirstLogin(uid, nickname)
+            // 연결이 불안정하면 트랜잭션이 재시도하며 길어질 수 있어 상한을 둔다.
+            // 시간 초과는 네트워크 에러로 취급하며, 서버에 뒤늦게 반영돼도 재시도 시 성공으로 처리된다.
+            withTimeoutOrNull(COMPLETE_FIRST_LOGIN_TIMEOUT_MS) {
+                userRemoteDataSource.completeFirstLogin(uid, nickname)
+            } ?: throw FirebaseNetworkException("첫 로그인 완료 처리 시간 초과")
         }.fold(
-            onSuccess = { Result.Success(Unit) },
+            onSuccess = { completed ->
+                if (completed) Result.Success(Unit) else Result.Failure(AppError.NicknameTaken())
+            },
             onFailure = { e -> Result.Failure(handleCompleteFirstLoginError(e)) }
         )
 
@@ -247,10 +256,6 @@ class UserRepositoryImpl @Inject constructor(
 
         return when (e) {
             is FirebaseFirestoreException -> when (e.code) {
-                // 트랜잭션 안에서 닉네임 문서가 이미 존재함 (예상된 입력값 에러라 로그 생략)
-                FirebaseFirestoreException.Code.ALREADY_EXISTS ->
-                    AppError.Custom("사용 중인 닉네임입니다.")
-
                 FirebaseFirestoreException.Code.UNAVAILABLE,
                 FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> {
                     Log.e("UserRepository", "첫 로그인 완료 처리 실패(네트워크): ${e.message}", e)

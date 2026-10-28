@@ -100,15 +100,15 @@ class SignInViewModel @Inject constructor(
                     _eventChannel.send(SignInEvent.NavigateToHome)
                 }
                 .onFailure { error ->
-                    // 네트워크 에러는 닉네임 값과 무관한 상황 에러 → 토스트, 그 외는 입력칸 인라인 에러
-                    val isNetworkError = error is AppError.Network
+                    // 닉네임 값 자체의 문제(중복)만 입력칸 인라인 에러, 네트워크·저장 실패 등 상황 에러는 토스트
+                    val isInputError = error is AppError.NicknameTaken
                     _uiState.update {
                         it.copy(
-                            nicknameError = if (isNetworkError) null else error.message,
+                            nicknameError = if (isInputError) error.message else null,
                             isNicknameLoading = false
                         )
                     }
-                    if (isNetworkError) sendToast(error.message, isLong = true)
+                    if (!isInputError) sendToast(error.message, isLong = error is AppError.Network)
                 }
         }
     }
