@@ -369,7 +369,7 @@ class CommunityListViewModel @Inject constructor(
 
     // 화면에 표시할 리스트
     // 검색어 없음 → 페이지네이션 posts 그대로
-    // 검색어 있음 → 전체 로드된 searchResults에서 contains 필터
+    // 검색어 있음 → 전체 로드된 searchResults에서 contains 필터 (블라인드 게시글은 숨겨진 제목/본문으로 매칭되지 않도록 제외)
     val filteredPosts = combine(
         _uiState,
         _searchQuery
@@ -378,8 +378,10 @@ class CommunityListViewModel @Inject constructor(
             state.posts
         } else {
             state.searchResults.filter { post ->
-                post.title.contains(query, ignoreCase = true) ||
-                    (post.content?.contains(query, ignoreCase = true) ?: false)
+                !post.isBlind && (
+                    post.title.contains(query, ignoreCase = true) ||
+                        (post.content?.contains(query, ignoreCase = true) ?: false)
+                )
             }
         }
     }.stateIn(

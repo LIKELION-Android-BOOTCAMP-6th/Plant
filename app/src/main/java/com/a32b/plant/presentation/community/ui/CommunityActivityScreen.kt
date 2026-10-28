@@ -45,6 +45,7 @@ import com.a32b.plant.domain.type.ActivityType
 import com.a32b.plant.presentation.community.viewmodel.CommunityActivityEvent
 import com.a32b.plant.presentation.community.viewmodel.CommunityActivityViewModel
 import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.core.component.TagGroup
 import com.a32b.plant.presentation.core.extension.showToast
@@ -88,98 +89,100 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
         )
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        Column(modifier = Modifier.fillMaxSize().padding(15.dp)) {
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                IconButton(
-                    onClick = { navController.popBackStack() },
-                    modifier = Modifier.size(30.dp).align(Alignment.CenterStart)
+    LoadableScreen(viewModel) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            Column(modifier = Modifier.fillMaxSize().padding(15.dp)) {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Image(
-                        painter = painterResource(R.drawable.ic_backbtn),
-                        contentDescription = "뒤로가기"
-                    )
-                }
-                Text("내 활동", style = MaterialTheme.typography.displayLarge)
-
-                if (uiState.isSelectionMode) {
-                    Row(
-                        modifier = Modifier.align(Alignment.CenterEnd),
-                        verticalAlignment = Alignment.CenterVertically
+                    IconButton(
+                        onClick = { navController.popBackStack() },
+                        modifier = Modifier.size(30.dp).align(Alignment.CenterStart)
                     ) {
-                        if (uiState.selectedIds.isNotEmpty()) {
+                        Image(
+                            painter = painterResource(R.drawable.ic_backbtn),
+                            contentDescription = "뒤로가기"
+                        )
+                    }
+                    Text("내 활동", style = MaterialTheme.typography.displayLarge)
+
+                    if (uiState.isSelectionMode) {
+                        Row(
+                            modifier = Modifier.align(Alignment.CenterEnd),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (uiState.selectedCount > 0) {
+                                TextButton(
+                                    onClick = { viewModel.showDeleteDialog() },
+                                    contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        when (uiState.selected) {
+                                            ActivityType.LIKE -> "좋아요 취소(${uiState.selectedCount})"
+                                            ActivityType.BOOKMARK -> "북마크 취소(${uiState.selectedCount})"
+                                            else -> "삭제(${uiState.selectedCount})"
+                                        },
+                                        color = MaterialTheme.colorScheme.error,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                            }
                             TextButton(
-                                onClick = { viewModel.showDeleteDialog() },
+                                onClick = { viewModel.toggleSelectionMode() },
                                 contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
                             ) {
                                 Text(
-                                    when (uiState.selected) {
-                                        ActivityType.LIKE -> "좋아요 취소(${uiState.selectedIds.size})"
-                                        ActivityType.BOOKMARK -> "북마크 취소(${uiState.selectedIds.size})"
-                                        else -> "삭제(${uiState.selectedIds.size})"
-                                    },
-                                    color = MaterialTheme.colorScheme.error,
+                                    "취소",
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
                         }
+                    } else {
                         TextButton(
                             onClick = { viewModel.toggleSelectionMode() },
+                            modifier = Modifier.align(Alignment.CenterEnd),
                             contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
                         ) {
                             Text(
-                                "취소",
-                                style = MaterialTheme.typography.bodyMedium
+                                "선택",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
-                } else {
-                    TextButton(
-                        onClick = { viewModel.toggleSelectionMode() },
-                        modifier = Modifier.align(Alignment.CenterEnd),
-                        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
+                }
+
+                TagGroup(list, init = listOf(uiState.selected), isMultiSelected = false) { selected ->
+                    viewModel.onSelectedChange(selected.get(0))
+                }
+
+                if (uiState.isLoading) {
+                    LoadingBox()
+                } else if (uiState.activities.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "선택",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary
+                            text = "커뮤니티 활동 내역이 없습니다.",
+                            style = MaterialTheme.typography.bodyMedium,
                         )
                     }
-                }
-            }
-
-            TagGroup(list, init = listOf(uiState.selected), isMultiSelected = false) { selected ->
-                viewModel.onSelectedChange(selected.get(0))
-            }
-
-            if (uiState.isLoading) {
-                LoadingBox()
-            } else if (uiState.activities.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "커뮤니티 활동 내역이 없습니다.",
-                        style = MaterialTheme.typography.bodyMedium,
+                } else {
+                    ContentList(
+                        lists = uiState.activities,
+                        isSelectionMode = uiState.isSelectionMode,
+                        selectedIds = uiState.selectedIds,
+                        onToggleSelection = { id -> viewModel.toggleItemSelection(id) },
+                        onClick = { targetId ->
+                            viewModel.moveToCommunityDetail(targetId)
+                        }
                     )
                 }
-            } else {
-                ContentList(
-                    lists = uiState.activities,
-                    isSelectionMode = uiState.isSelectionMode,
-                    selectedIds = uiState.selectedIds,
-                    onToggleSelection = { id -> viewModel.toggleItemSelection(id) },
-                    onClick = { targetId ->
-                        viewModel.moveToCommunityDetail(targetId)
-                    }
-                )
             }
         }
     }

@@ -23,6 +23,13 @@ interface UserRepository {
 
     suspend fun getUser(uid: String): Result<User?>
     suspend fun createUser(uid: String): Result<User>
+    /**
+     * 닉네임 중복 검사 + 닉네임 등록 + 첫 로그인 완료를 한 번에(원자적으로) 처리한다.
+     * 이미 같은 설정이 완료된 상태에서 다시 호출하면 성공으로 처리한다.
+     *
+     * 실패 시 [AppError.NicknameTaken] (다른 사용자가 사용 중), [AppError.Network] (오프라인·시간 초과),
+     * [AppError.Custom] (그 외 저장 실패)를 반환한다.
+     */
     suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit>
 
     suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit>

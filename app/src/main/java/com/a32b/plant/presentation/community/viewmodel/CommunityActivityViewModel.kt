@@ -1,9 +1,10 @@
 package com.a32b.plant.presentation.community.viewmodel
 
-import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.base.BaseViewModel
+import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.type.ActivityType
 import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.domain.repository.CommunityRepository
@@ -25,7 +26,12 @@ data class CommunityActivityUiState(
     val isSelectionMode: Boolean = false,
     val selectedIds: Set<String> = emptySet(),
     val isDeleteDialogShown: Boolean = false
-)
+) {
+    // 화면에 보이는 항목 중 선택된 개수. selectedIds를 직접 깎지 않는 이유:
+    // Firestore 삭제는 로컬에서 먼저 반영되므로, 서버가 거절해 항목이 다시 나타나도 선택이 유지되어야 함
+    val selectedCount: Int
+        get() = activities.count { it.id in selectedIds }
+}
 sealed class CommunityActivityEvent {
     data class NavigateToCommunityDetail(val postId: String) : CommunityActivityEvent()
     data class ShowToast(val message: String) : CommunityActivityEvent()
@@ -34,7 +40,7 @@ sealed class CommunityActivityEvent {
 class CommunityActivityViewModel @Inject constructor(
     private val repository: CommunityRepository,
     private val deleteActivitiesUseCase: DeleteActivitiesUseCase
-) : ViewModel() {
+) : BaseViewModel() {
     private val _uiState = MutableStateFlow(CommunityActivityUiState())
     val uiState = _uiState.asStateFlow()
 
@@ -57,7 +63,11 @@ class CommunityActivityViewModel @Inject constructor(
             repository.observeActivity(selected)
                 .collect { list ->
                     _uiState.update { it.copy(isLoading = false, activities = list) }
+                    loaded() // BaseViewModel: 최초 방출 시 LoadableScreen 해제 (탭 전환 로딩은 LoadingBox)
                 }
+            // 구독 실패로 방출 없이 Flow가 끝난 경우에도 로딩 해제 → 빈 상태 UI 표시
+            _uiState.update { it.copy(isLoading = false) }
+            loaded()
         }
     }
 
@@ -95,12 +105,15 @@ class CommunityActivityViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             deleteActivitiesUseCase(toDelete)
                 .onSuccess {
-                    _uiState.update { it.copy(isSelectionMode = false, selectedIds = emptySet()) }
+                    _uiState.update { it.copy(isLoading = false, isSelectionMode = false, selectedIds = emptySet()) }
                     sendToast("삭제되었습니다.")
                 }
                 .onFailure { e ->
                     _uiState.update { it.copy(isLoading = false) }
-                    sendToast(e.message ?: "삭제에 실패했습니다.")
+                    when (e) {
+                        is AppError.UnknownUser -> Unit // UseCase 내부 ensureCurrentUserUseCase에서 이미 세션 만료 알림 발송
+                        else -> sendToast(e.message)
+                    }
                 }
         }
     }

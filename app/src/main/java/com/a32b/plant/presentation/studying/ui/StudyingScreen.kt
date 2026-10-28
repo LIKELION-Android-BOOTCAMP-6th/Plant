@@ -48,6 +48,7 @@ import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.extension.showToast
@@ -113,126 +114,129 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
 
 
     val studyingUsers = uiState.studyingUsers
-    Surface(modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
+    // 목표 입력 다이얼로그도 로컬 복구 전에는 띄우지 않도록 함께 감쌈 (복구 시 다이얼로그가 깜빡이는 현상 방지)
+    LoadableScreen(viewModel) {
+        Surface(modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
         ) {
-
-            Spacer(modifier = Modifier.height(40.dp))
-            StudyStatusBadge(uiState.tag, uiState.title)
-
-            if (!uiState.isLocalSaved) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.errorContainer
-                ) {
-                    Text(
-                        text = "자동 저장에 실패했습니다. 앱 종료 시 학습 기록이 유실될 수 있습니다.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(30.dp))
-            Text("${TimeFormatter.formatToTimeOnly(startTime)} ~", style = MaterialTheme.typography.bodyMedium, fontSize = 13.sp,)
-            SetTimer(
-                time = uiState.timer,
-                color = if (uiState.goalCheckMode == StudyingGoalCheckMode.FINISH) MaterialTheme.colorScheme.error else Color.Unspecified
-            )
-
-            Box(modifier = Modifier.height(20.dp), contentAlignment = Alignment.Center) {
-                if (!uiState.isStudying && uiState.goalCheckMode == null && !uiState.isGoalInputDialogShown) {
-                    Text(
-                        text = "일시정지",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Card(
-                modifier = Modifier.padding(10.dp)
-                    .clickable{ viewModel.onChangeGoalCheckMode(StudyingGoalCheckMode.CHECK)},
-                shape = RoundedCornerShape(10.dp),
-                colors = CardDefaults.cardColors(MaterialTheme.colorScheme.secondaryContainer),
-                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Row(modifier = Modifier.padding(vertical = 17.dp, horizontal = 13.dp).width(250.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ){
-                    Text("오늘의 학습 목표", style = MaterialTheme.typography.bodyMedium, textDecoration = TextDecoration.Underline )
 
-                    Image(painter = painterResource(R.drawable.ic_right), contentDescription = "goalCheck")
+                Spacer(modifier = Modifier.height(40.dp))
+                StudyStatusBadge(uiState.tag, uiState.title)
+
+                if (!uiState.isLocalSaved) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.errorContainer
+                    ) {
+                        Text(
+                            text = "자동 저장에 실패했습니다. 앱 종료 시 학습 기록이 유실될 수 있습니다.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(30.dp))
+                Text("${TimeFormatter.formatToTimeOnly(startTime)} ~", style = MaterialTheme.typography.bodyMedium, fontSize = 13.sp,)
+                SetTimer(
+                    time = uiState.timer,
+                    color = if (uiState.goalCheckMode == StudyingGoalCheckMode.FINISH) MaterialTheme.colorScheme.error else Color.Unspecified
+                )
+
+                Box(modifier = Modifier.height(20.dp), contentAlignment = Alignment.Center) {
+                    if (!uiState.isStudying && uiState.goalCheckMode == null && !uiState.isGoalInputDialogShown) {
+                        Text(
+                            text = "일시정지",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Card(
+                    modifier = Modifier.padding(10.dp)
+                        .clickable{ viewModel.onChangeGoalCheckMode(StudyingGoalCheckMode.CHECK)},
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(MaterialTheme.colorScheme.secondaryContainer),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Row(modifier = Modifier.padding(vertical = 17.dp, horizontal = 13.dp).width(250.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ){
+                        Text("오늘의 학습 목표", style = MaterialTheme.typography.bodyMedium, textDecoration = TextDecoration.Underline )
+
+                        Image(painter = painterResource(R.drawable.ic_right), contentDescription = "goalCheck")
+
+                    }
 
                 }
 
-            }
+                Spacer(modifier = Modifier.height(15.dp))
 
-            Spacer(modifier = Modifier.height(15.dp))
-
-            Row {
-                //일시정지/학습시작 버튼
-                StateChangeButton(timerButtonText, timerButtonBack){ viewModel.onStudyingStatusChange()}
-                StateChangeButton("학습종료", MaterialTheme.colorScheme.surface) {
-                    viewModel.onChangeGoalCheckMode(StudyingGoalCheckMode.FINISH)
+                Row {
+                    //일시정지/학습시작 버튼
+                    StateChangeButton(timerButtonText, timerButtonBack){ viewModel.onStudyingStatusChange()}
+                    StateChangeButton("학습종료", MaterialTheme.colorScheme.surface) {
+                        viewModel.onChangeGoalCheckMode(StudyingGoalCheckMode.FINISH)
+                    }
                 }
-            }
 
-            // [DEBUG] 보상 테스트용 — 릴리즈 전 제거
-            StateChangeButton("+1h [DEBUG]", MaterialTheme.colorScheme.errorContainer) {
-                viewModel.addDebugTime()
-            }
-            Spacer(modifier = Modifier.weight(1f))
+                // [DEBUG] 보상 테스트용 — 릴리즈 전 제거
+                StateChangeButton("+1h [DEBUG]", MaterialTheme.colorScheme.errorContainer) {
+                    viewModel.addDebugTime()
+                }
+                Spacer(modifier = Modifier.weight(1f))
 
-            StudyingUserCard(studyingUsers, uiState.tag)
+                StudyingUserCard(studyingUsers, uiState.tag)
+            }
         }
-    }
-    if (uiState.isGoalInputDialogShown){
-        StudyingGoalInputDialog(
-            isEditing = uiState.isEditing,
-            initialIndex = uiState.logIndex ?: 0,
-            tag = uiState.tag,
-            title = uiState.title,
-            studyLogs = uiState.studyLog.map { it.log },
-            onDismiss = {
-                viewModel.onGoalInputDialogChange(false)
-            },
-            onConfirm = {
-                viewModel.setStudyLog(it)
-                viewModel.onGoalInputDialogChange(false)
-            },
-            onConfirmEdit = confirmEdit@{ log ->
-                val index = uiState.logIndex ?: return@confirmEdit
-                viewModel.onStudyLogChanged(index = index, log = log)
-                viewModel.onGoalInputDialogChange(false)
-            }
-        )
-    }
-    uiState.goalCheckMode?.let {
-        StudyingGoalCheckDialog(
-            mode = it,
-            studyLog = uiState.studyLog,
-            onEdit = { index -> viewModel.onStartEditing(index) },
-            onCompleted = {index, isCompleted ->
-                viewModel.onStudyLogChanged(index, isCompleted)
-            },
-            onDismiss = {viewModel.onChangeGoalCheckMode(null)},
-            onConfirm = {
-                viewModel.onIsStudyFinishChange()
-            }
-        )
+        if (uiState.isGoalInputDialogShown){
+            StudyingGoalInputDialog(
+                isEditing = uiState.isEditing,
+                initialIndex = uiState.logIndex ?: 0,
+                tag = uiState.tag,
+                title = uiState.title,
+                studyLogs = uiState.studyLog.map { it.log },
+                onDismiss = {
+                    viewModel.onGoalInputDialogChange(false)
+                },
+                onConfirm = {
+                    viewModel.setStudyLog(it)
+                    viewModel.onGoalInputDialogChange(false)
+                },
+                onConfirmEdit = confirmEdit@{ log ->
+                    val index = uiState.logIndex ?: return@confirmEdit
+                    viewModel.onStudyLogChanged(index = index, log = log)
+                    viewModel.onGoalInputDialogChange(false)
+                }
+            )
+        }
+        uiState.goalCheckMode?.let {
+            StudyingGoalCheckDialog(
+                mode = it,
+                studyLog = uiState.studyLog,
+                onEdit = { index -> viewModel.onStartEditing(index) },
+                onCompleted = {index, isCompleted ->
+                    viewModel.onStudyLogChanged(index, isCompleted)
+                },
+                onDismiss = {viewModel.onChangeGoalCheckMode(null)},
+                onConfirm = {
+                    viewModel.onIsStudyFinishChange()
+                }
+            )
+        }
     }
 
     if (uiState.isLoading)

@@ -30,3 +30,11 @@ val sub3 = Color(0xFFD9D9D9)
 val fontColor = Color(0xFF2F2F2F)
 //서브 폰트 색
 val fontColorSub = Color(0xFF4D4D4D)
+
+// 구글 로그인 버튼 - 구글 브랜딩 가이드 지정 색상 (임의 변경 금지)
+val googleButtonContainerLight = Color(0xFFFFFFFF)
+val googleButtonBorderLight = Color(0xFF747775)
+val googleButtonContentLight = Color(0xFF1F1F1F)
+val googleButtonContainerDark = Color(0xFF131314)
+val googleButtonBorderDark = Color(0xFF8E918F)
+val googleButtonContentDark = Color(0xFFE3E3E3)

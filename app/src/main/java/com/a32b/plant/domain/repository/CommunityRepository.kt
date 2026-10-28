@@ -36,13 +36,19 @@ interface CommunityRepository {
 
     suspend fun toggleLike(postId: String, uid: String, title: String): Result<Boolean>
     suspend fun toggleBookmark(postId: String, uid: String, title: String): Result<Boolean>
+    /** '내 활동' 삭제용 해제 — 이미 해제된 상태여도 activity만 정리하고 성공. activity 삭제 실패도 Failure로 반환 */
+    suspend fun removeLike(postId: String, uid: String): Result<Unit>
+    suspend fun removeBookmark(postId: String, uid: String): Result<Unit>
 
     suspend fun addComment(postId: String, comment: Comment, activity: CommunityActivity): Result<Unit>
-    suspend fun updateComment(postId: String, commentId: String, newContent: String): Result<Unit>
-    suspend fun deleteComment(postId: String, commentId: String): Result<Unit>
+    suspend fun updateComment(postId: String, commentId: String, newContent: String, activityId: String): Result<Unit>
+    /** 성공 시 이번 호출이 실제로 댓글을 지웠으면 true, 이미 없던 댓글(다른 곳에서 먼저 삭제)이면 false */
+    suspend fun deleteComment(postId: String, commentId: String): Result<Boolean>
 
     fun observeActivity(selected: String): Flow<List<CommunityActivity>>
     suspend fun deleteActivity(activityId : String): Result<Unit>
+    /** 연결된 댓글이 이미 없는 activity 정리용 — 이미 지워진 문서라 거절돼도 목적(activity 제거)이 달성된 것으로 보고 성공 처리 */
+    suspend fun deleteOrphanedActivity(activityId: String): Result<Unit>
 
     suspend fun findCommentItByActivityId(postId : String, activityId: String) : Result<String?>
     suspend fun isPostExist(postId: String) : Result<Boolean>
