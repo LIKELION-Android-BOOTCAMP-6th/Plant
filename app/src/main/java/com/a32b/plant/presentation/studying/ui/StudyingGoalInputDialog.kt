@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.a32b.plant.R
@@ -58,7 +59,8 @@ fun StudyingGoalInputDialog(
             if (studyLogs.isEmpty()) add("") else addAll(studyLogs)
         }
     }
-    var index by remember { mutableIntStateOf(initialIndex) }
+    // localLogs가 새로 만들어지면 index도 새 목록 범위 안으로 다시 맞춤 (범위 밖 index로 쓰기 시 크래시 방지)
+    var index by remember(localLogs) { mutableIntStateOf(initialIndex.coerceIn(0, localLogs.lastIndex)) }
     val currentText = localLogs.getOrElse(index) { "" }
     val canGoPrev = index > 0
     val canGoNext = index < localLogs.size - 1
@@ -89,7 +91,7 @@ fun StudyingGoalInputDialog(
 
                 if (!isEditing){
                     Text(
-                        "${index + 1} / 10 ",
+                        "${index + 1} / $maxLogSize",
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 7.dp)
                     )
@@ -110,7 +112,10 @@ fun StudyingGoalInputDialog(
                             },
                             enabled = canGoPrev,
                             // 자리는 유지해야 입력창 너비가 변하지 않으므로 숨김은 alpha로 처리
-                            modifier = Modifier.alpha(if (canGoPrev) 1f else 0f)
+                            // 숨김 상태에서는 TalkBack 포커스도 가지 않도록 semantics 제거
+                            modifier = Modifier
+                                .alpha(if (canGoPrev) 1f else 0f)
+                                .then(if (canGoPrev) Modifier else Modifier.clearAndSetSemantics {})
                         ) {
                             Image(
                                 painter = painterResource(R.drawable.ic_left),
@@ -163,7 +168,9 @@ fun StudyingGoalInputDialog(
                                 if (canGoNext) index++
                             },
                             enabled = canGoNext,
-                            modifier = Modifier.alpha(if (canGoNext) 1f else 0f)
+                            modifier = Modifier
+                                .alpha(if (canGoNext) 1f else 0f)
+                                .then(if (canGoNext) Modifier else Modifier.clearAndSetSemantics {})
                         ) {
                             Image(
                                 painter = painterResource(R.drawable.ic_right),
