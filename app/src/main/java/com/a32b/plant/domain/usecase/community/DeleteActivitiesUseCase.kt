@@ -47,14 +47,15 @@ class DeleteActivitiesUseCase @Inject constructor(
                                 }
 
                                 // 사용자 없음(null)도 실패로 집계 — 세션 만료 알림은 ensureCurrentUserUseCase 내부에서 이미 발송됨
+                                // 토글이 아닌 해제(remove)를 호출 — 이미 해제된 항목을 지워도 다시 좋아요/북마크되지 않음
                                 ActivityType.LIKE ->
                                     ensureCurrentUserUseCase{ user ->
-                                        repository.toggleLike(activity.targetId, user.uid, activity.title)
+                                        repository.removeLike(activity.targetId, user.uid)
                                     } ?: Result.Failure(AppError.UnknownUser())
 
                                 ActivityType.BOOKMARK ->
                                     ensureCurrentUserUseCase { user ->
-                                        repository.toggleBookmark(activity.targetId, user.uid, activity.title)
+                                        repository.removeBookmark(activity.targetId, user.uid)
                                     } ?: Result.Failure(AppError.UnknownUser())
 
                                 else -> Result.Failure(AppError.Unknown("알 수 없는 활동 유형입니다: ${activity.type}"))

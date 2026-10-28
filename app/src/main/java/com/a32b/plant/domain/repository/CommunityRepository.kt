@@ -36,6 +36,9 @@ interface CommunityRepository {
 
     suspend fun toggleLike(postId: String, uid: String, title: String): Result<Boolean>
     suspend fun toggleBookmark(postId: String, uid: String, title: String): Result<Boolean>
+    /** '내 활동' 삭제용 해제 — 이미 해제된 상태여도 activity만 정리하고 성공. activity 삭제 실패도 Failure로 반환 */
+    suspend fun removeLike(postId: String, uid: String): Result<Unit>
+    suspend fun removeBookmark(postId: String, uid: String): Result<Unit>
 
     suspend fun addComment(postId: String, comment: Comment, activity: CommunityActivity): Result<Unit>
     suspend fun updateComment(postId: String, commentId: String, newContent: String, activityId: String): Result<Unit>

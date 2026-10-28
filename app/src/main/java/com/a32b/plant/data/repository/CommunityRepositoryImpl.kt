@@ -191,6 +191,51 @@ class CommunityRepositoryImpl @Inject constructor(
         return Result.Success(wasBookmarked)
     }
 
+    override suspend fun removeLike(postId: String, uid: String): Result<Unit> {
+        safeRunCatching { communityRemoteDataSource.removeLike(postId, uid) }
+            .fold(
+                onSuccess = { removed ->
+                    if (!removed) Log.w("Community", "이미 좋아요가 해제된 상태라 activity만 정리: postId=$postId")
+                },
+                onFailure = { e ->
+                    Log.e("Community", "좋아요 취소 실패", e)
+                    return Result.Failure(handleError(e, "좋아요 취소에 실패했습니다.", isWrite = true))
+                }
+            )
+
+        // 해제가 멱등이므로 activity 삭제 실패는 실패로 돌려 재시도하게 함 (재시도해도 다시 좋아요되지 않음)
+        return safeRunCatching { communityRemoteDataSource.deleteActivityByType(uid, postId, ActivityType.LIKE) }
+            .fold(
+                onSuccess = { Result.Success(Unit) },
+                onFailure = { e ->
+                    Log.e("Community", "좋아요 activity 삭제 실패 (좋아요는 해제됨): postId=$postId", e)
+                    Result.Failure(handleError(e, "좋아요 취소에 실패했습니다.", isWrite = true))
+                }
+            )
+    }
+
+    override suspend fun removeBookmark(postId: String, uid: String): Result<Unit> {
+        safeRunCatching { communityRemoteDataSource.removeBookmark(postId, uid) }
+            .fold(
+                onSuccess = { removed ->
+                    if (!removed) Log.w("Community", "이미 북마크가 해제된 상태라 activity만 정리: postId=$postId")
+                },
+                onFailure = { e ->
+                    Log.e("Community", "북마크 취소 실패", e)
+                    return Result.Failure(handleError(e, "북마크 취소에 실패했습니다.", isWrite = true))
+                }
+            )
+
+        return safeRunCatching { communityRemoteDataSource.deleteActivityByType(uid, postId, ActivityType.BOOKMARK) }
+            .fold(
+                onSuccess = { Result.Success(Unit) },
+                onFailure = { e ->
+                    Log.e("Community", "북마크 activity 삭제 실패 (북마크는 해제됨): postId=$postId", e)
+                    Result.Failure(handleError(e, "북마크 취소에 실패했습니다.", isWrite = true))
+                }
+            )
+    }
+
     override suspend fun addComment(postId: String, comment: Comment, activity: CommunityActivity): Result<Unit> = safeRunCatching {
         communityRemoteDataSource.addComment(postId, comment, activity)
     }.fold(
