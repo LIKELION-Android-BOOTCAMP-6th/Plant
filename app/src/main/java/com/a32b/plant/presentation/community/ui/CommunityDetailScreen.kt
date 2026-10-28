@@ -132,7 +132,7 @@ fun CommunityDetailScreen(
     // recompose/재시작되게 한다. 이모지 키보드 전환처럼 열린 상태에서 높이만 바뀌는 경우는
     // key가 바뀌지 않아 사용자가 스크롤해둔 위치를 되돌리지 않는다.
     //
-    // 스크롤은 키보드가 열릴 때마다 최대 2번만 한다:
+    // 스크롤은 키보드가 열릴 때 (a)(b) 최대 2번, 이후에는 (c) 입력 카드 높이가 커질 때만 한다:
     // (a) 열리기 시작할 때 scrollToItem 1번 - 입력창이 리스트 최상단에 오면 LazyColumn은 상단 기준으로
     //     위치를 유지하므로, 이후 imePadding으로 viewport가 줄어들어도 매 프레임 보정할 필요가 없다.
     // (b) 키보드 애니메이션이 끝난 뒤 입력 카드 bringIntoView 1번 - 댓글이 적어 입력창을 최상단까지
@@ -166,11 +166,7 @@ fun CommunityDetailScreen(
         safeRunCatching { commentInputRequester.bringIntoView() }
 
         // (c) 이후 키보드가 열려 있는 동안 입력 카드 높이가 커질 때만 보정 (키보드가 닫히거나 포커스가 빠지면 key 변경으로 취소)
-        var prevHeightPx = commentInputHeightPx
-        snapshotFlow { commentInputHeightPx }.collect { heightPx ->
-            if (heightPx > prevHeightPx) safeRunCatching { commentInputRequester.bringIntoView() }
-            prevHeightPx = heightPx
-        }
+        commentInputRequester.bringIntoViewOnHeightGrow { commentInputHeightPx }
     }
 
     // 댓글 수정 중 뒤로가기 시 화면을 나가지 않고 수정만 취소
@@ -541,11 +537,15 @@ fun CommentRow(
     //
     // bringIntoView()는 내장 스크롤과 같은 처리기가 받아 함께 계산하므로 서로 선점하지 않는다.
     // TextField+저장/취소 Row 전체를 요청 영역으로 잡아 버튼까지 보이게 한다. 매 프레임 호출하면
-    // 버벅이므로(#380), 포커스당 최대 2번만 호출한다: (a) 키보드가 열리기 시작할 때 1번,
+    // 버벅이므로(#380), 포커스당 (a)(b) 최대 2번, 이후에는 (c) 편집 영역 높이가 커질 때만 호출한다:
+    // (a) 키보드가 열리기 시작할 때 1번,
     // (b) 키보드 애니메이션이 끝난 뒤(위쪽 댓글처럼 (a) 시점엔 보였지만 viewport가 줄며 가려진
-    // 경우를 마무리 보정) 1번. 이후 (c) 여러 줄 입력으로 편집 영역 높이가 커질 때마다 1번(#417) -
-    // 타이핑 중 내장 스크롤은 커서까지만 보이게 해 저장/취소 버튼이 가려질 수 있어서다.
-    // 높이는 onSizeChanged로 state에만 기록하고 effect 안에서만 읽어 recompose되지 않게 한다.
+    //     경우를 마무리 보정) 1번,
+    // (c) 여러 줄 입력으로 편집 영역 높이가 커질 때마다 1번(#417) - 타이핑 중 내장 스크롤은
+    //     커서까지만 보이게 해 저장/취소 버튼이 가려질 수 있어서다. TextField는 maxLines(4줄)로 제한해
+    //     편집 영역이 화면보다 커지지 않게 한다(화면보다 큰 영역은 bringIntoView로 버튼까지 보이게 할 수 없음).
+    //     4줄 도달 후 입력은 높이가 그대로라 동작하지 않는다.
+    //     높이는 onSizeChanged로 state에만 기록하고 effect 안에서만 읽어 recompose되지 않게 한다.
     val editAreaRequester = remember { BringIntoViewRequester() }
     var editAreaHeightPx by remember { mutableIntStateOf(0) }
     if (isEditing) {
@@ -572,11 +572,7 @@ fun CommentRow(
             safeRunCatching { editAreaRequester.bringIntoView() }
 
             // (c) 이후 편집 영역 높이가 커질 때만 보정 - 한 줄 안 타이핑이나 줄 삭제 시에는 동작하지 않음
-            var prevHeightPx = editAreaHeightPx
-            snapshotFlow { editAreaHeightPx }.collect { heightPx ->
-                if (heightPx > prevHeightPx) safeRunCatching { editAreaRequester.bringIntoView() }
-                prevHeightPx = heightPx
-            }
+            editAreaRequester.bringIntoViewOnHeightGrow { editAreaHeightPx }
         }
     }
 
@@ -630,6 +626,7 @@ fun CommentRow(
                                 limitLength(input, maxLength, context, onEditTextChange)
                             },
                             readOnly = isEditSubmitting,
+                            maxLines = 4,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .onFocusChanged { isEditFieldFocused = it.isFocused },
@@ -826,6 +823,19 @@ fun CommentInputSection(
                 }
             }
         }
+    }
+}
+
+// 키보드가 열린 동안 heightPx()가 이전보다 커질 때만 bringIntoView()를 1번 호출한다(#417).
+// 높이는 반드시 람다로 받아 snapshotFlow 안에서만 읽어야 변화를 감지하면서도 recompose되지 않는다.
+// 같은 높이(한 줄 안 타이핑, maxLines 도달 후 입력)나 줄어들 때는 호출하지 않는다.
+// 호출한 LaunchedEffect가 취소될 때까지(키보드 닫힘·포커스 해제) 계속 감지한다.
+private suspend fun BringIntoViewRequester.bringIntoViewOnHeightGrow(heightPx: () -> Int) {
+    var prevHeightPx = heightPx()
+    snapshotFlow { heightPx() }.collect { currentPx ->
+        // bringIntoView()의 CancellationException 외 예외로 호출한 effect가 죽지 않게 safeRunCatching으로 흡수
+        if (currentPx > prevHeightPx) safeRunCatching { bringIntoView() }
+        prevHeightPx = currentPx
     }
 }
 
