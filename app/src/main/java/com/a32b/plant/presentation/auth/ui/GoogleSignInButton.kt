@@ -5,8 +5,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,6 +20,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.a32b.plant.R
@@ -30,6 +31,9 @@ import com.a32b.plant.presentation.theme.googleButtonContainerDark
 import com.a32b.plant.presentation.theme.googleButtonContainerLight
 import com.a32b.plant.presentation.theme.googleButtonContentDark
 import com.a32b.plant.presentation.theme.googleButtonContentLight
+
+// 버튼 모양 - 로딩 오버레이 clip 등 버튼 바깥에서도 같은 모양을 써야 하므로 공용으로 둠
+val GoogleSignInButtonShape = RoundedCornerShape(24.dp)
 
 /**
  * 구글 브랜딩 가이드(pill 형태)를 따르는 "Google로 계속하기" 버튼
@@ -48,16 +52,17 @@ fun GoogleSignInButton(
 
     Surface(
         onClick = onClick,
-        modifier = modifier.height(48.dp),
-        shape = RoundedCornerShape(24.dp),
+        // 큰 글씨 설정에서 문구가 두 줄이 되어도 잘리지 않도록 최소 높이만 지정
+        modifier = modifier.heightIn(min = 48.dp),
+        shape = GoogleSignInButtonShape,
         color = containerColor,
         contentColor = contentColor,
         border = BorderStroke(1.dp, borderColor)
     ) {
         Row(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -78,7 +83,10 @@ fun GoogleSignInButton(
                     fontSize = 14.sp,
                     lineHeight = 20.sp
                 ),
-                color = contentColor
+                // Surface contentColor와 중복처럼 보여도 지우지 말 것:
+                // 색이 지정된 MaterialTheme.typography 스타일로 바꾸면 스타일 색이 contentColor를 덮어써 다크모드 색이 틀어짐
+                color = contentColor,
+                textAlign = TextAlign.Center
             )
         }
     }

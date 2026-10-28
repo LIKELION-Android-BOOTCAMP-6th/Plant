@@ -228,7 +228,8 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.primary)
         ) {
-            // 화면이 충분히 크면 카드를 하단에 붙이고, 작은 화면/가로/큰 글씨에서는 스크롤
+            // 화면이 충분히 크면 카드를 하단에 붙이고, 작은 화면/큰 글씨에서는 스크롤
+            // (상태바·내비바 여백은 MainActivity Scaffold가 이미 적용·소비하므로 여기서 따로 주지 않음)
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -236,7 +237,6 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                     .heightIn(min = maxHeight),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.statusBarsPadding())
                 Spacer(modifier = Modifier.weight(1f))
 
                 // 상단 브랜드 영역
@@ -271,8 +271,7 @@ private fun BrandSection(modifier: Modifier = Modifier) {
 
         Text(
             text = "Plant",
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.background
+            style = MaterialTheme.typography.headlineLarge // primary 위 글자색(onPrimary)이 스타일에 지정되어 있음
         )
 
         Spacer(modifier = Modifier.height(4.dp))
@@ -280,7 +279,7 @@ private fun BrandSection(modifier: Modifier = Modifier) {
         Text(
             text = "공부할수록 자라는 나만의 화분",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.background,
+            color = MaterialTheme.colorScheme.onPrimary,
             textAlign = TextAlign.Center
         )
     }
@@ -325,7 +324,6 @@ private fun SignInCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .navigationBarsPadding()
             .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
         shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.background
@@ -345,9 +343,9 @@ private fun SignInCard(
 
             Box(
                 modifier = Modifier
+                    .widthIn(max = 400.dp) // fillMaxWidth보다 먼저 와야 최대 너비가 적용됨
                     .fillMaxWidth()
-                    .widthIn(max = 400.dp)
-                    .clip(RoundedCornerShape(24.dp))
+                    .clip(GoogleSignInButtonShape) // 로딩 오버레이가 버튼 모양 밖으로 나가지 않도록 버튼과 같은 모양 사용
             ) {
                 GoogleSignInButton(
                     onClick = onGoogleSignInClick,
