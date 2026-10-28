@@ -291,7 +291,8 @@ class CommunityDetailViewModel @Inject constructor(
     fun toggleLike() {
         val currentPost = _post.value ?: return
         if (currentPost.author.id == _uiState.value.currentUid) return
-        if (likePendingCommit) return
+        // 커밋 진행 중 탭도 무시 — 커밋이 겹치면 다음 커밋의 activity 존재 확인이 이전 커밋이 지울 activity를 보고 생성을 건너뛰어 activity가 사라짐
+        if (isLikeUncommitted()) return
 
         // 낙관적 UI: 로컬 즉시 토글
         val newIsLiked = !currentPost.isLiked
@@ -315,7 +316,8 @@ class CommunityDetailViewModel @Inject constructor(
 
     fun toggleBookmark() {
         val currentPost = _post.value ?: return
-        if (bookmarkPendingCommit) return
+        // 커밋 진행 중 탭도 무시 (toggleLike와 같은 이유)
+        if (isBookmarkUncommitted()) return
 
         val newIsBookmarked = !currentPost.isBookmarked
         val delta = if (newIsBookmarked) 1 else -1
