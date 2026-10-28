@@ -38,6 +38,7 @@ import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.auth.viewmodel.SignInEvent
 import com.a32b.plant.presentation.auth.viewmodel.SignInViewModel
 import com.a32b.plant.presentation.core.component.LoadingBox
+import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.theme.LocalIsDarkTheme
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -58,7 +59,10 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
         viewModel.events.collect { event ->
             when (event) {
                 is SignInEvent.ShowToast ->
-                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                    context.showToast(
+                        event.message,
+                        if (event.isLong) Toast.LENGTH_LONG else Toast.LENGTH_SHORT
+                    )
 
                 is SignInEvent.NavigateToHome ->
                     navController.navigate(Routes.HomeMain) {

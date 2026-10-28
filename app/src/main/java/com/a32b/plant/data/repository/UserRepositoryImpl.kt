@@ -138,7 +138,7 @@ class UserRepositoryImpl @Inject constructor(
             userRemoteDataSource.completeFirstLogin(uid, nickname)
         }.fold(
             onSuccess = { Result.Success(Unit) },
-            onFailure = { e -> Result.Failure(handleError(e, "첫 로그인 완료 처리 실패")) }
+            onFailure = { e -> Result.Failure(handleCompleteFirstLoginError(e)) }
         )
 
     override suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit> = safeRunCatching {
@@ -239,6 +239,39 @@ class UserRepositoryImpl @Inject constructor(
             }
             is FirebaseNetworkException -> AppError.Network()
             else -> AppError.Custom("출석 처리 실패")
+        }
+    }
+
+    private fun handleCompleteFirstLoginError(e: Throwable): AppError {
+        val failMessage = "닉네임 설정에 실패했습니다."
+
+        return when (e) {
+            is FirebaseFirestoreException -> when (e.code) {
+                // 트랜잭션 안에서 닉네임 문서가 이미 존재함 (예상된 입력값 에러라 로그 생략)
+                FirebaseFirestoreException.Code.ALREADY_EXISTS ->
+                    AppError.Custom("사용 중인 닉네임입니다.")
+
+                FirebaseFirestoreException.Code.UNAVAILABLE,
+                FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> {
+                    Log.e("UserRepository", "첫 로그인 완료 처리 실패(네트워크): ${e.message}", e)
+                    AppError.Network()
+                }
+
+                else -> {
+                    Log.e("UserRepository", "첫 로그인 완료 처리 실패: ${e.message}", e)
+                    AppError.Custom(failMessage)
+                }
+            }
+
+            is FirebaseNetworkException -> {
+                Log.e("UserRepository", "첫 로그인 완료 처리 실패(네트워크): ${e.message}", e)
+                AppError.Network()
+            }
+
+            else -> {
+                Log.e("UserRepository", "첫 로그인 완료 처리 실패: ${e.message}", e)
+                AppError.Custom(failMessage)
+            }
         }
     }
 

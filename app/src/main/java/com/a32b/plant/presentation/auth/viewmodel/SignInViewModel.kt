@@ -25,7 +25,7 @@ data class SignInUiState(
 )
 
 sealed class SignInEvent {
-    data class ShowToast(val message: String) : SignInEvent()
+    data class ShowToast(val message: String, val isLong: Boolean) : SignInEvent()
     object NavigateToHome : SignInEvent()
 }
 
@@ -101,19 +101,19 @@ class SignInViewModel @Inject constructor(
                 }
                 .onFailure { error ->
                     // 네트워크 에러는 닉네임 값과 무관한 상황 에러 → 토스트, 그 외는 입력칸 인라인 에러
-                    if (error is AppError.Network) {
-                        _uiState.update { it.copy(isNicknameLoading = false) }
-                        sendToast(error.message)
-                    } else {
-                        _uiState.update {
-                            it.copy(nicknameError = error.message, isNicknameLoading = false)
-                        }
+                    val isNetworkError = error is AppError.Network
+                    _uiState.update {
+                        it.copy(
+                            nicknameError = if (isNetworkError) null else error.message,
+                            isNicknameLoading = false
+                        )
                     }
+                    if (isNetworkError) sendToast(error.message, isLong = true)
                 }
         }
     }
 
-    private fun sendToast(message: String) {
-        viewModelScope.launch { _eventChannel.send(SignInEvent.ShowToast(message)) }
+    private fun sendToast(message: String, isLong: Boolean = false) {
+        viewModelScope.launch { _eventChannel.send(SignInEvent.ShowToast(message, isLong)) }
     }
 }
