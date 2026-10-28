@@ -19,13 +19,10 @@ class CommunityReportRemoteDataSourceImpl @Inject constructor(
         reason: String,
         detail: String?
     ): Boolean {
-        val duplicate = db.collection("reports")
-            .whereEqualTo("reporterId", reporterUid)
-            .whereEqualTo("targetId", targetId)
-            .limit(1)
-            .get().await()
-
-        if (!duplicate.isEmpty) return false
+        // 신고 문서 ID를 "신고자uid_대상id"로 고정 → 같은 대상 중복 신고는 문서 존재 여부로 판단
+        // (보안 규칙도 이 ID 형식을 강제하고, 이미 있는 문서는 다시 만들 수 없다)
+        val reportRef = db.collection("reports").document("${reporterUid}_$targetId")
+        if (reportRef.get().await().exists()) return false
 
         val reportData = buildMap<String, Any?> {
             put("targetType", targetType)
@@ -37,18 +34,23 @@ class CommunityReportRemoteDataSourceImpl @Inject constructor(
             put("createdAt", FieldValue.serverTimestamp())
             put("status", "pending")
         }
-        db.collection("reports").add(reportData).await()
 
         val targetRef = when (targetType) {
             "post" -> db.collection("posts").document(targetId)
-            "comment" -> {
-                val postId = parentPostId ?: return true
+            "comment" -> parentPostId?.let { postId ->
                 db.collection("posts").document(postId)
                     .collection("comments").document(targetId)
             }
-            else -> return true
+            else -> null
         }
-        targetRef.update("reportCount", FieldValue.increment(1)).await()
+
+        // 신고 문서 생성과 reportCount +1을 한 batch로 묶음
+        // → 보안 규칙이 "이번 쓰기에서 신고 문서가 새로 생겼는지"로 +1을 검증하고,
+        //   대상이 삭제됐으면 둘 다 반영되지 않아 신고 문서만 남는 일이 없다
+        db.runBatch { batch ->
+            batch.set(reportRef, reportData)
+            targetRef?.let { batch.update(it, "reportCount", FieldValue.increment(1)) }
+        }.await()
 
         return true
     }

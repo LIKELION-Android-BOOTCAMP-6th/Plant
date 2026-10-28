@@ -49,6 +49,13 @@ service cloud.firestore {
       return !(request.auth.uid in newValue(arrayField, []));
     }
 
+    // 신고 1건당 reportCount +1: 같은 쓰기(batch)에서 reports/{내uid_대상id} 문서가 새로 생겨야 한다
+    // (신고 문서 없이 +1만 반복해 블라인드시키는 것을 막음)
+    function reportCreatedInSameWrite(targetId) {
+      let reportPath = /databases/$(database)/documents/reports/$(request.auth.uid + '_' + targetId);
+      return !exists(reportPath) && existsAfter(reportPath);
+    }
+
     // 생성 시 신고/숨김 상태는 초기값이어야 한다
     function hasInitialModeration() {
       return newValue('reportCount', 0) == 0 && newValue('isHidden', false) == false;
@@ -91,8 +98,8 @@ service cloud.firestore {
         // 댓글 작성(+1)/삭제(-1)
         onlyCountChangedBy('commentCount', 1) ||
         onlyCountChangedBy('commentCount', -1) ||
-        // 신고: 작성자가 아닌 사용자가 +1만 (#430 완료 후 클라이언트 쓰기 제거 예정)
-        (!isPostAuthor() && onlyCountChangedBy('reportCount', 1))
+        // 신고: 작성자가 아닌 사용자가 신고 문서 생성과 함께 +1만 (#430 완료 후 클라이언트 쓰기 제거 예정)
+        (!isPostAuthor() && onlyCountChangedBy('reportCount', 1) && reportCreatedInSameWrite(postId))
       );
 
       allow delete: if signedIn() && isPostAuthor();
@@ -117,7 +124,7 @@ service cloud.firestore {
 
         allow update: if signedIn() && (
           (isCommentAuthor() && (changedKeys().hasOnly(['content']) || isWithdrawalAnonymize())) ||
-          (!isCommentAuthor() && onlyCountChangedBy('reportCount', 1))
+          (!isCommentAuthor() && onlyCountChangedBy('reportCount', 1) && reportCreatedInSameWrite(commentId))
         );
 
         allow delete: if signedIn() && (
@@ -168,10 +175,13 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && request.auth.uid == studyingId;
     }
 
+    // 문서 ID는 {신고자uid}_{대상id}로 고정 → 같은 대상 중복 신고는 같은 문서라 생성 불가
     // 수정/삭제 규칙 없음 = 거부 (운영진은 콘솔에서 처리)
     match /reports/{reportId} {
-      allow read: if signedIn() && resource.data.reporterId == request.auth.uid;
+      // 중복 신고 확인은 아직 없는 문서를 조회하므로 resource == null 허용
+      allow read: if signedIn() && (resource == null || resource.data.reporterId == request.auth.uid);
       allow create: if signedIn() &&
+        reportId == request.auth.uid + '_' + request.resource.data.targetId &&
         request.resource.data.keys().hasOnly(['targetType', 'targetId', 'parentPostId', 'reporterId', 'reason', 'detail', 'createdAt', 'status']) &&
         request.resource.data.reporterId == request.auth.uid &&
         request.resource.data.targetType in ['post', 'comment'] &&
@@ -181,13 +191,14 @@ service cloud.firestore {
 
     // 닉네임 선점 문서: 소유자 uid를 함께 저장하고, 소유자만 삭제 가능
     // 이미 있는 문서에 set()하면 update로 평가되어 거부됨 (덮어쓰기 방지)
+    // 없는 문서 삭제는 허용 (users와 nicknames가 어긋나도 닉네임 변경·회원탈퇴가 막히지 않게)
     match /nicknames/{nickname} {
       allow read: if signedIn();
       allow create: if signedIn() &&
         request.resource.data.keys().hasOnly(['nickname', 'uid']) &&
         request.resource.data.nickname == nickname &&
         request.resource.data.uid == request.auth.uid;
-      allow delete: if signedIn() && resource.data.get('uid', '') == request.auth.uid;
+      allow delete: if signedIn() && (resource == null || resource.data.get('uid', '') == request.auth.uid);
     }
   }
 }
