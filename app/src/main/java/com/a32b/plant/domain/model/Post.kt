@@ -13,6 +13,8 @@ data class CommentUser(
     val profileImg: String
 )
 
+// 게시글·댓글 자동 블라인드 기준 신고 횟수 (#308) — Post.isBlind / Comment.isBlind 공통
+private const val BLIND_REPORT_THRESHOLD = 5
 
 data class Post(
     val postId : String,
@@ -34,6 +36,9 @@ data class Post(
     val reportCount: Int,
     val isHidden: Boolean
 ){
+    // 숨김 처리됐거나 신고가 기준 횟수 이상 누적된 게시글 — 화면에서 제목/본문 대신 블라인드 문구를 표시하고 검색에서도 제외
+    val isBlind: Boolean get() = isHidden || reportCount >= BLIND_REPORT_THRESHOLD
+
     companion object{
         fun createOriginal(author: PostAuthor, title: String, content: String, tag: Tag) = Post(
             postId = "",
@@ -90,7 +95,7 @@ data class Comment(
     val reportCount: Int,
     val isHidden: Boolean
 ) {
-    // 숨김 처리됐거나 신고가 5회 이상 누적된 댓글 — 화면에서 내용 대신 블라인드 문구를 표시
-    val isBlind: Boolean get() = isHidden || reportCount >= 5
+    // 숨김 처리됐거나 신고가 기준 횟수 이상 누적된 댓글 — 화면에서 내용 대신 블라인드 문구를 표시
+    val isBlind: Boolean get() = isHidden || reportCount >= BLIND_REPORT_THRESHOLD
 }
 

@@ -14,7 +14,9 @@ data class PostUpdate(
     val title: String? = null,
     val content: String? = null,
     val tag: Tag? = null,
-    val updatedAt: Long? = null
+    val updatedAt: Long? = null,
+    val reportCount: Int? = null,
+    val isHidden: Boolean? = null
 )
 
 fun Post.applyUpdate(update: PostUpdate): Post {
@@ -28,6 +30,8 @@ fun Post.applyUpdate(update: PostUpdate): Post {
         title = update.title ?: title,
         content = update.content ?: content,
         tag = update.tag ?: tag,
-        updatedAt = update.updatedAt ?: updatedAt
+        updatedAt = update.updatedAt ?: updatedAt,
+        reportCount = update.reportCount ?: reportCount,
+        isHidden = update.isHidden ?: isHidden
     )
 }

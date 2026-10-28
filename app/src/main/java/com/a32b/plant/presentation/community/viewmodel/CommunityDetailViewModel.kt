@@ -646,7 +646,9 @@ class CommunityDetailViewModel @Inject constructor(
                 title = post.title,
                 content = post.content,
                 tag = post.tag,
-                updatedAt = post.updatedAt
+                updatedAt = post.updatedAt,
+                reportCount = post.reportCount,
+                isHidden = post.isHidden
             )
         )
     }
