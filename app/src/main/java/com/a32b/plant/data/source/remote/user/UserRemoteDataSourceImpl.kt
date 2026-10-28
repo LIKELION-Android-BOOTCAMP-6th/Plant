@@ -52,24 +52,22 @@ class UserRemoteDataSourceImpl @Inject constructor(
     // 닉네임 등록(nicknames)과 첫 로그인 완료(users)를 한 트랜잭션으로 처리한다.
     // 일반 write는 오프라인에서 서버 응답이 올 때까지 await()가 끝나지 않고 로컬 큐에 남지만,
     // 트랜잭션은 오프라인이면 실패하고, 둘 중 하나만 반영되는 상태도 만들지 않는다.
-    // 반환: 완료했으면 true, 이미 다른 사용자가 선점한 닉네임이면 false.
+    // 확인한 서버 상태만 반환하고, 이를 성공/실패로 해석하는 일은 Repository가 한다.
     // (중복을 예외로 던지면 Firestore가 일부 코드를 자동 재시도해 응답이 늦어지므로 값으로 반환한다)
-    override suspend fun completeFirstLogin(uid: String, nickname: String): Boolean {
+    override suspend fun completeFirstLogin(uid: String, nickname: String): CompleteFirstLoginResult {
         val nicknameRef = db.collection("nicknames").document(nickname)
         val userRef = db.collection("users").document(uid)
 
         return db.runTransaction { txn ->
-            // 이전 시도가 시간 초과로 실패 처리됐지만 서버에는 뒤늦게 반영된 경우,
-            // 재시도가 "내 닉네임을 중복"으로 오판하지 않도록 이미 완료된 상태는 성공으로 본다.
             val userSnapshot = txn.get(userRef)
             if (userSnapshot.getString("nickname") == nickname &&
                 userSnapshot.getBoolean("isFirstLogin") == false
             ) {
-                return@runTransaction true
+                return@runTransaction CompleteFirstLoginResult.AlreadyCompleted
             }
 
             if (txn.get(nicknameRef).exists()) {
-                return@runTransaction false
+                return@runTransaction CompleteFirstLoginResult.NicknameTaken
             }
 
             txn.set(nicknameRef, mapOf("nickname" to nickname))
@@ -78,7 +76,7 @@ class UserRemoteDataSourceImpl @Inject constructor(
                 "nickname", nickname,
                 "isFirstLogin", false
             )
-            true
+            CompleteFirstLoginResult.Completed
         }.await()
     }
 

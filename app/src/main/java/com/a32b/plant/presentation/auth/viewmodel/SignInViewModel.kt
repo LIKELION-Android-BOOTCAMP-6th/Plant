@@ -7,6 +7,7 @@ import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.auth.SetNicknameUseCase
 import com.a32b.plant.domain.usecase.auth.SignInWithGoogleUseCase
+import com.a32b.plant.domain.util.NicknameRule
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -87,6 +88,11 @@ class SignInViewModel @Inject constructor(
 
         if (nickname.length !in 2..10) {
             _uiState.update { it.copy(nicknameError = "2자 이상 10자 이하로 입력해주세요.") }
+            return
+        }
+
+        if (!NicknameRule.isUsable(nickname)) {
+            _uiState.update { it.copy(nicknameError = NicknameRule.UNUSABLE_MESSAGE) }
             return
         }
 

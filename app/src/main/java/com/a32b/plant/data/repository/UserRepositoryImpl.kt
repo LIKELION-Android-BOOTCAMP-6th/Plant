@@ -5,6 +5,7 @@ import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.mapper.toDto
 import com.a32b.plant.data.source.local.SettingsLocalDataSource
+import com.a32b.plant.data.source.remote.user.CompleteFirstLoginResult
 import com.a32b.plant.data.source.remote.user.UserRemoteDataSource
 import com.a32b.plant.di.qualifier.ApplicationScope
 import com.a32b.plant.domain.error.AppError
@@ -139,13 +140,23 @@ class UserRepositoryImpl @Inject constructor(
     override suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit> =
         safeRunCatching {
             // 연결이 불안정하면 트랜잭션이 재시도하며 길어질 수 있어 상한을 둔다.
-            // 시간 초과는 네트워크 에러로 취급하며, 서버에 뒤늦게 반영돼도 재시도 시 성공으로 처리된다.
+            // 시간 초과(null)는 네트워크 에러로 취급하며, 서버에 뒤늦게 반영돼도 재시도 시 AlreadyCompleted로 성공 처리된다.
             withTimeoutOrNull(COMPLETE_FIRST_LOGIN_TIMEOUT_MS) {
                 userRemoteDataSource.completeFirstLogin(uid, nickname)
-            } ?: throw FirebaseNetworkException("첫 로그인 완료 처리 시간 초과")
+            }
         }.fold(
-            onSuccess = { completed ->
-                if (completed) Result.Success(Unit) else Result.Failure(AppError.NicknameTaken())
+            onSuccess = { completion ->
+                when (completion) {
+                    CompleteFirstLoginResult.Completed,
+                    CompleteFirstLoginResult.AlreadyCompleted -> Result.Success(Unit)
+
+                    CompleteFirstLoginResult.NicknameTaken -> Result.Failure(AppError.NicknameTaken())
+
+                    null -> {
+                        Log.w("UserRepository", "첫 로그인 완료 처리 시간 초과 (${COMPLETE_FIRST_LOGIN_TIMEOUT_MS}ms)")
+                        Result.Failure(AppError.Network())
+                    }
+                }
             },
             onFailure = { e -> Result.Failure(handleCompleteFirstLoginError(e)) }
         )
@@ -252,31 +263,18 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     private fun handleCompleteFirstLoginError(e: Throwable): AppError {
-        val failMessage = "닉네임 설정에 실패했습니다."
+        Log.e("UserRepository", "첫 로그인 완료 처리 실패: ${e.message}", e)
 
         return when (e) {
             is FirebaseFirestoreException -> when (e.code) {
                 FirebaseFirestoreException.Code.UNAVAILABLE,
-                FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> {
-                    Log.e("UserRepository", "첫 로그인 완료 처리 실패(네트워크): ${e.message}", e)
-                    AppError.Network()
-                }
+                FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
 
-                else -> {
-                    Log.e("UserRepository", "첫 로그인 완료 처리 실패: ${e.message}", e)
-                    AppError.Custom(failMessage)
-                }
+                else -> AppError.Custom("닉네임 설정에 실패했습니다.")
             }
 
-            is FirebaseNetworkException -> {
-                Log.e("UserRepository", "첫 로그인 완료 처리 실패(네트워크): ${e.message}", e)
-                AppError.Network()
-            }
-
-            else -> {
-                Log.e("UserRepository", "첫 로그인 완료 처리 실패: ${e.message}", e)
-                AppError.Custom(failMessage)
-            }
+            is FirebaseNetworkException -> AppError.Network()
+            else -> AppError.Custom("닉네임 설정에 실패했습니다.")
         }
     }
 
