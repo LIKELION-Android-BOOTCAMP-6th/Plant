@@ -171,19 +171,20 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
                     colors = CardDefaults.cardColors(MaterialTheme.colorScheme.secondaryContainer),
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
+                    val goalIconSize = 23.dp
                     Box(modifier = Modifier.padding(vertical = 13.dp, horizontal = 13.dp).width(250.dp)) {
                         Text(
                             "오늘의 학습 목표",
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center,
-                            // 아이콘 너비(23) + 여백(8)을 양쪽에 똑같이 줘서 가운데 정렬 유지 + 큰 글꼴에서 아이콘과 겹침 방지
-                            modifier = Modifier.align(Alignment.Center).padding(horizontal = 31.dp)
+                            // 아이콘 너비 + 여백(8)을 양쪽에 똑같이 줘서 가운데 정렬 유지 + 큰 글꼴에서 아이콘과 겹침 방지
+                            modifier = Modifier.align(Alignment.Center).padding(horizontal = goalIconSize + 8.dp)
                         )
 
                         Icon(
                             painter = painterResource(R.drawable.ic_right),
                             contentDescription = null,
-                            modifier = Modifier.size(23.dp).align(Alignment.CenterEnd),
+                            modifier = Modifier.size(goalIconSize).align(Alignment.CenterEnd),
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
