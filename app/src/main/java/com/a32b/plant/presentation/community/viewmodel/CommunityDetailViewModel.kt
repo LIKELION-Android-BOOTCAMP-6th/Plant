@@ -23,6 +23,7 @@ import com.a32b.plant.domain.usecase.community.CreateCommunityReportUseCase
 import com.a32b.plant.domain.usecase.community.ToggleBookmarkUseCase
 import com.a32b.plant.domain.usecase.community.ToggleLikeUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
+import com.a32b.plant.presentation.community.CommunityConstants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -96,9 +97,9 @@ class CommunityDetailViewModel @Inject constructor(
     companion object {
         private val LIKE_DEBOUNCE = 500.milliseconds
         private val BOOKMARK_DEBOUNCE = 500.milliseconds
-        private val BLANK_COMMENT_TOAST_DEBOUNCE = 1000.milliseconds
+        // 빈 댓글·블라인드 차단 Toast 연타 방지 디바운스
+        private val COMMENT_TOAST_DEBOUNCE = 1000.milliseconds
         private const val BLANK_COMMENT_MESSAGE = "댓글 내용을 입력해주세요"
-        private const val BLIND_POST_COMMENT_BLOCKED_MESSAGE = "숨김 처리된 게시글에는 댓글을 달 수 없어요"
         private const val BLIND_POST_COMMENT_EDIT_BLOCKED_MESSAGE = "숨김 처리된 게시글의 댓글은 수정할 수 없어요"
     }
 
@@ -226,7 +227,10 @@ class CommunityDetailViewModel @Inject constructor(
                     val editingId = _uiState.value.editingCommentId
                     val editingComment = editingId?.let { id -> comments.firstOrNull { it.commentId == id } }
                     val isEditingCommentDeleted = editingId != null && editingComment == null
-                    val shouldCancelEdit = isEditingCommentDeleted || editingComment?.isBlind == true
+                    // 게시글이 블라인드되면 댓글 저장이 항상 차단되므로 수정 모드에 머물지 않게 함
+                    // (게시글 결과가 위에서 먼저 반영되므로 _post.value로 판정)
+                    val isEditBlockedByBlindPost = editingId != null && !isEditingCommentDeleted && _post.value?.isBlind == true
+                    val shouldCancelEdit = isEditingCommentDeleted || isEditBlockedByBlindPost || editingComment?.isBlind == true
 
                     _uiState.update {
                         if (shouldCancelEdit) {
@@ -236,6 +240,7 @@ class CommunityDetailViewModel @Inject constructor(
                         }
                     }
                     if (isEditingCommentDeleted) sendToast(COMMENT_ALREADY_DELETED_MESSAGE)
+                    else if (isEditBlockedByBlindPost) sendToast(BLIND_POST_COMMENT_EDIT_BLOCKED_MESSAGE)
                 }
                 .onFailure { e -> sendToast(e.message) }
 
@@ -252,14 +257,12 @@ class CommunityDetailViewModel @Inject constructor(
     private fun sendDebouncedToast(job: Job?, message: String): Job {
         if (job?.isActive == true) return job
         sendToast(message)
-        return viewModelScope.launch { delay(BLANK_COMMENT_TOAST_DEBOUNCE) }
+        return viewModelScope.launch { delay(COMMENT_TOAST_DEBOUNCE) }
     }
-
-    private fun sendBlankCommentToastIfNeeded(job: Job?): Job = sendDebouncedToast(job, BLANK_COMMENT_MESSAGE)
 
     /** 블라인드 게시글의 댓글 입력창을 눌렀을 때 차단 안내 (입력창은 비활성처럼만 보이고 탭은 받음) */
     fun onBlockedCommentInputClick() {
-        blindCommentToastJob = sendDebouncedToast(blindCommentToastJob, BLIND_POST_COMMENT_BLOCKED_MESSAGE)
+        blindCommentToastJob = sendDebouncedToast(blindCommentToastJob, CommunityConstants.BLIND_POST_COMMENT_BLOCKED_MESSAGE)
     }
 
     fun addComment() {
@@ -271,7 +274,7 @@ class CommunityDetailViewModel @Inject constructor(
         }
         if (_uiState.value.isCommentSubmitting) return
         if (_uiState.value.comment.isBlank()) {
-            commentBlankToastJob = sendBlankCommentToastIfNeeded(commentBlankToastJob)
+            commentBlankToastJob = sendDebouncedToast(commentBlankToastJob, BLANK_COMMENT_MESSAGE)
             return
         }
 
@@ -470,13 +473,13 @@ class CommunityDetailViewModel @Inject constructor(
         val state = _uiState.value
         val commentId = state.editingCommentId ?: return
         if (commentId in state.editingSubmittingCommentIds) return
-        // 수정 중에 게시글이 블라인드로 바뀐 경우 — 입력한 텍스트는 유지하고 취소만 가능하게 둠
+        // 화면을 거치지 않는 호출 대비 — 수정 중 블라인드 전환은 refresh()에서 수정 모드를 해제함
         if (_post.value?.isBlind == true) {
             sendToast(BLIND_POST_COMMENT_EDIT_BLOCKED_MESSAGE)
             return
         }
         if (state.editingCommentText.isBlank()) {
-            editBlankToastJob = sendBlankCommentToastIfNeeded(editBlankToastJob)
+            editBlankToastJob = sendDebouncedToast(editBlankToastJob, BLANK_COMMENT_MESSAGE)
             return
         }
 

@@ -77,6 +77,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -768,7 +771,12 @@ fun CommentInputSection(
         // enabled = false는 onClick 자체를 막아 Toast를 띄울 수 없으므로, 차단 시에는 alpha로 비활성처럼 보이게 하고
         // 위에 덮은 투명 레이어가 탭을 받아 TextField 포커스(키보드)·등록 버튼 대신 onBlockedClick을 호출한다
         Box {
-            Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp)) {
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 8.dp, vertical = 12.dp)
+                    // 차단 시 TalkBack이 아래 TextField로 바로 가면 Toast 없이 포커스만 잡히므로, 안내는 위 레이어 하나로만 읽히게 함
+                    .then(if (isBlocked) Modifier.clearAndSetSemantics { } else Modifier)
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     ProfileImage(level = profileImg, size = 24)
                     Spacer(modifier = Modifier.width(6.dp))
@@ -791,7 +799,7 @@ fun CommentInputSection(
                         .onFocusChanged { onFocusChanged(it.isFocused) },
                     placeholder = {
                         Text(
-                            "댓글을 남겨보세요...",
+                            if (isBlocked) CommunityConstants.BLIND_POST_COMMENT_BLOCKED_MESSAGE else "댓글을 남겨보세요...",
                             style = MaterialTheme.typography.labelMedium
                         )
                     },
@@ -836,11 +844,12 @@ fun CommentInputSection(
                             .height(28.dp)
                             .padding(top = 4.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (text.isBlank())
+                            // 차단 시에는 입력해 둔 텍스트가 남아 있어도 비활성 색으로 표시 (활성 버튼처럼 보이지 않게)
+                            containerColor = if (text.isBlank() || isBlocked)
                                 MaterialTheme.colorScheme.tertiaryContainer
                             else
                                 MaterialTheme.colorScheme.primary,
-                            contentColor = if (text.isBlank())
+                            contentColor = if (text.isBlank() || isBlocked)
                                 MaterialTheme.colorScheme.onSurface
                             else
                                 MaterialTheme.colorScheme.onPrimary,
@@ -862,6 +871,7 @@ fun CommentInputSection(
                 Box(
                     modifier = Modifier
                         .matchParentSize()
+                        .semantics { contentDescription = CommunityConstants.BLIND_POST_COMMENT_BLOCKED_MESSAGE }
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
