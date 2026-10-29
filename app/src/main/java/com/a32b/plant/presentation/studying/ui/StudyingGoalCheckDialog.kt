@@ -38,6 +38,7 @@ import androidx.compose.ui.window.Dialog
 import com.a32b.plant.R
 import com.a32b.plant.presentation.core.type.StudyingGoalCheckMode
 import com.a32b.plant.presentation.studying.StudyingConstants.MAX_STUDY_LOG_SIZE
+import com.a32b.plant.presentation.studying.StudyingConstants.STUDY_LOG_LIMIT_STATE_DESCRIPTION
 import com.a32b.plant.presentation.studying.viewmodel.StudyLogUi
 
 
@@ -102,7 +103,7 @@ fun StudyingGoalCheckDialog(
                         .alpha(if (canAddLog) 1f else 0.38f)
                         // alpha는 시각 표시뿐이라 TalkBack에 상태를 따로 알림
                         // disabled()는 클릭 동작이 막혀 토스트를 못 띄울 수 있고, contentDescription은 버튼 이름을 덮어써서 쓰지 않음
-                        .semantics { if (!canAddLog) stateDescription = "최대 ${MAX_STUDY_LOG_SIZE}개 도달" }
+                        .semantics { if (!canAddLog) stateDescription = STUDY_LOG_LIMIT_STATE_DESCRIPTION }
                 ) {
                     Text(
                         "추가하기",
