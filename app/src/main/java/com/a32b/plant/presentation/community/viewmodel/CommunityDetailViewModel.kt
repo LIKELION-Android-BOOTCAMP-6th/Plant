@@ -303,8 +303,7 @@ class CommunityDetailViewModel @Inject constructor(
         notifyCommentCountChanged(1)
 
         viewModelScope.launch {
-            // runBatch는 첫 중단점 전에 SDK 로컬 큐에 적재되므로 화면 이탈과 무관하게 쓰기는 반영된다.
-            // NonCancellable은 이탈 후에도 결과를 받아 실패 시 댓글 수 롤백 알림을 보내기 위한 용도이며,
+            // NonCancellable: 화면 이탈 후에도 등록 요청과 결과 처리(실패 시 댓글 수 롤백 알림)를 끝까지 수행
             // withContext는 종료 시 바깥 취소를 확인해 결과를 버리므로 결과 처리도 반드시 블록 안에 둘 것
             // (이탈 후에는 viewModelScope가 취소돼 sendToast/refresh는 no-op)
             withContext(NonCancellable) {
