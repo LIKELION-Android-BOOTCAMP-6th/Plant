@@ -9,7 +9,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -38,7 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -171,14 +171,22 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
                     colors = CardDefaults.cardColors(MaterialTheme.colorScheme.secondaryContainer),
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
-                    Row(modifier = Modifier.padding(vertical = 17.dp, horizontal = 13.dp).width(250.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ){
-                        Text("오늘의 학습 목표", style = MaterialTheme.typography.bodyMedium, textDecoration = TextDecoration.Underline )
+                    val goalIconSize = 23.dp
+                    Box(modifier = Modifier.padding(vertical = 13.dp, horizontal = 13.dp).width(250.dp)) {
+                        Text(
+                            "오늘의 학습 목표",
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center,
+                            // 아이콘 너비 + 여백(8)을 양쪽에 똑같이 줘서 가운데 정렬 유지 + 큰 글꼴에서 아이콘과 겹침 방지
+                            modifier = Modifier.align(Alignment.Center).padding(horizontal = goalIconSize + 8.dp)
+                        )
 
-                        Image(painter = painterResource(R.drawable.ic_right), contentDescription = "goalCheck")
-
+                        Icon(
+                            painter = painterResource(R.drawable.ic_right),
+                            contentDescription = null,
+                            modifier = Modifier.size(goalIconSize).align(Alignment.CenterEnd),
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
                     }
 
                 }
