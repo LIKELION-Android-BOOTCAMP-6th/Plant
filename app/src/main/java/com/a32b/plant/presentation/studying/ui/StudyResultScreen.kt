@@ -189,13 +189,7 @@ fun StudyResultContent(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Image(painter = painterResource(id = R.drawable.logo_plant),
-                            contentDescription = "logo",
-                            modifier = Modifier.size(30.dp).padding(end = 10.dp))
-                        Text("식물이 한 뼘 더 자랐습니다!", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-
-                    }
+                    Text("학습 시간이 식물에게 전해졌어요!", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.height(22.dp))
 
                 }
