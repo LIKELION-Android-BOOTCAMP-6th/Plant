@@ -219,8 +219,18 @@ class CommunityPostViewModel @Inject constructor(
                     _eventChannel.send(CommunityPostEvent.ShowToast("수정에 실패했습니다."))
                 }
             } else {
-                if (!postCooldownManager.canPost()) {
-                    val remaining = postCooldownManager.getRemainingSeconds()
+                // 쿨다운은 글을 등록한 계정 기준이므로 요청 시점의 uid로 확인/기록
+                // (이번 등록 동작 안에서만 쓰는 지역변수라 유저 정보 캐싱에 해당하지 않음)
+                val uid = when (val result = ensureCurrentUserUseCase()) {
+                    is Result.Success -> result.data.uid
+                    is Result.Failure -> {
+                        _uiState.update { it.copy(isSubmitting = false) }
+                        return@launch // 세션 만료는 UseCase 내부에서 이미 알림
+                    }
+                }
+
+                if (!postCooldownManager.canPost(uid)) {
+                    val remaining = postCooldownManager.getRemainingSeconds(uid)
                     sendToast("게시글 작성은 ${remaining}초 후에 가능합니다")
                     _uiState.update { it.copy(isSubmitting = false) }
                     return@launch
@@ -235,7 +245,7 @@ class CommunityPostViewModel @Inject constructor(
                         tag = selectedTag
                     )
                 }.onSuccess { newPostId ->
-                    postCooldownManager.recordPost()
+                    postCooldownManager.recordPost(uid)
                     postId = newPostId
                     _eventChannel.send(CommunityPostEvent.ShowToast("성공적으로 등록되었습니다!"))
                     _eventChannel.send(CommunityPostEvent.NavigateToDetail(newPostId))
