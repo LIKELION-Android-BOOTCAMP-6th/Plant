@@ -28,12 +28,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.a32b.plant.R
 import com.a32b.plant.presentation.core.type.StudyingGoalCheckMode
+import com.a32b.plant.presentation.studying.StudyingConstants.MAX_STUDY_LOG_SIZE
 import com.a32b.plant.presentation.studying.viewmodel.StudyLogUi
 
 
@@ -90,7 +92,12 @@ fun StudyingGoalCheckDialog(
                     }
                 }
 
-                TextButton(onClick = { onEdit(-1) }) {
+                // 최대 개수면 비활성처럼만 표시 — enabled=false면 클릭이 막혀 안내 토스트를 띄울 수 없으므로 클릭은 ViewModel 가드에서 처리
+                val canAddLog = studyLog.size < MAX_STUDY_LOG_SIZE
+                TextButton(
+                    onClick = { onEdit(-1) },
+                    modifier = Modifier.alpha(if (canAddLog) 1f else 0.38f)
+                ) {
                     Text(
                         "추가하기",
                         style = MaterialTheme.typography.bodyMedium,

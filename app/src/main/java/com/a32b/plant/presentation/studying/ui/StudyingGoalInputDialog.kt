@@ -39,6 +39,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.a32b.plant.R
+import com.a32b.plant.presentation.studying.StudyingConstants.MAX_STUDY_LOG_SIZE
 
 @Composable
 fun StudyingGoalInputDialog(
@@ -52,7 +53,7 @@ fun StudyingGoalInputDialog(
     onConfirmEdit: (String) -> Unit = {}
 ) {
     val maxLength = 100
-    val maxLogSize = 10
+    val maxLogSize = MAX_STUDY_LOG_SIZE
 
     val localLogs = remember(studyLogs) {
         mutableStateListOf<String>().apply {

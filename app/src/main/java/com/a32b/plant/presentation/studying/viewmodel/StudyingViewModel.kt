@@ -18,6 +18,8 @@ import com.a32b.plant.domain.usecase.studying.FinishStudyingUseCase
 import com.a32b.plant.domain.usecase.studying.StartStudyingSessionUseCase
 import com.a32b.plant.domain.usecase.studying.UpdateLocalStudyingSessionUseCase
 import com.a32b.plant.presentation.core.type.StudyingGoalCheckMode
+import com.a32b.plant.presentation.studying.StudyingConstants.MAX_STUDY_LOG_SIZE
+import com.a32b.plant.presentation.studying.StudyingConstants.STUDY_LOG_LIMIT_MESSAGE
 import com.a32b.plant.presentation.studying.service.StudyingTimerService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -263,6 +265,10 @@ class StudyingViewModel @Inject constructor(
     }
 
     fun onStartEditing(index: Int) {
+        // 연타 등으로 이미 편집 다이얼로그가 열려 있으면 무시 — 두 번째 호출이 savedGoalCheckMode를 null로 덮어쓰는 것도 방지
+        if (_uiState.value.isEditing) return
+        // savedGoalCheckMode 저장 / 확인 다이얼로그 닫기보다 먼저 막아야 확인 다이얼로그가 그대로 유지됨
+        if (index == -1 && isStudyLogFull()) return
         savedGoalCheckMode = _uiState.value.goalCheckMode
         _uiState.update { state ->
             // index == -1 분기 로직은 onIsEditingChanged와 동일 — 한쪽 변경 시 같이 수정 필요
@@ -328,6 +334,7 @@ class StudyingViewModel @Inject constructor(
 
     /** 수정중으로 변환*/
     fun onIsEditingChanged(value: Boolean, index: Int? = null) {
+        if (index == -1 && isStudyLogFull()) return
         _uiState.update { state ->
             when {
                 // 편집 종료 + 방금 새로 추가한 로그를 저장하지 않은 경우 -> 마지막 로그 제거
@@ -352,6 +359,13 @@ class StudyingViewModel @Inject constructor(
                 else -> state.copy(isEditing = value, logIndex = index)
             }
         }
+    }
+
+    /** 새 목표 추가 가능 여부 확인 — 최대 개수 이상이면 안내 토스트 발송 (복구 등으로 이미 초과한 목록은 지우지 않고 추가만 막음) */
+    private fun isStudyLogFull(): Boolean {
+        val isFull = _uiState.value.studyLog.size >= MAX_STUDY_LOG_SIZE
+        if (isFull) sendToast(STUDY_LOG_LIMIT_MESSAGE)
+        return isFull
     }
 
     /** 목표 수정 함수 */
