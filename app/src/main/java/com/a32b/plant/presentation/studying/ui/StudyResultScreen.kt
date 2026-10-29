@@ -92,12 +92,15 @@ fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewMo
                                 contentDescription = "닫기",
                                 modifier = Modifier.size(24.dp))
                         }
-                        IconButton(onClick = {
-                            viewModel.onDialogShow()
-                        }) {
-                            Image(painter = painterResource(R.drawable.ic_study_result_download),
-                                contentDescription = "이미지 저장하기",
-                                modifier = Modifier.size(20.dp))
+                        // 갤러리 저장을 지원하지 않는 기기(Android 9 이하)에서는 저장 버튼 숨김
+                        if (uiState.isImageSaveSupported) {
+                            IconButton(onClick = {
+                                viewModel.onDialogShow()
+                            }) {
+                                Image(painter = painterResource(R.drawable.ic_study_result_download),
+                                    contentDescription = "이미지 저장하기",
+                                    modifier = Modifier.size(20.dp))
+                            }
                         }
                     }
 
@@ -118,7 +121,7 @@ fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewMo
         ConfirmDialog("결과를 이미지로 저장하시겠습니까?",
             onDismiss = {viewModel.onDialogDismiss()},
             onConfirm = {
-                viewModel.saveBitmapToGallery(context, capture.invoke())
+                viewModel.saveBitmapToGallery(capture.invoke())
                 viewModel.onDialogDismiss()
             })
 

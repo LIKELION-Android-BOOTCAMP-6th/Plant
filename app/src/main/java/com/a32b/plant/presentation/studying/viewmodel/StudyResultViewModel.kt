@@ -1,21 +1,15 @@
 package com.a32b.plant.presentation.studying.viewmodel
 
-import android.content.ContentValues
-import android.content.Context
 import android.graphics.Bitmap
-import android.net.Uri
-import android.os.Environment
-import android.provider.MediaStore
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import androidx.navigation.toRoute
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
-import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.StudyReward
+import com.a32b.plant.domain.repository.GalleryRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.item.GiveStudyRewardUseCase
@@ -28,12 +22,14 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 import java.time.LocalDateTime
 import javax.inject.Inject
 
 data class StudyResultUiState(
     val isLoading: Boolean = false,
     val isDialogShow: Boolean = false,
+    val isImageSaveSupported: Boolean = false,
     val reward: StudyReward? = null,
     val timestamp: String = "",
     val tag: String = "",
@@ -51,12 +47,14 @@ sealed class StudyResultEvent {
 @HiltViewModel
 class StudyResultViewModel @Inject constructor(
     private val giveStudyRewardUseCase: GiveStudyRewardUseCase,
+    private val galleryRepository: GalleryRepository,
     savedStateHandle: SavedStateHandle
 ) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(
         savedStateHandle.toRoute<Routes.StudyResult>().let { route ->
             StudyResultUiState(
+                isImageSaveSupported = galleryRepository.isGallerySaveSupported(),
                 timestamp = route.timestamp,
                 tag = route.tag,
                 title = route.title,
@@ -97,39 +95,21 @@ class StudyResultViewModel @Inject constructor(
         }
     }
 
-    fun saveBitmapToGallery(context: Context, bitmap: Bitmap) {
-        val resolver = context.contentResolver
+    fun saveBitmapToGallery(bitmap: Bitmap) {
         val fileName = "plant_${TimeFormatter.formatToDateOnly(LocalDateTime.now())}.png"
-        val contentValues = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
-            put(MediaStore.Images.Media.MIME_TYPE, "image/png")
-            put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
-            // 쓰는 도중에는 갤러리에 노출되지 않도록 숨김 (완료되지 못한 항목은 시스템이 정리)
-            put(MediaStore.Images.Media.IS_PENDING, 1)
-        }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            val isSaved = withContext(Dispatchers.IO) {
-                var uri: Uri? = null
-                safeRunCatching {
-                    val insertedUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-                        ?: error("갤러리 항목 생성 실패")
-                    uri = insertedUri
-                    val stream = resolver.openOutputStream(insertedUri) ?: error("출력 스트림 열기 실패")
-                    val isWritten = stream.use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-                    if (!isWritten) error("PNG 쓰기 실패")
-                    // 쓰기가 끝나면 숨김 해제
-                    val pendingCleared = ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }
-                    if (resolver.update(insertedUri, pendingCleared, null, null) <= 0) error("숨김 해제 실패")
-                }.onFailure { e ->
-                    Log.e("StudyResultVM", "이미지 저장 실패: ${e.message}", e)
-                    // 실패하면 갤러리에 빈 이미지 항목이 남지 않도록 삭제
-                    uri?.let { safeRunCatching { resolver.delete(it, null, null) } }
-                }.isSuccess
-            }
+            // PNG 변환은 CPU 작업이라 메인 스레드를 막지 않도록 분리 (변환 실패 시 빈 배열 → Repository에서 실패 처리)
+            val pngBytes = withContext(Dispatchers.Default) { bitmap.toPngBytes() }
+            galleryRepository.savePngToGallery(pngBytes, fileName)
+                .onSuccess { _event.send(StudyResultEvent.ShowToast("이미지가 저장되었습니다.")) }
+                .onFailure { error -> _event.send(StudyResultEvent.ShowToast(error.message)) }
             _uiState.update { it.copy(isLoading = false) }
-            _event.send(StudyResultEvent.ShowToast(if (isSaved) "사진이 저장되었습니다" else "이미지 저장에 실패했습니다."))
         }
+    }
+
+    private fun Bitmap.toPngBytes(): ByteArray = ByteArrayOutputStream().use { stream ->
+        if (compress(Bitmap.CompressFormat.PNG, 100, stream)) stream.toByteArray() else ByteArray(0)
     }
 }
