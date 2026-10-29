@@ -1,5 +1,6 @@
 package com.a32b.plant.domain.service
 
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -7,7 +8,8 @@ import javax.inject.Singleton
 class PostCooldownManager @Inject constructor() {
 
     // 같은 기기에서 계정을 바꿔 로그인해도 이전 계정의 쿨다운이 적용되지 않도록 uid별로 저장
-    private val lastPostTimeMillisByUid = mutableMapOf<String, Long>()
+    // 싱글톤이라 어느 스레드에서 호출돼도 안전하도록 ConcurrentHashMap 사용
+    private val lastPostTimeMillisByUid = ConcurrentHashMap<String, Long>()
 
     fun canPost(uid: String): Boolean =
         System.currentTimeMillis() - lastPostTimeMillis(uid) >= COOLDOWN_MILLIS
