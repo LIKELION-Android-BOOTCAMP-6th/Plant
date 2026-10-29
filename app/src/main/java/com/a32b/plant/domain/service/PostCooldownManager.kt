@@ -8,7 +8,7 @@ import javax.inject.Singleton
 class PostCooldownManager @Inject constructor() {
 
     // 같은 기기에서 계정을 바꿔 로그인해도 이전 계정의 쿨다운이 적용되지 않도록 uid별로 저장
-    // 싱글톤이라 어느 스레드에서 호출돼도 안전하도록 ConcurrentHashMap 사용
+    // 싱글톤이라 Map 읽기/쓰기는 스레드 안전하게 ConcurrentHashMap 사용 (확인→기록의 원자성은 isSubmitting으로 보장)
     private val lastPostTimeMillisByUid = ConcurrentHashMap<String, Long>()
 
     fun canPost(uid: String): Boolean =

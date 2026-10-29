@@ -219,8 +219,8 @@ class CommunityPostViewModel @Inject constructor(
                     _eventChannel.send(CommunityPostEvent.ShowToast("수정에 실패했습니다."))
                 }
             } else {
-                // 등록을 요청한 계정에 쿨다운을 기록하기 위해 이번 등록 동안만 지역변수로 유지
-                // (등록 후 재조회하면 그사이 세션 만료 시 글은 올라갔는데 쿨다운이 기록되지 않음)
+                // 쿨다운은 글을 등록한 계정 기준이므로 요청 시점의 uid로 확인/기록
+                // (이번 등록 동작 안에서만 쓰는 지역변수라 유저 정보 캐싱에 해당하지 않음)
                 val uid = when (val result = ensureCurrentUserUseCase()) {
                     is Result.Success -> result.data.uid
                     is Result.Failure -> {
