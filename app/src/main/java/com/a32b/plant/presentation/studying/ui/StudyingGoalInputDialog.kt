@@ -1,6 +1,5 @@
 package com.a32b.plant.presentation.studying.ui
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +18,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -118,10 +118,11 @@ fun StudyingGoalInputDialog(
                                 .alpha(if (canGoPrev) 1f else 0f)
                                 .then(if (canGoPrev) Modifier else Modifier.clearAndSetSemantics {})
                         ) {
-                            Image(
+                            Icon(
                                 painter = painterResource(R.drawable.ic_left),
                                 contentDescription = "왼쪽",
-                                modifier = Modifier.size(23.dp)
+                                modifier = Modifier.size(23.dp),
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -173,10 +174,11 @@ fun StudyingGoalInputDialog(
                                 .alpha(if (canGoNext) 1f else 0f)
                                 .then(if (canGoNext) Modifier else Modifier.clearAndSetSemantics {})
                         ) {
-                            Image(
+                            Icon(
                                 painter = painterResource(R.drawable.ic_right),
                                 contentDescription = "오른쪽",
-                                modifier = Modifier.size(23.dp)
+                                modifier = Modifier.size(23.dp),
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
