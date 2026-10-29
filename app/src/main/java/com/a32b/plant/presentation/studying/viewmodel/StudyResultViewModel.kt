@@ -129,7 +129,7 @@ class StudyResultViewModel @Inject constructor(
                 }.isSuccess
             }
             _uiState.update { it.copy(isLoading = false) }
-            _event.send(StudyResultEvent.ShowToast(if (isSaved) "저장이 완료됐습니다!" else "이미지 저장에 실패했습니다."))
+            _event.send(StudyResultEvent.ShowToast(if (isSaved) "사진이 저장되었습니다" else "이미지 저장에 실패했습니다."))
         }
     }
 }
