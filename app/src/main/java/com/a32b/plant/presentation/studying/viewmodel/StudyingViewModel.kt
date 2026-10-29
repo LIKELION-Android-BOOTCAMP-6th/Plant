@@ -339,7 +339,7 @@ class StudyingViewModel @Inject constructor(
     /** 편집 종료 — 방금 새로 추가한 목표를 저장하지 않고 닫았으면(빈 목표) 마지막 목표 제거 */
     private fun finishEditing() {
         _uiState.update { state ->
-            val isUnsavedNewLog = state.logIndex == state.studyLog.lastIndex && state.studyLog.lastOrNull()?.log?.isEmpty() == true
+            val isUnsavedNewLog = state.logIndex == state.studyLog.lastIndex && state.studyLog.lastOrNull()?.log?.isBlank() == true
             state.copy(
                 studyLog = if (isUnsavedNewLog) state.studyLog.dropLast(1) else state.studyLog,
                 isEditing = false,
@@ -367,7 +367,8 @@ class StudyingViewModel @Inject constructor(
     /** 목표 수정 함수 */
     fun onStudyLogChanged(index: Int, completed: Boolean? = null, log: String? = null) = _uiState.update {
         it.copy(
-            studyLog = if (log == "") {
+            // 공백만 입력한 목표도 빈 입력과 같이 삭제 — 완료 체크는 log = null로 호출되므로 삭제 대상 아님
+            studyLog = if (log != null && log.isBlank()) {
                 it.studyLog.filterIndexed { i, _ -> i != index }
             } else {
                 it.studyLog.mapIndexed { i, item ->
