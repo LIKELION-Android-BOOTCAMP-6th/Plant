@@ -37,12 +37,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
-import com.a32b.plant.domain.type.PlantLevel
 import com.a32b.plant.presentation.auth.viewmodel.SignInEvent
 import com.a32b.plant.presentation.auth.viewmodel.SignInViewModel
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.LoadingBox
-import com.a32b.plant.presentation.core.extension.resId
 import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.theme.LocalIsDarkTheme
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
@@ -267,9 +265,16 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
 }
 
 // 화분 성장 단계 이미지 (lv0 → lv6)
-private val potGrowthImages = PlantLevel.entries
-    .filter { it != PlantLevel.DEFAULT }
-    .map { it.resId }
+// 일반 화분 이미지는 가운데 정렬이라 레벨마다 화분 위치가 달라짐 → 애니메이션용은 화분 위치를 고정한 별도 리소스 사용
+private val potGrowthImages = listOf(
+    R.drawable.ic_pot_growth_lv0,
+    R.drawable.ic_pot_growth_lv1,
+    R.drawable.ic_pot_growth_lv2,
+    R.drawable.ic_pot_growth_lv3,
+    R.drawable.ic_pot_growth_lv4,
+    R.drawable.ic_pot_growth_lv5,
+    R.drawable.ic_pot_growth_lv6
+)
 
 @Composable
 private fun BrandSection(modifier: Modifier = Modifier) {
