@@ -98,6 +98,8 @@ class CommunityDetailViewModel @Inject constructor(
         private val BOOKMARK_DEBOUNCE = 500.milliseconds
         private val BLANK_COMMENT_TOAST_DEBOUNCE = 1000.milliseconds
         private const val BLANK_COMMENT_MESSAGE = "댓글 내용을 입력해주세요"
+        private const val BLIND_POST_COMMENT_BLOCKED_MESSAGE = "숨김 처리된 게시글에는 댓글을 달 수 없어요"
+        private const val BLIND_POST_COMMENT_EDIT_BLOCKED_MESSAGE = "숨김 처리된 게시글의 댓글은 수정할 수 없어요"
     }
 
     private val _uiState = MutableStateFlow(CommunityDetailUiState())
@@ -133,6 +135,8 @@ class CommunityDetailViewModel @Inject constructor(
     // blank 상태에서 연타 시 Toast가 줄줄이 쌓이는 것을 막기 위한 디바운스
     private var commentBlankToastJob: Job? = null
     private var editBlankToastJob: Job? = null
+    // 블라인드 게시글 입력창 연타 시 Toast가 줄줄이 쌓이는 것을 막기 위한 디바운스
+    private var blindCommentToastJob: Job? = null
 
     // 진행 중인 새로고침 — 새로고침이 겹치면 늦게 끝난 이전 결과가 최신 결과를 덮어쓰지 않도록 이전 것을 취소하기 위함
     private var refreshJob: Job? = null
@@ -245,14 +249,26 @@ class CommunityDetailViewModel @Inject constructor(
     fun closeDeleteDialog() { _showDeleteDialog.value = false }
 
     // 진행 중인 디바운스 Job이 있으면 Toast를 다시 보내지 않고 그 Job을 유지, 없으면 새로 보내고 새 Job을 반환
-    private fun sendBlankCommentToastIfNeeded(job: Job?): Job {
+    private fun sendDebouncedToast(job: Job?, message: String): Job {
         if (job?.isActive == true) return job
-        sendToast(BLANK_COMMENT_MESSAGE)
+        sendToast(message)
         return viewModelScope.launch { delay(BLANK_COMMENT_TOAST_DEBOUNCE) }
     }
 
-    fun addComment() {
+    private fun sendBlankCommentToastIfNeeded(job: Job?): Job = sendDebouncedToast(job, BLANK_COMMENT_MESSAGE)
 
+    /** 블라인드 게시글의 댓글 입력창을 눌렀을 때 차단 안내 (입력창은 비활성처럼만 보이고 탭은 받음) */
+    fun onBlockedCommentInputClick() {
+        blindCommentToastJob = sendDebouncedToast(blindCommentToastJob, BLIND_POST_COMMENT_BLOCKED_MESSAGE)
+    }
+
+    fun addComment() {
+        // 블라인드 게시글에 댓글이 달리면 원래 제목이 activity에 복사돼 '내 활동'에서 다시 보이므로 차단
+        // 입력 중에 블라인드로 바뀐 경우에도 입력한 텍스트는 지우지 않음
+        if (_post.value?.isBlind == true) {
+            onBlockedCommentInputClick()
+            return
+        }
         if (_uiState.value.isCommentSubmitting) return
         if (_uiState.value.comment.isBlank()) {
             commentBlankToastJob = sendBlankCommentToastIfNeeded(commentBlankToastJob)
@@ -429,6 +445,11 @@ class CommunityDetailViewModel @Inject constructor(
 
     // 댓글 수정 관련 함수
     fun startEditComment(comment: Comment) {
+        // 블라인드 게시글의 댓글은 게시글 수정 차단과 같은 기준으로 수정 진입 차단 (삭제는 허용)
+        if (_post.value?.isBlind == true) {
+            sendToast(BLIND_POST_COMMENT_EDIT_BLOCKED_MESSAGE)
+            return
+        }
         _uiState.update {
             it.copy(editingCommentId = comment.commentId, editingCommentText = comment.content)
         }
@@ -449,6 +470,11 @@ class CommunityDetailViewModel @Inject constructor(
         val state = _uiState.value
         val commentId = state.editingCommentId ?: return
         if (commentId in state.editingSubmittingCommentIds) return
+        // 수정 중에 게시글이 블라인드로 바뀐 경우 — 입력한 텍스트는 유지하고 취소만 가능하게 둠
+        if (_post.value?.isBlind == true) {
+            sendToast(BLIND_POST_COMMENT_EDIT_BLOCKED_MESSAGE)
+            return
+        }
         if (state.editingCommentText.isBlank()) {
             editBlankToastJob = sendBlankCommentToastIfNeeded(editBlankToastJob)
             return

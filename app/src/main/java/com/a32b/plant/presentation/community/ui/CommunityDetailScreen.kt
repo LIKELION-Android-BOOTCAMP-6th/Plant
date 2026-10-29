@@ -7,6 +7,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -67,6 +68,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -480,8 +482,11 @@ fun CommunityDetailScreen(
                                     profileImg = uiState.currentProfileImg,
                                     text = uiState.comment,
                                     isSubmitting = uiState.isCommentSubmitting,
+                                    // 블라인드 게시글은 새 댓글 차단 — item 자체는 남겨 COMMENT_INPUT_ITEM_INDEX를 고정값으로 유지
+                                    isBlocked = isPostBlind,
                                     onTextChange = { viewModel.onCommentChange(it) },
                                     onSend = { viewModel.addComment() },
+                                    onBlockedClick = { viewModel.onBlockedCommentInputClick() },
                                     onFocusChanged = { isCommentFieldFocused = it },
                                     modifier = Modifier
                                         .bringIntoViewRequester(commentInputRequester)
@@ -495,6 +500,8 @@ fun CommunityDetailScreen(
                                 CommentRow(
                                     comment = commentData,
                                     isOwner = commentData.user.uid == uiState.currentUid,
+                                    // 블라인드 게시글의 댓글은 수정 진입 차단 (삭제는 허용)
+                                    canEdit = !isPostBlind,
                                     isEditing = uiState.editingCommentId == commentData.commentId,
                                     editingText = uiState.editingCommentText,
                                     isEditSubmitting = commentData.commentId in uiState.editingSubmittingCommentIds,
@@ -521,6 +528,7 @@ fun CommunityDetailScreen(
 fun CommentRow(
     comment: Comment,
     isOwner: Boolean,
+    canEdit: Boolean = true,
     isEditing: Boolean,
     editingText: String,
     isEditSubmitting: Boolean = false,
@@ -704,12 +712,14 @@ fun CommentRow(
 
         // 본인 댓글이고 편집 중이 아닐 때만 수정/삭제 아이콘 표시
         if (isOwner && !isEditing) {
-            IconButton(onClick = onEditStart, modifier = Modifier.size(28.dp)) {
-                Icon(
-                    painterResource(id = R.drawable.ic_edit), null,
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(14.dp)
-                )
+            if (canEdit) {
+                IconButton(onClick = onEditStart, modifier = Modifier.size(28.dp)) {
+                    Icon(
+                        painterResource(id = R.drawable.ic_edit), null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
             }
             IconButton(onClick = onDeleteClick, modifier = Modifier.size(28.dp)) {
                 Icon(
@@ -729,108 +739,135 @@ fun CommentInputSection(
     text: String,
     modifier: Modifier = Modifier,
     isSubmitting: Boolean = false,
+    // true면 비활성처럼 보이게 하고 탭·전송 시 onBlockedClick만 호출 (블라인드 게시글)
+    isBlocked: Boolean = false,
     onTextChange: (String) -> Unit,
     onSend: () -> Unit,
+    onBlockedClick: () -> Unit = {},
     onFocusChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     val maxLength = 100
     val focus = LocalFocusManager.current
 
+    // 입력 중에 블라인드로 바뀌면(refresh 반영) 포커스를 빼 키보드를 닫음 — 입력한 텍스트는 유지
+    LaunchedEffect(isBlocked) {
+        if (isBlocked) focus.clearFocus()
+    }
+
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         shape = RoundedCornerShape(12.dp),
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .alpha(if (isBlocked) 0.5f else 1f),
         elevation = CardDefaults.elevatedCardElevation(1.dp)
     ) {
-        Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                ProfileImage(level = profileImg, size = 24)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    nickname,
-//                fontSize = 13.sp,
-                    style = MaterialTheme.typography.titleSmall
-                )
-            }
-            TextField(
-                value = text,
-                onValueChange = { input ->
-                    limitLength(input, maxLength, context, onTextChange)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp)
-                    .onFocusChanged { onFocusChanged(it.isFocused) },
-                placeholder = {
+        // enabled = false는 onClick 자체를 막아 Toast를 띄울 수 없으므로, 차단 시에는 alpha로 비활성처럼 보이게 하고
+        // 위에 덮은 투명 레이어가 탭을 받아 TextField 포커스(키보드)·등록 버튼 대신 onBlockedClick을 호출한다
+        Box {
+            Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    ProfileImage(level = profileImg, size = 24)
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        "댓글을 남겨보세요...",
-                        style = MaterialTheme.typography.labelMedium
-                    )
-                },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    cursorColor = MaterialTheme.colorScheme.primary
-                ),
-                shape = RoundedCornerShape(8.dp),
-                textStyle = MaterialTheme.typography.bodyMedium,
-                maxLines = COMMENT_MAX_LINES,
-                minLines = 1,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text,
-                    imeAction = ImeAction.Default
-                )
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "${text.length} / $maxLength",
-                    modifier = Modifier.padding(start = 4.dp),
-                    color = if (text.length >= maxLength) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSecondary,
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                Button(
-                    onClick = {
-                        onSend()
-                        // blank 제출 시에는 Toast 안내만 띄우고 포커스는 유지해 바로 이어서 입력 가능하게 함
-                        if (text.isNotBlank()) focus.clearFocus()
-                    },
-                    enabled = !isSubmitting,
-                    modifier = Modifier
-                        .height(28.dp)
-                        .padding(top = 4.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (text.isBlank())
-                            MaterialTheme.colorScheme.tertiaryContainer
-                        else
-                            MaterialTheme.colorScheme.primary,
-                        contentColor = if (text.isBlank())
-                            MaterialTheme.colorScheme.onSurface
-                        else
-                            MaterialTheme.colorScheme.onPrimary,
-                        disabledContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                        disabledContentColor = MaterialTheme.colorScheme.onSurface
-                    ),
-                    shape = RoundedCornerShape(4.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
-                ) {
-                    Text(
-                        if (isSubmitting) "등록 중" else "등록",
-//                        fontSize = 12.sp,
-                        style = MaterialTheme.typography.labelMedium
+                        nickname,
+    //                fontSize = 13.sp,
+                        style = MaterialTheme.typography.titleSmall
                     )
                 }
+                TextField(
+                    value = text,
+                    onValueChange = { input ->
+                        limitLength(input, maxLength, context, onTextChange)
+                    },
+                    // 레이어가 탭을 막지만, 접근성 등 다른 경로로 포커스가 와도 키보드가 뜨지 않도록 readOnly 유지
+                    readOnly = isBlocked,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                        .onFocusChanged { onFocusChanged(it.isFocused) },
+                    placeholder = {
+                        Text(
+                            "댓글을 남겨보세요...",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        cursorColor = MaterialTheme.colorScheme.primary
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    textStyle = MaterialTheme.typography.bodyMedium,
+                    maxLines = COMMENT_MAX_LINES,
+                    minLines = 1,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Default
+                    )
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "${text.length} / $maxLength",
+                        modifier = Modifier.padding(start = 4.dp),
+                        color = if (text.length >= maxLength) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSecondary,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Button(
+                        onClick = {
+                            onSend()
+                            // blank 제출 시에는 Toast 안내만 띄우고 포커스는 유지해 바로 이어서 입력 가능하게 함
+                            if (text.isNotBlank()) focus.clearFocus()
+                        },
+                        enabled = !isSubmitting,
+                        modifier = Modifier
+                            .height(28.dp)
+                            .padding(top = 4.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (text.isBlank())
+                                MaterialTheme.colorScheme.tertiaryContainer
+                            else
+                                MaterialTheme.colorScheme.primary,
+                            contentColor = if (text.isBlank())
+                                MaterialTheme.colorScheme.onSurface
+                            else
+                                MaterialTheme.colorScheme.onPrimary,
+                            disabledContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                            disabledContentColor = MaterialTheme.colorScheme.onSurface
+                        ),
+                        shape = RoundedCornerShape(4.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
+                    ) {
+                        Text(
+                            if (isSubmitting) "등록 중" else "등록",
+    //                        fontSize = 12.sp,
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                }
+            }
+            if (isBlocked) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onBlockedClick
+                        )
+                )
             }
         }
     }
