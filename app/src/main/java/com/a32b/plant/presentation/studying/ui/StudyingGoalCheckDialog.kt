@@ -30,6 +30,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -96,7 +98,11 @@ fun StudyingGoalCheckDialog(
                 val canAddLog = studyLog.size < MAX_STUDY_LOG_SIZE
                 TextButton(
                     onClick = { onEdit(-1) },
-                    modifier = Modifier.alpha(if (canAddLog) 1f else 0.38f)
+                    modifier = Modifier
+                        .alpha(if (canAddLog) 1f else 0.38f)
+                        // alpha는 시각 표시뿐이라 TalkBack에 상태를 따로 알림
+                        // disabled()는 클릭 동작이 막혀 토스트를 못 띄울 수 있고, contentDescription은 버튼 이름을 덮어써서 쓰지 않음
+                        .semantics { if (!canAddLog) stateDescription = "최대 ${MAX_STUDY_LOG_SIZE}개 도달" }
                 ) {
                     Text(
                         "추가하기",
