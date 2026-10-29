@@ -306,13 +306,14 @@ fun CommunityListScreen(
                             }
                         }
 
+                        // 레이어 순서: 게시글 목록 < 바깥 클릭 레이어(1) < FAB(2) < 로딩 오버레이(3) < 태그 선택 창(4)
                         // 태그 선택 창 오버레이 (게시글 목록을 밀지 않고 위에 덮음)
                         if (uiState.isTagSheetShown) {
                             // 바깥 클릭 시 닫기용 투명 레이어
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .zIndex(0.5f)
+                                    .zIndex(1f)
                                     .clickable { viewModel.onIsTagSheetShownChange() }
                             )
                             Box(
@@ -320,7 +321,7 @@ fun CommunityListScreen(
                                     .padding(top = innerPadding.calculateTopPadding())
                                     .padding(horizontal = 20.dp)
                                     .fillMaxWidth()
-                                    .zIndex(1f)
+                                    .zIndex(4f)
                             ) {
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
@@ -338,31 +339,34 @@ fun CommunityListScreen(
                             }
                         }
 
+                        // 로딩 오버레이가 덮어 클릭을 막을 수 있도록 같은 Box 안에 배치
+                        FloatingActionButton(
+                            onClick = { navController.navigate(Routes.CommunityPost()) },
+                            containerColor = MaterialTheme.colorScheme.secondary,
+                            shape = CircleShape,
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(end = 16.dp, bottom = 16.dp)
+                                .zIndex(2f)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_edit),
+                                contentDescription = null,
+                                modifier = Modifier.size(26.dp),
+                                tint = MaterialTheme.colorScheme.onBackground,
+                            )
+                        }
+
                         // 필터 변경 재쿼리 로딩 오버레이
                         if (uiState.hasLoadedOnce && uiState.isLoadingMore && uiState.posts.isEmpty()) {
-                            LoadingBox()
+                            LoadingBox(modifier = Modifier.fillMaxSize().zIndex(3f))
                         }
                         // 검색 전체 로드 중 오버레이
                         if (uiState.isSearchLoading) {
-                            LoadingBox()
+                            LoadingBox(modifier = Modifier.fillMaxSize().zIndex(3f))
                         }
                     }
                 }
-            }
-            FloatingActionButton(
-                onClick = { navController.navigate(Routes.CommunityPost()) },
-                containerColor = MaterialTheme.colorScheme.secondary,
-                shape = CircleShape,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = 16.dp)
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_edit),
-                    contentDescription = null,
-                    modifier = Modifier.size(26.dp),
-                    tint = MaterialTheme.colorScheme.onBackground,
-                )
             }
         }
     }
