@@ -1,6 +1,5 @@
 package com.a32b.plant.presentation.studying.ui
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +20,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -171,10 +171,11 @@ fun StudyLogItem(log: StudyLogUi, onEdit: () -> Unit, onCompleted: (Boolean) -> 
         IconButton(
             onClick = onEdit,
         ) {
-            Image(
+            Icon(
                 painter = painterResource(R.drawable.ic_edit),
                 contentDescription = "edit",
-                modifier = Modifier.size(17.dp).padding(end = 5.dp)
+                modifier = Modifier.size(17.dp).padding(end = 5.dp),
+                tint = MaterialTheme.colorScheme.onSurface
             )
         }
     }
