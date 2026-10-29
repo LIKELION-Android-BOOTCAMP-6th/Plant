@@ -1,5 +1,6 @@
 package com.a32b.plant.domain.model
 
+import java.util.UUID
 
 data class PostAuthor(
     val id: String,
@@ -93,9 +94,25 @@ data class Comment(
     val activityId: String,
     val createdAt: Long?,
     val reportCount: Int,
-    val isHidden: Boolean
+    val isHidden: Boolean,
+    // 서버 반영 전 화면에만 표시하는 임시 댓글 (낙관적 UI) — Firestore에는 저장되지 않는 값
+    val isPending: Boolean = false
 ) {
     // 숨김 처리됐거나 신고가 기준 횟수 이상 누적된 댓글 — 화면에서 내용 대신 블라인드 문구를 표시
     val isBlind: Boolean get() = isHidden || reportCount >= BLIND_REPORT_THRESHOLD
+
+    companion object {
+        // commentId는 Firestore ID가 아니라 임시 댓글끼리 구분하기 위한 로컬 키 (서버 반영 전까지 수정/삭제/신고 불가)
+        fun pending(user: CommentUser, content: String, createdAt: Long) = Comment(
+            commentId = "pending_${UUID.randomUUID()}",
+            user = user,
+            content = content,
+            activityId = "",
+            createdAt = createdAt,
+            reportCount = 0,
+            isHidden = false,
+            isPending = true
+        )
+    }
 }
 

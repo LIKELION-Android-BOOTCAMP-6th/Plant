@@ -484,7 +484,6 @@ fun CommunityDetailScreen(
                                     nickname = uiState.currentNickname,
                                     profileImg = uiState.currentProfileImg,
                                     text = uiState.comment,
-                                    isSubmitting = uiState.isCommentSubmitting,
                                     // 블라인드 게시글은 새 댓글 차단 — item 자체는 남겨 COMMENT_INPUT_ITEM_INDEX를 고정값으로 유지
                                     isBlocked = isPostBlind,
                                     onTextChange = { viewModel.onCommentChange(it) },
@@ -597,7 +596,13 @@ fun CommentRow(
         }
     }
 
-    Row(verticalAlignment = Alignment.Top) {
+    // 서버 반영 전 임시 댓글은 실제 commentId가 없어 수정/삭제/신고 아이콘을 숨기고 흐리게 표시
+    val isPending = comment.isPending
+
+    Row(
+        verticalAlignment = Alignment.Top,
+        modifier = Modifier.alpha(if (isPending) 0.5f else 1f)
+    ) {
         ProfileImage(comment.user.profileImg, 24)
         Spacer(Modifier.width(5.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -610,10 +615,10 @@ fun CommentRow(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = comment.createdAt?.let { TimeFormatter.formatTimeWithClock(it) } ?: "",
+                        text = if (isPending) "등록 중" else comment.createdAt?.let { TimeFormatter.formatTimeWithClock(it) } ?: "",
                         style = MaterialTheme.typography.labelMedium
                     )
-                    if (!isOwner && !isEditing && !isCommentBlind) {
+                    if (!isOwner && !isEditing && !isCommentBlind && !isPending) {
                         Spacer(Modifier.width(6.dp))
                         Icon(
                             painter = painterResource(R.drawable.ic_siren_report),
@@ -713,8 +718,8 @@ fun CommentRow(
                 }
             }
 
-        // 본인 댓글이고 편집 중이 아닐 때만 수정/삭제 아이콘 표시
-        if (isOwner && !isEditing) {
+        // 본인 댓글이고 편집 중이 아니며 서버에 반영된 댓글일 때만 수정/삭제 아이콘 표시
+        if (isOwner && !isEditing && !isPending) {
             if (canEdit) {
                 IconButton(onClick = onEditStart, modifier = Modifier.size(28.dp)) {
                     Icon(
@@ -741,7 +746,6 @@ fun CommentInputSection(
     profileImg: String,
     text: String,
     modifier: Modifier = Modifier,
-    isSubmitting: Boolean = false,
     // true면 비활성처럼 보이게 하고 탭·전송 시 onBlockedClick만 호출 (블라인드 게시글)
     isBlocked: Boolean = false,
     onTextChange: (String) -> Unit,
@@ -839,7 +843,7 @@ fun CommentInputSection(
                             // blank 제출 시에는 Toast 안내만 띄우고 포커스는 유지해 바로 이어서 입력 가능하게 함
                             if (text.isNotBlank()) focus.clearFocus()
                         },
-                        enabled = !isSubmitting,
+                        // 낙관적 UI로 등록 즉시 입력창이 비워지므로 등록 중 비활성 상태가 없음
                         modifier = Modifier
                             .height(28.dp)
                             .padding(top = 4.dp),
@@ -852,15 +856,13 @@ fun CommentInputSection(
                             contentColor = if (text.isBlank() || isBlocked)
                                 MaterialTheme.colorScheme.onSurface
                             else
-                                MaterialTheme.colorScheme.onPrimary,
-                            disabledContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                            disabledContentColor = MaterialTheme.colorScheme.onSurface
+                                MaterialTheme.colorScheme.onPrimary
                         ),
                         shape = RoundedCornerShape(4.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
                     ) {
                         Text(
-                            if (isSubmitting) "등록 중" else "등록",
+                            "등록",
     //                        fontSize = 12.sp,
                             style = MaterialTheme.typography.labelMedium
                         )
