@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -189,13 +190,7 @@ fun StudyResultContent(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Image(painter = painterResource(id = R.drawable.logo_plant),
-                            contentDescription = "logo",
-                            modifier = Modifier.size(30.dp).padding(end = 10.dp))
-                        Text("식물이 한 뼘 더 자랐습니다!", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-
-                    }
+                    Text("학습 시간이 식물에게 전해졌어요!", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, textAlign = TextAlign.Center)
                     Spacer(modifier = Modifier.height(22.dp))
 
                 }
