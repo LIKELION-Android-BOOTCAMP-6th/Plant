@@ -168,7 +168,7 @@ fun StudyResultContent(
                     horizontalAlignment = Alignment.CenterHorizontally) {
                     Spacer(modifier = Modifier.height(22.dp))
                     // 부모 Column이 가운데 정렬이라 너비를 채워야 길이와 관계없이 좌측 정렬됨
-                    Text(modifier = Modifier.fillMaxWidth().padding(start = 12.dp),
+                    Text(modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp),
                         text = "[$tag] $title", style = MaterialTheme.typography.titleSmall,)
 
                     log.forEachIndexed { index, text ->
