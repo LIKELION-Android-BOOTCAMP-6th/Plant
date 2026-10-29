@@ -106,7 +106,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
                     }
                 }
 
-                is StudyingEvent.ShowToast -> context.showToast(event.message)
+                is StudyingEvent.ShowToast -> context.showToast(event.message, event.duration)
             }
         }
     }

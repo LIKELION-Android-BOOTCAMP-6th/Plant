@@ -28,12 +28,17 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.a32b.plant.R
 import com.a32b.plant.presentation.core.type.StudyingGoalCheckMode
+import com.a32b.plant.presentation.studying.StudyingConstants.MAX_STUDY_LOG_SIZE
+import com.a32b.plant.presentation.studying.StudyingConstants.STUDY_LOG_LIMIT_STATE_DESCRIPTION
 import com.a32b.plant.presentation.studying.viewmodel.StudyLogUi
 
 
@@ -90,7 +95,16 @@ fun StudyingGoalCheckDialog(
                     }
                 }
 
-                TextButton(onClick = { onEdit(-1) }) {
+                // 최대 개수면 비활성처럼만 표시 — enabled=false면 클릭이 막혀 안내 토스트를 띄울 수 없으므로 클릭은 ViewModel 가드에서 처리
+                val canAddLog = studyLog.size < MAX_STUDY_LOG_SIZE
+                TextButton(
+                    onClick = { onEdit(-1) },
+                    modifier = Modifier
+                        .alpha(if (canAddLog) 1f else 0.38f)
+                        // alpha는 시각 표시뿐이라 TalkBack에 상태를 따로 알림
+                        // disabled()는 클릭 동작이 막혀 토스트를 못 띄울 수 있고, contentDescription은 버튼 이름을 덮어써서 쓰지 않음
+                        .semantics { if (!canAddLog) stateDescription = STUDY_LOG_LIMIT_STATE_DESCRIPTION }
+                ) {
                     Text(
                         "추가하기",
                         style = MaterialTheme.typography.bodyMedium,
