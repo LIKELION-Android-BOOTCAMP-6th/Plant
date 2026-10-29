@@ -186,24 +186,27 @@ fun StudyingGoalInputDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(
-                        onClick = {
-                            if (isEditing){
-                                onDismiss()
-                            }else if (!isEditing && localLogs.size < maxLogSize){
-                                localLogs.add("")
-                                index = localLogs.size - 1
-                            }
-                        },
-                        enabled = localLogs.size < maxLogSize || isEditing,
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f).height(38.dp),
-                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.outline,
-                            contentColor = MaterialTheme.colorScheme.onSurface
-                        )
-                    ) { Text(if (isEditing) "취소" else "추가", style = MaterialTheme.typography.bodySmall) }
+                    if (!isEditing){
+                        Button(
+                            onClick = {
+                                if (localLogs.size < maxLogSize){
+                                    localLogs.add("")
+                                    index = localLogs.size - 1
+                                }
+                            },
+                            enabled = localLogs.size < maxLogSize,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f).height(38.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.outline,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
+                        ) { Text("추가", style = MaterialTheme.typography.bodySmall) }
+                    } else {
+                        // 편집 모드는 "추가"가 없으므로 빈 칸으로 채워 버튼 너비를 4개일 때와 맞추고 오른쪽 정렬
+                        Spacer(Modifier.weight(1f))
+                    }
 
                     Button(
                         onClick = {
@@ -239,18 +242,16 @@ fun StudyingGoalInputDialog(
                         )
                     ) { Text("완료", style = MaterialTheme.typography.bodySmall)}
 
-                    if (!isEditing){
-                        Button(
-                            onClick = onDismiss,
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f).height(38.dp),
-                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                contentColor = MaterialTheme.colorScheme.onSurface
-                            )
-                        ) { Text("닫기", style = MaterialTheme.typography.bodySmall) }
-                    }
+                    Button(
+                        onClick = onDismiss,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f).height(38.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    ) { Text("닫기", style = MaterialTheme.typography.bodySmall) }
                 }
             }
         }
