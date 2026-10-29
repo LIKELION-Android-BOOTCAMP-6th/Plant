@@ -2,7 +2,9 @@ package com.a32b.plant.domain.usecase.report
 
 import com.a32b.plant.domain.model.DailyReport
 import com.a32b.plant.domain.result.Result
-import com.a32b.plant.domain.util.MIN_STUDYING_TIME_MILLIS
+import com.a32b.plant.domain.util.FIRST_STREAK_CHUNK_DAYS
+import com.a32b.plant.domain.util.NEXT_STREAK_CHUNK_DAYS
+import com.a32b.plant.domain.util.isStudyDay
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -35,21 +37,28 @@ class GetDailyReportUseCase @Inject constructor(
     }
 
     private suspend fun getStreakDays(uid: String, date: LocalDate, totalMillis: Long): Result<Int> {
-        if (totalMillis < MIN_STUDYING_TIME_MILLIS) return Result.Success(0)
+        if (!isStudyDay(totalMillis)) return Result.Success(0)
 
         var streakDays = 1
-        var previousDate = date.minusDays(1)
+        var chunkEnd = date
+        var chunkDays = FIRST_STREAK_CHUNK_DAYS
         while (true) {
-            val recordsResult = getReportRecordsUseCase(uid, previousDate, previousDate.plusDays(1))
-            val previousRecords = when (recordsResult) {
-                is Result.Success -> recordsResult.data
-                is Result.Failure -> return recordsResult
+            val chunkStart = chunkEnd.minusDays(chunkDays)
+            val records = when (val result = getReportRecordsUseCase(uid, chunkStart, chunkEnd)) {
+                is Result.Success -> result.data
+                is Result.Failure -> return result
             }
-            val previousTotalMillis = previousRecords.sumOf { it.studyingTime }
-            if (previousTotalMillis < MIN_STUDYING_TIME_MILLIS) return Result.Success(streakDays)
+            val totalsByDate = records.groupBy { it.startedAt.toLocalDate() }
+                .mapValues { (_, dayRecords) -> dayRecords.sumOf { it.studyingTime } }
 
-            streakDays++
-            previousDate = previousDate.minusDays(1)
+            var day = chunkEnd.minusDays(1)
+            while (!day.isBefore(chunkStart)) {
+                if (!isStudyDay(totalsByDate[day] ?: 0L)) return Result.Success(streakDays)
+                streakDays++
+                day = day.minusDays(1)
+            }
+            chunkEnd = chunkStart
+            chunkDays = NEXT_STREAK_CHUNK_DAYS
         }
     }
 }

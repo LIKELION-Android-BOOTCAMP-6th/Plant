@@ -12,22 +12,26 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.MonthlyReport
 import com.a32b.plant.presentation.theme.LocalIsDarkTheme
+import kotlinx.coroutines.flow.first
 
 @Composable
 fun MonthlyReportContent(report: MonthlyReport) {
@@ -102,7 +106,18 @@ private fun MonthlyDailyGraph(report: MonthlyReport) {
     } + 2.dp
     val barSlotWidth = maxOf(barWidth + barGap, dayLabelWidth + 4.dp)
 
-    Box(Modifier.fillMaxWidth().height(graphHeight).semantics { contentDescription = voiceDescription }) {
+    LaunchedEffect(report.month) {
+        val lastRecordDate = report.recordDates.maxOrNull()
+        if (lastRecordDate == null) {
+            horizontalScrollState.scrollTo(0)
+            return@LaunchedEffect
+        }
+        val viewport = snapshotFlow { horizontalScrollState.viewportSize }.first { it > 0 }
+        val slotWidthPx = with(density) { barSlotWidth.roundToPx() }
+        horizontalScrollState.scrollTo((lastRecordDate.dayOfMonth * slotWidthPx - viewport).coerceAtLeast(0))
+    }
+
+    Box(Modifier.fillMaxWidth().height(graphHeight).clearAndSetSemantics { contentDescription = voiceDescription }) {
         Canvas(Modifier.matchParentSize()) {
             val left = axisWidth.toPx()
             val plotHeightPx = plotHeight.toPx()
@@ -146,6 +161,7 @@ private fun MonthlyDailyGraph(report: MonthlyReport) {
                                     .offset(y = plotBottom + 8.dp)
                                     .width(dayLabelWidth),
                                 style = MaterialTheme.typography.bodySmall,
+                                textAlign = TextAlign.Center,
                                 maxLines = 1
                             )
                         }
