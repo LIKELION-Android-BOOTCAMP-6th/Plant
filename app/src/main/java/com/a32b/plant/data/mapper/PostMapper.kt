@@ -30,7 +30,8 @@ fun CommentDto.toDomain() : Comment = Comment(
     activityId = activityId,
     createdAt = createdAt.toLong(),
     reportCount = reportCount,
-    isHidden = isHidden
+    isHidden = isHidden,
+    isPending = false
 )
 fun StudyLogEmbedDto.toDomain(): StudyLog = StudyLog(
     title = title,

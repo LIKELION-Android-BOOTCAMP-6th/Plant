@@ -135,6 +135,8 @@ class CommunityDetailViewModel @Inject constructor(
 
     // 등록 요청이 아직 끝나지 않은 임시 댓글 — refresh()로 목록이 교체돼도 사라지지 않도록 병합하기 위함
     private val pendingComments = mutableListOf<Comment>()
+    // 대기 중인 임시 댓글에 대해 느린 네트워크 안내를 이미 띄웠는지 — 연속 등록 시 안내가 댓글마다 쌓이지 않도록 하기 위함
+    private var isSlowNoticeShownForPending = false
 
     // blank 상태에서 연타 시 Toast가 줄줄이 쌓이는 것을 막기 위한 디바운스
     private var commentBlankToastJob: Job? = null
@@ -283,73 +285,110 @@ class CommunityDetailViewModel @Inject constructor(
             return
         }
 
+        // 유저 확인 실패 시 세션 만료 처리 후 종료 — 입력 내용은 비우기 전이라 그대로 남고,
+        // UseCase까지 가지 않으므로 세션 만료 알림이 중복으로 뜨지 않음
+        val user = ensureCurrentUserUseCase { it } ?: return
+
         // 낙관적 UI: 서버 응답을 기다리지 않고 입력창을 비우고 임시 댓글을 목록 맨 아래에 먼저 표시
         val content = state.comment
-        val pendingComment = Comment.pending(
-            user = CommentUser(state.currentUid, state.currentNickname, state.currentProfileImg),
+        val pendingComment = Comment.createPending(
+            user = CommentUser(user.uid, user.nickname, user.profileImg),
             content = content,
             createdAt = System.currentTimeMillis()
         )
         pendingComments.add(pendingComment)
         _uiState.update { it.copy(comment = "", commentList = it.commentList + pendingComment) }
+        // 댓글 수도 등록 시점에 +1 (성공 시점에 올리면 연속 등록 중 refresh()가 받아온 값 —
+        // 아직 반영 안 된 다른 댓글의 증가분까지 포함된 값 — 에 한 번 더 더해져 실제보다 커짐)
+        notifyCommentCountChanged(1)
 
         viewModelScope.launch {
-            // NonCancellable: 임시 댓글이 바로 보여 등록 직후 화면을 떠나기 쉬우므로,
-            // runBatch 적재 전의 suspend 지점(유저 확인)에서 취소돼 쓰기가 누락되지 않도록 보장
-            // (이탈 후에는 viewModelScope가 취소돼 아래 sendToast/refresh는 no-op)
+            // runBatch는 첫 중단점 전에 SDK 로컬 큐에 적재되므로 화면 이탈과 무관하게 쓰기는 반영된다.
+            // NonCancellable은 이탈 후에도 결과를 받아 실패 시 댓글 수 롤백 알림을 보내기 위한 용도이며,
+            // withContext는 종료 시 바깥 취소를 확인해 결과를 버리므로 결과 처리도 반드시 블록 안에 둘 것
+            // (이탈 후에는 viewModelScope가 취소돼 sendToast/refresh는 no-op)
             withContext(NonCancellable) {
                 // 오프라인이면 쓰기는 로컬 큐에 남아 재연결 시 반영되므로 임시 댓글을 유지한 채 안내만 표시
-                withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
+                withSlowNotice(onSlow = { sendSlowNoticeForPending() }) {
                     addCommentUseCase(postId, _post.value?.title ?: "", content)
                 }
-            }
-                .onSuccess {
-                    // 임시 댓글은 목록에 남겨 두고 병합 대상에서만 제외 → refresh() 결과(실제 댓글)로 자연스럽게 교체
-                    pendingComments.remove(pendingComment)
-                    refresh()
-                }
-                .onFailure { e ->
-                    rollbackPendingComment(pendingComment)
-                    when (e) {
-                        // 세션 만료 처리는 UseCase의 ensureCurrentUserUseCase()가 이미 수행
-                        is AppError.UnknownUser -> Unit
-                        else -> sendToast(e.message)
+                    .onSuccess {
+                        // 임시 댓글은 목록에 남겨 두고 병합 대상에서만 제외 → refresh() 결과(실제 댓글)로 자연스럽게 교체
+                        removePendingComment(pendingComment)
+                        refresh()
                     }
-                }
+                    .onFailure { e ->
+                        rollbackPendingComment(pendingComment)
+                        when (e) {
+                            // 세션 만료 처리는 UseCase의 ensureCurrentUserUseCase()가 이미 수행
+                            // (쓰기 자체가 시도되지 않았으므로 목록 재조회 불필요)
+                            is AppError.UnknownUser -> Unit
+                            else -> {
+                                sendToast(e.message)
+                                // 반영 전 refresh()로 임시 댓글이 로컬 쓰기 버전의 실제 댓글로 대체돼 있었다면
+                                // 임시 키로는 지워지지 않으므로, 거절된 쓰기가 빠진 서버 상태로 다시 맞춤
+                                refresh()
+                            }
+                        }
+                    }
+            }
         }
     }
 
     /** 등록 실패한 임시 댓글을 목록에서 제거하고, 작성 내용을 입력창에 복원 (새로 입력 중인 내용은 덮어쓰지 않음) */
     private fun rollbackPendingComment(pendingComment: Comment) {
-        pendingComments.remove(pendingComment)
+        removePendingComment(pendingComment)
         _uiState.update {
             it.copy(
                 commentList = it.commentList.filterNot { comment -> comment.commentId == pendingComment.commentId },
                 comment = if (it.comment.isEmpty()) pendingComment.content else it.comment
             )
         }
+        notifyCommentCountChanged(-1)
+    }
+
+    private fun removePendingComment(pendingComment: Comment) {
+        pendingComments.remove(pendingComment)
+        // 대기 중인 댓글이 모두 끝났으면 다음 등록의 느린 네트워크 안내를 다시 허용
+        if (pendingComments.isEmpty()) isSlowNoticeShownForPending = false
+    }
+
+    // 임시 댓글이 여러 개 대기 중이어도 느린 네트워크 안내는 한 번만 표시
+    // (대기 중인 댓글은 "등록 중"으로 표시되므로 댓글마다 안내를 반복할 필요 없음)
+    private fun sendSlowNoticeForPending() {
+        if (isSlowNoticeShownForPending) return
+        isSlowNoticeShownForPending = true
+        sendToast(NETWORK_SLOW_MESSAGE)
     }
 
     /**
-     * 조회한 댓글 목록 맨 아래에 아직 등록 요청이 끝나지 않은 임시 댓글을 이어 붙인다.
+     * 조회한 댓글 목록에 아직 등록 요청이 끝나지 않은 임시 댓글을 병합한다.
      * Firestore 조회 결과에는 서버 반영 전 로컬 쓰기도 포함될 수 있어, 같은 작성자·내용이면서 임시 댓글 이후에
      * 작성된 댓글이 이미 있으면 그 댓글을 실제 댓글로 보고 임시 댓글은 붙이지 않는다 (중복 표시 방지).
+     * 대신 그 댓글도 서버 반영 전이므로 isPending으로 표시해 수정/삭제/신고를 막는다.
      * 실제 댓글 하나는 임시 댓글 하나에만 대응시켜 같은 내용을 연속 등록한 경우에도 개수가 맞게 한다.
+     * 짝이 없는 임시 댓글은 목록 맨 아래에 이어 붙인다.
      */
     private fun mergePendingComments(fetched: List<Comment>): List<Comment> {
         if (pendingComments.isEmpty()) return fetched
-        val unmatched = fetched.toMutableList()
+        val merged = fetched.toMutableList()
+        val matchedIndices = mutableSetOf<Int>()
         val unconfirmed = pendingComments.filter { pending ->
             val pendingCreatedAt = pending.createdAt ?: 0L
-            val match = unmatched.firstOrNull {
-                it.user.uid == pending.user.uid &&
-                    it.content == pending.content &&
-                    (it.createdAt ?: 0L) >= pendingCreatedAt
+            val matchIndex = merged.indices.firstOrNull { index ->
+                val comment = merged[index]
+                index !in matchedIndices &&
+                    comment.user.uid == pending.user.uid &&
+                    comment.content == pending.content &&
+                    (comment.createdAt ?: 0L) >= pendingCreatedAt
             }
-            if (match != null) unmatched.remove(match)
-            match == null
+            if (matchIndex != null) {
+                matchedIndices += matchIndex
+                merged[matchIndex] = merged[matchIndex].copy(isPending = true)
+            }
+            matchIndex == null
         }
-        return fetched + unconfirmed
+        return merged + unconfirmed
     }
 
     fun deletePost() {
@@ -601,7 +640,7 @@ class CommunityDetailViewModel @Inject constructor(
                         repository.deleteComment(postId, commentId)
                     }
                         // 이미 다른 곳에서 지워진 댓글이면(false) 댓글 수가 이미 반영됐으므로 알리지 않음
-                        .onSuccess { deleted -> if (deleted) notifyCommentDeleted() }
+                        .onSuccess { deleted -> if (deleted) notifyCommentCountChanged(-1) }
                 }
                     .onFailure { e ->
                         when (e) {
@@ -620,11 +659,12 @@ class CommunityDetailViewModel @Inject constructor(
         }
     }
 
-    // 이탈 후에는 refresh()가 실행되지 않아 목록이 삭제된 댓글 수를 모르므로, 로컬 값 기준으로 먼저 알림
+    // 댓글 등록(+1)·등록 실패 롤백(-1)·삭제(-1) 시 댓글 수를 로컬 값 기준으로 먼저 반영하고 목록 화면에 알림
+    // 이탈 후에는 refresh()가 실행되지 않아 목록이 바뀐 댓글 수를 모르기 때문
     // (화면에 머물러 있으면 뒤이은 refresh()가 서버 값으로 다시 알려 보정)
-    private fun notifyCommentDeleted() {
+    private fun notifyCommentCountChanged(delta: Int) {
         val post = _post.value ?: return
-        val updatedCount = (post.commentCount - 1).coerceAtLeast(0)
+        val updatedCount = (post.commentCount + delta).coerceAtLeast(0)
         _post.value = post.copy(commentCount = updatedCount)
         postUpdateNotifier.notifyPostUpdated(PostUpdate(postId = postId, commentCount = updatedCount))
     }
