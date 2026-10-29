@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -189,7 +190,7 @@ fun StudyResultContent(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("학습 시간이 식물에게 전해졌어요!", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                    Text("학습 시간이 식물에게 전해졌어요!", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, textAlign = TextAlign.Center)
                     Spacer(modifier = Modifier.height(22.dp))
 
                 }
