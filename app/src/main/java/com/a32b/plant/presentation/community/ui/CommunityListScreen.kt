@@ -144,7 +144,7 @@ fun CommunityListScreen(
             }
         }
 
-        // 필터 변경 재쿼리 중 오버레이 (LoadableScreen 이후, 이미 데이터가 있는 상태)
+        // 당겨서 새로고침 + 화면 콘텐츠 영역
         Box(modifier = Modifier.fillMaxSize()) {
             PullToRefreshBox(
                 isRefreshing = uiState.isRefreshing,
