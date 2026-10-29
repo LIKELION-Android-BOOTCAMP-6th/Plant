@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.OutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -27,10 +28,7 @@ class GalleryLocalDataSourceImpl @Inject constructor(
         return resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
     }
 
-    override fun writeImage(uri: Uri, bytes: ByteArray) {
-        val stream = resolver.openOutputStream(uri) ?: error("출력 스트림 열기 실패")
-        stream.use { it.write(bytes) }
-    }
+    override fun openOutputStream(uri: Uri): OutputStream? = resolver.openOutputStream(uri)
 
     override fun publishImage(uri: Uri): Int {
         val pendingCleared = ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }

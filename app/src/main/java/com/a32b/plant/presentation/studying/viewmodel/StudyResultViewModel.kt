@@ -14,15 +14,12 @@ import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.item.GiveStudyRewardUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
 import java.time.LocalDateTime
 import javax.inject.Inject
 
@@ -100,16 +97,12 @@ class StudyResultViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            // PNG 변환은 CPU 작업이라 메인 스레드를 막지 않도록 분리 (변환 실패 시 빈 배열 → Repository에서 실패 처리)
-            val pngBytes = withContext(Dispatchers.Default) { bitmap.toPngBytes() }
-            galleryRepository.savePngToGallery(pngBytes, fileName)
+            galleryRepository.saveImageToGallery(fileName, "image/png") { stream ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+            }
                 .onSuccess { _event.send(StudyResultEvent.ShowToast("이미지가 저장되었습니다.")) }
                 .onFailure { error -> _event.send(StudyResultEvent.ShowToast(error.message)) }
             _uiState.update { it.copy(isLoading = false) }
         }
-    }
-
-    private fun Bitmap.toPngBytes(): ByteArray = ByteArrayOutputStream().use { stream ->
-        if (compress(Bitmap.CompressFormat.PNG, 100, stream)) stream.toByteArray() else ByteArray(0)
     }
 }
