@@ -21,7 +21,8 @@ import javax.inject.Inject
 
 data class SplashUiState(
     val isLoading: Boolean = true,
-    val isDarkMode: Boolean = false
+    val isDarkMode: Boolean = false,
+    val isFirstScreenReady: Boolean = false
 )
 
 @HiltViewModel
@@ -38,9 +39,6 @@ class SplashViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SplashUiState())
     val uiState = _uiState.asStateFlow()
 
-    private val _isFirstScreenReady = MutableStateFlow(false)
-    val isFirstScreenReady = _isFirstScreenReady.asStateFlow()
-
     init {
         observeDarkMode()
         checkAuthLogin()
@@ -56,7 +54,7 @@ class SplashViewModel @Inject constructor(
 
     /** 첫 화면에 표시할 데이터가 준비되어 스플래시를 끝내도 될 때 호출 */
     fun onFirstScreenReady() {
-        _isFirstScreenReady.value = true
+        _uiState.update { it.copy(isFirstScreenReady = true) }
     }
 
     private fun checkAuthLogin() {

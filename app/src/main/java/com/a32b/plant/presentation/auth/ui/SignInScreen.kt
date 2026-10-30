@@ -282,7 +282,8 @@ private fun BrandSection(modifier: Modifier = Modifier) {
         modifier = modifier.padding(horizontal = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        PotGrowthAnimation(modifier = Modifier.size(130.dp))
+        // 화분 그림이 이미지 폭의 약 41%라서(Lv6까지 담기 위해 축소) 영역을 키워 화분이 작아 보이지 않게 함
+        PotGrowthAnimation(modifier = Modifier.size(170.dp))
 
         Spacer(modifier = Modifier.height(16.dp))
 

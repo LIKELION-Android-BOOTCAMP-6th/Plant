@@ -183,7 +183,8 @@ fun StudyResultContent(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    ProfileImage(level, 150)
+                    // 화분 이미지는 Lv6까지 담느라 화분 폭이 영역의 약 41%라서, 영역을 키워 화분이 작아 보이지 않게 함
+                    ProfileImage(level, 200)
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(TimeFormatter.formatToDigitalClock(time), style = MaterialTheme.typography.titleLarge, fontSize = 50.sp,)

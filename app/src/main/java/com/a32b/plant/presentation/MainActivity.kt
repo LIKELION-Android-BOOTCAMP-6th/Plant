@@ -44,6 +44,8 @@ import com.a32b.plant.presentation.splash.SplashViewModel
 import com.a32b.plant.presentation.theme.PlantTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
+import java.time.Duration
+import java.time.Instant
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -58,18 +60,26 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // enableEdgeToEdge가 decorView를 만들기 때문에 먼저 호출하면 스플래시 테마(ActionBar 있음)로 창이 구성됨
-        val splashScreen = installSplashScreen()
+        val compatSplashScreen = installSplashScreen()
         enableEdgeToEdge()
-        splashScreen.setKeepOnScreenCondition {
+        compatSplashScreen.setKeepOnScreenCondition {
             //해당 값이 트루일 동안 스플래시 유지
-            viewModel.destination.value == null || viewModel.uiState.value.isLoading ||
-                    !viewModel.isFirstScreenReady.value
+            val uiState = viewModel.uiState.value
+            viewModel.destination.value == null || uiState.isLoading || !uiState.isFirstScreenReady
         }
         // 시스템 기본 종료 효과(로고 잔상) 없이 바로 첫 화면으로 전환
         // 라이브러리 리스너는 시스템 바 색을 테마 값으로 덮어쓰므로 플랫폼 API를 직접 사용 (Android 11 이하는 원래 즉시 제거됨)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             this.splashScreen.setOnExitAnimationListener { splashScreenView ->
-                splashScreenView.remove()
+                // 로딩이 빨라도 로고 애니메이션은 끝까지 보여준 뒤 제거
+                val iconStart = splashScreenView.iconAnimationStart
+                val iconDuration = splashScreenView.iconAnimationDuration
+                val remainingMillis = if (iconStart != null && iconDuration != null) {
+                    Duration.between(Instant.now(), iconStart.plus(iconDuration)).toMillis()
+                } else {
+                    0L
+                }
+                splashScreenView.postDelayed({ splashScreenView.remove() }, remainingMillis.coerceAtLeast(0L))
             }
         }
 
@@ -191,5 +201,4 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
 }
