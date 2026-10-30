@@ -22,7 +22,7 @@ fun ProfileImage(level: String, size: Int, modifier: Modifier = Modifier){
 
     Image(
         painter = painterResource(id = plantLevel.resId),
-        contentDescription = "화분 성장 단계 : $level",
+        contentDescription = "화분 성장 단계 : ${plantLevel.label}",
         contentScale = ContentScale.Fit,
         modifier = modifier
             .size(size.dp)
