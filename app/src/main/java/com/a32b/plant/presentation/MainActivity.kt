@@ -1,5 +1,7 @@
 package com.a32b.plant.presentation
 
+import android.content.res.Configuration
+import android.content.res.Resources
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -60,10 +62,13 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var signOutUseCase: SignOutUseCase
 
+    // 시스템 바에 적용할 앱 다크모드 설정. null이면 아직 값을 읽기 전
+    private var appDarkMode: Boolean? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // enableEdgeToEdge가 decorView를 만들기 때문에 먼저 호출하면 스플래시 테마(ActionBar 있음)로 창이 구성됨
         val compatSplashScreen = installSplashScreen()
-        enableEdgeToEdge()
+        applySystemBarStyle()
         compatSplashScreen.setKeepOnScreenCondition {
             //해당 값이 트루일 동안 스플래시 유지
             val uiState = viewModel.uiState.value
@@ -85,7 +90,7 @@ class MainActivity : ComponentActivity() {
                 splashScreenView.postDelayed({
                     splashScreenView.remove()
                     // remove()가 시스템 바를 스플래시 이전 값으로 되돌릴 수 있어 앱 설정으로 다시 적용
-                    applySystemBarStyle(viewModel.uiState.value.isDarkMode)
+                    applySystemBarStyle()
                 }, remainingMillis.coerceAtLeast(0L))
             }
         }
@@ -98,7 +103,8 @@ class MainActivity : ComponentActivity() {
 
             // 다크모드 값을 읽기 전에는 onCreate의 시스템 기준을 유지하고, 읽은 뒤부터 앱 설정을 따른다
             LaunchedEffect(uiState.isDarkMode) {
-                applySystemBarStyle(uiState.isDarkMode)
+                appDarkMode = uiState.isDarkMode
+                applySystemBarStyle()
             }
 
             PlantTheme(darkTheme = uiState.isDarkMode) {
@@ -214,11 +220,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** 시스템 다크모드가 아닌 앱 다크모드 설정을 기준으로 시스템 바 스타일을 적용 */
-    private fun applySystemBarStyle(isDarkMode: Boolean) {
+    /**
+     * 앱 다크모드 설정을 기준으로 시스템 바 스타일을 적용 (값을 읽기 전에는 시스템 기준)
+     *
+     * enableEdgeToEdge는 첫 호출의 스타일을 설정 변경 때마다 다시 적용하므로,
+     * 값을 넘기지 않고 appDarkMode를 읽어 첫 호출의 스타일도 최신 설정을 따르게 한다.
+     */
+    private fun applySystemBarStyle() {
+        val detectDarkMode = { resources: Resources ->
+            appDarkMode ?: (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES)
+        }
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { isDarkMode },
-            navigationBarStyle = SystemBarStyle.auto(NAVIGATION_BAR_LIGHT_SCRIM, NAVIGATION_BAR_DARK_SCRIM) { isDarkMode }
+            statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT, detectDarkMode),
+            navigationBarStyle = SystemBarStyle.auto(NAVIGATION_BAR_LIGHT_SCRIM, NAVIGATION_BAR_DARK_SCRIM, detectDarkMode)
         )
     }
 
