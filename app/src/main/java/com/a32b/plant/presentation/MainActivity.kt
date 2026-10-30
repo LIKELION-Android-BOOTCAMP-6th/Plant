@@ -1,8 +1,10 @@
 package com.a32b.plant.presentation
 
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -80,7 +82,11 @@ class MainActivity : ComponentActivity() {
                 } else {
                     0L
                 }
-                splashScreenView.postDelayed({ splashScreenView.remove() }, remainingMillis.coerceAtLeast(0L))
+                splashScreenView.postDelayed({
+                    splashScreenView.remove()
+                    // remove()가 시스템 바를 스플래시 이전 값으로 되돌릴 수 있어 앱 설정으로 다시 적용
+                    applySystemBarStyle(viewModel.uiState.value.isDarkMode)
+                }, remainingMillis.coerceAtLeast(0L))
             }
         }
 
@@ -89,6 +95,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             val uiState by viewModel.uiState.collectAsState()
             if (uiState.isLoading) return@setContent
+
+            // 다크모드 값을 읽기 전에는 onCreate의 시스템 기준을 유지하고, 읽은 뒤부터 앱 설정을 따른다
+            LaunchedEffect(uiState.isDarkMode) {
+                applySystemBarStyle(uiState.isDarkMode)
+            }
 
             PlantTheme(darkTheme = uiState.isDarkMode) {
                 Surface(
@@ -201,5 +212,19 @@ class MainActivity : ComponentActivity() {
 
             }
         }
+    }
+
+    /** 시스템 다크모드가 아닌 앱 다크모드 설정을 기준으로 시스템 바 스타일을 적용 */
+    private fun applySystemBarStyle(isDarkMode: Boolean) {
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { isDarkMode },
+            navigationBarStyle = SystemBarStyle.auto(NAVIGATION_BAR_LIGHT_SCRIM, NAVIGATION_BAR_DARK_SCRIM) { isDarkMode }
+        )
+    }
+
+    private companion object {
+        // enableEdgeToEdge 기본 내비게이션 바 스타일과 같은 값 (라이브러리에서 공개하지 않음)
+        val NAVIGATION_BAR_LIGHT_SCRIM = Color.argb(0xe6, 0xFF, 0xFF, 0xFF)
+        val NAVIGATION_BAR_DARK_SCRIM = Color.argb(0x80, 0x1b, 0x1b, 0x1b)
     }
 }
