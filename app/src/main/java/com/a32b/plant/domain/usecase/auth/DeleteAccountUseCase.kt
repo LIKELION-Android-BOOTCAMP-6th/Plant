@@ -22,32 +22,37 @@ class DeleteAccountUseCase @Inject constructor(
         val uid = user.uid
         val nickname = user.nickname
 
-        // 1. Firestore 데이터 먼저 삭제 (인증 세션이 살아있는 동안)
-        val deleteDataResult = userRepository.deleteUserData(uid)
-        if (deleteDataResult is Result.Failure) return deleteDataResult
+        userRepository.beginAccountDeletion(uid)
+        try {
+            // 1. Firestore 데이터 먼저 삭제 (인증 세션이 살아있는 동안)
+            val deleteDataResult = userRepository.deleteUserData(uid)
+            if (deleteDataResult is Result.Failure) return deleteDataResult
 
-        if (nickname.isNotBlank()) {
-            val deleteNicknameResult = userRepository.deleteNickname(nickname)
-            if (deleteNicknameResult is Result.Failure) return deleteNicknameResult
+            // currentUser 실시간 구독을 먼저 끊어야 한다. Auth 계정을 지운 뒤에도 리스너가
+            // 살아있으면 서버로부터 PERMISSION_DENIED를 받아 앱이 크래시한다.
+            userRepository.endUserSession()
+            // TODO: CurrentUser 전역 싱글톤 제거 대상.
+            //  아직 CurrentUser를 직접 읽는 화면이 남아 있어 과도기 동안 함께 초기화한다.
+            //  모든 화면이 UserRepository로 전환되면 이 줄과 di/CurrentUser.kt를 함께 삭제할 것.
+            CurrentUser.clear()
+
+            if (nickname.isNotBlank()) {
+                val deleteNicknameResult = userRepository.deleteNickname(nickname)
+                if (deleteNicknameResult is Result.Failure) return deleteNicknameResult
+            }
+
+            // 2. Firebase Auth 계정은 맨 마지막에 삭제
+            val deleteAuthResult = authRepository.deleteAuthAccount()
+            if (deleteAuthResult is Result.Failure) return deleteAuthResult
+
+            // 회원탈퇴가 완료된 뒤에만 기기 테마와 로컬 학습 세션을 초기화한다.
+            // 저장 실패는 Repository에서 로그를 남기며, 완료된 회원탈퇴 결과는 유지한다.
+            userRepository.updateDarkMode(false)
+            studyingRepository.clearLocalSession()
+
+            return Result.Success(Unit)
+        } finally {
+            userRepository.endAccountDeletion()
         }
-
-        // currentUser 실시간 구독을 먼저 끊어야 한다. Auth 계정을 지운 뒤에도 리스너가
-        // 살아있으면 서버로부터 PERMISSION_DENIED를 받아 앱이 크래시한다.
-        userRepository.endUserSession()
-        // TODO: CurrentUser 전역 싱글톤 제거 대상.
-        //  아직 CurrentUser를 직접 읽는 화면이 남아 있어 과도기 동안 함께 초기화한다.
-        //  모든 화면이 UserRepository로 전환되면 이 줄과 di/CurrentUser.kt를 함께 삭제할 것.
-        CurrentUser.clear()
-
-        // 2. Firebase Auth 계정은 맨 마지막에 삭제
-        val deleteAuthResult = authRepository.deleteAuthAccount()
-        if (deleteAuthResult is Result.Failure) return deleteAuthResult
-
-        // 회원탈퇴가 완료된 뒤에만 기기 테마와 로컬 학습 세션을 초기화한다.
-        // 저장 실패는 Repository에서 로그를 남기며, 완료된 회원탈퇴 결과는 유지한다.
-        userRepository.updateDarkMode(false)
-        studyingRepository.clearLocalSession()
-
-        return Result.Success(Unit)
     }
 }

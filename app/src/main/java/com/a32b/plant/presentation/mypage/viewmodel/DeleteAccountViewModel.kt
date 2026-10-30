@@ -41,6 +41,7 @@ class DeleteAccountViewModel @Inject constructor(
 
     /** 2단계 확인 완료 후 Google 재인증 요청 */
     fun requestDeleteAccount() {
+        if (_uiState.value.isLoading) return
         _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
             _eventChannel.send(DeleteAccountEvent.RequestGoogleReauth)

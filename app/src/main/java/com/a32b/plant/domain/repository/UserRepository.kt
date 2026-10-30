@@ -19,6 +19,12 @@ interface UserRepository {
     /** 로그인 세션을 종료한다. 구독을 해제하고 currentUser를 비운다. */
     fun endUserSession()
 
+    /** 회원탈퇴 중에는 users/{uid} 삭제를 세션 만료로 처리하지 않도록 표시한다. */
+    fun beginAccountDeletion(uid: String)
+
+    /** 회원탈퇴 중 표시를 해제한다. */
+    fun endAccountDeletion()
+
     suspend fun updateLastSelectedPot(uid: String, potId: String)
 
     suspend fun getUser(uid: String): Result<User?>
