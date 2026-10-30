@@ -11,15 +11,18 @@ import com.a32b.plant.domain.model.AttendanceReward
 import com.a32b.plant.domain.model.DailyCheckThisMonth
 import com.a32b.plant.domain.model.Item
 import com.a32b.plant.domain.model.Pot
+import com.a32b.plant.domain.model.PotLevelConditions
 import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.type.ItemType
 import com.a32b.plant.domain.usecase.item.OpenBonusBoxUseCase
+import com.a32b.plant.domain.usecase.pot.CheckLevelUpConditionUseCase
 import com.a32b.plant.domain.usecase.pot.GetActivePotUseCase
 import com.a32b.plant.domain.usecase.pot.GetPotListUseCase
 import com.a32b.plant.domain.usecase.pot.GetTodayTotalStudyTimeUseCase
+import com.a32b.plant.domain.usecase.pot.LevelUpPotUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import com.a32b.plant.domain.usecase.studying.ClearStudyingSessionUseCase
 import com.a32b.plant.domain.usecase.studying.RecoverStudySessionUseCase
@@ -41,6 +44,14 @@ data class AttendanceUiState(
     val isAttendanceCompleted: Boolean = false,
     val isChecking: Boolean = false,
     val reward: AttendanceReward? = null
+)
+
+data class HomeUiState(
+    val levelUpAvailable: Boolean = false, //레벨업 버튼 활성화
+    val showInsufficientItemsDialog: Boolean = false, // 아이템 부족 다이얼로그
+    val levelUpProgress: Float = 0f,
+    val levelUpProgressText: String = "",
+    val isLoading: Boolean = false
 )
 
 sealed class HomeEvent {
@@ -90,7 +101,9 @@ class HomeViewModel @Inject constructor(
     private val studyingRepository: StudyingRepository,
     private val recoverStudySessionUseCase: RecoverStudySessionUseCase,
     private val clearStudyingSessionUseCase: ClearStudyingSessionUseCase,
-    private val openBonusBoxUseCase: OpenBonusBoxUseCase
+    private val openBonusBoxUseCase: OpenBonusBoxUseCase,
+    private val checkLevelUpConditionUseCase: CheckLevelUpConditionUseCase,
+    private val levelUpPotUseCase: LevelUpPotUseCase
 ) : BaseViewModel() {
 
     private val _displayPot = MutableStateFlow(Pot.EMPTY)
@@ -140,6 +153,10 @@ class HomeViewModel @Inject constructor(
     private val _isBoxOpening = MutableStateFlow(false)
     val isBoxOpening = _isBoxOpening.asStateFlow()
 
+    // 레벨업 상태
+    private val _uiState = MutableStateFlow(HomeUiState())
+    val uiState = _uiState.asStateFlow()
+
     init {
         checkUserAndLoadData()
         observeUserItem()
@@ -169,7 +186,9 @@ class HomeViewModel @Inject constructor(
                     val newState = it.monthCheck.toAttendanceUiState()
                     _attendanceUiState.update { currentUiState ->
                         newState.copy(reward = currentUiState.reward)
-                    }                }
+                    }
+                    recheckLevelUpCondition()
+                }
             }
         }
     }
@@ -225,6 +244,7 @@ class HomeViewModel @Inject constructor(
                 getActivePotUseCase(uid = uid, lastSelectedPotId = lastSelectedPotId)
                     .collect { pot ->
                         _displayPot.value = pot
+                        updateProgressAndCondition(pot)
                         if (pot.id.isNotEmpty() && pot != Pot.EMPTY) {
                             fetchTodayStudyTime(uid, pot.id)
                         } else {
@@ -263,6 +283,8 @@ class HomeViewModel @Inject constructor(
     fun confirmPotChange() {
         _tempSelectedPot.value?.let { selected ->
             _displayPot.value = selected
+
+            updateProgressAndCondition(selected)
 
             viewModelScope.launch {
                 safeRunCatching {
@@ -363,6 +385,79 @@ class HomeViewModel @Inject constructor(
             } finally {
                 _isBoxOpening.value = false
             }
+        }
+    }
+
+    //진행도 & 텍스트 계산
+    private fun computeProgress(pot: Pot): Pair<Float, String> {
+        val condition = PotLevelConditions.getCondition(pot.potLevel)
+            ?: return 1f to "최고 레벨"
+
+        val maxMs = condition.requiredMaxHours * 3_600_000L
+        val progress = (pot.potTotalStudyingTime.toFloat() / maxMs).coerceIn(0f, 1f)
+
+        val currentMin = pot.potTotalStudyingTime / 60_000
+        val requiredMin = maxMs / 60_000
+        val text = "${(progress * 100).toInt()}% (${currentMin}분/${requiredMin}분)"
+        return progress to text
+    }
+
+    // 레벨업 재검증
+    private suspend fun recheckLevelUpCondition() {
+        val pot = _displayPot.value
+        if (pot.id.isEmpty() || pot == Pot.EMPTY) {
+            _uiState.update { it.copy(levelUpAvailable = false) }
+            return
+        }
+
+        checkLevelUpConditionUseCase(pot.potLevel, pot.potTotalStudyingTime)
+            .onSuccess { available ->
+                _uiState.update { it.copy(levelUpAvailable = available) }
+            }
+            .onFailure {
+                _uiState.update { it.copy(levelUpAvailable = false) }
+            }
+    }
+
+    //레벨업 다이얼로그
+    fun onLevelUpClick(potId: String, currentPotLevel: Int) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            levelUpPotUseCase(potId, currentPotLevel)
+                .onSuccess {
+                    _uiState.update { it.copy(isLoading = false) }
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(isLoading = false) }
+                    when (e) {
+                        is AppError.Custom -> {
+                            if (e.message.contains("부족")) {
+                                _uiState.update { it.copy(showInsufficientItemsDialog = true) }
+                            } else {
+                                sendToast(e.message)
+                            }
+                        }
+                        else -> sendToast(e.message)
+                    }
+                }
+        }
+    }
+
+    fun onDismissInsufficientDialog() {
+        _uiState.update { it.copy(showInsufficientItemsDialog = false) }
+    }
+
+    //바 계산 & 레벨업 조건 검증 일괄 처리용
+    private fun updateProgressAndCondition(pot: Pot) {
+        val (progress, text) = computeProgress(pot)
+        _uiState.update {
+            it.copy(
+                levelUpProgress = progress,
+                levelUpProgressText = text
+            )
+        }
+        viewModelScope.launch {
+            recheckLevelUpCondition()
         }
     }
 }
