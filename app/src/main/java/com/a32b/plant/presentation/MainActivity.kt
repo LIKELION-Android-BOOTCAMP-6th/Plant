@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
     private var appDarkMode: Boolean? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // enableEdgeToEdge가 decorView를 만들기 때문에 먼저 호출하면 스플래시 테마(ActionBar 있음)로 창이 구성됨
+        // applySystemBarStyle(내부의 enableEdgeToEdge)이 decorView를 만들기 때문에 먼저 호출하면 스플래시 테마(ActionBar 있음)로 창이 구성됨
         val compatSplashScreen = installSplashScreen()
         applySystemBarStyle()
         compatSplashScreen.setKeepOnScreenCondition {
