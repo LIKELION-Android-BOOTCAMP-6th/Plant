@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ 스플래시 아이콘 애니메이션 (총 1000ms)
+     200~700ms 링 차오름 → 650~800ms 줄기 → 740~1000ms 잎 두 장
+     앱 창이 나타나는 페이드 인과 겹치면 12시 시작 부분이 보이지 않아 링을 200ms 늦게 시작
+     벡터 초기값은 '숨김' 상태, 애니메이션이 끝나면 정적 로고(splash_logo.xml)와 같은 모양 -->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+
+    <aapt:attr name="android:drawable">
+        <vector
+            android:width="288dp"
+            android:height="288dp"
+            android:viewportWidth="108"
+            android:viewportHeight="108">
+            <group
+                android:scaleX="0.7"
+                android:scaleY="0.7"
+                android:translateX="19"
+                android:translateY="18.3">
+                <path
+                    android:pathData="M50,26A30,30 0,1 1,50 86A30,30 0,1 1,50 26Z"
+                    android:strokeColor="@color/splash_logo_track"
+                    android:strokeWidth="8" />
+                <path
+                    android:name="ring"
+                    android:pathData="M50,26A30,30 0,1 1,21.45 65.22"
+                    android:strokeColor="@color/splash_logo_primary"
+                    android:strokeWidth="8"
+                    android:trimPathEnd="0" />
+                <path
+                    android:name="ring_end"
+                    android:fillAlpha="0"
+                    android:fillColor="@color/splash_logo_primary"
+                    android:pathData="M17.45,65.22A4,4 0,1 1,25.45 65.22A4,4 0,1 1,17.45 65.22Z" />
+                <path
+                    android:fillColor="@color/splash_logo_accent"
+                    android:pathData="M45.5,12H54.5A2.5,2.5 0,0 1,57 14.5V15.5A2.5,2.5 0,0 1,54.5 18H45.5A2.5,2.5 0,0 1,43 15.5V14.5A2.5,2.5 0,0 1,45.5 12Z" />
+                <path
+                    android:fillColor="@color/splash_logo_accent"
+                    android:pathData="M47.5,17H52.5V22.2A34.2,34.2 0,0 0,47.5 22.2Z" />
+                <path
+                    android:name="stem"
+                    android:pathData="M50,71V56"
+                    android:strokeColor="@color/splash_logo_accent"
+                    android:strokeLineCap="round"
+                    android:strokeWidth="4"
+                    android:trimPathEnd="0" />
+                <group
+                    android:name="leaf_left"
+                    android:pivotX="50"
+                    android:pivotY="58"
+                    android:scaleX="0"
+                    android:scaleY="0">
+                    <path
+                        android:fillColor="@color/splash_logo_primary"
+                        android:pathData="M50,58C41,58 36,53 36,45C44,45 50,50 50,58Z" />
+                </group>
+                <group
+                    android:name="leaf_right"
+                    android:pivotX="50"
+                    android:pivotY="54"
+                    android:scaleX="0"
+                    android:scaleY="0">
+                    <path
+                        android:fillColor="@color/splash_logo_accent"
+                        android:pathData="M50,54C50,45 56,39 65,39C65,48 59,54 50,54Z" />
+                </group>
+            </group>
+        </vector>
+    </aapt:attr>
+
+    <target android:name="ring">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="500"
+                android:interpolator="@android:anim/accelerate_decelerate_interpolator"
+                android:propertyName="trimPathEnd"
+                android:startOffset="200"
+                android:valueFrom="0"
+                android:valueTo="1"
+                android:valueType="floatType" />
+        </aapt:attr>
+    </target>
+
+    <target android:name="ring_end">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="100"
+                android:propertyName="fillAlpha"
+                android:startOffset="600"
+                android:valueFrom="0"
+                android:valueTo="1"
+                android:valueType="floatType" />
+        </aapt:attr>
+    </target>
+
+    <target android:name="stem">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="150"
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="trimPathEnd"
+                android:startOffset="650"
+                android:valueFrom="0"
+                android:valueTo="1"
+                android:valueType="floatType" />
+        </aapt:attr>
+    </target>
+
+    <target android:name="leaf_left">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator
+                    android:duration="220"
+                    android:interpolator="@android:anim/overshoot_interpolator"
+                    android:propertyName="scaleX"
+                    android:startOffset="740"
+                    android:valueFrom="0"
+                    android:valueTo="1"
+                    android:valueType="floatType" />
+                <objectAnimator
+                    android:duration="220"
+                    android:interpolator="@android:anim/overshoot_interpolator"
+                    android:propertyName="scaleY"
+                    android:startOffset="740"
+                    android:valueFrom="0"
+                    android:valueTo="1"
+                    android:valueType="floatType" />
+            </set>
+        </aapt:attr>
+    </target>
+
+    <target android:name="leaf_right">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator
+                    android:duration="220"
+                    android:interpolator="@android:anim/overshoot_interpolator"
+                    android:propertyName="scaleX"
+                    android:startOffset="780"
+                    android:valueFrom="0"
+                    android:valueTo="1"
+                    android:valueType="floatType" />
+                <objectAnimator
+                    android:duration="220"
+                    android:interpolator="@android:anim/overshoot_interpolator"
+                    android:propertyName="scaleY"
+                    android:startOffset="780"
+                    android:valueFrom="0"
+                    android:valueTo="1"
+                    android:valueType="floatType" />
+            </set>
+        </aapt:attr>
+    </target>
+</animated-vector>
