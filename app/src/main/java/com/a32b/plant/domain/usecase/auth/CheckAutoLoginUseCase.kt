@@ -24,7 +24,8 @@ class CheckAutoLoginUseCase @Inject constructor(
 
         // 세션은 있는데 Firestore 프로필이 없거나, 닉네임 미설정 상태면 로그인 화면으로 되돌린다.
         if (user == null || user.isFirstLogin == true) {
-            authRepository.signOut()
+            // 캐시는 오래된 값일 수 있으므로 서버 응답을 확인한 경우에만 로그아웃한다.
+            if (snapshot.isFromServer) authRepository.signOut()
             return Result.Success(AutoLoginResult.NotLoggedIn)
         }
 

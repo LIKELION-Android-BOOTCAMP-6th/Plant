@@ -43,7 +43,8 @@ interface UserRepository {
     suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success>
     /**
      * 세션 토큰을 저장한다. 제한 시간 안에 서버 응답이 없어도 쓰기는 큐에 남아 나중에 반영되므로 성공으로 반환한다.
-     * 오프라인에서 호출하면 온라인 복귀 후 다른 기기를 로그아웃시킬 수 있으니, 서버 응답을 확인한 뒤에 호출할 것.
+     * 뒤늦게 반영되면 다른 기기를 로그아웃시킬 수 있으므로, 사용자가 직접 로그인한 경우가 아닌 자동 진입에서는
+     * 서버 응답을 확인한 뒤에 호출할 것.
      */
     suspend fun updateSessionToken(uid: String, token: String?): Result<Unit>
     suspend fun deleteUserData(uid: String): Result<Unit>
