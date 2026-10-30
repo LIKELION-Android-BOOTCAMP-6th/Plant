@@ -72,6 +72,7 @@ import com.a32b.plant.presentation.community.viewmodel.CommunityListViewModel
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.core.component.ProfileImage
+import com.a32b.plant.presentation.core.component.TabTopBar
 import com.a32b.plant.presentation.core.component.TagChip
 import com.a32b.plant.presentation.core.component.TagSheet
 import com.a32b.plant.presentation.core.extension.showToast
@@ -155,23 +156,11 @@ fun CommunityListScreen(
                     containerColor = MaterialTheme.colorScheme.background,
                     topBar = {
                         Column(
-                            modifier = Modifier
-                                .background(MaterialTheme.colorScheme.background)
-                                .padding(horizontal = 10.dp)
+                            modifier = Modifier.background(MaterialTheme.colorScheme.background)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 6.dp, vertical = 8.dp)
-                            ) {
-                                Text(
-                                    "커뮤니티",
-                                    style = MaterialTheme.typography.displayLarge,
-                                    modifier = Modifier.align(Alignment.Center)
-                                )
+                            TabTopBar(title = "커뮤니티") {
                                 TextButton(
-                                    onClick = { navController.navigate(Routes.CommunityActivity) },
-                                    modifier = Modifier.align(Alignment.CenterEnd)
+                                    onClick = { navController.navigate(Routes.CommunityActivity) }
                                 ) {
                                     Text(
                                         "내 활동",
@@ -180,81 +169,85 @@ fun CommunityListScreen(
                                     )
                                 }
                             }
-                            SearchBarSection(
-                                query = searchQuery,
-                                onQueryChange = { viewModel.onSearchQueryChanged(it) }
-                            )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
+                            Column(
+                                modifier = Modifier.padding(horizontal = 10.dp)
                             ) {
+                                SearchBarSection(
+                                    query = searchQuery,
+                                    onQueryChange = { viewModel.onSearchQueryChanged(it) }
+                                )
                                 Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .padding(start = 16.dp)
-                                        .clickable { viewModel.onIsTagSheetShownChange() }
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .padding(start = 16.dp)
+                                            .clickable { viewModel.onIsTagSheetShownChange() }
+                                    ) {
+                                        Text(
+                                            "태그",
+                                            style = MaterialTheme.typography.titleMedium,
+                                        )
+                                        Icon(
+                                            painter = painterResource(id = if (uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
+                                            contentDescription = "태그박스",
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    Box(modifier = Modifier.clickable {
+                                        viewModel.onSelectedChanged(emptyList())
+                                    }) {
+                                        TagChip("전체 선택 해제", 13, false)
+                                    }
+
+                                    Spacer(modifier = Modifier.weight(1f))
+
                                     Text(
-                                        "태그",
-                                        style = MaterialTheme.typography.titleMedium,
+                                        "공유글 보기",
+                                        style =
+                                            MaterialTheme.typography.titleMedium,
+                                            fontSize = 14.sp,
                                     )
-                                    Icon(
-                                        painter = painterResource(id = if (uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
-                                        contentDescription = "태그박스",
-                                        modifier = Modifier.size(18.dp)
+                                    Switch(
+                                        uiState.isSharedShown,
+                                        onCheckedChange = { viewModel.onSharedShownChange() },
+                                        modifier = Modifier
+                                            .scale(0.7f)
+                                            .padding(end = 10.dp),
+                                        colors = SwitchDefaults.colors(
+                                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                            uncheckedBorderColor = MaterialTheme.colorScheme.outline
+                                        )
                                     )
                                 }
-                                Box(modifier = Modifier.clickable {
-                                    viewModel.onSelectedChanged(emptyList())
-                                }) {
-                                    TagChip("전체 선택 해제", 13, false)
-                                }
-
-                                Spacer(modifier = Modifier.weight(1f))
-
-                                Text(
-                                    "공유글 보기",
-                                    style =
-                                        MaterialTheme.typography.titleMedium,
-                                        fontSize = 14.sp,
-                                )
-                                Switch(
-                                    uiState.isSharedShown,
-                                    onCheckedChange = { viewModel.onSharedShownChange() },
-                                    modifier = Modifier
-                                        .scale(0.7f)
-                                        .padding(end = 10.dp),
-                                    colors = SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-                                        uncheckedBorderColor = MaterialTheme.colorScheme.outline
-                                    )
-                                )
-                            }
-                            if (uiState.selected.isNotEmpty()) {
-                                FlowRow(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(bottom = 8.dp, start = 16.dp, end = 16.dp),
-                                    maxItemsInEachRow = 6,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    uiState.selected.forEach { tag ->
-                                        Surface(
-                                            shape = RoundedCornerShape(16.dp),
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.padding(vertical = 2.dp)
-                                        ) {
-                                            Text(
-                                                text = tag.name,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                modifier = Modifier.padding(
-                                                    horizontal = 10.dp,
-                                                    vertical = 4.dp
-                                                ),
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
+                                if (uiState.selected.isNotEmpty()) {
+                                    FlowRow(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(bottom = 8.dp, start = 16.dp, end = 16.dp),
+                                        maxItemsInEachRow = 6,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        uiState.selected.forEach { tag ->
+                                            Surface(
+                                                shape = RoundedCornerShape(16.dp),
+                                                color = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.padding(vertical = 2.dp)
+                                            ) {
+                                                Text(
+                                                    text = tag.name,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    modifier = Modifier.padding(
+                                                        horizontal = 10.dp,
+                                                        vertical = 4.dp
+                                                    ),
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                            }
                                         }
                                     }
                                 }
