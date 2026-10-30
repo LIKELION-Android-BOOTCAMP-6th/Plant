@@ -38,7 +38,8 @@ fun TabTopBar(
         modifier = modifier,
         actions = actions,
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.background
+            containerColor = MaterialTheme.colorScheme.background,
+            actionIconContentColor = MaterialTheme.colorScheme.onSurface
         )
     )
 }
