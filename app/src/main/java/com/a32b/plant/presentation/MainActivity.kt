@@ -53,8 +53,8 @@ class MainActivity : ComponentActivity() {
     lateinit var signOutUseCase: SignOutUseCase
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
         val splashScreen = installSplashScreen()
+        enableEdgeToEdge()
         splashScreen.setKeepOnScreenCondition {
             //해당 값이 트루일 동안 스플래시 유지
             viewModel.destination.value == null || viewModel.uiState.value.isLoading
