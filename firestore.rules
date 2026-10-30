@@ -189,6 +189,23 @@ service cloud.firestore {
         request.resource.data.createdAt == request.time;
     }
 
+    // 버그 제보·개선사항 제안: 본인 명의 생성만 허용
+    // 읽기/수정/삭제 규칙 없음 = 거부 (운영진은 콘솔에서 처리)
+    match /feedbacks/{feedbackId} {
+      allow create: if signedIn() &&
+        request.resource.data.keys().hasOnly(['type', 'reporterId', 'category', 'description', 'reproductionSteps', 'deviceModel', 'androidVersion', 'appVersion', 'createdAt', 'status']) &&
+        request.resource.data.keys().hasAll(['type', 'reporterId', 'category', 'description', 'appVersion', 'createdAt', 'status']) &&
+        request.resource.data.reporterId == request.auth.uid &&
+        (
+          (request.resource.data.type == 'bug' && request.resource.data.category in ['ui_bug', 'feature_error', 'other']) ||
+          (request.resource.data.type == 'improvement' && request.resource.data.category in ['ui_improvement', 'new_feature', 'convenience', 'other'])
+        ) &&
+        request.resource.data.description is string &&
+        request.resource.data.description.size() > 0 &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.createdAt == request.time;
+    }
+
     // 닉네임 선점 문서: 소유자 uid를 함께 저장하고, 소유자만 삭제 가능
     // 이미 있는 문서에 set()하면 update로 평가되어 거부됨 (덮어쓰기 방지)
     // 없는 문서 삭제는 허용 (users와 nicknames가 어긋나도 닉네임 변경·회원탈퇴가 막히지 않게)
