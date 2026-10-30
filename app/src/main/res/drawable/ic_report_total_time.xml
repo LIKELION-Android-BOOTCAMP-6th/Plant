@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 리포트 - 총 시간 (시계) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M12,3.5 a8.5,8.5 0 1,0 0,17 a8.5,8.5 0 1,0 0,-17 z"
+        android:fillColor="#00000000"
+        android:strokeColor="#2E5A0C"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M12,7.2 L12,12 L15.6,14.2"
+        android:fillColor="#00000000"
+        android:strokeColor="#2E5A0C"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

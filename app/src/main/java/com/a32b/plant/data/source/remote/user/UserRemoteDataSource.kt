@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.Flow
 interface UserRemoteDataSource {
 
     suspend fun getUser(uid: String): UserDto?
+    suspend fun getUserFromServer(uid: String): UserDto?
+    suspend fun getUserFromCache(uid: String): UserDto?
     fun observeUser(uid: String): Flow<UserDto?>
     suspend fun createUser(uid: String, user: UserDto)
     /** 닉네임 등록 + 첫 로그인 완료를 한 트랜잭션으로 처리하고, 확인한 서버 상태를 반환 */

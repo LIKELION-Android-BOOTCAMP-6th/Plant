@@ -11,6 +11,7 @@ import com.a32b.plant.di.qualifier.ApplicationScope
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.User
+import com.a32b.plant.domain.model.UserSnapshot
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.session.SessionExpiredNotifier
@@ -20,6 +21,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,6 +37,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val COMPLETE_FIRST_LOGIN_TIMEOUT_MS = 10_000L
+private const val GET_USER_SERVER_TIMEOUT_MS = 2_000L
+private const val SESSION_TOKEN_WRITE_TIMEOUT_MS = 1_500L
 
 @Singleton
 class UserRepositoryImpl @Inject constructor(
@@ -46,6 +50,7 @@ class UserRepositoryImpl @Inject constructor(
 ) : UserRepository {
     private val _currentUser = MutableStateFlow<User?>(null)
     private var sessionJob: Job? = null
+    @Volatile
     private var localSessionToken: String? = null
     private val accountDeletionUid = MutableStateFlow<String?>(null)
     // 읽기 실패와 재구독 사이에도 마지막 정상 테마를 유지한다. 영구 저장은 DataStore가 담당한다.
@@ -121,13 +126,26 @@ class UserRepositoryImpl @Inject constructor(
         accountDeletionUid.value = null
     }
 
-    override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> =
-        safeRunCatching {
-            userRemoteDataSource.updateSessionToken(uid, token)
-        }.fold(
+    override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> {
+        // 일반 write의 await()는 서버 응답 전까지 끝나지 않으므로 호출부와 분리해 대기 시간만 제한한다.
+        val write = scope.async {
+            safeRunCatching {
+                userRemoteDataSource.updateSessionToken(uid, token)
+            }.onFailure {
+                // 시간 초과 후 서버가 거부하면 이 토큰은 반영되지 않으므로 중복 로그인 비교에서 제외한다.
+                if (token != null && localSessionToken == token) localSessionToken = null
+            }
+        }
+        val result = withTimeoutOrNull(SESSION_TOKEN_WRITE_TIMEOUT_MS) { write.await() }
+        if (result == null) {
+            Log.w("UserRepository", "세션 토큰 저장 대기 시간 초과 (${SESSION_TOKEN_WRITE_TIMEOUT_MS}ms)")
+            return Result.Success(Unit)
+        }
+        return result.fold(
             onSuccess = { Result.Success(Unit) },
             onFailure = { e -> Result.Failure(handleError(e, "세션 토큰 업데이트 실패")) }
         )
+    }
 
     override suspend fun updateLastSelectedPot(uid: String, potId: String) {
         db.collection("users").document(uid)
@@ -141,6 +159,37 @@ class UserRepositoryImpl @Inject constructor(
         onSuccess = { Result.Success(it) },
         onFailure = { e -> Result.Failure(handleError(e, "유저 정보 조회 실패")) }
     )
+
+    override suspend fun getUserPreferringServer(uid: String): Result<UserSnapshot> =
+        safeRunCatching {
+            // 문서가 없는 경우(user = null)와 구분되도록 시간 초과만 null로 받는다.
+            withTimeoutOrNull(GET_USER_SERVER_TIMEOUT_MS) {
+                UserSnapshot(userRemoteDataSource.getUserFromServer(uid)?.toDomain(), isFromServer = true)
+            }
+        }.fold(
+            onSuccess = { snapshot ->
+                if (snapshot != null) Result.Success(snapshot) else getUserFromCache(uid)
+            },
+            onFailure = { e ->
+                if (isNetworkError(e)) getUserFromCache(uid)
+                else Result.Failure(handleError(e, "유저 정보 조회 실패"))
+            }
+        )
+
+    private suspend fun getUserFromCache(uid: String): Result<UserSnapshot> = safeRunCatching {
+        UserSnapshot(userRemoteDataSource.getUserFromCache(uid)?.toDomain(), isFromServer = false)
+    }.fold(
+        onSuccess = { Result.Success(it) },
+        onFailure = { e -> Result.Failure(handleError(e, "유저 정보 조회 실패")) }
+    )
+
+    private fun isNetworkError(e: Throwable): Boolean = when (e) {
+        is FirebaseFirestoreException ->
+            e.code == FirebaseFirestoreException.Code.UNAVAILABLE ||
+                e.code == FirebaseFirestoreException.Code.DEADLINE_EXCEEDED
+        is FirebaseNetworkException -> true
+        else -> false
+    }
 
     override suspend fun createUser(uid: String): Result<User> = safeRunCatching {
         val newUser = User.create().copy(uid = uid)

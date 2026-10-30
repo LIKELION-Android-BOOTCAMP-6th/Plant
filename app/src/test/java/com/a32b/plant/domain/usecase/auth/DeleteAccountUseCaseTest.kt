@@ -6,6 +6,7 @@ import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.domain.model.User
+import com.a32b.plant.domain.model.UserSnapshot
 import com.a32b.plant.domain.repository.AuthRepository
 import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.repository.UserRepository
@@ -198,6 +199,7 @@ class DeleteAccountUseCaseTest {
         }
         override suspend fun updateLastSelectedPot(uid: String, potId: String) = Unit
         override suspend fun getUser(uid: String): Result<User?> = TODO()
+        override suspend fun getUserPreferringServer(uid: String): Result<UserSnapshot> = TODO()
         override suspend fun createUser(uid: String): Result<User> = TODO()
         override suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit> = TODO()
         override suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit> {
