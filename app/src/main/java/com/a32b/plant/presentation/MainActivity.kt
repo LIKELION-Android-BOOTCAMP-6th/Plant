@@ -1,5 +1,6 @@
 package com.a32b.plant.presentation
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -19,6 +20,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -30,6 +32,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.a32b.plant.core.navigation.PlantAppNavigation
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.domain.session.SessionExpiredObserver
 import com.a32b.plant.domain.usecase.auth.SignOutUseCase
@@ -40,6 +43,7 @@ import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
 import com.a32b.plant.presentation.splash.SplashViewModel
 import com.a32b.plant.presentation.theme.PlantTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -53,11 +57,20 @@ class MainActivity : ComponentActivity() {
     lateinit var signOutUseCase: SignOutUseCase
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
+        // enableEdgeToEdge가 decorView를 만들기 때문에 먼저 호출하면 스플래시 테마(ActionBar 있음)로 창이 구성됨
         val splashScreen = installSplashScreen()
+        enableEdgeToEdge()
         splashScreen.setKeepOnScreenCondition {
             //해당 값이 트루일 동안 스플래시 유지
-            viewModel.destination.value == null || viewModel.uiState.value.isLoading
+            viewModel.destination.value == null || viewModel.uiState.value.isLoading ||
+                    !viewModel.isFirstScreenReady.value
+        }
+        // 시스템 기본 종료 효과(로고 잔상) 없이 바로 첫 화면으로 전환
+        // 라이브러리 리스너는 시스템 바 색을 테마 값으로 덮어쓰므로 플랫폼 API를 직접 사용 (Android 11 이하는 원래 즉시 제거됨)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            this.splashScreen.setOnExitAnimationListener { splashScreenView ->
+                splashScreenView.remove()
+            }
         }
 
         super.onCreate(savedInstanceState)
@@ -130,13 +143,21 @@ class MainActivity : ComponentActivity() {
                         try { navController.getBackStackEntry<Routes.HomeMain>() }
                         catch (_: Exception) { null }
                     }
+                    val homeViewModel = homeBackStackEntry?.let { hiltViewModel<HomeViewModel>(it) }
                     val recoverySession: StudyingSession? by (
-                        homeBackStackEntry
-                            ?.let { hiltViewModel<HomeViewModel>(it) }
+                        homeViewModel
                             ?.recoverySession
                             ?.collectAsState()
                             ?: remember { mutableStateOf(null) }
                     )
+
+                    // 홈 화분이 화면에 반영된 뒤 스플래시를 끝내 기본 화면이 보이지 않게 한다.
+                    // 화분이 없는 경우 등은 SplashViewModel이 처리한다.
+                    LaunchedEffect(homeViewModel) {
+                        homeViewModel?.displayPot?.first { it != Pot.EMPTY } ?: return@LaunchedEffect
+                        withFrameNanos { }
+                        viewModel.onFirstScreenReady()
+                    }
 
                     val showBottomBar = navBackStackEntry?.destination?.let { destination ->
                         destination.hasRoute<Routes.HomeMain>() ||
