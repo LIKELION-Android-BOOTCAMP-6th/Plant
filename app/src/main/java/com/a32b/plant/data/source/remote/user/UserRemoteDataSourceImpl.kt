@@ -28,6 +28,16 @@ class UserRemoteDataSourceImpl @Inject constructor(
         return snapshot.toObject(UserDto::class.java)
     }
 
+    override suspend fun getUserFromServer(uid: String): UserDto? {
+        val snapshot = db.collection("users").document(uid).get(Source.SERVER).await()
+        return snapshot.toObject(UserDto::class.java)
+    }
+
+    override suspend fun getUserFromCache(uid: String): UserDto? {
+        val snapshot = db.collection("users").document(uid).get(Source.CACHE).await()
+        return snapshot.toObject(UserDto::class.java)
+    }
+
     override fun observeUser(uid: String): Flow<UserDto?> = callbackFlow {
         if (uid.isEmpty()) {
             trySend(null)
