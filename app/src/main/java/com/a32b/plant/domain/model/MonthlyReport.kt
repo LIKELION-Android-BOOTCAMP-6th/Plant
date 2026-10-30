@@ -7,6 +7,8 @@ data class MonthlyReport(
     val month: YearMonth,
     val totalMillis: Long,
     val averageMillis: Long,
+    val studyCount: Int,
+    val longestStreakDays: Int,
     val dailyTotals: List<ReportDailyTotal>,
     // 기록 있는 날이 없으면 둘 다 null. 하루뿐이면 둘 다 같은 날이다.
     val highestDay: ReportDailyTotal?,
