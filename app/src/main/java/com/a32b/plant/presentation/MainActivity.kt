@@ -67,9 +67,10 @@ class MainActivity : ComponentActivity() {
             val uiState = viewModel.uiState.value
             viewModel.destination.value == null || uiState.isLoading || !uiState.isFirstScreenReady
         }
-        // 시스템 기본 종료 효과(로고 잔상) 없이 바로 첫 화면으로 전환
-        // 라이브러리 리스너는 시스템 바 색을 테마 값으로 덮어쓰므로 플랫폼 API를 직접 사용 (Android 11 이하는 원래 즉시 제거됨)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        // 시스템 기본 종료 효과(로고 잔상) 없이 첫 화면으로 전환
+        // 라이브러리 리스너는 시스템 바 색을 테마 값으로 덮어쓰므로 플랫폼 API를 직접 사용.
+        // Android 12(API 31/32)는 직접 제거하면 시스템 바 설정이 되돌아가서 시스템 기본 전환을 쓴다. (Android 11 이하는 원래 즉시 제거됨)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             this.splashScreen.setOnExitAnimationListener { splashScreenView ->
                 // 로딩이 빨라도 로고 애니메이션은 끝까지 보여준 뒤 제거
                 val iconStart = splashScreenView.iconAnimationStart
