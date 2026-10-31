@@ -46,6 +46,8 @@ import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.mypage.viewmodel.DeleteAccountEvent
 import com.a32b.plant.presentation.mypage.viewmodel.DeleteAccountViewModel
+import com.a32b.plant.presentation.theme.LocalIsDarkTheme
+import com.a32b.plant.presentation.theme.deleteAccountButtonContentDark
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.launch
@@ -195,7 +197,11 @@ fun AccountManageScreen(
             ButtonTemplate(
                 text = "회원탈퇴",
                 enabled = !deleteUiState.isLoading,
-                textColor = MaterialTheme.colorScheme.error,
+                textColor = if (LocalIsDarkTheme.current) {
+                    deleteAccountButtonContentDark
+                } else {
+                    MaterialTheme.colorScheme.error
+                },
                 onClick = {
                     isDeleteSecondConfirm = false
                     showDeleteDialog = true
