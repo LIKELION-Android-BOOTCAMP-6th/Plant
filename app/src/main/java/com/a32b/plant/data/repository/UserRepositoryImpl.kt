@@ -241,11 +241,11 @@ class UserRepositoryImpl @Inject constructor(
         onFailure = { e -> Result.Failure(handleNicknameCheckError(e)) }
     )
 
-    override suspend fun registerNickname(nickname: String): Result<Unit> = safeRunCatching {
-        userRemoteDataSource.registerNickname(nickname)
+    override suspend fun registerNickname(uid: String, nickname: String): Result<Unit> = safeRunCatching {
+        userRemoteDataSource.registerNickname(uid, nickname)
     }.fold(
         onSuccess = { Result.Success(Unit) },
-        onFailure = { e -> Result.Failure(handleError(e, "닉네임 등록 실패")) }
+        onFailure = { e -> Result.Failure(handleRegisterNicknameError(e)) }
     )
 
     override suspend fun deleteNickname(nickname: String): Result<Unit> = safeRunCatching {
@@ -324,6 +324,22 @@ class UserRepositoryImpl @Inject constructor(
 
             is FirebaseNetworkException -> AppError.Network()
             else -> AppError.Custom("닉네임 설정에 실패했습니다.")
+        }
+    }
+
+    private fun handleRegisterNicknameError(e: Throwable): AppError {
+        Log.e("UserRepository", "닉네임 등록 실패: ${e.message}", e)
+
+        return when (e) {
+            is FirebaseFirestoreException -> when (e.code) {
+                FirebaseFirestoreException.Code.UNAVAILABLE,
+                FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
+                // 중복 검사 직후 다른 사용자가 먼저 등록하면, 이미 있는 문서 덮어쓰기라 보안 규칙이 거부한다
+                FirebaseFirestoreException.Code.PERMISSION_DENIED -> AppError.NicknameTaken()
+                else -> AppError.Custom("닉네임 등록 실패")
+            }
+            is FirebaseNetworkException -> AppError.Network()
+            else -> AppError.Custom("닉네임 등록 실패")
         }
     }
 
