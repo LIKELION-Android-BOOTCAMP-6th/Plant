@@ -74,6 +74,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
     val allPots by viewModel.allPots.collectAsState()
     val tempSelectedPot by viewModel.tempSelectedPot.collectAsState()
     val attendanceUiState by viewModel.attendanceUiState.collectAsState()
+    val showAttendanceDialog by viewModel.showAttendanceDialog.collectAsState()
     val userItem by viewModel.userItem.collectAsState()
     val recoverySession by viewModel.recoverySession.collectAsState()
     val isRecovering by viewModel.isRecovering.collectAsState()
@@ -95,12 +96,11 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
         )
     }
 
-    var showAttendanceDialog by remember { mutableStateOf(false) }
     if (showAttendanceDialog) {
         AttendanceCheckDialog(
             uiState = attendanceUiState,
             onCheckClick = { viewModel.checkAttendance() },
-            onDismiss = { showAttendanceDialog = false }
+            onDismiss = viewModel::closeAttendanceDialog
         )
     }
 
@@ -128,7 +128,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                 HomeTopBar(
                     userName = userName,
                     isAttendanceCompleted = attendanceUiState.isAttendanceCompleted,
-                    onAttendanceClick = { showAttendanceDialog = true }
+                    onAttendanceClick = viewModel::openAttendanceDialog
                 )
             },
             containerColor = MaterialTheme.colorScheme.background

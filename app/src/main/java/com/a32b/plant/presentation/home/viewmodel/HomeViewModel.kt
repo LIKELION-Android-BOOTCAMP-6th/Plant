@@ -115,6 +115,10 @@ class HomeViewModel @Inject constructor(
     private val _attendanceUiState = MutableStateFlow(AttendanceUiState())
     val attendanceUiState = _attendanceUiState.asStateFlow()
 
+    private val _showAttendanceDialog = MutableStateFlow(false)
+    val showAttendanceDialog = _showAttendanceDialog.asStateFlow()
+    private var hasConsideredAutomaticAttendanceDialog = false
+
     // 일회성 화면 이벤트
     private val _eventChannel = Channel<HomeEvent>(Channel.BUFFERED)
     val events = _eventChannel.receiveAsFlow()
@@ -146,16 +150,38 @@ class HomeViewModel @Inject constructor(
     }
     private fun checkUserAndLoadData() {
         viewModelScope.launch {
-            ensureCurrentUserUseCase { user ->
+            val isUserLookupSuccessful = ensureCurrentUserUseCase { user ->
                 _userName.value = user.nickname
                 _attendanceUiState.value = user.monthCheck.toAttendanceUiState()
                 _userItem.value = user.item
 
                 loadActivePot(uid = user.uid, lastSelectedPotId = user.lastSelectedPotId)
                 checkRecoverySession(user.uid)
-            } ?: Unit
+            } != null
             loaded()
+            if (isUserLookupSuccessful) {
+                maybeShowAutomaticAttendanceDialog()
+            }
         }
+    }
+
+    private fun maybeShowAutomaticAttendanceDialog() {
+        if (_recoverySession.value != null ||
+            hasConsideredAutomaticAttendanceDialog
+        ) return
+
+        hasConsideredAutomaticAttendanceDialog = true
+        if (!_attendanceUiState.value.isAttendanceCompleted) {
+            _showAttendanceDialog.value = true
+        }
+    }
+
+    fun openAttendanceDialog() {
+        _showAttendanceDialog.value = true
+    }
+
+    fun closeAttendanceDialog() {
+        _showAttendanceDialog.value = false
     }
 
 
@@ -190,6 +216,7 @@ class HomeViewModel @Inject constructor(
             recoverStudySessionUseCase(session)
                 .onSuccess {
                     _recoverySession.value = null
+                    maybeShowAutomaticAttendanceDialog()
                     sendToast("학습 기록이 저장되었습니다.")
                 }
                 .onFailure { error ->
@@ -208,6 +235,7 @@ class HomeViewModel @Inject constructor(
             clearStudyingSessionUseCase()
                 .onSuccess {
                     _recoverySession.value = null
+                    maybeShowAutomaticAttendanceDialog()
                 }
                 .onFailure { error ->
                     when (error) {
