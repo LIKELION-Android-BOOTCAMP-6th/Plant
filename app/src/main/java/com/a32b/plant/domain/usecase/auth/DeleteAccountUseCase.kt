@@ -38,12 +38,18 @@ class DeleteAccountUseCase @Inject constructor(
 
             if (nickname.isNotBlank()) {
                 val deleteNicknameResult = userRepository.deleteNickname(nickname)
-                if (deleteNicknameResult is Result.Failure) return deleteNicknameResult
+                if (deleteNicknameResult is Result.Failure) {
+                    ensureCurrentUserUseCase()
+                    return deleteNicknameResult
+                }
             }
 
             // 2. Firebase Auth 계정은 맨 마지막에 삭제
             val deleteAuthResult = authRepository.deleteAuthAccount()
-            if (deleteAuthResult is Result.Failure) return deleteAuthResult
+            if (deleteAuthResult is Result.Failure) {
+                ensureCurrentUserUseCase()
+                return deleteAuthResult
+            }
 
             // 회원탈퇴가 완료된 뒤에만 기기 테마와 로컬 학습 세션을 초기화한다.
             // 저장 실패는 Repository에서 로그를 남기며, 완료된 회원탈퇴 결과는 유지한다.

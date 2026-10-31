@@ -28,9 +28,13 @@ class DeleteAccountUseCaseTest {
     fun `failed cleanup keeps current user and a later invocation succeeds`() = runBlocking {
         val user = testUser(token = "session-1")
         val users = FakeUserRepository(user)
-        val useCase = createUseCase(users, FakeAuthRepository("uid-1"))
+        var sessionExpiredEvents = 0
+        val useCase = createUseCase(users, FakeAuthRepository("uid-1")) {
+            sessionExpiredEvents++
+        }
 
         assertTrue(useCase() is Result.Failure)
+        assertEquals(0, sessionExpiredEvents)
         assertTrue(users.startedSessions.isEmpty())
         assertEquals(0, users.endUserSessionCalls)
         assertEquals(user, users.currentUser.value)
@@ -40,6 +44,7 @@ class DeleteAccountUseCaseTest {
         users.deleteNicknameResult = Result.Success(Unit)
 
         assertTrue(useCase() is Result.Success)
+        assertEquals(0, sessionExpiredEvents)
         assertTrue(users.startedSessions.isEmpty())
         assertEquals(1, users.endUserSessionCalls)
         assertTrue(users.currentUser.value == null)
@@ -57,11 +62,15 @@ class DeleteAccountUseCaseTest {
             deleteNicknameResult = Result.Failure(AppError.Network())
         )
         val auth = FakeAuthRepository("uid-1")
-        val useCase = createUseCase(users, auth)
+        var sessionExpiredEvents = 0
+        val useCase = createUseCase(users, auth) {
+            sessionExpiredEvents++
+        }
 
         val result = useCase()
 
         assertTrue(result is Result.Failure)
+        assertEquals(1, sessionExpiredEvents)
         assertTrue(users.startedSessions.isEmpty())
         assertTrue(users.currentUser.value == null)
         assertEquals(0, auth.deleteAuthAccountCalls)
@@ -79,11 +88,19 @@ class DeleteAccountUseCaseTest {
             deleteNicknameResult = Result.Success(Unit)
         )
         val study = FakeStudyingRepository()
-        val useCase = createUseCase(users, FakeAuthRepository("uid-1", Result.Failure(AppError.Auth())), study)
+        var sessionExpiredEvents = 0
+        val useCase = createUseCase(
+            users,
+            FakeAuthRepository("uid-1", Result.Failure(AppError.Auth())),
+            study
+        ) {
+            sessionExpiredEvents++
+        }
 
         val result = useCase()
 
         assertTrue(result is Result.Failure)
+        assertEquals(1, sessionExpiredEvents)
         assertTrue(users.startedSessions.isEmpty())
         assertEquals(1, users.endUserSessionCalls)
         assertTrue(users.currentUser.value == null)
@@ -94,6 +111,7 @@ class DeleteAccountUseCaseTest {
     @Test
     fun `cancellation before document deletion preserves user and retry succeeds`() = runBlocking {
         val user = testUser("session-1")
+        var sessionExpiredEvents = 0
         var cancelFirstCall = true
         val users = FakeUserRepository(
             user,
@@ -106,7 +124,9 @@ class DeleteAccountUseCaseTest {
                 }
             }
         )
-        val useCase = createUseCase(users, FakeAuthRepository("uid-1", Result.Success(Unit)))
+        val useCase = createUseCase(users, FakeAuthRepository("uid-1", Result.Success(Unit))) {
+            sessionExpiredEvents++
+        }
 
         val cancelled = try {
             useCase()
@@ -116,12 +136,14 @@ class DeleteAccountUseCaseTest {
         }
 
         assertTrue(cancelled)
+        assertEquals(0, sessionExpiredEvents)
         assertEquals(1, users.endDeletionCalls)
         assertTrue(users.startedSessions.isEmpty())
         assertEquals(0, users.endUserSessionCalls)
         assertEquals(user, users.currentUser.value)
 
         assertTrue(useCase() is Result.Success)
+        assertEquals(0, sessionExpiredEvents)
         assertEquals(2, users.endDeletionCalls)
         assertTrue(users.startedSessions.isEmpty())
         assertEquals(1, users.endUserSessionCalls)
@@ -136,10 +158,18 @@ class DeleteAccountUseCaseTest {
             deleteNicknameResult = Result.Success(Unit)
         )
         val study = FakeStudyingRepository()
-        val useCase = createUseCase(users, FakeAuthRepository("uid-1", Result.Success(Unit)), study)
+        var sessionExpiredEvents = 0
+        val useCase = createUseCase(
+            users,
+            FakeAuthRepository("uid-1", Result.Success(Unit)),
+            study
+        ) {
+            sessionExpiredEvents++
+        }
 
         assertTrue(useCase() is Result.Success)
 
+        assertEquals(0, sessionExpiredEvents)
         assertEquals(1, users.endUserSessionCalls)
         assertEquals(listOf(false), users.darkModeUpdates)
         assertEquals(1, study.clearLocalSessionCalls)
@@ -149,7 +179,8 @@ class DeleteAccountUseCaseTest {
     private fun createUseCase(
         users: FakeUserRepository,
         auth: AuthRepository,
-        study: StudyingRepository = FakeStudyingRepository()
+        study: StudyingRepository = FakeStudyingRepository(),
+        onSessionExpired: () -> Unit = {}
     ) = DeleteAccountUseCase(
         authRepository = auth,
         userRepository = users,
@@ -157,7 +188,7 @@ class DeleteAccountUseCaseTest {
         ensureCurrentUserUseCase = EnsureCurrentUserUseCase(
             users,
             object : SessionExpiredNotifier {
-                override fun notifySessionExpired(reason: SessionExpiredReason) = Unit
+                override fun notifySessionExpired(reason: SessionExpiredReason) = onSessionExpired()
             }
         )
     )

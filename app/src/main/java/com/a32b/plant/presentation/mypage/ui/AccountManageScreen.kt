@@ -195,8 +195,7 @@ fun AccountManageScreen(
             ButtonTemplate(
                 text = "회원탈퇴",
                 enabled = !deleteUiState.isLoading,
-                containerColor = MaterialTheme.colorScheme.error,
-                textColor = MaterialTheme.colorScheme.onPrimary,
+                textColor = MaterialTheme.colorScheme.error,
                 onClick = {
                     isDeleteSecondConfirm = false
                     showDeleteDialog = true

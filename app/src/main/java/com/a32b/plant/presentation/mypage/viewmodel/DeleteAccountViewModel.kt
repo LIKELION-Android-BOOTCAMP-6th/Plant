@@ -6,6 +6,7 @@ import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.repository.AuthRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
+import com.a32b.plant.domain.session.SessionExpiredNotifier
 import com.a32b.plant.domain.usecase.auth.DeleteAccountUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -30,7 +31,8 @@ sealed class DeleteAccountEvent {
 @HiltViewModel
 class DeleteAccountViewModel @Inject constructor(
     private val deleteAccountUseCase: DeleteAccountUseCase,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val sessionExpiredNotifier: SessionExpiredNotifier
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DeleteAccountUiState())
@@ -66,7 +68,9 @@ class DeleteAccountViewModel @Inject constructor(
                 .onSuccess { performDelete() }
                 .onFailure { error ->
                     _uiState.update { it.copy(isLoading = false) }
-                    if (error !is AppError.UnknownUser) {
+                    if (error is AppError.UnknownUser) {
+                        sessionExpiredNotifier.notifySessionExpired()
+                    } else {
                         _eventChannel.send(DeleteAccountEvent.ShowToast(error.message))
                     }
                 }

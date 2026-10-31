@@ -279,8 +279,7 @@ fun DarkModeToggleButton(
 fun ButtonTemplate(
     text: String,
     enabled: Boolean = true,
-    containerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
-    textColor: Color? = null,
+    textColor: Color = Color.Unspecified,
     onClick: () -> Unit
 ) {
     Button(
@@ -291,7 +290,7 @@ fun ButtonTemplate(
             .height(50.dp),
         shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = containerColor,
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
         ),
         elevation = ButtonDefaults.buttonElevation(
             defaultElevation = if (LocalIsDarkTheme.current) 0.dp else 2.dp,
@@ -304,7 +303,7 @@ fun ButtonTemplate(
             Text(
                 text = text,
                 style = MaterialTheme.typography.titleSmall,
-                color = textColor ?: Color.Unspecified
+                color = textColor
             )
         }
     }
