@@ -29,6 +29,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -62,6 +63,7 @@ import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.ProfileImage
+import com.a32b.plant.presentation.core.component.TabTopBar
 import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageEvent
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageUiState
@@ -131,27 +133,33 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
         )
     }
     LoadableScreen(viewModel) {
-        MyPageContent(
-            uiState = uiState,
-            onProfileClick = {
-                viewModel.getImageLevelList()
-                showProfileDialog = true
-            },
-            onDarkModeToggle = { isDarkMode ->
-                viewModel.updateDarkMode(isDarkMode)
-            },
-            onGuideClick = {
-                context.showToast("준비 중입니다.")
-            },
-            onTermsClick = {
-                context.showToast("준비 중입니다.")
-            },
-            onPrivacyClick = { viewModel.onPrivacyPolicyClick() },
-            onLogoutClick = {
-                showLogoutDialog = true
-            },
-            onAccountManageClick = { navController.navigate(Routes.AccountManage) }
-        )
+        Scaffold(
+            topBar = { TabTopBar(title = "마이페이지") },
+            containerColor = MaterialTheme.colorScheme.background
+        ) { innerPadding ->
+            MyPageContent(
+                modifier = Modifier.padding(top = innerPadding.calculateTopPadding()),
+                uiState = uiState,
+                onProfileClick = {
+                    viewModel.getImageLevelList()
+                    showProfileDialog = true
+                },
+                onDarkModeToggle = { isDarkMode ->
+                    viewModel.updateDarkMode(isDarkMode)
+                },
+                onGuideClick = {
+                    context.showToast("준비 중입니다.")
+                },
+                onTermsClick = {
+                    context.showToast("준비 중입니다.")
+                },
+                onPrivacyClick = { viewModel.onPrivacyPolicyClick() },
+                onLogoutClick = {
+                    showLogoutDialog = true
+                },
+                onAccountManageClick = { navController.navigate(Routes.AccountManage) }
+            )
+        }
     }
 
 }
@@ -159,6 +167,7 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
 
 @Composable
 private fun MyPageContent(
+    modifier: Modifier = Modifier,
     uiState: MyPageUiState,
     onProfileClick: () -> Unit,
     onDarkModeToggle: (Boolean) -> Unit,
@@ -169,7 +178,7 @@ private fun MyPageContent(
     onLogoutClick: () -> Unit
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.background
     ) {
         Column(
