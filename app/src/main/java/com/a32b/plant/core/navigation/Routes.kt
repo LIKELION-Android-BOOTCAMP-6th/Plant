@@ -9,6 +9,7 @@ sealed interface Routes {
     @Serializable data object NewBornTree: Routes
     @Serializable data object CommunityList: Routes
     @Serializable data object Mypage: Routes
+    @Serializable data object AccountManage : Routes
     @Serializable data object StudyCompleted: Routes
     @Serializable data object CommunityActivity: Routes
 
