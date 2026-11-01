@@ -2,6 +2,7 @@ package com.a32b.plant.presentation.home.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
+import com.a32b.plant.core.util.KST_ZONE_ID
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.domain.error.AppError
@@ -80,6 +81,14 @@ private fun DailyCheckThisMonth.toAttendanceUiState(): AttendanceUiState {
     }
 }
 
+// 유저 정보로 출석 상태를 다시 계산하되, 진행 중인 보상 다이얼로그와 출석 처리 중 상태는 유지한다
+private fun DailyCheckThisMonth.toAttendanceUiStateKeeping(
+    current: AttendanceUiState
+): AttendanceUiState = toAttendanceUiState().copy(
+    reward = current.reward,
+    isChecking = current.isChecking
+)
+
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val getActivePotUseCase: GetActivePotUseCase,
@@ -117,7 +126,7 @@ class HomeViewModel @Inject constructor(
 
     private val _showAttendanceDialog = MutableStateFlow(false)
     val showAttendanceDialog = _showAttendanceDialog.asStateFlow()
-    private var hasConsideredAutomaticAttendanceDialog = false
+    private var lastAutoAttendanceDate: LocalDate? = null
 
     // 일회성 화면 이벤트
     private val _eventChannel = Channel<HomeEvent>(Channel.BUFFERED)
@@ -150,27 +159,26 @@ class HomeViewModel @Inject constructor(
     }
     private fun checkUserAndLoadData() {
         viewModelScope.launch {
-            val isUserLookupSuccessful = ensureCurrentUserUseCase { user ->
+            ensureCurrentUserUseCase { user ->
                 _userName.value = user.nickname
                 _attendanceUiState.value = user.monthCheck.toAttendanceUiState()
                 _userItem.value = user.item
 
                 loadActivePot(uid = user.uid, lastSelectedPotId = user.lastSelectedPotId)
                 checkRecoverySession(user.uid)
-            } != null
-            loaded()
-            if (isUserLookupSuccessful) {
                 maybeShowAutomaticAttendanceDialog()
             }
+            loaded()
         }
     }
 
     private fun maybeShowAutomaticAttendanceDialog() {
-        if (_recoverySession.value != null ||
-            hasConsideredAutomaticAttendanceDialog
-        ) return
+        if (_recoverySession.value != null) return
 
-        hasConsideredAutomaticAttendanceDialog = true
+        val today = LocalDate.now(KST_ZONE_ID)
+        if (lastAutoAttendanceDate == today) return
+
+        lastAutoAttendanceDate = today
         if (!_attendanceUiState.value.isAttendanceCompleted) {
             _showAttendanceDialog.value = true
         }
@@ -185,6 +193,19 @@ class HomeViewModel @Inject constructor(
     }
 
 
+    fun onHomeResumed() {
+        // 복구 세션 확인 전에는 표시 순서가 깨지므로 초기 로딩이 끝난 뒤에만 판단한다
+        if (isLoading.value) return
+        // 같은 날 복귀는 아직 갱신되지 않은 유저 정보가 방금 한 출석 상태를 덮어쓰지 않도록 건너뛴다
+        if (lastAutoAttendanceDate == LocalDate.now(KST_ZONE_ID)) return
+
+        // EnsureCurrentUserUseCase는 값이 없으면 세션 만료 이벤트를 보내므로, 화면 복귀만으로 이벤트가 나가지 않도록
+        // 현재 값을 직접 읽고 값이 없으면 이벤트 없이 반환한다.
+        val user = userRepository.currentUser.value ?: return
+        _attendanceUiState.update { user.monthCheck.toAttendanceUiStateKeeping(it) }
+        maybeShowAutomaticAttendanceDialog()
+    }
+
     private fun observeUserItem() {
         viewModelScope.launch {
             userRepository.currentUser.collect { currentUser ->
@@ -192,10 +213,10 @@ class HomeViewModel @Inject constructor(
                     _userItem.value = it.item
                     _userName.value = it.nickname
 
-                    val newState = it.monthCheck.toAttendanceUiState()
                     _attendanceUiState.update { currentUiState ->
-                        newState.copy(reward = currentUiState.reward)
-                    }                }
+                        it.monthCheck.toAttendanceUiStateKeeping(currentUiState)
+                    }
+                }
             }
         }
     }

@@ -14,6 +14,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -22,7 +23,8 @@ import javax.inject.Inject
 data class SplashUiState(
     val isLoading: Boolean = true,
     val isDarkMode: Boolean = false,
-    val isFirstScreenReady: Boolean = false
+    val isFirstScreenReady: Boolean = false,
+    val isSplashExitFinished: Boolean = false
 )
 
 @HiltViewModel
@@ -42,6 +44,7 @@ class SplashViewModel @Inject constructor(
     init {
         observeDarkMode()
         checkAuthLogin()
+        limitSplashExitWait()
     }
 
     private fun observeDarkMode() {
@@ -55,6 +58,21 @@ class SplashViewModel @Inject constructor(
     /** 첫 화면에 표시할 데이터가 준비되어 스플래시를 끝내도 될 때 호출 */
     fun onFirstScreenReady() {
         _uiState.update { it.copy(isFirstScreenReady = true) }
+    }
+
+    /** 스플래시가 끝났다고 볼 수 있을 때 호출 (Android 12 이하와 신호가 오지 않는 경우에는 대체 시점에 호출) */
+    fun onSplashExitFinished() {
+        _uiState.update { it.copy(isSplashExitFinished = true) }
+    }
+
+    // 제거 신호가 오지 않아도 홈의 다이얼로그가 계속 막히지 않도록 대기 시간을 제한
+    // (스플래시 도중 Activity가 재생성되면 제거 신호가 오지 않을 수 있다)
+    private fun limitSplashExitWait() {
+        viewModelScope.launch {
+            _uiState.first { it.isFirstScreenReady }
+            delay(MAX_SPLASH_EXIT_WAIT_MILLIS)
+            onSplashExitFinished()
+        }
     }
 
     private fun checkAuthLogin() {
@@ -95,5 +113,8 @@ class SplashViewModel @Inject constructor(
 
     private companion object {
         const val MAX_HOME_WAIT_MILLIS = 3_000L
+
+        // 로고 애니메이션(windowSplashScreenAnimationDuration 1000ms)이 끝나기에 충분한 시간
+        const val MAX_SPLASH_EXIT_WAIT_MILLIS = 2_000L
     }
 }

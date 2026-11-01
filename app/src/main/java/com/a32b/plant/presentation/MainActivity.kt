@@ -91,11 +91,15 @@ class MainActivity : ComponentActivity() {
                     splashScreenView.remove()
                     // remove()가 시스템 바를 스플래시 이전 값으로 되돌릴 수 있어 앱 설정으로 다시 적용
                     applySystemBarStyle()
+                    viewModel.onSplashExitFinished()
                 }, remainingMillis.coerceAtLeast(0L))
             }
         }
 
         super.onCreate(savedInstanceState)
+
+        // Android 12 이하는 스플래시 제거 시점을 알 수 없어 첫 화면 준비 신호만 사용한다
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) viewModel.onSplashExitFinished()
 
         setContent {
             val uiState by viewModel.uiState.collectAsState()

@@ -25,6 +25,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -40,6 +41,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
@@ -67,7 +71,11 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 @Composable
-fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltViewModel()) {
+fun HomeScreen(
+    navController: NavController,
+    isSplashFinished: Boolean,
+    viewModel: HomeViewModel = hiltViewModel()
+) {
     val displayPot by viewModel.displayPot.collectAsState()
     val userName by viewModel.userName.collectAsState()
     val showPotChangeDialog by viewModel.showPotChangeDialog.collectAsState()
@@ -79,6 +87,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
     val recoverySession by viewModel.recoverySession.collectAsState()
     val isRecovering by viewModel.isRecovering.collectAsState()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val isBoxOpening by viewModel.isBoxOpening.collectAsState()
     var bonusBoxResult by remember { mutableStateOf<List<ItemType>?>(null) }
     var showOpenDialog by remember { mutableStateOf(false) }
@@ -86,6 +95,15 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
     val todayStudyTime by viewModel.todayStudyTime.collectAsState()
 
     val hasNoPot = displayPot.id.isEmpty() || displayPot == Pot.EMPTY
+
+    // 등록 시점에 ON_RESUME이 즉시 발화되므로 초기 진입은 onHomeResumed() 안의 로딩 가드가 무시한다
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.onHomeResumed()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     recoverySession?.let { session ->
         RecoveryDialog(
@@ -96,7 +114,8 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
         )
     }
 
-    if (showAttendanceDialog) {
+    // 다이얼로그는 별도 창이라 스플래시 위에 뜰 수 있어, 스플래시가 끝난 뒤에만 표시한다
+    if (showAttendanceDialog && isSplashFinished) {
         AttendanceCheckDialog(
             uiState = attendanceUiState,
             onCheckClick = { viewModel.checkAttendance() },
