@@ -2,7 +2,6 @@ package com.a32b.plant.presentation.mypage.ui
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -195,7 +194,6 @@ private fun MyPageContent(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                DividerImage()
                 // 클릭 없는 Card는 처음 그림자 값을 기억하므로, 테마가 바뀌면 새로 그려야 그림자가 갱신된다
                 key(LocalIsDarkTheme.current) {
                     DarkModeToggleButton(
@@ -381,20 +379,6 @@ fun ProfileRow(
                 )
             }
         }
-    }
-}
-
-@Composable
-fun DividerImage() {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.ic_mypage_divider),
-            contentDescription = "구분선",
-            modifier = Modifier.size(45.dp),
-        )
     }
 }
 
