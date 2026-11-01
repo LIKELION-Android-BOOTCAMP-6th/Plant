@@ -52,6 +52,7 @@ class UserRepositoryImpl @Inject constructor(
     private var sessionJob: Job? = null
     @Volatile
     private var localSessionToken: String? = null
+    private val accountDeletionUid = MutableStateFlow<String?>(null)
     // 읽기 실패와 재구독 사이에도 마지막 정상 테마를 유지한다. 영구 저장은 DataStore가 담당한다.
     private val lastKnownDarkMode = MutableStateFlow(false)
 
@@ -84,6 +85,11 @@ class UserRepositoryImpl @Inject constructor(
                 .catch { e -> Log.e("UserRepository", "currentUser 실시간 구독 실패: ${e.message}", e) }
                 .collect { dto ->
                     if (dto == null) {
+                        if (accountDeletionUid.value == user.uid) {
+                            // 회원탈퇴가 직접 users/{uid} 문서를 삭제하는 동안에는
+                            // 화면의 탈퇴 작업이 세션 만료 이벤트로 취소되지 않게 한다.
+                            return@collect
+                        }
                         // Firestore 유저 문서가 삭제된 경우. 리스너를 먼저 종료해야
                         // 이후 스냅샷에서 이벤트가 반복 발생하지 않는다.
                         endUserSession()
@@ -110,6 +116,14 @@ class UserRepositoryImpl @Inject constructor(
         sessionJob = null
         _currentUser.value = null
         localSessionToken = null
+    }
+
+    override fun beginAccountDeletion(uid: String) {
+        accountDeletionUid.value = uid
+    }
+
+    override fun endAccountDeletion() {
+        accountDeletionUid.value = null
     }
 
     override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> {

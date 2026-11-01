@@ -52,6 +52,7 @@ serialization = {module = "org.jetbrains.kotlinx:kotlinx-serialization-json", ve
 #코루틴
 coroutine-core = {module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutine"}
 coroutine-android = {module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutine"}
+coroutine-test = {module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutine"}
 lifecycle-viewmodel = {module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle-viewmodel"}
 
 #시스템 스플래시 제어

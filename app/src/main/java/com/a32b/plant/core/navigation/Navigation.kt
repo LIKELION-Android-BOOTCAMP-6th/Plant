@@ -15,6 +15,7 @@ import com.a32b.plant.presentation.community.ui.CommunityDetailScreen
 import com.a32b.plant.presentation.community.ui.CommunityListScreen
 import com.a32b.plant.presentation.community.ui.CommunityPostScreen
 import com.a32b.plant.presentation.home.ui.HomeScreen
+import com.a32b.plant.presentation.mypage.ui.AccountManageScreen
 import com.a32b.plant.presentation.mypage.ui.MyPageScreen
 import com.a32b.plant.presentation.pot.ui.NewBornTreeScreen
 import com.a32b.plant.presentation.pot.ui.PotListScreen
@@ -39,6 +40,7 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
 
             composable<Routes.HomeMain> { HomeScreen(navController) }
             composable<Routes.Mypage> { MyPageScreen(navController) }
+            composable<Routes.AccountManage> { AccountManageScreen(navController) }
 
             composable<Routes.CommunityList> {
                 CommunityListScreen(navController)
