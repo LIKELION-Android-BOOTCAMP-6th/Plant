@@ -153,6 +153,7 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                     context.showToast("준비 중입니다.")
                 },
                 onPrivacyClick = { viewModel.onPrivacyPolicyClick() },
+                onBugReportClick = { navController.navigate(Routes.BugReport) },
                 onLogoutClick = {
                     showLogoutDialog = true
                 },
@@ -173,6 +174,7 @@ private fun MyPageContent(
     onGuideClick: () -> Unit,
     onTermsClick: () -> Unit,
     onPrivacyClick: () -> Unit,
+    onBugReportClick: () -> Unit,
     onAccountManageClick: () -> Unit,
     onLogoutClick: () -> Unit
 ) {
@@ -205,6 +207,7 @@ private fun MyPageContent(
                 ButtonTemplate(text = "사용 가이드", onClick = onGuideClick)
                 ButtonTemplate(text = "서비스 이용약관", onClick = onTermsClick)
                 ButtonTemplate(text = "개인정보처리방침", onClick = onPrivacyClick)
+                ButtonTemplate(text = "버그 제보", onClick = onBugReportClick)
                 ButtonTemplate(text = "계정 관리", onClick = onAccountManageClick)
                 ButtonTemplate(text = "로그아웃", onClick = onLogoutClick)
             }
@@ -228,6 +231,7 @@ private fun MyPageContentPreview() {
             onGuideClick = {},
             onTermsClick = {},
             onPrivacyClick = {},
+            onBugReportClick = {},
             onAccountManageClick = {},
             onLogoutClick = {}
         )

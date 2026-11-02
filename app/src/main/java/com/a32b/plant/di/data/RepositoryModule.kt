@@ -3,6 +3,7 @@ package com.a32b.plant.di.data
 import com.a32b.plant.data.repository.AuthRepositoryImpl
 import com.a32b.plant.data.repository.CommunityRepositoryImpl
 import com.a32b.plant.data.repository.CommunityReportRepositoryImpl
+import com.a32b.plant.data.repository.FeedbackRepositoryImpl
 import com.a32b.plant.data.repository.GalleryRepositoryImpl
 import com.a32b.plant.data.repository.ItemRepositoryImpl
 import com.a32b.plant.data.repository.PotRepositoryImpl
@@ -13,6 +14,7 @@ import com.a32b.plant.data.repository.UserRepositoryImpl
 import com.a32b.plant.domain.repository.AuthRepository
 import com.a32b.plant.domain.repository.CommunityRepository
 import com.a32b.plant.domain.repository.CommunityReportRepository
+import com.a32b.plant.domain.repository.FeedbackRepository
 import com.a32b.plant.domain.repository.GalleryRepository
 import com.a32b.plant.domain.repository.ItemRepository
 import com.a32b.plant.domain.repository.PotRepository
@@ -41,6 +43,9 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindCommunityReportRepository(impl: CommunityReportRepositoryImpl): CommunityReportRepository
+    @Binds
+    @Singleton
+    abstract fun bindFeedbackRepository(impl: FeedbackRepositoryImpl): FeedbackRepository
 
     @Binds
     @Singleton
