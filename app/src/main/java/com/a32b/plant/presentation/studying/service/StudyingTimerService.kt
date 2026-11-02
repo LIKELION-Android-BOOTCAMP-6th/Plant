@@ -36,7 +36,8 @@ class StudyingTimerService : Service() {
         const val CHANNEL_ID = "studying_timer_channel"
     }
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    // 포그라운드 해제 직후 진행 중이던 알림 갱신이 알림을 되살리지 않도록 메인 스레드에서 순서대로 처리한다.
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var timerJob: Job? = null
     private var segmentStart = 0L
     private var accumulatedMs = 0L
@@ -54,7 +55,12 @@ class StudyingTimerService : Service() {
                 accumulatedMs = intent.getLongExtra(EXTRA_ACCUMULATED, 0L)
                 startTimer()
             }
-            ACTION_PAUSE -> pauseTimer()
+            // 일시정지 중에는 실행할 작업이 없으므로 서비스를 멈춘다. 재개 시 ViewModel이 누적 시간을 다시 넘겨준다.
+            // startId를 넘겨 그사이 도착한 재개 요청까지 함께 멈추지 않도록 한다.
+            ACTION_PAUSE -> {
+                pauseTimer()
+                stopSelf(startId)
+            }
             ACTION_STOP -> {
                 stopTimer()
                 stopSelf()
@@ -83,10 +89,12 @@ class StudyingTimerService : Service() {
     }
 
     private fun pauseTimer() {
+        // 서비스가 없을 때 온 일시정지 요청은 segmentStart가 0이라 시간을 계산하면 안 된다.
+        if (timerJob?.isActive != true) return
         accumulatedMs += SystemClock.elapsedRealtime() - segmentStart
         timerJob?.cancel()
         _elapsed.value = accumulatedMs
-        updateNotification(accumulatedMs)
+        stopForeground(STOP_FOREGROUND_REMOVE)
     }
 
     private fun stopTimer() {
