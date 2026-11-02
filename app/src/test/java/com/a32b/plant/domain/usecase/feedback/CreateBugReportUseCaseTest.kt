@@ -1,12 +1,8 @@
 package com.a32b.plant.domain.usecase.feedback
 
-import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.Feedback
 import com.a32b.plant.domain.model.FeedbackSubmissionResult
-import com.a32b.plant.domain.model.StudyLog
-import com.a32b.plant.domain.model.StudyingSession
-import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.domain.model.User
 import com.a32b.plant.domain.model.UserSnapshot
 import com.a32b.plant.domain.repository.FeedbackRepository
