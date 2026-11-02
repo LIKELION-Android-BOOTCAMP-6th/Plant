@@ -2,6 +2,8 @@ package com.a32b.plant.data.source.remote.feedback
 
 import com.a32b.plant.domain.model.Feedback
 import com.a32b.plant.domain.type.BugCategory
+import com.a32b.plant.domain.type.FeedbackType
+import com.a32b.plant.domain.type.ImprovementCategory
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.Timestamp
 import org.junit.Assert.assertEquals
@@ -51,6 +53,39 @@ class FeedbackRemoteDataSourceImplTest {
         assertTrue(payload.keys.containsAll(
             setOf("type", "reporterId", "category", "description", "appVersion", "createdAt", "status")
         ))
+    }
+
+    @Test
+    fun improvementPayloadHasOnlyImprovementRuleKeysAndServerTimestampSentinel() {
+        val payload = Feedback.createImprovement(
+            reporterId = "uid-1",
+            category = ImprovementCategory.UI_IMPROVEMENT,
+            description = "화면 구성을 개선해주세요.",
+            appVersion = "1.0"
+        ).toFirestoreMap()
+
+        assertEquals(
+            setOf("type", "reporterId", "category", "description", "appVersion", "createdAt", "status"),
+            payload.keys
+        )
+        assertFalse(payload.containsKey("reproductionSteps"))
+        assertFalse(payload.containsKey("deviceModel"))
+        assertFalse(payload.containsKey("androidVersion"))
+        assertEquals("improvement", payload["type"])
+        assertEquals("ui_improvement", payload["category"])
+        assertEquals("pending", payload["status"])
+        assertTrue(payload["createdAt"] is FieldValue)
+        assertEquals(FieldValue.serverTimestamp(), payload["createdAt"])
+        assertFalse(payload["createdAt"] is Timestamp)
+        assertEquals(setOf("bug", "improvement"), FeedbackType.entries.map { it.firestoreValue }.toSet())
+        assertEquals(
+            setOf("ui_bug", "feature_error", "other"),
+            BugCategory.entries.map { it.firestoreValue }.toSet()
+        )
+        assertEquals(
+            setOf("ui_improvement", "new_feature", "convenience", "other"),
+            ImprovementCategory.entries.map { it.firestoreValue }.toSet()
+        )
     }
 
     private fun createFeedback(reproductionSteps: String?) = Feedback.createBug(

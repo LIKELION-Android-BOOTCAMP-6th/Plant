@@ -211,7 +211,7 @@ class BugReportViewModelTest {
             return "feedback-1"
         }
 
-        override suspend fun createBugReport(
+        override suspend fun createFeedback(
             feedbackId: String,
             feedback: Feedback
         ): Result<FeedbackSubmissionResult> {

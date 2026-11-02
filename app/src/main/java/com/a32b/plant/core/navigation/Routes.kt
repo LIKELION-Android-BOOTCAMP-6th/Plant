@@ -27,5 +27,6 @@ sealed interface Routes {
 
     @Serializable data object Report : Routes
     @Serializable data object BugReport : Routes
+    @Serializable data object ImprovementSuggestion : Routes
 
 }

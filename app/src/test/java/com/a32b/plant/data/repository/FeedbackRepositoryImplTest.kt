@@ -16,7 +16,7 @@ class FeedbackRepositoryImplTest {
     fun completedWriteReturnsSaved() = runTest {
         val repository = FeedbackRepositoryImpl(FakeFeedbackRemoteDataSource())
 
-        val result = repository.createBugReport("id-1", createFeedback())
+        val result = repository.createFeedback("id-1", createFeedback())
 
         assertEquals(Result.Success(FeedbackSubmissionResult.Saved), result)
     }
@@ -28,7 +28,7 @@ class FeedbackRepositoryImplTest {
         }
         val repository = FeedbackRepositoryImpl(remote)
 
-        val result = repository.createBugReport("id-1", createFeedback())
+        val result = repository.createFeedback("id-1", createFeedback())
 
         assertEquals(Result.Success(FeedbackSubmissionResult.Pending), result)
     }
@@ -40,7 +40,7 @@ class FeedbackRepositoryImplTest {
         }
         val repository = FeedbackRepositoryImpl(remote)
 
-        val result = repository.createBugReport("id-1", createFeedback())
+        val result = repository.createFeedback("id-1", createFeedback())
 
         assertTrue(result is Result.Failure)
         assertEquals(

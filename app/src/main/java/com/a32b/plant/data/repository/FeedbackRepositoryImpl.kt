@@ -18,7 +18,7 @@ class FeedbackRepositoryImpl @Inject constructor(
 ) : FeedbackRepository {
     override fun createFeedbackId(): String = remote.createFeedbackId()
 
-    override suspend fun createBugReport(
+    override suspend fun createFeedback(
         feedbackId: String,
         feedback: Feedback
     ): Result<FeedbackSubmissionResult> = safeRunCatching {

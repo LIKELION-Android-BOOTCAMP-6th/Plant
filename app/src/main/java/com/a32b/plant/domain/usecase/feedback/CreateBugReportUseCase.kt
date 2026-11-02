@@ -36,7 +36,7 @@ class CreateBugReportUseCase @Inject constructor(
             appVersion = appVersion
         )
 
-        return feedbackRepository.createBugReport(
+        return feedbackRepository.createFeedback(
             feedbackId = feedbackId,
             feedback = feedback
         )

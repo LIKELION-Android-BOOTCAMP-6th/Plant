@@ -107,7 +107,7 @@ class CreateBugReportUseCaseTest {
 
         override fun createFeedbackId(): String = "generated-id"
 
-        override suspend fun createBugReport(
+        override suspend fun createFeedback(
             feedbackId: String,
             feedback: Feedback
         ): Result<FeedbackSubmissionResult> {

@@ -35,6 +35,6 @@ fun Feedback.toFirestoreMap(): Map<String, Any> = buildMap {
     put("createdAt", FieldValue.serverTimestamp())
     put("status", "pending")
     reproductionSteps?.let { put("reproductionSteps", it) }
-    put("deviceModel", deviceModel)
-    put("androidVersion", androidVersion)
+    deviceModel?.let { put("deviceModel", it) }
+    androidVersion?.let { put("androidVersion", it) }
 }

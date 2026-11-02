@@ -7,7 +7,7 @@ import com.a32b.plant.domain.result.Result
 interface FeedbackRepository {
     fun createFeedbackId(): String
 
-    suspend fun createBugReport(
+    suspend fun createFeedback(
         feedbackId: String,
         feedback: Feedback
     ): Result<FeedbackSubmissionResult>
