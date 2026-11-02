@@ -49,8 +49,8 @@ class ImprovementSuggestionViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ImprovementSuggestionUiState())
     val uiState = _uiState.asStateFlow()
 
-    private val eventChannel = Channel<ImprovementSuggestionEvent>(Channel.BUFFERED)
-    val events = eventChannel.receiveAsFlow()
+    private val _eventChannel = Channel<ImprovementSuggestionEvent>(Channel.BUFFERED)
+    val events = _eventChannel.receiveAsFlow()
 
     fun loadAppVersion() {
         _uiState.update { it.copy(appVersion = readAppVersion(context)) }
@@ -81,18 +81,18 @@ class ImprovementSuggestionViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoading = false) }
                 when (result) {
                     FeedbackSubmissionResult.Saved -> {
-                        eventChannel.send(ImprovementSuggestionEvent.ShowToast(SUCCESS_MESSAGE))
-                        eventChannel.send(ImprovementSuggestionEvent.NavigateBack)
+                        _eventChannel.send(ImprovementSuggestionEvent.ShowToast(SUCCESS_MESSAGE))
+                        _eventChannel.send(ImprovementSuggestionEvent.NavigateBack)
                     }
                     FeedbackSubmissionResult.Pending -> {
-                        eventChannel.send(ImprovementSuggestionEvent.ShowToast(NETWORK_SLOW_MESSAGE))
-                        eventChannel.send(ImprovementSuggestionEvent.NavigateBack)
+                        _eventChannel.send(ImprovementSuggestionEvent.ShowToast(NETWORK_SLOW_MESSAGE))
+                        _eventChannel.send(ImprovementSuggestionEvent.NavigateBack)
                     }
                 }
             }.onFailure { error ->
                 _uiState.update { it.copy(isLoading = false) }
                 if (error !is AppError.UnknownUser) {
-                    eventChannel.send(ImprovementSuggestionEvent.ShowToast(error.message))
+                    _eventChannel.send(ImprovementSuggestionEvent.ShowToast(error.message))
                 }
             }
         }

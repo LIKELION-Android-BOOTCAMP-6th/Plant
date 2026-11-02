@@ -52,8 +52,8 @@ class BugReportViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(BugReportUiState())
     val uiState = _uiState.asStateFlow()
 
-    private val eventChannel = Channel<BugReportEvent>(Channel.BUFFERED)
-    val events = eventChannel.receiveAsFlow()
+    private val _eventChannel = Channel<BugReportEvent>(Channel.BUFFERED)
+    val events = _eventChannel.receiveAsFlow()
 
     fun loadDeviceInfo() {
         _uiState.update {
@@ -97,18 +97,18 @@ class BugReportViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoading = false) }
                 when (result) {
                     FeedbackSubmissionResult.Saved -> {
-                        eventChannel.send(BugReportEvent.ShowToast(SUCCESS_MESSAGE))
-                        eventChannel.send(BugReportEvent.NavigateBack)
+                        _eventChannel.send(BugReportEvent.ShowToast(SUCCESS_MESSAGE))
+                        _eventChannel.send(BugReportEvent.NavigateBack)
                     }
                     FeedbackSubmissionResult.Pending -> {
-                        eventChannel.send(BugReportEvent.ShowToast(NETWORK_SLOW_MESSAGE))
-                        eventChannel.send(BugReportEvent.NavigateBack)
+                        _eventChannel.send(BugReportEvent.ShowToast(NETWORK_SLOW_MESSAGE))
+                        _eventChannel.send(BugReportEvent.NavigateBack)
                     }
                 }
             }.onFailure { error ->
                 _uiState.update { it.copy(isLoading = false) }
                 if (error !is AppError.UnknownUser) {
-                    eventChannel.send(BugReportEvent.ShowToast(error.message))
+                    _eventChannel.send(BugReportEvent.ShowToast(error.message))
                 }
             }
         }

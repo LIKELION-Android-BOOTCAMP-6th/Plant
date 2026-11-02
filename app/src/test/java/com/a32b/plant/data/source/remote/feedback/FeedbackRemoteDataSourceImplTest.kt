@@ -77,14 +77,14 @@ class FeedbackRemoteDataSourceImplTest {
         assertTrue(payload["createdAt"] is FieldValue)
         assertEquals(FieldValue.serverTimestamp(), payload["createdAt"])
         assertFalse(payload["createdAt"] is Timestamp)
-        assertEquals(setOf("bug", "improvement"), FeedbackType.entries.map { it.firestoreValue }.toSet())
+        assertEquals(setOf("bug", "improvement"), FeedbackType.entries.map { it.firestoreKey }.toSet())
         assertEquals(
             setOf("ui_bug", "feature_error", "other"),
-            BugCategory.entries.map { it.firestoreValue }.toSet()
+            BugCategory.entries.map { it.firestoreKey }.toSet()
         )
         assertEquals(
             setOf("ui_improvement", "new_feature", "convenience", "other"),
-            ImprovementCategory.entries.map { it.firestoreValue }.toSet()
+            ImprovementCategory.entries.map { it.firestoreKey }.toSet()
         )
     }
 

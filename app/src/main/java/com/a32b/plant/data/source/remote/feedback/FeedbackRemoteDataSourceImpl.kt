@@ -27,9 +27,9 @@ class FeedbackRemoteDataSourceImpl @Inject constructor(
 }
 
 fun Feedback.toFirestoreMap(): Map<String, Any> = buildMap {
-    put("type", type.firestoreValue)
+    put("type", type.firestoreKey)
     put("reporterId", reporterId)
-    put("category", category.firestoreValue)
+    put("category", category.firestoreKey)
     put("description", description)
     put("appVersion", appVersion)
     put("createdAt", FieldValue.serverTimestamp())

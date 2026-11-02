@@ -40,7 +40,7 @@ class CreateBugReportUseCaseTest {
         assertTrue(result is Result.Success)
         assertEquals("feedback-1", repository.feedbackId)
         val feedback = repository.feedback!!
-        assertEquals("bug", feedback.type.firestoreValue)
+        assertEquals("bug", feedback.type.firestoreKey)
         assertEquals("uid-1", feedback.reporterId)
         assertEquals(BugCategory.FEATURE_ERROR, feedback.category)
         assertEquals("저장 버튼을 누르면 앱이 종료됩니다.", feedback.description)
