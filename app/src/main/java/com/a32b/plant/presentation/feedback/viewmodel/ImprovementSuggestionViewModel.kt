@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.util.NETWORK_SLOW_MESSAGE
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.FeedbackSubmissionResult
 import com.a32b.plant.domain.repository.FeedbackRepository
@@ -84,7 +85,7 @@ class ImprovementSuggestionViewModel @Inject constructor(
                         eventChannel.send(ImprovementSuggestionEvent.NavigateBack)
                     }
                     FeedbackSubmissionResult.Pending -> {
-                        eventChannel.send(ImprovementSuggestionEvent.ShowToast(PENDING_MESSAGE))
+                        eventChannel.send(ImprovementSuggestionEvent.ShowToast(NETWORK_SLOW_MESSAGE))
                         eventChannel.send(ImprovementSuggestionEvent.NavigateBack)
                     }
                 }
@@ -113,6 +114,5 @@ class ImprovementSuggestionViewModel @Inject constructor(
     companion object {
         private const val UNKNOWN_APP_VERSION = "unknown"
         private const val SUCCESS_MESSAGE = "개선사항 제안이 접수되었습니다."
-        private const val PENDING_MESSAGE = "네트워크가 불안정해 제출이 지연되고 있어요. 연결되면 자동으로 전송됩니다."
     }
 }

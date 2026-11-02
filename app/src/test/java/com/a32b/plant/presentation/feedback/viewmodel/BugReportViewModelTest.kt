@@ -1,6 +1,7 @@
 package com.a32b.plant.presentation.feedback.viewmodel
 
 import android.content.ContextWrapper
+import com.a32b.plant.core.util.NETWORK_SLOW_MESSAGE
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.Feedback
@@ -153,7 +154,7 @@ class BugReportViewModelTest {
             assertFalse(viewModel.uiState.value.isLoading)
             assertEquals(
                 listOf(
-                    BugReportEvent.ShowToast("네트워크가 불안정해 제출이 지연되고 있어요. 연결되면 자동으로 전송됩니다."),
+                    BugReportEvent.ShowToast(NETWORK_SLOW_MESSAGE),
                     BugReportEvent.NavigateBack
                 ),
                 events
