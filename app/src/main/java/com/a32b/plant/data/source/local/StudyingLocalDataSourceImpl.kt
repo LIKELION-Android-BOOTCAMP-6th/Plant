@@ -3,6 +3,7 @@ package com.a32b.plant.data.source.local
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -33,6 +34,7 @@ class StudyingLocalDataSourceImpl @Inject constructor(
     private val TIME = longPreferencesKey("time")
     private val LOG = stringPreferencesKey("log")
     private val STARTEDAT = longPreferencesKey("startedAt")
+    private val IS_PAUSED = booleanPreferencesKey("isPaused")
 
     override suspend fun save(studying: StudyingSessionDto) {
         context.dataStore.edit { preferences ->
@@ -42,6 +44,7 @@ class StudyingLocalDataSourceImpl @Inject constructor(
             preferences[TITLE] = studying.title
             preferences[TIME] = studying.time
             preferences[STARTEDAT] = studying.startedAt
+            preferences[IS_PAUSED] = studying.isPaused
             studying.log?.let {
                 preferences[LOG] = Json.encodeToString(it)
             }
@@ -70,7 +73,8 @@ class StudyingLocalDataSourceImpl @Inject constructor(
             title = title,
             time = time,
             log = log,
-            startedAt = startedAt
+            startedAt = startedAt,
+            isPaused = preferences[IS_PAUSED] ?: false // 이전 버전 백업에는 값이 없으므로 공부 중으로 처리
         )
     }
 

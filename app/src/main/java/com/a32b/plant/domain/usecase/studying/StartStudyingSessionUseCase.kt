@@ -17,10 +17,10 @@ class StartStudyingSessionUseCase @Inject constructor(
      * 오프라인에서는 원격 등록이 연결될 때까지 끝나지 않으므로, 호출부는 이 함수의 완료를 기다리는 후속 작업을 두면 안 됨
      * 원격 등록 실패는 공부 진행에 영향이 없어 로컬 저장 결과만 반환 (에러 로그는 레포지토리에서 찍고 있음)
      */
-    suspend operator fun invoke(tag: String, title: String, potId: String, time: Long, log: List<String>?, startedAt: Long) : Result<Unit> {
+    suspend operator fun invoke(tag: String, title: String, potId: String, time: Long, log: List<String>?, startedAt: Long, isPaused: Boolean) : Result<Unit> {
         return ensureCurrentUserUseCase {
             val localResult = repository.saveLocalSession(
-                StudyingSession(it.uid, tag, title, potId, time, log, startedAt)
+                StudyingSession(it.uid, tag, title, potId, time, log, startedAt, isPaused)
             )
             repository.initStudyingUser(
                 StudyingUser(it.uid, it.nickname, it.profileImg, tag, time)

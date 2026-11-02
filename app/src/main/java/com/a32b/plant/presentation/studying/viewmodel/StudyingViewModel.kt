@@ -135,10 +135,11 @@ class StudyingViewModel @Inject constructor(
                             startedAt = session.startedAt,
                             studyLog = session.log?.map { log -> StudyLogUi(log = log) }?.filter { it.log.isNotBlank() } ?: emptyList(),
                             isGoalInputDialogShown = false,
-                            isStudying = true
+                            isStudying = !session.isPaused
                         )
                     }
-                    startStopwatch()
+                    // 일시정지 중이었으면 사용자가 재개할 때까지 타이머를 시작하지 않는다
+                    if (!session.isPaused) startStopwatch()
                 }
             }
     }
@@ -166,7 +167,7 @@ class StudyingViewModel @Inject constructor(
 
     /** 비정상 종료 대비 로컬 디비에 데이터 저장   */
     private suspend fun saveSession(){
-        updateLocalStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title, potId, _uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt)
+        updateLocalStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title, potId, _uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt, isPaused = !_uiState.value.isStudying)
             .onSuccess { _uiState.update { it.copy(isLocalSaved = true) } }
             .onFailure { e ->
                 if (e is AppError.Custom) _uiState.update { it.copy(isLocalSaved = false) }
@@ -179,7 +180,7 @@ class StudyingViewModel @Inject constructor(
      */
     suspend fun initStudyingUser(){
         withContext(Dispatchers.IO){
-            startStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title,potId,_uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt)
+            startStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title,potId,_uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt, isPaused = !_uiState.value.isStudying)
         }
     }
 
@@ -206,6 +207,8 @@ class StudyingViewModel @Inject constructor(
     }
 
     private fun startStopwatch() {
+        // 재개 직후 앱이 종료돼도 일시정지 상태로 복원되지 않도록 바로 저장한다
+        viewModelScope.launch { saveSession() }
         sendServiceIntent(StudyingTimerService.ACTION_START) {
             putExtra(StudyingTimerService.EXTRA_ACCUMULATED, _uiState.value.timer)
         }
@@ -260,7 +263,7 @@ class StudyingViewModel @Inject constructor(
             )
         }
         viewModelScope.launch {
-            updateLocalStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title, potId, _uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt)
+            updateLocalStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title, potId, _uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt, isPaused = !_uiState.value.isStudying)
         }
     }
 

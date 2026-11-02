@@ -10,7 +10,8 @@ fun StudyingSessionDto.toDomain() = StudyingSession(
     potId = potId,
     time = time,
     log = log,
-    startedAt = startedAt
+    startedAt = startedAt,
+    isPaused = isPaused
 )
 
 fun StudyingSession.toDto() = StudyingSessionDto(
@@ -20,5 +21,6 @@ fun StudyingSession.toDto() = StudyingSessionDto(
     potId = potId,
     time = time,
     log = log,
-    startedAt = startedAt
+    startedAt = startedAt,
+    isPaused = isPaused
 )

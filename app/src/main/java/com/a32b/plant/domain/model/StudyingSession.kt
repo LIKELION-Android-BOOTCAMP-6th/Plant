@@ -7,5 +7,6 @@ data class StudyingSession(
     val potId: String,
     val time: Long,
     val log: List<String>?,
-    val startedAt: Long
+    val startedAt: Long,
+    val isPaused: Boolean
 )
