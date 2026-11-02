@@ -310,6 +310,8 @@ class StudyingViewModel @Inject constructor(
                 )}
                 savedGoalCheckMode = null
                 finishEditing()
+                // 일시정지 중에는 주기 저장이 돌지 않으므로 수정한 목표를 바로 백업한다
+                viewModelScope.launch { saveSession() }
             }
         }
     }
