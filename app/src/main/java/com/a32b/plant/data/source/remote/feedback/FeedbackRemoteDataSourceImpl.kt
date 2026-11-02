@@ -1,7 +1,5 @@
 package com.a32b.plant.data.source.remote.feedback
 
-import com.a32b.plant.domain.model.Feedback
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -14,27 +12,14 @@ class FeedbackRemoteDataSourceImpl @Inject constructor(
     override fun createFeedbackId(): String =
         db.collection(FEEDBACKS_COLLECTION).document().id
 
-    override suspend fun createFeedback(feedbackId: String, feedback: Feedback) {
+    override suspend fun createFeedback(feedbackId: String, data: Map<String, Any>) {
         db.collection(FEEDBACKS_COLLECTION)
             .document(feedbackId)
-            .set(feedback.toFirestoreMap())
+            .set(data)
             .await()
     }
 
     companion object {
         private const val FEEDBACKS_COLLECTION = "feedbacks"
     }
-}
-
-fun Feedback.toFirestoreMap(): Map<String, Any> = buildMap {
-    put("type", type.firestoreKey)
-    put("reporterId", reporterId)
-    put("category", category.firestoreKey)
-    put("description", description)
-    put("appVersion", appVersion)
-    put("createdAt", FieldValue.serverTimestamp())
-    put("status", "pending")
-    reproductionSteps?.let { put("reproductionSteps", it) }
-    deviceModel?.let { put("deviceModel", it) }
-    androidVersion?.let { put("androidVersion", it) }
 }

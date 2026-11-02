@@ -1,6 +1,7 @@
 package com.a32b.plant.data.repository
 
 import com.a32b.plant.core.util.safeRunCatching
+import com.a32b.plant.data.mapper.toFirestoreMap
 import com.a32b.plant.data.source.remote.feedback.FeedbackRemoteDataSource
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.Feedback
@@ -23,7 +24,7 @@ class FeedbackRepositoryImpl @Inject constructor(
         feedback: Feedback
     ): Result<FeedbackSubmissionResult> = safeRunCatching {
         withTimeoutOrNull(SUBMISSION_TIMEOUT_MILLIS) {
-            remote.createFeedback(feedbackId, feedback)
+            remote.createFeedback(feedbackId, feedback.toFirestoreMap())
             true
         }
     }.fold(

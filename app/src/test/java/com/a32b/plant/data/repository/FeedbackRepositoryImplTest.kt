@@ -62,6 +62,6 @@ class FeedbackRepositoryImplTest {
     private class FakeFeedbackRemoteDataSource : FeedbackRemoteDataSource {
         var onCreate: suspend () -> Unit = {}
         override fun createFeedbackId(): String = "id-1"
-        override suspend fun createFeedback(feedbackId: String, feedback: Feedback) = onCreate()
+        override suspend fun createFeedback(feedbackId: String, data: Map<String, Any>) = onCreate()
     }
 }

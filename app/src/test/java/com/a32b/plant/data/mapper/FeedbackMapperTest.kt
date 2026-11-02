@@ -1,4 +1,4 @@
-package com.a32b.plant.data.source.remote.feedback
+package com.a32b.plant.data.mapper
 
 import com.a32b.plant.domain.model.Feedback
 import com.a32b.plant.domain.type.BugCategory
@@ -11,7 +11,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class FeedbackRemoteDataSourceImplTest {
+class FeedbackMapperTest {
     @Test
     fun bugPayloadHasOnlyRuleKeysAndServerTimestampSentinel() {
         val payload = createFeedback(reproductionSteps = "앱 실행 후 저장 버튼 선택").toFirestoreMap()
