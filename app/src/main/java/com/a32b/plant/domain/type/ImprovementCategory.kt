@@ -5,7 +5,7 @@ enum class ImprovementCategory(
     override val firestoreValue: String
 ) : FeedbackCategory {
     UI_IMPROVEMENT("UI 개선", "ui_improvement"),
-    NEW_FEATURE("새 기능", "new_feature"),
-    CONVENIENCE("편의성", "convenience"),
+    NEW_FEATURE("새 기능 요청", "new_feature"),
+    CONVENIENCE("편의성 개선", "convenience"),
     OTHER("기타", "other")
 }
