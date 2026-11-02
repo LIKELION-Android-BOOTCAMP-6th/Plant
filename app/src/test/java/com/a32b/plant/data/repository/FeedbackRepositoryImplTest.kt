@@ -44,7 +44,7 @@ class FeedbackRepositoryImplTest {
 
         assertTrue(result is Result.Failure)
         assertEquals(
-            "제보 처리 중 오류가 발생했습니다.",
+            "제출 처리 중 오류가 발생했습니다.",
             (result as Result.Failure).error.message
         )
     }

@@ -23,6 +23,8 @@ class FeedbackRepositoryImpl @Inject constructor(
         feedbackId: String,
         feedback: Feedback
     ): Result<FeedbackSubmissionResult> = safeRunCatching {
+        // 오프라인 쓰기는 연결될 때까지 완료되지 않아 대기 시간을 10초로 제한한다.
+        // 시간 초과는 실패가 아니라 전송 대기로 처리한다.
         withTimeoutOrNull(SUBMISSION_TIMEOUT_MILLIS) {
             remote.createFeedback(feedbackId, feedback.toFirestoreMap())
             true
@@ -50,6 +52,6 @@ class FeedbackRepositoryImpl @Inject constructor(
 
     companion object {
         private const val SUBMISSION_TIMEOUT_MILLIS = 10_000L
-        private const val GENERIC_ERROR_MESSAGE = "제보 처리 중 오류가 발생했습니다."
+        private const val GENERIC_ERROR_MESSAGE = "제출 처리 중 오류가 발생했습니다."
     }
 }
