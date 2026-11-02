@@ -6,7 +6,6 @@ import com.a32b.plant.domain.type.FeedbackType
 import com.a32b.plant.domain.type.ImprovementCategory
 
 data class Feedback(
-    val type: FeedbackType,
     val reporterId: String,
     val category: FeedbackCategory,
     val description: String,
@@ -15,6 +14,12 @@ data class Feedback(
     val deviceModel: String?,
     val androidVersion: String?
 ) {
+    val type: FeedbackType
+        get() = when (category) {
+            is BugCategory -> FeedbackType.BUG
+            is ImprovementCategory -> FeedbackType.IMPROVEMENT
+        }
+
     companion object {
         fun createBug(
             reporterId: String,
@@ -25,7 +30,6 @@ data class Feedback(
             androidVersion: String,
             appVersion: String
         ) = Feedback(
-            type = FeedbackType.BUG,
             reporterId = reporterId,
             category = category,
             description = description,
@@ -41,7 +45,6 @@ data class Feedback(
             description: String,
             appVersion: String
         ) = Feedback(
-            type = FeedbackType.IMPROVEMENT,
             reporterId = reporterId,
             category = category,
             description = description,
