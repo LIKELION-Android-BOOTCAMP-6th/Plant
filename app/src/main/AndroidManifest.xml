@@ -40,7 +40,7 @@
             android:exported="false">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="User-initiated study stopwatch that keeps counting elapsed time and shows it in an ongoing notification while the app is in the background" />
+                android:value="User-initiated study stopwatch that keeps counting elapsed time and shows it in an ongoing notification while the timer is running" />
         </service>
     </application>
 
