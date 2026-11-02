@@ -173,18 +173,13 @@ class StudyingViewModel @Inject constructor(
             }
     }
 
-    /** 최초 시작 시 로컬 + 원격 db에 현재 사용자 정보 저장 */
+    /**
+     * 최초 시작 시 로컬 + 원격 db에 현재 사용자 정보 저장
+     * 실패해도 공부는 계속하므로 별도 처리 없음 (UnknownUser는 유즈케이스에서 처리, 에러 로그는 레포지토리에서 찍고 있음)
+     */
     suspend fun initStudyingUser(){
         withContext(Dispatchers.IO){
             startStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title,potId,_uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt)
-                .onFailure { e ->
-                    when (e){
-                        is AppError.UnknownUser -> Unit //유즈케이스에서 호출했으므로 따로 호출 x
-                        is AppError.Local, is AppError.Custom -> Unit //에러 로그는 레포지토리에서 찍고 있음
-                        is AppError.Network -> sendToast(e.message)
-                        else -> _uiState.update { it.copy(error = e.message) }
-                    }
-                }
         }
     }
 
