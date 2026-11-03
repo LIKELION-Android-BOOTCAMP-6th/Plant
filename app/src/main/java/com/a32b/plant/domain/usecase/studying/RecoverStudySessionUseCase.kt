@@ -1,7 +1,6 @@
 package com.a32b.plant.domain.usecase.studying
 
 import com.a32b.plant.core.util.TimeFormatter
-import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.result.Result
@@ -14,6 +13,10 @@ class RecoverStudySessionUseCase @Inject constructor(
     private val finishStudyingUseCase: FinishStudyingUseCase,
     private val repository: StudyingRepository
 ) {
+    /**
+     * 백업 세션을 학습 기록으로 저장한 뒤 로컬 백업 삭제
+     * "공부 중" 표시(studying/{uid}) 삭제는 복구 결과와 무관하므로 여기서 하지 않음 — 호출부가 기다리지 않고 따로 요청
+     */
     suspend operator fun invoke(session: StudyingSession): Result<Unit> {
         val startedAtDateTime = LocalDateTime.ofInstant(
             Instant.ofEpochMilli(session.startedAt),
@@ -33,9 +36,6 @@ class RecoverStudySessionUseCase @Inject constructor(
             startedAt = session.startedAt
         )
         if (saveResult is Result.Failure) return saveResult
-
-        val deleteResult = repository.deleteStudyingUserInfo()
-        if (deleteResult is Result.Failure && deleteResult.error !is AppError.Network) return deleteResult
 
         return repository.clearLocalSession()
     }

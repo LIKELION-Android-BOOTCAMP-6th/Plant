@@ -8,5 +8,6 @@ data class StudyingSessionDto(
     var time: Long = 0L,
     var log: List<String>? = null,
     var startedAt: Long = 0L,
-    var isPaused: Boolean = false
+    var isPaused: Boolean = false,
+    var status: String? = null // 이전 버전 백업에는 값이 없음
 )
