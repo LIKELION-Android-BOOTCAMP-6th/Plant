@@ -4,6 +4,9 @@ import android.util.Log
 import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.data.source.remote.pot.PotRemoteDataSource
 import com.a32b.plant.data.mapper.toDomain
+import com.a32b.plant.data.source.remote.pot.InsufficientItemsException
+import com.a32b.plant.data.source.remote.pot.PotLevelMismatchException
+import com.a32b.plant.data.source.remote.pot.PotNotFoundException
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.model.StudyLog
@@ -45,18 +48,6 @@ class PotRepositoryImpl @Inject constructor(
             onFailure = { e ->
                 Log.e("PotRepository", "화분 추가 실패", e)
                 Result.Failure(handleError(e, "화분 추가에 실패했습니다.", isWrite = true))
-            }
-        )
-    }
-
-    override suspend fun updatePotLevel(uid: String, potId: String, newLevel: Int): Result<Unit> {
-        return safeRunCatching {
-            potRemoteDataSource.updatePotLevel(uid, potId, newLevel)
-        }.fold(
-            onSuccess = { Result.Success(it) },
-            onFailure = { e ->
-                Log.e("PotRepository", "화분 레벨 업데이트 실패", e)
-                Result.Failure(handleError(e, "화분 레벨 업데이트에 실패했습니다.", isWrite = true))
             }
         )
     }
@@ -148,6 +139,11 @@ class PotRepositoryImpl @Inject constructor(
 
     private fun handleError(e: Throwable, defaultMessage: String, isWrite: Boolean = false): AppError = when (e) {
         is AppError -> e
+
+        is InsufficientItemsException -> AppError.InsufficientItems()
+        is PotLevelMismatchException -> AppError.Custom("이미 레벨업이 완료된 화분입니다.")
+        is PotNotFoundException -> AppError.Custom("존재하지 않거나 삭제된 화분입니다.")
+
         is FirebaseFirestoreException -> when (e.code) {
             FirebaseFirestoreException.Code.UNAVAILABLE,
             FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()

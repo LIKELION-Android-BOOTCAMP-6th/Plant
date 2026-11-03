@@ -165,7 +165,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                         todayStudyTime = todayStudyTime,
                         levelUpProgress = uiState.levelUpProgress,
                         levelUpProgressText = uiState.levelUpProgressText,
-                        levelUpAvailable = uiState.levelUpAvailable,
+                        levelUpAvailable = uiState.levelUpReady,
                         isLoading = uiState.isLoading,
                         onStartClick = {
                             if (!hasNoPot) {
@@ -180,7 +180,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                             }
                         },
                         onLevelUpClick = {
-                            if (!hasNoPot) {
+                            if (!hasNoPot && !uiState.isLoading) {
                                 viewModel.onLevelUpClick(displayPot.id, displayPot.potLevel)
                             }
                         },

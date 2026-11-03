@@ -27,6 +27,7 @@ import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import com.a32b.plant.domain.usecase.studying.ClearStudyingSessionUseCase
 import com.a32b.plant.domain.usecase.studying.RecoverStudySessionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -47,7 +48,7 @@ data class AttendanceUiState(
 )
 
 data class HomeUiState(
-    val levelUpAvailable: Boolean = false, //레벨업 버튼 활성화
+    val levelUpReady: Boolean = false, //레벨업 버튼 활성화
     val showInsufficientItemsDialog: Boolean = false, // 아이템 부족 다이얼로그
     val levelUpProgress: Float = 0f,
     val levelUpProgressText: String = "",
@@ -187,7 +188,6 @@ class HomeViewModel @Inject constructor(
                     _attendanceUiState.update { currentUiState ->
                         newState.copy(reward = currentUiState.reward)
                     }
-                    recheckLevelUpCondition()
                 }
             }
         }
@@ -400,24 +400,30 @@ class HomeViewModel @Inject constructor(
         return progress to text
     }
 
+    private var levelUpCheckJob: Job? = null
+
     // 레벨업 재검증
-    private suspend fun recheckLevelUpCondition() {
+    private fun recheckLevelUpCondition() {
+        levelUpCheckJob?.cancel()
+
         val pot = _displayPot.value
         if (pot.id.isEmpty() || pot == Pot.EMPTY) {
-            _uiState.update { it.copy(levelUpAvailable = false) }
+            _uiState.update { it.copy(levelUpReady = false) }
             return
         }
 
-        checkLevelUpConditionUseCase(pot.potLevel, pot.potTotalStudyingTime)
-            .onSuccess { available ->
-                _uiState.update { it.copy(levelUpAvailable = available) }
-            }
-            .onFailure {
-                _uiState.update { it.copy(levelUpAvailable = false) }
-            }
+        levelUpCheckJob = viewModelScope.launch {
+            checkLevelUpConditionUseCase(pot.potLevel, pot.potTotalStudyingTime)
+                .onSuccess { available ->
+                    _uiState.update { it.copy(levelUpReady = available) }
+                }
+                .onFailure {
+                    _uiState.update { it.copy(levelUpReady = false) }
+                }
+        }
     }
 
-    //레벨업 다이얼로그
+    //레벨업 함수
     fun onLevelUpClick(potId: String, currentPotLevel: Int) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
@@ -429,7 +435,6 @@ class HomeViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoading = false) }
                     when (e) {
                         is AppError.InsufficientItems -> {
-                            // [수정] 타입으로 안전하게 분기하여 아이템 부족 다이얼로그 표시
                             _uiState.update { it.copy(showInsufficientItemsDialog = true) }
                         }
                         else -> sendToast(e.message)

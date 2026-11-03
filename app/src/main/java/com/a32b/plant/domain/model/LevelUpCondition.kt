@@ -3,8 +3,8 @@ package com.a32b.plant.domain.model
 import com.a32b.plant.domain.type.ItemType
 
 data class LevelUpCondition(
-    val minHoursForLevelUp: Long,    // 레벨업 가능 최소 시간 — 레벨업 버튼 활성화 기준[cite: 5]
-    val maxHoursForProgress: Long,   // 진행도 바 기준 최대 시간 (필요 학습 시간)[cite: 5]
+    val minHoursForLevelUp: Long,    // 레벨업 가능 최소 시간 — 레벨업 버튼 활성화 기준
+    val maxHoursForProgress: Long,   // 진행도 바 기준 최대 시간 (필요 학습 시간)
     val requiredItems: Map<ItemType, Int>
 )
 
