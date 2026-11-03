@@ -20,4 +20,13 @@ class SignOutUseCase @Inject constructor(
         //  모든 화면이 UserRepository로 전환되면 이 줄과 di/CurrentUser.kt를 함께 삭제할 것.
         CurrentUser.clear()
     }
+
+    suspend fun invokeWithTokenClear() {
+        val uid = userRepository.currentUser.value?.uid
+        if (uid != null) {
+            // 실패해도 로컬 로그아웃은 진행한다. 잔존 토큰은 다음 로그인 시 덮어쓰인다.
+            userRepository.updateSessionToken(uid, null)
+        }
+        invoke()
+    }
 }

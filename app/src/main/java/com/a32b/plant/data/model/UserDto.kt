@@ -25,9 +25,9 @@ data class UserDto(
     @get:PropertyName("dailyCheckThisMonth") @set:PropertyName("dailyCheckThisMonth")
     var monthCheck: DailyCheckThisMonthDto = DailyCheckThisMonthDto(),
     @get:PropertyName("item") @set:PropertyName("item")
-    var item: ItemDto = ItemDto()
-
-
+    var item: ItemDto = ItemDto(),
+    @get:PropertyName("activeSessionToken") @set:PropertyName("activeSessionToken")
+    var activeSessionToken: String? = null
 )
 
 data class DailyCheckThisMonthDto(

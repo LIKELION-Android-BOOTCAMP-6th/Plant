@@ -16,6 +16,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -204,31 +205,36 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         }.await()
     }
 
-    override suspend fun updateComment(postId: String, commentId: String, newContent: String) {
-        db.collection("posts").document(postId)
+    override suspend fun updateComment(postId: String, commentId: String, newContent: String, activityId: String?) {
+        val commentRef = db.collection("posts").document(postId)
             .collection("comments").document(commentId)
-            .update("content", newContent)
-            .await()
+
+        if (activityId == null) {
+            commentRef.update("content", newContent).await()
+            return
+        }
+
+        // 본문과 activity를 한 번의 batch로 묶음 — commit 시점에 SDK 로컬 큐에 원자적으로 적재되므로
+        // await() 도중 코루틴이 취소되거나(화면 이탈) 프로세스가 종료돼도 두 문서가 함께 반영된다
+        // 주의: 이 함수는 runBatch 호출 전에 suspend 지점이 없다는 전제 위에서 이탈에 안전하다.
+        //       앞에 withContext/조회/ensureCurrentUser 같은 중단점을 추가하면 이탈 시 쓰기가 통째로 누락될 수 있다
+        db.runBatch { batch ->
+            batch.update(commentRef, "content", newContent)
+            batch.update(db.collection("activities").document(activityId), "comment", newContent)
+        }.await()
     }
 
-    override suspend fun updateActivityComment(commentId: String, content: String) {
-        db.collection("activities")
-            .whereEqualTo("commentId", commentId)
-            .get()
-            .await()
-            .documents
-            .firstOrNull()?.reference?.update("comment", content)?.await()
-    }
-
-    override suspend fun deleteComment(postId: String, commentId: String): String? {
+    override suspend fun deleteComment(postId: String, commentId: String, deleteActivity: Boolean): Boolean {
         val commentRef = db.collection("posts").document(postId)
             .collection("comments").document(commentId)
         val postRef = commentRef.parent.parent!!
 
         // exists() 체크 → delete() → commentCount 감소를 트랜잭션으로 묶어 TOCTOU 방지 + 포스트 부재 시 NOT_FOUND 방어
+        // activity 삭제도 같은 트랜잭션에 포함 — 트랜잭션은 await() 취소와 무관하게 SDK에서 끝까지 실행되므로
+        // 화면 이탈로 코루틴이 취소돼도 댓글만 지워지고 activity가 남는 상태가 생기지 않는다
         return db.runTransaction { txn ->
             val commentSnapshot = txn.get(commentRef)
-            if (!commentSnapshot.exists()) return@runTransaction null
+            if (!commentSnapshot.exists()) return@runTransaction false
 
             val postSnapshot = txn.get(postRef)
             val actId = commentSnapshot.getString("activityId")
@@ -236,7 +242,10 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             if (postSnapshot.exists()) {
                 txn.update(postRef, "commentCount", FieldValue.increment(-1))
             }
-            actId
+            if (deleteActivity && !actId.isNullOrEmpty()) {
+                txn.delete(db.collection("activities").document(actId))
+            }
+            true
         }.await()
     }
 
@@ -291,6 +300,16 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             .forEach { it.reference.delete().await() }
     }
 
+    override suspend fun hasActivityByType(uid: String, targetId: String, type: String): Boolean =
+        !db.collection("activities")
+            .whereEqualTo("uid", uid)
+            .whereEqualTo("targetId", targetId)
+            .whereEqualTo("type", type)
+            .limit(1)
+            .get()
+            .await()
+            .isEmpty
+
     override suspend fun createActivity(activity: CommunityActivity) {
         db.collection("activities").add(activity.toDto()).await()
     }
@@ -319,6 +338,31 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         }.await()
     }
 
+    override suspend fun removeLike(postId: String, uid: String): Boolean =
+        removeUidFromPost(postId, uid, arrayField = "likedBy", countField = "likeCount")
+
+    override suspend fun removeBookmark(postId: String, uid: String): Boolean =
+        removeUidFromPost(postId, uid, arrayField = "bookmarkedBy", countField = "bookmarkCount")
+
+    // 트랜잭션 안에서 배열을 읽어 uid가 있을 때만 배열 제거 + 카운트 감소를 함께 반영
+    // → 이미 해제된 상태면 post 문서에 쓰지 않으므로 카운트가 어긋나거나 다시 추가되는 일이 없음
+    private suspend fun removeUidFromPost(postId: String, uid: String, arrayField: String, countField: String): Boolean {
+        val postRef = db.collection("posts").document(postId)
+
+        return db.runTransaction { txn ->
+            val snapshot = txn.get(postRef)
+            @Suppress("UNCHECKED_CAST")
+            val uids = (snapshot.get(arrayField) as? List<String>) ?: emptyList()
+            if (uid !in uids) return@runTransaction false
+
+            txn.update(postRef, mapOf(
+                arrayField to FieldValue.arrayRemove(uid),
+                countField to FieldValue.increment(-1L)
+            ))
+            true
+        }.await()
+    }
+
     override suspend fun findCommentIdByActivityId(postId: String, activityId: String): String? {
         val snapshot = db.collection("posts").document(postId)
             .collection("comments")
@@ -329,5 +373,10 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         return snapshot.documents.firstOrNull()?.id
     }
 
-    override suspend fun isPostExist(postId: String): Boolean = db.collection("posts").document(postId).get().await().exists()
+    // 서버 조회 강제: 오프라인이면 UNAVAILABLE로 바로 실패시켜, 뒤이은 삭제(쓰기)가 서버 응답을 무한 대기하지 않게 함
+    // (캐시 조회를 허용하면 오프라인에서도 통과 → 쓰기 await()가 온라인 복귀 전까지 끝나지 않아 로딩이 풀리지 않음)
+    override suspend fun isPostExist(postId: String): Boolean = db.collection("posts").document(postId).get(Source.SERVER).await().exists()
+
+    override suspend fun isCommentExist(postId: String, commentId: String): Boolean =
+        db.collection("posts").document(postId).collection("comments").document(commentId).get().await().exists()
 }

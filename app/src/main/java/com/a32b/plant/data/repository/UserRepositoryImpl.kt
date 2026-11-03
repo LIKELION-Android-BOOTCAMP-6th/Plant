@@ -5,19 +5,23 @@ import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.mapper.toDto
 import com.a32b.plant.data.source.local.SettingsLocalDataSource
+import com.a32b.plant.data.source.remote.user.CompleteFirstLoginResult
 import com.a32b.plant.data.source.remote.user.UserRemoteDataSource
 import com.a32b.plant.di.qualifier.ApplicationScope
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.User
+import com.a32b.plant.domain.model.UserSnapshot
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
+import com.a32b.plant.domain.session.SessionExpiredNotifier
+import com.a32b.plant.domain.session.SessionExpiredReason
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,18 +32,27 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
+
+private const val COMPLETE_FIRST_LOGIN_TIMEOUT_MS = 10_000L
+private const val GET_USER_SERVER_TIMEOUT_MS = 2_000L
+private const val SESSION_TOKEN_WRITE_TIMEOUT_MS = 1_500L
 
 @Singleton
 class UserRepositoryImpl @Inject constructor(
     private val userRemoteDataSource: UserRemoteDataSource,
     private val settingsLocalDataSource: SettingsLocalDataSource,
+    private val sessionExpiredNotifier: SessionExpiredNotifier,
     private val db: FirebaseFirestore,
     @param:ApplicationScope private val scope: CoroutineScope
 ) : UserRepository {
     private val _currentUser = MutableStateFlow<User?>(null)
     private var sessionJob: Job? = null
+    @Volatile
+    private var localSessionToken: String? = null
+    private val accountDeletionUid = MutableStateFlow<String?>(null)
     // 읽기 실패와 재구독 사이에도 마지막 정상 테마를 유지한다. 영구 저장은 DataStore가 담당한다.
     private val lastKnownDarkMode = MutableStateFlow(false)
 
@@ -61,6 +74,7 @@ class UserRepositoryImpl @Inject constructor(
         // 초기값을 즉시 세팅해 HomeViewModel 등이 init에서 currentUser.value를
         // 곧바로 읽어도 null로 오인해 로그인 에러 처리하지 않도록 한다.
         _currentUser.value = user
+        localSessionToken = user.activeSessionToken
 
         sessionJob?.cancel()
         sessionJob = scope.launch {
@@ -70,7 +84,29 @@ class UserRepositoryImpl @Inject constructor(
                 // 여기서 흡수한다. (endUserSession으로 정상 종료되는 경로와는 별개의 방어선)
                 .catch { e -> Log.e("UserRepository", "currentUser 실시간 구독 실패: ${e.message}", e) }
                 .collect { dto ->
-                    dto?.let { _currentUser.value = it.toDomain() }
+                    if (dto == null) {
+                        if (accountDeletionUid.value == user.uid) {
+                            // 회원탈퇴가 직접 users/{uid} 문서를 삭제하는 동안에는
+                            // 화면의 탈퇴 작업이 세션 만료 이벤트로 취소되지 않게 한다.
+                            return@collect
+                        }
+                        // Firestore 유저 문서가 삭제된 경우. 리스너를 먼저 종료해야
+                        // 이후 스냅샷에서 이벤트가 반복 발생하지 않는다.
+                        endUserSession()
+                        sessionExpiredNotifier.notifySessionExpired(SessionExpiredReason.USER_NOT_FOUND)
+                        return@collect
+                    }
+                    val remoteToken = dto.activeSessionToken
+                    val currentToken = localSessionToken
+                    if (currentToken != null && remoteToken != null && currentToken != remoteToken) {
+                        // 리스너를 먼저 종료해야 이후 스냅샷에서 이벤트가 반복 발생하지 않는다.
+                        // MainActivity도 signOutUseCase()를 통해 endUserSession()을 재호출하나
+                        // 멱등적이므로 문제없다. authRepository.signOut()은 그쪽에서 처리된다.
+                        endUserSession()
+                        sessionExpiredNotifier.notifySessionExpired(SessionExpiredReason.DUPLICATE_LOGIN)
+                        return@collect
+                    }
+                    _currentUser.value = dto.toDomain()
                 }
         }
     }
@@ -79,6 +115,36 @@ class UserRepositoryImpl @Inject constructor(
         sessionJob?.cancel()
         sessionJob = null
         _currentUser.value = null
+        localSessionToken = null
+    }
+
+    override fun beginAccountDeletion(uid: String) {
+        accountDeletionUid.value = uid
+    }
+
+    override fun endAccountDeletion() {
+        accountDeletionUid.value = null
+    }
+
+    override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> {
+        // 일반 write의 await()는 서버 응답 전까지 끝나지 않으므로 호출부와 분리해 대기 시간만 제한한다.
+        val write = scope.async {
+            safeRunCatching {
+                userRemoteDataSource.updateSessionToken(uid, token)
+            }.onFailure {
+                // 시간 초과 후 서버가 거부하면 이 토큰은 반영되지 않으므로 중복 로그인 비교에서 제외한다.
+                if (token != null && localSessionToken == token) localSessionToken = null
+            }
+        }
+        val result = withTimeoutOrNull(SESSION_TOKEN_WRITE_TIMEOUT_MS) { write.await() }
+        if (result == null) {
+            Log.w("UserRepository", "세션 토큰 저장 대기 시간 초과 (${SESSION_TOKEN_WRITE_TIMEOUT_MS}ms)")
+            return Result.Success(Unit)
+        }
+        return result.fold(
+            onSuccess = { Result.Success(Unit) },
+            onFailure = { e -> Result.Failure(handleError(e, "세션 토큰 업데이트 실패")) }
+        )
     }
 
     override suspend fun updateLastSelectedPot(uid: String, potId: String) {
@@ -94,6 +160,37 @@ class UserRepositoryImpl @Inject constructor(
         onFailure = { e -> Result.Failure(handleError(e, "유저 정보 조회 실패")) }
     )
 
+    override suspend fun getUserPreferringServer(uid: String): Result<UserSnapshot> =
+        safeRunCatching {
+            // 문서가 없는 경우(user = null)와 구분되도록 시간 초과만 null로 받는다.
+            withTimeoutOrNull(GET_USER_SERVER_TIMEOUT_MS) {
+                UserSnapshot(userRemoteDataSource.getUserFromServer(uid)?.toDomain(), isFromServer = true)
+            }
+        }.fold(
+            onSuccess = { snapshot ->
+                if (snapshot != null) Result.Success(snapshot) else getUserFromCache(uid)
+            },
+            onFailure = { e ->
+                if (isNetworkError(e)) getUserFromCache(uid)
+                else Result.Failure(handleError(e, "유저 정보 조회 실패"))
+            }
+        )
+
+    private suspend fun getUserFromCache(uid: String): Result<UserSnapshot> = safeRunCatching {
+        UserSnapshot(userRemoteDataSource.getUserFromCache(uid)?.toDomain(), isFromServer = false)
+    }.fold(
+        onSuccess = { Result.Success(it) },
+        onFailure = { e -> Result.Failure(handleError(e, "유저 정보 조회 실패")) }
+    )
+
+    private fun isNetworkError(e: Throwable): Boolean = when (e) {
+        is FirebaseFirestoreException ->
+            e.code == FirebaseFirestoreException.Code.UNAVAILABLE ||
+                e.code == FirebaseFirestoreException.Code.DEADLINE_EXCEEDED
+        is FirebaseNetworkException -> true
+        else -> false
+    }
+
     override suspend fun createUser(uid: String): Result<User> = safeRunCatching {
         val newUser = User.create().copy(uid = uid)
         userRemoteDataSource.createUser(uid, newUser.toDto())
@@ -105,10 +202,26 @@ class UserRepositoryImpl @Inject constructor(
 
     override suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit> =
         safeRunCatching {
-            userRemoteDataSource.completeFirstLogin(uid, nickname)
+            // 연결이 불안정하면 트랜잭션이 재시도하며 길어질 수 있어 상한을 둔다.
+            // 시간 초과(null)는 네트워크 에러로 취급하며, 서버에 뒤늦게 반영돼도 재시도 시 AlreadyCompleted로 성공 처리된다.
+            withTimeoutOrNull(COMPLETE_FIRST_LOGIN_TIMEOUT_MS) {
+                userRemoteDataSource.completeFirstLogin(uid, nickname)
+            }
         }.fold(
-            onSuccess = { Result.Success(Unit) },
-            onFailure = { e -> Result.Failure(handleError(e, "첫 로그인 완료 처리 실패")) }
+            onSuccess = { completion ->
+                when (completion) {
+                    CompleteFirstLoginResult.Completed,
+                    CompleteFirstLoginResult.AlreadyCompleted -> Result.Success(Unit)
+
+                    CompleteFirstLoginResult.NicknameTaken -> Result.Failure(AppError.NicknameTaken())
+
+                    null -> {
+                        Log.w("UserRepository", "첫 로그인 완료 처리 시간 초과 (${COMPLETE_FIRST_LOGIN_TIMEOUT_MS}ms)")
+                        Result.Failure(AppError.Network())
+                    }
+                }
+            },
+            onFailure = { e -> Result.Failure(handleCompleteFirstLoginError(e)) }
         )
 
     override suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit> = safeRunCatching {
@@ -139,7 +252,7 @@ class UserRepositoryImpl @Inject constructor(
         userRemoteDataSource.isNicknameTaken(nickname)
     }.fold(
         onSuccess = { Result.Success(it) },
-        onFailure = { e -> Result.Failure(handleError(e, "닉네임 중복 검사 실패")) }
+        onFailure = { e -> Result.Failure(handleNicknameCheckError(e)) }
     )
 
     override suspend fun registerNickname(nickname: String): Result<Unit> = safeRunCatching {
@@ -185,8 +298,6 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     private fun handleError(e: Throwable, logMessage: String): AppError {
-        if (e is CancellationException) throw e
-
         Log.e("UserRepository", "$logMessage: ${e.message}", e)
 
         return when (e) {
@@ -211,6 +322,36 @@ class UserRepositoryImpl @Inject constructor(
             }
             is FirebaseNetworkException -> AppError.Network()
             else -> AppError.Custom("출석 처리 실패")
+        }
+    }
+
+    private fun handleCompleteFirstLoginError(e: Throwable): AppError {
+        Log.e("UserRepository", "첫 로그인 완료 처리 실패: ${e.message}", e)
+
+        return when (e) {
+            is FirebaseFirestoreException -> when (e.code) {
+                FirebaseFirestoreException.Code.UNAVAILABLE,
+                FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
+
+                else -> AppError.Custom("닉네임 설정에 실패했습니다.")
+            }
+
+            is FirebaseNetworkException -> AppError.Network()
+            else -> AppError.Custom("닉네임 설정에 실패했습니다.")
+        }
+    }
+
+    private fun handleNicknameCheckError(e: Throwable): AppError {
+        Log.e("UserRepository", "닉네임 중복 검사 실패: ${e.message}", e)
+
+        return when (e) {
+            is FirebaseFirestoreException -> when (e.code) {
+                FirebaseFirestoreException.Code.UNAVAILABLE,
+                FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
+                else -> AppError.Custom("닉네임 중복 검사 실패")
+            }
+            is FirebaseNetworkException -> AppError.Network()
+            else -> AppError.Custom("닉네임 중복 검사 실패")
         }
     }
 }

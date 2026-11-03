@@ -2,7 +2,6 @@ package com.a32b.plant.domain.usecase.auth
 
 import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.di.UserModel
-import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
 import javax.inject.Inject
@@ -11,15 +10,8 @@ class SetNicknameUseCase @Inject constructor(
     private val userRepository: UserRepository
 ) {
     suspend operator fun invoke(uid: String, nickname: String): Result<Unit> {
-        val duplicateCheck = userRepository.isNicknameTaken(nickname)
-        if (duplicateCheck is Result.Failure) return duplicateCheck
-        if ((duplicateCheck as Result.Success).data) {
-            return Result.Failure(AppError.Custom("사용 중인 닉네임입니다."))
-        }
-
-        val registerResult = userRepository.registerNickname(nickname)
-        if (registerResult is Result.Failure) return registerResult
-
+        // 중복 검사 + 닉네임 등록 + 첫 로그인 완료를 하나의 트랜잭션으로 처리한다.
+        // (등록만 성공하고 완료가 실패해 닉네임이 선점된 채 남는 상태, 오프라인 write 대기를 방지)
         val completeResult = userRepository.completeFirstLogin(uid, nickname)
         if (completeResult is Result.Failure) return completeResult
 

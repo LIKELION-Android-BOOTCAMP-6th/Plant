@@ -1,7 +1,6 @@
 package com.a32b.plant.presentation.theme
 
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.TextStyle
@@ -54,7 +53,7 @@ fun plantTypography(colorScheme: ColorScheme): Typography{
             color = colorScheme.onSurface
         ),
 
-        //작은 글씨 강조용 - 홈의 날짜, 커뮤니티 리스트의 글제목, 다이얼로그 제목 등
+        //작은 글씨 강조용 - 홈의 날짜, 커뮤니티 리스트의 글제목 등 (ConfirmDialog 제목은 titleMedium 사용)
         titleSmall = TextStyle(
             fontFamily = bold,
             fontSize = 12.sp,

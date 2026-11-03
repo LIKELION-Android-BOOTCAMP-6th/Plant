@@ -18,6 +18,8 @@ import com.a32b.plant.data.source.local.StudyingLocalDataSource
 import com.a32b.plant.data.source.local.StudyingLocalDataSourceImpl
 import com.a32b.plant.data.source.local.SettingsLocalDataSource
 import com.a32b.plant.data.source.local.SettingsLocalDataSourceImpl
+import com.a32b.plant.data.source.local.GalleryLocalDataSource
+import com.a32b.plant.data.source.local.GalleryLocalDataSourceImpl
 import com.a32b.plant.data.source.remote.item.ItemRemoteDataSourceImpl
 import com.a32b.plant.data.source.remote.item.ItemRemoteDataSource
 import dagger.Binds
@@ -72,5 +74,9 @@ abstract class DataSourceModule {
     @Binds
     @Singleton
     abstract fun bindItemDataSource(impl: ItemRemoteDataSourceImpl) : ItemRemoteDataSource
+
+    @Binds
+    @Singleton
+    abstract fun bindGalleryLocalDataSource(impl: GalleryLocalDataSourceImpl) : GalleryLocalDataSource
 
 }

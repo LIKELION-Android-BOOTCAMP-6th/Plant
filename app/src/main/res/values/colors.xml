@@ -7,4 +7,11 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- 스플래시 (다크모드 값은 values-night/colors.xml) -->
+    <color name="splash_background">#EEF5E4</color>
+    <color name="splash_logo_track">#D9E8C6</color>
+    <color name="splash_logo_primary">#8DB85A</color>
+    <color name="splash_logo_accent">#3F7F55</color>
+    <color name="splash_wordmark">#3F7F55</color>
 </resources>

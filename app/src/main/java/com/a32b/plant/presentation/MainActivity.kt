@@ -1,12 +1,17 @@
 package com.a32b.plant.presentation
 
+import android.content.res.Configuration
+import android.content.res.Resources
+import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -19,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -30,15 +36,20 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.a32b.plant.core.navigation.PlantAppNavigation
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.model.StudyingSession
-import com.a32b.plant.domain.repository.AuthRepository
 import com.a32b.plant.domain.session.SessionExpiredObserver
+import com.a32b.plant.domain.usecase.auth.SignOutUseCase
+import com.a32b.plant.domain.session.SessionExpiredReason
 import com.a32b.plant.presentation.core.component.BottomBar
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
 import com.a32b.plant.presentation.splash.SplashViewModel
 import com.a32b.plant.presentation.theme.PlantTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.first
+import java.time.Duration
+import java.time.Instant
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -49,15 +60,39 @@ class MainActivity : ComponentActivity() {
     lateinit var sessionExpiredObserver: SessionExpiredObserver
 
     @Inject
-    lateinit var authRepository: AuthRepository
+    lateinit var signOutUseCase: SignOutUseCase
+
+    // 시스템 바에 적용할 앱 다크모드 설정. null이면 아직 값을 읽기 전
+    private var appDarkMode: Boolean? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
-        Log.d("plantLog", "-----MainActivity")
-        val splashScreen = installSplashScreen()
-        splashScreen.setKeepOnScreenCondition {
+        // applySystemBarStyle(내부의 enableEdgeToEdge)이 decorView를 만들기 때문에 먼저 호출하면 스플래시 테마(ActionBar 있음)로 창이 구성됨
+        val compatSplashScreen = installSplashScreen()
+        applySystemBarStyle()
+        compatSplashScreen.setKeepOnScreenCondition {
             //해당 값이 트루일 동안 스플래시 유지
-            viewModel.destination.value == null || viewModel.uiState.value.isLoading
+            val uiState = viewModel.uiState.value
+            viewModel.destination.value == null || uiState.isLoading || !uiState.isFirstScreenReady
+        }
+        // 시스템 기본 종료 효과(로고 잔상) 없이 첫 화면으로 전환
+        // 라이브러리 리스너는 시스템 바 색을 테마 값으로 덮어쓰므로 플랫폼 API를 직접 사용.
+        // Android 12(API 31/32)는 직접 제거하면 시스템 바 설정이 되돌아가서 시스템 기본 전환을 쓴다. (Android 11 이하는 원래 즉시 제거됨)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            this.splashScreen.setOnExitAnimationListener { splashScreenView ->
+                // 로딩이 빨라도 로고 애니메이션은 끝까지 보여준 뒤 제거
+                val iconStart = splashScreenView.iconAnimationStart
+                val iconDuration = splashScreenView.iconAnimationDuration
+                val remainingMillis = if (iconStart != null && iconDuration != null) {
+                    Duration.between(Instant.now(), iconStart.plus(iconDuration)).toMillis()
+                } else {
+                    0L
+                }
+                splashScreenView.postDelayed({
+                    splashScreenView.remove()
+                    // remove()가 시스템 바를 스플래시 이전 값으로 되돌릴 수 있어 앱 설정으로 다시 적용
+                    applySystemBarStyle()
+                }, remainingMillis.coerceAtLeast(0L))
+            }
         }
 
         super.onCreate(savedInstanceState)
@@ -65,6 +100,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             val uiState by viewModel.uiState.collectAsState()
             if (uiState.isLoading) return@setContent
+
+            // 다크모드 값을 읽기 전에는 onCreate의 시스템 기준을 유지하고, 읽은 뒤부터 앱 설정을 따른다
+            LaunchedEffect(uiState.isDarkMode) {
+                appDarkMode = uiState.isDarkMode
+                applySystemBarStyle()
+            }
 
             PlantTheme(darkTheme = uiState.isDarkMode) {
                 Surface(
@@ -79,31 +120,42 @@ class MainActivity : ComponentActivity() {
                     2. 로그인 화면으로 이동
                     3. 유저 정보 조회 실패 다이얼로그 표출
                      */
-                    var isSessionDialogShown by rememberSaveable { mutableStateOf(false) }
+                    var sessionExpiredReasonOrdinal by rememberSaveable { mutableStateOf<Int?>(null) }
+                    val sessionExpiredReason = sessionExpiredReasonOrdinal?.let { SessionExpiredReason.entries[it] }
                     val lifecycleOwner = LocalLifecycleOwner.current
 
                     LaunchedEffect(Unit) {
                         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                            sessionExpiredObserver.event.collect {
-                                authRepository.signOut()
+                            sessionExpiredObserver.event.collect { reason ->
+                                val alreadyAtSignIn = navController.currentBackStackEntry
+                                    ?.destination?.hasRoute<Routes.SignIn>() == true
+                                if (alreadyAtSignIn) return@collect
+
+                                signOutUseCase()
 
                                 navController.navigate(Routes.SignIn) {
                                     popUpTo(0) { inclusive = true }
                                 }
 
-                                isSessionDialogShown = true
+                                sessionExpiredReasonOrdinal = reason.ordinal
                             }
                         }
-
-
                     }
 
-                    if (isSessionDialogShown) {
+                    if (sessionExpiredReason != null) {
+                        val (text, semiText) = when (sessionExpiredReason) {
+                            SessionExpiredReason.DUPLICATE_LOGIN ->
+                                "다른 기기에서 로그인되었습니다." to "보안을 위해 자동 로그아웃 됩니다."
+                            SessionExpiredReason.USER_NOT_FOUND ->
+                                "로그인한 유저의 정보를 찾을 수 없습니다." to "다시 로그인해 주세요."
+                        }
                         ConfirmDialog(
-                            text = "로그인한 유저의 정보를 찾을 수 없습니다.",
-                            semiText = "다시 로그인해 주세요.",
+                            text = text,
+                            semiText = semiText,
+                            isSingleBtn = true,
+                            confirmBtnText = "확인",
                             onDismiss = {},
-                            onConfirm = { isSessionDialogShown = false }
+                            onConfirm = { sessionExpiredReasonOrdinal = null }
                         )
                     }
 
@@ -119,13 +171,21 @@ class MainActivity : ComponentActivity() {
                         try { navController.getBackStackEntry<Routes.HomeMain>() }
                         catch (_: Exception) { null }
                     }
+                    val homeViewModel = homeBackStackEntry?.let { hiltViewModel<HomeViewModel>(it) }
                     val recoverySession: StudyingSession? by (
-                        homeBackStackEntry
-                            ?.let { hiltViewModel<HomeViewModel>(it) }
+                        homeViewModel
                             ?.recoverySession
                             ?.collectAsState()
                             ?: remember { mutableStateOf(null) }
                     )
+
+                    // 홈 화분이 화면에 반영된 뒤 스플래시를 끝내 기본 화면이 보이지 않게 한다.
+                    // 화분이 없는 경우 등은 SplashViewModel이 처리한다.
+                    LaunchedEffect(homeViewModel) {
+                        homeViewModel?.displayPot?.first { it != Pot.EMPTY } ?: return@LaunchedEffect
+                        withFrameNanos { }
+                        viewModel.onFirstScreenReady()
+                    }
 
                     val showBottomBar = navBackStackEntry?.destination?.let { destination ->
                         destination.hasRoute<Routes.HomeMain>() ||
@@ -143,7 +203,14 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     ) { innerPadding ->
-                        Box(modifier = Modifier.padding(innerPadding)) {
+                        // Modifier.padding()은 inset을 소비하지 않아, 하위 화면의 Scaffold나
+                        // imePadding() 등이 같은 시스템 인셋(내비바 등)을 중복으로 더하게 됨.
+                        // consumeWindowInsets로 여기서 소비해 하위에서 중복 적용되지 않도록 한다.
+                        Box(
+                            modifier = Modifier
+                                .padding(innerPadding)
+                                .consumeWindowInsets(innerPadding)
+                        ) {
                             PlantAppNavigation(navController = navController, viewModel = viewModel)
                         }
                     }
@@ -153,4 +220,25 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * 앱 다크모드 설정을 기준으로 시스템 바 스타일을 적용 (값을 읽기 전에는 시스템 기준)
+     *
+     * enableEdgeToEdge는 첫 호출의 스타일을 설정 변경 때마다 다시 적용하므로,
+     * 값을 넘기지 않고 appDarkMode를 읽어 첫 호출의 스타일도 최신 설정을 따르게 한다.
+     */
+    private fun applySystemBarStyle() {
+        val detectDarkMode = { resources: Resources ->
+            appDarkMode ?: (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES)
+        }
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT, detectDarkMode),
+            navigationBarStyle = SystemBarStyle.auto(NAVIGATION_BAR_LIGHT_SCRIM, NAVIGATION_BAR_DARK_SCRIM, detectDarkMode)
+        )
+    }
+
+    private companion object {
+        // enableEdgeToEdge 기본 내비게이션 바 스타일과 같은 값 (라이브러리에서 공개하지 않음)
+        val NAVIGATION_BAR_LIGHT_SCRIM = Color.argb(0xe6, 0xFF, 0xFF, 0xFF)
+        val NAVIGATION_BAR_DARK_SCRIM = Color.argb(0x80, 0x1b, 0x1b, 0x1b)
+    }
 }

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 리포트 - 연속 (불꽃) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M12,3 C13.4,6.3 18.2,7.6 18.2,12 A6.2,6.2 0 0,1 5.8,12 C5.8,9.7 7.2,8.4 8.2,7 C9.1,8.8 10,9.2 10.8,8.4 C12.4,7 11.6,5 12,3 Z"
+        android:fillColor="#00000000"
+        android:strokeColor="#2E5A0C"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

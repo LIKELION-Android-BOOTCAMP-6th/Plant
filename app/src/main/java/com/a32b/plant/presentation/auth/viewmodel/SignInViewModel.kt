@@ -1,11 +1,13 @@
 package com.a32b.plant.presentation.auth.viewmodel
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.base.BaseViewModel
+import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.auth.SetNicknameUseCase
 import com.a32b.plant.domain.usecase.auth.SignInWithGoogleUseCase
+import com.a32b.plant.domain.util.NicknameRule
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,7 +26,7 @@ data class SignInUiState(
 )
 
 sealed class SignInEvent {
-    data class ShowToast(val message: String) : SignInEvent()
+    data class ShowToast(val message: String, val isLong: Boolean) : SignInEvent()
     object NavigateToHome : SignInEvent()
 }
 
@@ -32,7 +34,7 @@ sealed class SignInEvent {
 class SignInViewModel @Inject constructor(
     private val signInWithGoogleUseCase: SignInWithGoogleUseCase,
     private val setNicknameUseCase: SetNicknameUseCase
-) : ViewModel() {
+) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(SignInUiState())
     val uiState = _uiState.asStateFlow()
@@ -42,12 +44,26 @@ class SignInViewModel @Inject constructor(
 
     private var loggedInUid: String = ""
 
+    init {
+        loaded() // 초기에 불러올 데이터가 없으므로 LoadableScreen 로딩 없이 즉시 로그인 UI 표시
+    }
+
     fun onNicknameChange(value: String) {
         _uiState.update { it.copy(nicknameInput = value, nicknameError = null) }
     }
 
-    fun handleGoogleSignIn(idToken: String) {
+    fun tryStartGoogleSignIn(): Boolean {
+        if (_uiState.value.isLoading) return false
         _uiState.update { it.copy(isLoading = true) }
+        return true
+    }
+
+    fun cancelGoogleSignIn() {
+        _uiState.update { it.copy(isLoading = false) }
+    }
+
+    fun handleGoogleSignIn(idToken: String) {
+        if (!_uiState.value.isLoading) return // 현재 호출부에서는 항상 true라 실질적으로 안 타지만, tryStartGoogleSignIn() 없이 직접 호출하는 경로가 생기면 signInWithGoogleUseCase 중복 호출을 막아주는 가드라 지우지 말 것
 
         viewModelScope.launch {
             signInWithGoogleUseCase(idToken)
@@ -70,10 +86,17 @@ class SignInViewModel @Inject constructor(
     }
 
     fun confirmNickname() {
+        if (_uiState.value.isNicknameLoading) return
+
         val nickname = _uiState.value.nicknameInput.trim()
 
         if (nickname.length !in 2..10) {
             _uiState.update { it.copy(nicknameError = "2자 이상 10자 이하로 입력해주세요.") }
+            return
+        }
+
+        if (!NicknameRule.isUsable(nickname)) {
+            _uiState.update { it.copy(nicknameError = NicknameRule.UNUSABLE_MESSAGE) }
             return
         }
 
@@ -87,14 +110,20 @@ class SignInViewModel @Inject constructor(
                     _eventChannel.send(SignInEvent.NavigateToHome)
                 }
                 .onFailure { error ->
+                    // 닉네임 값 자체의 문제(중복)만 입력칸 인라인 에러, 네트워크·저장 실패 등 상황 에러는 토스트
+                    val isInputError = error is AppError.NicknameTaken
                     _uiState.update {
-                        it.copy(nicknameError = error.message, isNicknameLoading = false)
+                        it.copy(
+                            nicknameError = if (isInputError) error.message else null,
+                            isNicknameLoading = false
+                        )
                     }
+                    if (!isInputError) sendToast(error.message, isLong = error is AppError.Network)
                 }
         }
     }
 
-    private fun sendToast(message: String) {
-        viewModelScope.launch { _eventChannel.send(SignInEvent.ShowToast(message)) }
+    private fun sendToast(message: String, isLong: Boolean = false) {
+        viewModelScope.launch { _eventChannel.send(SignInEvent.ShowToast(message, isLong)) }
     }
 }

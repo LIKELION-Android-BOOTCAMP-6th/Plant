@@ -26,9 +26,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.a32b.plant.core.extension.isCompletedAt
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyLog
+import com.a32b.plant.presentation.core.component.StudyGoalItem
 import com.a32b.plant.presentation.theme.fontColorSub
 
 @Composable
@@ -101,20 +104,14 @@ fun StudyLogDetailDialog(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                        log.contents.forEach { content ->
-                            Row(modifier = Modifier.padding(vertical = 4.dp)){
-                                Text(text = "•",
-                                    modifier = Modifier.padding(end = 8.dp),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = content,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
+                        log.contents.forEachIndexed { index, content ->
+                            StudyGoalItem(
+                                text = content,
+                                isCompleted = log.completedContents.isCompletedAt(index),
+                                modifier = Modifier.padding(vertical = 4.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                iconSize = 7.sp
+                            )
                         }
                     }
                 } else {

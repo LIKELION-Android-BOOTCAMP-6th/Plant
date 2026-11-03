@@ -2,8 +2,8 @@ package com.a32b.plant.presentation.studyPlanDetail.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.base.BaseViewModel
 import androidx.navigation.NavController
 import androidx.navigation.toRoute
 import com.a32b.plant.core.navigation.Routes
@@ -18,6 +18,8 @@ import com.a32b.plant.domain.usecase.studyLog.*
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -33,7 +35,7 @@ class StudyPlanDetailViewModel @Inject constructor(
     private val deleteEntirePotUseCase: DeleteEntirePotUseCase,
     private val completeStudyPlanUseCase: CompleteStudyPlanUseCase,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase
-) : ViewModel() {
+) : BaseViewModel() {
     private val auth = Firebase.auth
 
     // Navigation에서 넘겨준 potId
@@ -76,23 +78,26 @@ class StudyPlanDetailViewModel @Inject constructor(
             ensureCurrentUserUseCase { user ->
                 userId = user.uid
                 if(userId.isNotEmpty() && potId.isNotEmpty()){
-                    loadPotDetail()
-                    loadStudyLogs()
+                    // 화분 상세 + 학습 기록 첫 결과가 모두 도착할 때까지 LoadableScreen 유지
+                    val studyLogsFirstLoaded = CompletableDeferred<Unit>()
+                    val potDetailJob = loadPotDetail()
+                    loadStudyLogs(studyLogsFirstLoaded)
+                    potDetailJob?.join()
+                    studyLogsFirstLoaded.await()
                 }
             }
+            loaded() // BaseViewModel: 성공/실패 모두 최초 시도 후 LoadableScreen 해제
         }
     }
-    private fun loadPotDetail() {
-        Log.d("StudyPlanDetailVM", "loadPotDetail called - userId: $userId, potId: $potId")
+    private fun loadPotDetail(): Job? {
         if (userId.isEmpty() || potId.isEmpty()){
             Log.e("StudyPlanDetailVM", "ERROR: userId or potId is empty!")
-            return
+            return null
         }
-        viewModelScope.launch {
+        return viewModelScope.launch {
             safeRunCatching {
                 getPotDetailUseCase(userId,potId)
             }.onSuccess { pot ->
-                Log.d("StudyPlanDetailVM", "Successfully fetched pot result: $pot")
                 _potDetail.value = pot
             }.onFailure { error ->
                 Log.e("StudyPlanDetailVM", "Failed to load pot detail: ${error.message}", error)
@@ -100,8 +105,12 @@ class StudyPlanDetailViewModel @Inject constructor(
         }
     }
 
-    private fun loadStudyLogs() {
-        if (userId.isEmpty() || potId.isEmpty()) return
+    /** [firstLoaded]: 첫 결과(성공/실패) 수신 또는 방출 없이 종료 시 complete — 초기 로딩 해제 대기용 */
+    private fun loadStudyLogs(firstLoaded: CompletableDeferred<Unit>? = null) {
+        if (userId.isEmpty() || potId.isEmpty()) {
+            firstLoaded?.complete(Unit)
+            return
+        }
         viewModelScope.launch {
             safeRunCatching {
                 getStudyLogsUseCase(userId, potId)
@@ -113,10 +122,13 @@ class StudyPlanDetailViewModel @Inject constructor(
                     }.onFailure { error ->
                         Log.e("StudyPlanDetailVM", "Failed to load study logs: ${error.message}")
                     }
+                    firstLoaded?.complete(Unit)
                 }
             }.onFailure { error ->
                 Log.e("StudyPlanDetailVM", "Failed to collect study logs flow: ${error.message}")
             }
+            // 방출 없이 Flow가 끝나거나 실패한 경우에도 대기 해제
+            firstLoaded?.complete(Unit)
         }
     }
 

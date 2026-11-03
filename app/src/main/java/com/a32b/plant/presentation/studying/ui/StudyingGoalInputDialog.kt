@@ -1,10 +1,10 @@
 package com.a32b.plant.presentation.studying.ui
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -18,11 +18,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -31,15 +31,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.a32b.plant.R
-import com.a32b.plant.presentation.theme.sub3
+import com.a32b.plant.presentation.studying.StudyingConstants.MAX_STUDY_LOG_SIZE
 
 @Composable
 fun StudyingGoalInputDialog(
@@ -53,15 +53,18 @@ fun StudyingGoalInputDialog(
     onConfirmEdit: (String) -> Unit = {}
 ) {
     val maxLength = 100
-    val maxLogSize = 10
+    val maxLogSize = MAX_STUDY_LOG_SIZE
 
     val localLogs = remember(studyLogs) {
         mutableStateListOf<String>().apply {
             if (studyLogs.isEmpty()) add("") else addAll(studyLogs)
         }
     }
-    var index by remember { mutableIntStateOf(initialIndex) }
+    // localLogs가 새로 만들어지면 index도 새 목록 범위 안으로 다시 맞춤 (범위 밖 index로 쓰기 시 크래시 방지)
+    var index by remember(localLogs) { mutableIntStateOf(initialIndex.coerceIn(0, localLogs.lastIndex)) }
     val currentText = localLogs.getOrElse(index) { "" }
+    val canGoPrev = index > 0
+    val canGoNext = index < localLogs.lastIndex
 
     val focusManager = LocalFocusManager.current
 
@@ -79,7 +82,7 @@ fun StudyingGoalInputDialog(
                 }
         ) {
             Column(
-                modifier = Modifier.padding(top = 10.dp, bottom = 5.dp),
+                modifier = Modifier.padding(top = 10.dp, bottom = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
 
@@ -89,7 +92,7 @@ fun StudyingGoalInputDialog(
 
                 if (!isEditing){
                     Text(
-                        "${index + 1} / 10 ",
+                        "${index + 1} / $maxLogSize",
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 7.dp)
                     )
@@ -106,14 +109,20 @@ fun StudyingGoalInputDialog(
                         IconButton(
                             onClick = {
                                 focusManager.clearFocus()
-                                if (index > 0) index--
+                                if (canGoPrev) index--
                             },
-                            enabled = index > 0
+                            enabled = canGoPrev,
+                            // 자리는 유지해야 입력창 너비가 변하지 않으므로 숨김은 alpha로 처리
+                            // 숨김 상태에서는 TalkBack 포커스도 가지 않도록 semantics 제거
+                            modifier = Modifier
+                                .alpha(if (canGoPrev) 1f else 0f)
+                                .then(if (canGoPrev) Modifier else Modifier.clearAndSetSemantics {})
                         ) {
-                            Image(
+                            Icon(
                                 painter = painterResource(R.drawable.ic_left),
                                 contentDescription = "왼쪽",
-                                modifier = Modifier.size(23.dp)
+                                modifier = Modifier.size(23.dp),
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -158,14 +167,18 @@ fun StudyingGoalInputDialog(
                         IconButton(
                             onClick = {
                                 focusManager.clearFocus()
-                                if (index < 10) index++
+                                if (canGoNext) index++
                             },
-                            enabled = index < localLogs.size - 1
+                            enabled = canGoNext,
+                            modifier = Modifier
+                                .alpha(if (canGoNext) 1f else 0f)
+                                .then(if (canGoNext) Modifier else Modifier.clearAndSetSemantics {})
                         ) {
-                            Image(
+                            Icon(
                                 painter = painterResource(R.drawable.ic_right),
                                 contentDescription = "오른쪽",
-                                modifier = Modifier.size(23.dp)
+                                modifier = Modifier.size(23.dp),
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -173,22 +186,30 @@ fun StudyingGoalInputDialog(
 
                 Row(
                     modifier = Modifier.padding(horizontal = 13.dp).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(
-                        onClick = {
-                            if (isEditing){
-                                onDismiss()
-                            }else if (!isEditing && localLogs.size < maxLogSize){
-                                localLogs.add("")
-                                index = localLogs.size - 1
-                            }
-                        },
-                        enabled = localLogs.size < maxLogSize || isEditing,
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.height(33.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.outline)
-                    ) { Text(if (isEditing) "취소" else "추가", style = MaterialTheme.typography.bodySmall) }
+                    if (!isEditing){
+                        Button(
+                            onClick = {
+                                if (localLogs.size < maxLogSize){
+                                    localLogs.add("")
+                                    index = localLogs.size - 1
+                                }
+                            },
+                            enabled = localLogs.size < maxLogSize,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f).height(38.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.outline,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
+                        ) { Text("추가", style = MaterialTheme.typography.bodySmall) }
+                    } else {
+                        // 편집 모드는 "추가"가 없으므로 빈 칸으로 채워 버튼 너비를 4개일 때와 맞추고 오른쪽 정렬
+                        Spacer(Modifier.weight(1f))
+                    }
 
                     Button(
                         onClick = {
@@ -205,32 +226,35 @@ fun StudyingGoalInputDialog(
 
                         },
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.height(33.dp).padding(start = 10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error.copy(0.3f))
+                        modifier = Modifier.weight(1f).height(38.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error.copy(0.3f),
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
                     ) { Text("삭제", style = MaterialTheme.typography.bodySmall) }
-
-
-                    Spacer(Modifier.weight(1f))
 
                     Button(
                         onClick = {if (isEditing) onConfirmEdit(localLogs[index]) else onConfirm(localLogs.toList())},
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.height(33.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(0.7f))
+                        modifier = Modifier.weight(1f).height(38.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary.copy(0.7f),
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
                     ) { Text("완료", style = MaterialTheme.typography.bodySmall)}
 
-                }
-
-                if (!isEditing){
-                    TextButton(onClick = onDismiss) {
-                        Text(
-                            "다음에 입력하기",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            textDecoration = TextDecoration.Underline
+                    Button(
+                        onClick = onDismiss,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f).height(38.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurface
                         )
-                        Spacer(Modifier.weight(1f))
-                    }
+                    ) { Text("닫기", style = MaterialTheme.typography.bodySmall) }
                 }
             }
         }

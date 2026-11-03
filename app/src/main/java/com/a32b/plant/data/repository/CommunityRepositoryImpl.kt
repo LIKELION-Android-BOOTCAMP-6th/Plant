@@ -6,6 +6,7 @@ import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.mapper.toDto
 import com.a32b.plant.data.source.remote.community.CommunityRemoteDataSource
 import com.a32b.plant.domain.error.AppError
+import com.a32b.plant.domain.error.COMMENT_ALREADY_DELETED_MESSAGE
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.domain.model.Post
@@ -161,7 +162,7 @@ class CommunityRepositoryImpl @Inject constructor(
             safeRunCatching { communityRemoteDataSource.deleteActivityByType(uid, postId, ActivityType.LIKE) }
                 .onFailure { Log.e("Community", "좋아요 activity 삭제 실패 (좋아요는 취소됨): postId=$postId", it) }
         } else {
-            safeRunCatching { communityRemoteDataSource.createActivity(CommunityActivity.like(uid = uid, title = title, targetId = postId)) }
+            safeRunCatching { createActivityIfAbsent(CommunityActivity.like(uid = uid, title = title, targetId = postId)) }
                 .onFailure { Log.e("Community", "좋아요 activity 생성 실패 (좋아요는 추가됨): postId=$postId", it) }
         }
 
@@ -183,11 +184,61 @@ class CommunityRepositoryImpl @Inject constructor(
             safeRunCatching { communityRemoteDataSource.deleteActivityByType(uid, postId, ActivityType.BOOKMARK) }
                 .onFailure { Log.e("Community", "북마크 activity 삭제 실패 (북마크는 취소됨): postId=$postId", it) }
         } else {
-            safeRunCatching { communityRemoteDataSource.createActivity(CommunityActivity.bookmark(uid = uid, title = title, targetId = postId)) }
+            safeRunCatching { createActivityIfAbsent(CommunityActivity.bookmark(uid = uid, title = title, targetId = postId)) }
                 .onFailure { Log.e("Community", "북마크 activity 생성 실패 (북마크는 추가됨): postId=$postId", it) }
         }
 
         return Result.Success(wasBookmarked)
+    }
+
+    // 이전 취소 때 activity 삭제가 실패해 남아 있던 activity가 있으면 새로 만들지 않음 — 다시 누를 때마다 중복이 쌓이는 것 방지
+    // (남아 있던 activity를 그대로 쓰므로 '내 활동'에는 처음 눌렀던 시각으로 표시됨)
+    private suspend fun createActivityIfAbsent(activity: CommunityActivity) {
+        if (communityRemoteDataSource.hasActivityByType(activity.uid, activity.targetId, activity.type)) {
+            Log.w("Community", "이미 남아 있는 ${activity.type} activity가 있어 생성 생략: postId=${activity.targetId}")
+            return
+        }
+        communityRemoteDataSource.createActivity(activity)
+    }
+
+    override suspend fun removeLike(postId: String, uid: String): Result<Unit> =
+        removeReaction(postId, uid, ActivityType.LIKE, label = "좋아요") {
+            communityRemoteDataSource.removeLike(postId, uid)
+        }
+
+    override suspend fun removeBookmark(postId: String, uid: String): Result<Unit> =
+        removeReaction(postId, uid, ActivityType.BOOKMARK, label = "북마크") {
+            communityRemoteDataSource.removeBookmark(postId, uid)
+        }
+
+    // 좋아요/북마크 해제 공통 흐름 — type은 remove가 해제하는 대상과 반드시 같아야 함 (다르면 엉뚱한 activity가 지워짐)
+    private suspend fun removeReaction(
+        postId: String,
+        uid: String,
+        type: String,
+        label: String,
+        remove: suspend () -> Boolean
+    ): Result<Unit> {
+        safeRunCatching { remove() }
+            .fold(
+                onSuccess = { removed ->
+                    if (!removed) Log.w("Community", "이미 ${label}가 해제된 상태라 activity만 정리: postId=$postId")
+                },
+                onFailure = { e ->
+                    Log.e("Community", "$label 취소 실패", e)
+                    return Result.Failure(handleError(e, "$label 취소에 실패했습니다.", isWrite = true))
+                }
+            )
+
+        // 해제가 멱등이므로 activity 삭제 실패는 실패로 돌려 재시도하게 함 (재시도해도 다시 좋아요/북마크되지 않음)
+        return safeRunCatching { communityRemoteDataSource.deleteActivityByType(uid, postId, type) }
+            .fold(
+                onSuccess = { Result.Success(Unit) },
+                onFailure = { e ->
+                    Log.e("Community", "$label activity 삭제 실패 (${label}는 해제됨): postId=$postId", e)
+                    Result.Failure(handleError(e, "$label 취소에 실패했습니다.", isWrite = true))
+                }
+            )
     }
 
     override suspend fun addComment(postId: String, comment: Comment, activity: CommunityActivity): Result<Unit> = safeRunCatching {
@@ -200,37 +251,81 @@ class CommunityRepositoryImpl @Inject constructor(
         }
     )
 
-    override suspend fun updateComment(postId: String, commentId: String, newContent: String): Result<Unit> {
-        safeRunCatching {
-            communityRemoteDataSource.updateComment(postId, commentId, newContent)
-        }.onFailure { e ->
+    override suspend fun updateComment(postId: String, commentId: String, newContent: String, activityId: String): Result<Unit> {
+        val hasActivityId = activityId.isNotBlank()
+        // 모든 댓글은 activityId를 가진다는 전제 — 깨지면 '내 활동' 문구가 갱신되지 않으므로 원인 추적용으로 남김
+        if (!hasActivityId) Log.w("Community", "activityId가 비어 있어 댓글 본문만 수정: commentId=$commentId")
+
+        // 주의: 아래 호출 전에 suspend 지점을 추가하면 화면 이탈(코루틴 취소) 시 batch가 SDK에 적재되지 못한다
+        var result = safeRunCatching {
+            communityRemoteDataSource.updateComment(postId, commentId, newContent, activityId.takeIf { hasActivityId })
+        }
+        // 재시도 전에 이미 댓글이 존재함을 확인했다면 실패 후 같은 확인을 반복하지 않기 위한 표시
+        var commentExistenceChecked = false
+
+        // activity 문서가 이미 없으면 batch 전체가 실패한다. 보안 규칙이 resource.data를 참조하므로
+        // NOT_FOUND가 아니라 PERMISSION_DENIED로 거절될 수 있어 둘 다 보정 대상 — 댓글 본문만이라도 수정되도록 재시도
+        // (진짜 권한 없음이면 재시도도 같은 이유로 실패해 그대로 에러가 반환됨)
+        // 한계: 오프라인에서 저장하고 화면을 이탈한 뒤 연결이 복구되면 서버가 batch를 거절하는데,
+        //       이때는 코루틴이 이미 사라져 이 재시도가 실행되지 않아 수정이 반영되지 않는다 (activity 문서가 없는 댓글에 한함)
+        if (hasActivityId && result.exceptionOrNull().isMissingOrDenied()) {
+            // 댓글 자체가 이미 지워진 경우에도 같은 코드로 거절되므로, 재시도 전에 구분 (읽기는 규칙상 문서가 없어도 허용됨)
+            if (isCommentGone(postId, commentId)) return commentGoneFailure(commentId)
+            commentExistenceChecked = true
+
+            Log.w("Community", "수정할 activity가 없어 댓글 본문만 수정: commentId=$commentId, activityId=$activityId")
+            result = safeRunCatching {
+                communityRemoteDataSource.updateComment(postId, commentId, newContent, null)
+            }
+        }
+
+        result.onFailure { e ->
+            if (!commentExistenceChecked && e.isMissingOrDenied() && isCommentGone(postId, commentId)) {
+                return commentGoneFailure(commentId)
+            }
             Log.e("Community", "댓글 수정 실패", e)
             return Result.Failure(handleError(e, "댓글 수정에 실패했습니다.", isWrite = true))
         }
 
-        safeRunCatching { communityRemoteDataSource.updateActivityComment(commentId, newContent) }
-            .onFailure { Log.e("Community", "activity comment 업데이트 실패 (댓글은 수정됨): commentId=$commentId", it) }
-
         return Result.Success(Unit)
     }
 
-    override suspend fun deleteComment(postId: String, commentId: String): Result<Unit> {
-        val activityId = safeRunCatching {
-            communityRemoteDataSource.deleteComment(postId, commentId)
-        }.fold(
+    // 존재 여부 확인 자체가 실패하면(네트워크 등) "사라졌다"고 단정하지 않고 false로 둠
+    private suspend fun isCommentGone(postId: String, commentId: String): Boolean =
+        safeRunCatching { communityRemoteDataSource.isCommentExist(postId, commentId) }.getOrNull() == false
+
+    private fun commentGoneFailure(commentId: String): Result.Failure {
+        Log.w("Community", "수정하려는 댓글이 이미 삭제됨: commentId=$commentId")
+        return Result.Failure(AppError.Custom(COMMENT_ALREADY_DELETED_MESSAGE))
+    }
+
+    private fun Throwable?.isMissingOrDenied() =
+        this is FirebaseFirestoreException && (
+            code == FirebaseFirestoreException.Code.NOT_FOUND ||
+                code == FirebaseFirestoreException.Code.PERMISSION_DENIED
+            )
+
+    override suspend fun deleteComment(postId: String, commentId: String): Result<Boolean> {
+        var result = safeRunCatching {
+            communityRemoteDataSource.deleteComment(postId, commentId, deleteActivity = true)
+        }
+
+        // 지울 activity 문서가 이미 없으면 보안 규칙(resource.data 참조)에 걸려 트랜잭션 전체가 거절될 수 있음
+        // → 댓글 삭제가 막히지 않도록 activity 없이 한 번 더 시도 (진짜 권한 없음이면 재시도도 실패해 에러 반환)
+        if (result.exceptionOrNull().isMissingOrDenied()) {
+            Log.w("Community", "activity 삭제 포함 트랜잭션 실패 — 댓글만 삭제 재시도: commentId=$commentId", result.exceptionOrNull())
+            result = safeRunCatching {
+                communityRemoteDataSource.deleteComment(postId, commentId, deleteActivity = false)
+            }
+        }
+
+        return result.fold(
             onSuccess = { Result.Success(it) },
             onFailure = { e ->
                 Log.e("Community", "댓글 삭제 실패", e)
-                return Result.Failure(handleError(e, "댓글 삭제에 실패했습니다.", isWrite = true))
+                Result.Failure(handleError(e, "댓글 삭제에 실패했습니다.", isWrite = true))
             }
-        ).let { (it as Result.Success).data }
-
-        if (!activityId.isNullOrEmpty()) {
-            safeRunCatching { communityRemoteDataSource.deleteActivity(activityId) }
-                .onFailure { Log.e("Community", "activity 삭제 실패 (댓글은 삭제됨): $activityId", it) }
-        }
-
-        return Result.Success(Unit)
+        )
     }
 
     override fun observeActivity(selected: String): Flow<List<CommunityActivity>> {
@@ -254,6 +349,22 @@ class CommunityRepositoryImpl @Inject constructor(
         }
     )
 
+
+    override suspend fun deleteOrphanedActivity(activityId: String): Result<Unit> = safeRunCatching {
+        communityRemoteDataSource.deleteActivity(activityId)
+    }.fold(
+        onSuccess = { Result.Success(Unit) },
+        onFailure = { e ->
+            if (e.isMissingOrDenied()) {
+                // 다른 기기에서 먼저 지운 경우 — 없는 문서의 삭제는 보안 규칙(resource.data 참조)에 의해 PERMISSION_DENIED로 거절될 수 있음
+                Log.w("Community", "이미 없는 activity라 삭제를 성공으로 처리: $activityId", e)
+                Result.Success(Unit)
+            } else {
+                Log.e("Community", "고아 activity 삭제 실패", e)
+                Result.Failure(handleError(e, "오류가 발생했습니다.\n잠시 후 다시 시도해주세요."))
+            }
+        }
+    )
 
     override suspend fun isPostExist(postId: String): Result<Boolean> = safeRunCatching {
         communityRemoteDataSource.isPostExist(postId)

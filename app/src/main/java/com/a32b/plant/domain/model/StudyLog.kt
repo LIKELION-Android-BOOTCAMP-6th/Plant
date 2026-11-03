@@ -4,6 +4,7 @@ package com.a32b.plant.domain.model
 data class StudyLog(
     val title: String,
     val contents: List<String>,
+    val completedContents: List<Boolean>,
     val studyingTime: Long,
     val createAt: Long?,
     val startedAt: Long,
@@ -11,9 +12,10 @@ data class StudyLog(
     val isSelected: Boolean
 ){
     companion object{
-        fun write(title: String, contents: List<String>, time: Long, startedAt: Long) = StudyLog(
+        fun write(title: String, contents: List<String>, completedContents: List<Boolean>, time: Long, startedAt: Long) = StudyLog(
             title = title,
             contents = contents,
+            completedContents = completedContents,
             studyingTime = time,
             createAt = null,
             startedAt = startedAt,

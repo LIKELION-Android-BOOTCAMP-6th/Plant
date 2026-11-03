@@ -28,7 +28,8 @@ class AddCommentUseCase @Inject constructor(
                 activityId = "",
                 createdAt = null,
                 reportCount = 0,
-                isHidden = false
+                isHidden = false,
+                isPending = false
             ),
             activity = CommunityActivity.comment(
                 uid = user.uid, title = title, targetId = postId, content = content, commentId = ""

@@ -1,6 +1,5 @@
 package com.a32b.plant.domain.usecase.studying
 
-import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.result.Result
@@ -12,10 +11,10 @@ import javax.inject.Inject
 class FinishStudyingUseCase @Inject constructor(
     private val repository: StudyingRepository
 ) {
-    suspend operator fun invoke(potId : String, timestamp: String, log: List<String>, time: Long, startedAt: Long ) : Result<Unit> {
+    suspend operator fun invoke(potId : String, timestamp: String, log: List<String>, completed: List<Boolean>, time: Long, startedAt: Long ) : Result<Unit> {
         return coroutineScope {
             val results = awaitAll(
-                async { repository.saveStudyLog(potId, StudyLog.write(timestamp, log, time, startedAt)) },
+                async { repository.saveStudyLog(potId, StudyLog.write(timestamp, log, completed, time, startedAt)) },
                 async { repository.updateTotalStudyTime(potId, time) },
                 async { repository.updateUserTotalStudyTime(time) },
             )

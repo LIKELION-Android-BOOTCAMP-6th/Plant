@@ -13,10 +13,14 @@ import com.a32b.plant.domain.model.ReportRecord
 
 @Composable
 fun DailyReportContent(report: DailyReport) {
-    val date = report.date
     val containerColor = reportCardContainerColor()
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        ReportPeriodTitle(date)
+        ReportSummaryMetrics(
+            totalMillis = report.totalMillis,
+            studyCount = report.records.size,
+            streakDays = report.streakDays,
+            streakLabel = "연속"
+        )
         // 시작한 기록이 없으면 "0초 + 기록 없음" 한 번만 보여주고, 최고·최저 줄과 목록 카드는 숨긴다(반복 제거).
         val hasRecords = report.records.isNotEmpty()
         ReportCard(
@@ -39,7 +43,7 @@ fun DailyReportContent(report: DailyReport) {
             ReportCard(containerColor = containerColor) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("이 날짜에 시작한 기록", style = MaterialTheme.typography.titleMedium)
-                    Text("시각은 학습 화면을 연 때부터 저장 때까지예요", style = MaterialTheme.typography.labelMedium)
+                    Text("시각은 학습 화면을 열었을 때부터 저장때까지입니다", style = MaterialTheme.typography.labelMedium)
                 }
                 report.records.forEachIndexed { index, record ->
                     if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outline)

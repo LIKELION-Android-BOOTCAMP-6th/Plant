@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.offset
@@ -67,11 +66,13 @@ import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.Post
+import com.a32b.plant.presentation.community.CommunityConstants
 import com.a32b.plant.presentation.community.viewmodel.CommunityListEvent
 import com.a32b.plant.presentation.community.viewmodel.CommunityListViewModel
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.core.component.ProfileImage
+import com.a32b.plant.presentation.core.component.TabTopBar
 import com.a32b.plant.presentation.core.component.TagChip
 import com.a32b.plant.presentation.core.component.TagSheet
 import com.a32b.plant.presentation.core.extension.showToast
@@ -144,7 +145,7 @@ fun CommunityListScreen(
             }
         }
 
-        // 필터 변경 재쿼리 중 오버레이 (LoadableScreen 이후, 이미 데이터가 있는 상태)
+        // 당겨서 새로고침 + 화면 콘텐츠 영역
         Box(modifier = Modifier.fillMaxSize()) {
             PullToRefreshBox(
                 isRefreshing = uiState.isRefreshing,
@@ -155,23 +156,11 @@ fun CommunityListScreen(
                     containerColor = MaterialTheme.colorScheme.background,
                     topBar = {
                         Column(
-                            modifier = Modifier
-                                .background(MaterialTheme.colorScheme.background)
-                                .padding(horizontal = 10.dp)
+                            modifier = Modifier.background(MaterialTheme.colorScheme.background)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 6.dp, vertical = 8.dp)
-                            ) {
-                                Text(
-                                    "커뮤니티",
-                                    style = MaterialTheme.typography.displayLarge,
-                                    modifier = Modifier.align(Alignment.Center)
-                                )
+                            TabTopBar(title = "커뮤니티") {
                                 TextButton(
-                                    onClick = { navController.navigate(Routes.CommunityActivity) },
-                                    modifier = Modifier.align(Alignment.CenterEnd)
+                                    onClick = { navController.navigate(Routes.CommunityActivity) }
                                 ) {
                                     Text(
                                         "내 활동",
@@ -180,81 +169,85 @@ fun CommunityListScreen(
                                     )
                                 }
                             }
-                            SearchBarSection(
-                                query = searchQuery,
-                                onQueryChange = { viewModel.onSearchQueryChanged(it) }
-                            )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
+                            Column(
+                                modifier = Modifier.padding(horizontal = 10.dp)
                             ) {
+                                SearchBarSection(
+                                    query = searchQuery,
+                                    onQueryChange = { viewModel.onSearchQueryChanged(it) }
+                                )
                                 Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .padding(start = 16.dp)
-                                        .clickable { viewModel.onIsTagSheetShownChange() }
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .padding(start = 16.dp)
+                                            .clickable { viewModel.onIsTagSheetShownChange() }
+                                    ) {
+                                        Text(
+                                            "태그",
+                                            style = MaterialTheme.typography.titleMedium,
+                                        )
+                                        Icon(
+                                            painter = painterResource(id = if (uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
+                                            contentDescription = "태그박스",
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    Box(modifier = Modifier.clickable {
+                                        viewModel.onSelectedChanged(emptyList())
+                                    }) {
+                                        TagChip("전체 선택 해제", 13, false)
+                                    }
+
+                                    Spacer(modifier = Modifier.weight(1f))
+
                                     Text(
-                                        "태그",
-                                        style = MaterialTheme.typography.titleMedium,
+                                        "공유글 보기",
+                                        style =
+                                            MaterialTheme.typography.titleMedium,
+                                            fontSize = 14.sp,
                                     )
-                                    Icon(
-                                        painter = painterResource(id = if (uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
-                                        contentDescription = "태그박스",
-                                        modifier = Modifier.size(18.dp)
+                                    Switch(
+                                        uiState.isSharedShown,
+                                        onCheckedChange = { viewModel.onSharedShownChange() },
+                                        modifier = Modifier
+                                            .scale(0.7f)
+                                            .padding(end = 10.dp),
+                                        colors = SwitchDefaults.colors(
+                                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                            uncheckedBorderColor = MaterialTheme.colorScheme.outline
+                                        )
                                     )
                                 }
-                                Box(modifier = Modifier.clickable {
-                                    viewModel.onSelectedChanged(emptyList())
-                                }) {
-                                    TagChip("전체 선택 해제", 13, false)
-                                }
-
-                                Spacer(modifier = Modifier.weight(1f))
-
-                                Text(
-                                    "공유글 보기",
-                                    style =
-                                        MaterialTheme.typography.titleMedium,
-                                        fontSize = 14.sp,
-                                )
-                                Switch(
-                                    uiState.isSharedShown,
-                                    onCheckedChange = { viewModel.onSharedShownChange() },
-                                    modifier = Modifier
-                                        .scale(0.7f)
-                                        .padding(end = 10.dp),
-                                    colors = SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-                                        uncheckedBorderColor = MaterialTheme.colorScheme.outline
-                                    )
-                                )
-                            }
-                            if (uiState.selected.isNotEmpty()) {
-                                FlowRow(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(bottom = 8.dp, start = 16.dp, end = 16.dp),
-                                    maxItemsInEachRow = 6,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    uiState.selected.forEach { tag ->
-                                        Surface(
-                                            shape = RoundedCornerShape(16.dp),
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.padding(vertical = 2.dp)
-                                        ) {
-                                            Text(
-                                                text = tag.name,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                modifier = Modifier.padding(
-                                                    horizontal = 10.dp,
-                                                    vertical = 4.dp
-                                                ),
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
+                                if (uiState.selected.isNotEmpty()) {
+                                    FlowRow(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(bottom = 8.dp, start = 16.dp, end = 16.dp),
+                                        maxItemsInEachRow = 6,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        uiState.selected.forEach { tag ->
+                                            Surface(
+                                                shape = RoundedCornerShape(16.dp),
+                                                color = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.padding(vertical = 2.dp)
+                                            ) {
+                                                Text(
+                                                    text = tag.name,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    modifier = Modifier.padding(
+                                                        horizontal = 10.dp,
+                                                        vertical = 4.dp
+                                                    ),
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -306,13 +299,14 @@ fun CommunityListScreen(
                             }
                         }
 
+                        // 레이어 순서: 게시글 목록 < 바깥 클릭 레이어(1) < FAB(2) < 로딩 오버레이(3) < 태그 선택 창(4)
                         // 태그 선택 창 오버레이 (게시글 목록을 밀지 않고 위에 덮음)
                         if (uiState.isTagSheetShown) {
                             // 바깥 클릭 시 닫기용 투명 레이어
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .zIndex(0.5f)
+                                    .zIndex(1f)
                                     .clickable { viewModel.onIsTagSheetShownChange() }
                             )
                             Box(
@@ -320,7 +314,7 @@ fun CommunityListScreen(
                                     .padding(top = innerPadding.calculateTopPadding())
                                     .padding(horizontal = 20.dp)
                                     .fillMaxWidth()
-                                    .zIndex(1f)
+                                    .zIndex(4f)
                             ) {
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
@@ -338,33 +332,34 @@ fun CommunityListScreen(
                             }
                         }
 
+                        // 로딩 오버레이가 덮어 클릭을 막을 수 있도록 같은 Box 안에 배치
+                        FloatingActionButton(
+                            onClick = { navController.navigate(Routes.CommunityPost()) },
+                            containerColor = MaterialTheme.colorScheme.secondary,
+                            shape = CircleShape,
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(end = 16.dp, bottom = 16.dp)
+                                .zIndex(2f)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_edit),
+                                contentDescription = null,
+                                modifier = Modifier.size(26.dp),
+                                tint = MaterialTheme.colorScheme.onBackground,
+                            )
+                        }
+
                         // 필터 변경 재쿼리 로딩 오버레이
                         if (uiState.hasLoadedOnce && uiState.isLoadingMore && uiState.posts.isEmpty()) {
-                            LoadingBox()
+                            LoadingBox(modifier = Modifier.fillMaxSize().zIndex(3f))
                         }
                         // 검색 전체 로드 중 오버레이
                         if (uiState.isSearchLoading) {
-                            LoadingBox()
+                            LoadingBox(modifier = Modifier.fillMaxSize().zIndex(3f))
                         }
                     }
                 }
-            }
-            FloatingActionButton(
-                onClick = { navController.navigate(Routes.CommunityPost()) },
-                containerColor = MaterialTheme.colorScheme.secondary,
-                shape = CircleShape,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .navigationBarsPadding()
-                    .offset(y = 32.dp)
-                    .padding(end = 16.dp, bottom = 4.dp)
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_edit),
-                    contentDescription = null,
-                    modifier = Modifier.size(26.dp),
-                    tint = MaterialTheme.colorScheme.onBackground,
-                )
             }
         }
     }
@@ -447,8 +442,10 @@ fun PostCard(post: Post, isLiked: Boolean, isBookmarked: Boolean = false, onClic
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
 
                 Text(
-                    text = post.title,
+                    text = if (post.isBlind) CommunityConstants.BLIND_TITLE_MESSAGE else post.title,
                     style = MaterialTheme.typography.titleMedium,
+                    // 블라인드 문구는 실제 제목과 구분되도록 힌트 색으로 표시
+                    color = if (post.isBlind) MaterialTheme.colorScheme.onSecondary else Color.Unspecified,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)

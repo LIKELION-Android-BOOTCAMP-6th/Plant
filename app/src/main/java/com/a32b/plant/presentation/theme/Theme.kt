@@ -19,7 +19,7 @@ private val DarkColorScheme = darkColorScheme(
     primaryContainer = Color(0xFF414141),
 
     //하단바 배경색
-    surface = Color(0xFFD8B787),
+    surface = Color(0xFF8E9872),
 
     //보조 배경
     surfaceVariant = Color(0xFF9BA199),
@@ -63,7 +63,7 @@ private val LightColorScheme = lightColorScheme(
     primaryContainer = Color.White,
 
     //하단바 배경색
-    surface = bottom,
+    surface = Color(0xFFC0C9A5),
 
     //보조 배경
     surfaceVariant = sub2,

@@ -4,6 +4,7 @@ import com.a32b.plant.domain.model.MonthlyReport
 import com.a32b.plant.domain.model.ReportDailyTotal
 import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.result.map
+import com.a32b.plant.domain.util.longestConsecutiveStudyDays
 import java.time.YearMonth
 import javax.inject.Inject
 
@@ -26,6 +27,8 @@ class GetMonthlyReportUseCase @Inject constructor(
                 month = month,
                 totalMillis = totalMillis,
                 averageMillis = if (recordDays.isEmpty()) 0L else totalMillis / recordDays.size,
+                studyCount = records.size,
+                longestStreakDays = longestConsecutiveStudyDays(dailyTotals),
                 dailyTotals = dailyTotals,
                 highestDay = recordDays.maxByOrNull { it.totalMillis },
                 lowestDay = recordDays.minByOrNull { it.totalMillis },

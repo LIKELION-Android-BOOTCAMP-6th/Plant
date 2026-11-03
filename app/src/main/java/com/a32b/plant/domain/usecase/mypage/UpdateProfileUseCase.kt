@@ -6,6 +6,7 @@ import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
+import com.a32b.plant.domain.util.NicknameRule
 import javax.inject.Inject
 
 class UpdateProfileUseCase @Inject constructor(
@@ -121,10 +122,10 @@ class UpdateProfileUseCase @Inject constructor(
 
     private fun validateNickname(nickname: String): String? {
         val len = nickname.length
-        return if (len !in 2..10) {
-            "2~10자로 입력해주세요."
-        } else {
-            null
+        return when {
+            len !in 2..10 -> "2~10자로 입력해주세요."
+            !NicknameRule.isUsable(nickname) -> NicknameRule.UNUSABLE_MESSAGE
+            else -> null
         }
     }
 }

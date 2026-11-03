@@ -28,6 +28,7 @@ class RecoverStudySessionUseCase @Inject constructor(
             potId = session.potId,
             timestamp = timestamp,
             log = session.log ?: emptyList(),
+            completed = emptyList(), // 로컬 백업에는 완료 체크 상태가 저장되지 않음
             time = session.time,
             startedAt = session.startedAt
         )

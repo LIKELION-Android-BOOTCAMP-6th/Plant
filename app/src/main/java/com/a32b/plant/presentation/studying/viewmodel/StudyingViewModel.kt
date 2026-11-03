@@ -2,10 +2,12 @@ package com.a32b.plant.presentation.studying.viewmodel
 
 import android.content.Context
 import android.content.Intent
+import android.os.SystemClock
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.StudyingUser
@@ -18,6 +20,9 @@ import com.a32b.plant.domain.usecase.studying.FinishStudyingUseCase
 import com.a32b.plant.domain.usecase.studying.StartStudyingSessionUseCase
 import com.a32b.plant.domain.usecase.studying.UpdateLocalStudyingSessionUseCase
 import com.a32b.plant.presentation.core.type.StudyingGoalCheckMode
+import com.a32b.plant.presentation.studying.StudyingConstants.MAX_STUDY_LOG_SIZE
+import com.a32b.plant.presentation.studying.StudyingConstants.STUDY_LOG_LIMIT_MESSAGE
+import com.a32b.plant.presentation.studying.StudyingConstants.STUDY_LOG_LIMIT_TOAST_INTERVAL_MS
 import com.a32b.plant.presentation.studying.service.StudyingTimerService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -65,6 +70,7 @@ sealed class StudyingEvent{
         val tag: String,
         val title: String,
         val log: List<String>,
+        val completed: List<Boolean>,
         val time: Long,
         val potId: String,
         val level: String
@@ -72,7 +78,7 @@ sealed class StudyingEvent{
         ): StudyingEvent()
 
     object NavigateToHome : StudyingEvent()
-    data class ShowToast(val message: String) : StudyingEvent()
+    data class ShowToast(val message: String, val duration: Int) : StudyingEvent()
 }
 @HiltViewModel
 class StudyingViewModel @Inject constructor(
@@ -84,7 +90,7 @@ class StudyingViewModel @Inject constructor(
     private val finishStudyingUseCase: FinishStudyingUseCase,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     savedStateHandle: SavedStateHandle
-) : ViewModel() {
+) : BaseViewModel() {
     private val _eventChannel = Channel<StudyingEvent>(Channel.BUFFERED)
     val event = _eventChannel.receiveAsFlow()
 
@@ -102,10 +108,15 @@ class StudyingViewModel @Inject constructor(
     private var lastSaveMs = 0L
     private var lastUpdateMs = 0L
     private var savedGoalCheckMode: StudyingGoalCheckMode? = null
+    // 최대 개수 안내 토스트를 마지막으로 띄운 시각 (elapsedRealtime 기준, 아직 안 띄웠으면 null)
+    private var lastStudyLogLimitToastMs: Long? = null
 
     init {
         viewModelScope.launch {
             restoreFromLocalBackup()
+            // 로컬 복구 결과(타이머·목표 다이얼로그 표시 여부)가 확정된 뒤 화면 노출
+            // 원격 등록(initStudyingUser)은 화면 표시와 무관하므로 기다리지 않음
+            loaded()
             initStudyingUser()
         }
         onStudyingUsersChange()
@@ -124,10 +135,11 @@ class StudyingViewModel @Inject constructor(
                             startedAt = session.startedAt,
                             studyLog = session.log?.map { log -> StudyLogUi(log = log) }?.filter { it.log.isNotBlank() } ?: emptyList(),
                             isGoalInputDialogShown = false,
-                            isStudying = true
+                            isStudying = !session.isPaused
                         )
                     }
-                    startStopwatch()
+                    // 일시정지 중이었으면 사용자가 재개할 때까지 타이머를 시작하지 않는다
+                    if (!session.isPaused) startStopwatch()
                 }
             }
     }
@@ -155,25 +167,20 @@ class StudyingViewModel @Inject constructor(
 
     /** 비정상 종료 대비 로컬 디비에 데이터 저장   */
     private suspend fun saveSession(){
-        updateLocalStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title, potId, _uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt)
+        updateLocalStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title, potId, _uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt, isPaused = !_uiState.value.isStudying)
             .onSuccess { _uiState.update { it.copy(isLocalSaved = true) } }
             .onFailure { e ->
                 if (e is AppError.Custom) _uiState.update { it.copy(isLocalSaved = false) }
             }
     }
 
-    /** 최초 시작 시 로컬 + 원격 db에 현재 사용자 정보 저장 */
+    /**
+     * 최초 시작 시 로컬 + 원격 db에 현재 사용자 정보 저장
+     * 실패해도 공부는 계속하므로 별도 처리 없음 (UnknownUser는 유즈케이스에서 처리, 에러 로그는 레포지토리에서 찍고 있음)
+     */
     suspend fun initStudyingUser(){
         withContext(Dispatchers.IO){
-            startStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title,potId,_uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt)
-                .onFailure { e ->
-                    when (e){
-                        is AppError.UnknownUser -> Unit //유즈케이스에서 호출했으므로 따로 호출 x
-                        is AppError.Local, is AppError.Custom -> Unit //에러 로그는 레포지토리에서 찍고 있음
-                        is AppError.Network -> sendToast(e.message)
-                        else -> _uiState.update { it.copy(error = e.message) }
-                    }
-                }
+            startStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title,potId,_uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt, isPaused = !_uiState.value.isStudying)
         }
     }
 
@@ -200,6 +207,8 @@ class StudyingViewModel @Inject constructor(
     }
 
     private fun startStopwatch() {
+        // 재개 직후 앱이 종료돼도 일시정지 상태로 복원되지 않도록 바로 저장한다
+        viewModelScope.launch { saveSession() }
         sendServiceIntent(StudyingTimerService.ACTION_START) {
             putExtra(StudyingTimerService.EXTRA_ACCUMULATED, _uiState.value.timer)
         }
@@ -254,14 +263,17 @@ class StudyingViewModel @Inject constructor(
             )
         }
         viewModelScope.launch {
-            updateLocalStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title, potId, _uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt)
+            updateLocalStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title, potId, _uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt, isPaused = !_uiState.value.isStudying)
         }
     }
 
     fun onStartEditing(index: Int) {
+        // 연타 등으로 이미 편집 다이얼로그가 열려 있으면 무시 — 두 번째 호출이 savedGoalCheckMode를 null로 덮어쓰는 것도 방지
+        if (_uiState.value.isEditing) return
+        // savedGoalCheckMode 저장 / 확인 다이얼로그 닫기보다 먼저 막아야 확인 다이얼로그가 그대로 유지됨
+        if (index == -1 && blockIfStudyLogFull()) return
         savedGoalCheckMode = _uiState.value.goalCheckMode
         _uiState.update { state ->
-            // index == -1 분기 로직은 onIsEditingChanged와 동일 — 한쪽 변경 시 같이 수정 필요
             val newState = if (index == -1) {
                 val newLog = state.studyLog + StudyLogUi()
                 state.copy(studyLog = newLog, isEditing = true, logIndex = newLog.lastIndex)
@@ -297,7 +309,9 @@ class StudyingViewModel @Inject constructor(
                     goalCheckMode = savedGoalCheckMode
                 )}
                 savedGoalCheckMode = null
-                onIsEditingChanged(false, null)
+                finishEditing()
+                // 일시정지 중에는 주기 저장이 돌지 않으므로 수정한 목표를 바로 백업한다
+                viewModelScope.launch { saveSession() }
             }
         }
     }
@@ -322,38 +336,39 @@ class StudyingViewModel @Inject constructor(
         }
     }
 
-    /** 수정중으로 변환*/
-    fun onIsEditingChanged(value: Boolean, index: Int? = null) {
+    /** 편집 종료 — 방금 새로 추가한 목표를 저장하지 않고 닫았으면(빈 목표) 마지막 목표 제거 */
+    private fun finishEditing() {
         _uiState.update { state ->
-            when {
-                // 편집 종료 + 방금 새로 추가한 로그를 저장하지 않은 경우 -> 마지막 로그 제거
-                !value && index == null && state.logIndex == state.studyLog.lastIndex && state.studyLog.last().log.isEmpty()-> {
-                    state.copy(
-                        studyLog = state.studyLog.dropLast(1),
-                        isEditing = false,
-                        logIndex = null
-                    )
-                }
-
-                // 새 로그 추가 시작
-                index == -1 -> {
-                    val newLog = state.studyLog + StudyLogUi()
-                    state.copy(studyLog = newLog, isEditing = value, logIndex = newLog.lastIndex)
-                }
-
-                // 기존 로그 편집
-                index != null -> state.copy(isEditing = value, logIndex = index)
-
-                // 그 외 (index == null, 단순 편집 상태만 토글)
-                else -> state.copy(isEditing = value, logIndex = index)
-            }
+            val isUnsavedNewLog = state.logIndex == state.studyLog.lastIndex && state.studyLog.lastOrNull()?.log?.isBlank() == true
+            state.copy(
+                studyLog = if (isUnsavedNewLog) state.studyLog.dropLast(1) else state.studyLog,
+                isEditing = false,
+                logIndex = null
+            )
         }
+    }
+
+    /**
+     * 최대 개수 이상이면 새 목표 추가를 막고 안내 토스트 발송 — 막았으면 true 반환
+     * (복구 등으로 이미 초과한 목록은 지우지 않고 추가만 막음)
+     * 연타 시 토스트가 쌓이지 않도록 이전 안내가 떠 있는 동안(LENGTH_LONG)은 토스트만 생략하고 추가는 계속 막음
+     */
+    private fun blockIfStudyLogFull(): Boolean {
+        if (_uiState.value.studyLog.size < MAX_STUDY_LOG_SIZE) return false
+        val now = SystemClock.elapsedRealtime()
+        val last = lastStudyLogLimitToastMs
+        if (last == null || now - last >= STUDY_LOG_LIMIT_TOAST_INTERVAL_MS) {
+            lastStudyLogLimitToastMs = now
+            sendToast(STUDY_LOG_LIMIT_MESSAGE, Toast.LENGTH_LONG)
+        }
+        return true
     }
 
     /** 목표 수정 함수 */
     fun onStudyLogChanged(index: Int, completed: Boolean? = null, log: String? = null) = _uiState.update {
         it.copy(
-            studyLog = if (log == "") {
+            // 공백만 입력한 목표도 빈 입력과 같이 삭제 — 완료 체크는 log = null로 호출되므로 삭제 대상 아님
+            studyLog = if (log != null && log.isBlank()) {
                 it.studyLog.filterIndexed { i, _ -> i != index }
             } else {
                 it.studyLog.mapIndexed { i, item ->
@@ -393,7 +408,14 @@ class StudyingViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO){
 
             val result = withTimeoutOrNull(5.seconds){
-                finishStudyingUseCase(potId, timestamp, _uiState.value.studyLog.map { it.log }, _uiState.value.timer, _uiState.value.startedAt)
+                finishStudyingUseCase(
+                    potId = potId,
+                    timestamp = timestamp,
+                    log = _uiState.value.studyLog.map { it.log },
+                    completed = _uiState.value.studyLog.map { it.isCompleted },
+                    time = _uiState.value.timer,
+                    startedAt = _uiState.value.startedAt
+                )
                     .onSuccess { clearSession() }
                     .onFailure { e ->
                         when (e){
@@ -417,6 +439,7 @@ class StudyingViewModel @Inject constructor(
                     potId = potId,
                     title = _uiState.value.title,
                     log = _uiState.value.studyLog.map { it.log },
+                    completed = _uiState.value.studyLog.map { it.isCompleted },
                     time = _uiState.value.timer,
                     level = _uiState.value.level
                 ))
@@ -446,8 +469,8 @@ class StudyingViewModel @Inject constructor(
         }
     }
 
-    private fun sendToast(message: String) {
-        viewModelScope.launch { _eventChannel.send(StudyingEvent.ShowToast(message)) }
+    private fun sendToast(message: String, duration: Int = Toast.LENGTH_SHORT) {
+        viewModelScope.launch { _eventChannel.send(StudyingEvent.ShowToast(message, duration)) }
     }
 
 }

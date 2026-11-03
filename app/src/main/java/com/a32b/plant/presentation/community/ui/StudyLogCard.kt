@@ -12,8 +12,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.a32b.plant.core.extension.isCompletedAt
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyLog
+import com.a32b.plant.presentation.core.component.StudyGoalItem
 
 @Composable
 fun StudyLogCard(studyLogs: List<StudyLog>) {
@@ -28,9 +30,13 @@ fun StudyLogCard(studyLogs: List<StudyLog>) {
                     modifier = Modifier.padding(10.dp),
                     fontSize = 15.sp
                 )
-                log.contents.forEach { content ->
-                    Text(content, style = MaterialTheme.typography.bodyMedium, fontSize = 13.sp,
-                        modifier = Modifier.padding(10.dp)
+                log.contents.forEachIndexed { index, content ->
+                    StudyGoalItem(
+                        text = content,
+                        isCompleted = log.completedContents.isCompletedAt(index),
+                        modifier = Modifier.padding(10.dp),
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 18.sp),
+                        iconSize = 8.sp
                     )
                 }
             }

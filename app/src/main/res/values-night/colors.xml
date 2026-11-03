@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 스플래시 다크모드: 앱 다크 테마 배경(#2D2D2D)과 맞추고 로고는 흰색 -->
+    <color name="splash_background">#2D2D2D</color>
+    <color name="splash_logo_track">#52FFFFFF</color>
+    <color name="splash_logo_primary">#FFFFFF</color>
+    <color name="splash_logo_accent">#FFFFFF</color>
+    <color name="splash_wordmark">#FFFFFF</color>
+</resources>

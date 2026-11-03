@@ -10,6 +10,8 @@ data class StudyLogEmbedDto(
     var title: String = "",
     @get:PropertyName("contents") @set:PropertyName("contents")
     var contents: List<String> = emptyList(),
+    @get:PropertyName("completedContents") @set:PropertyName("completedContents")
+    var completedContents: List<Boolean> = emptyList(),
     @get:PropertyName("studyingTime") @set:PropertyName("studyingTime")
     var studyingTime: Long = 0L,
     @get:PropertyName("createAt") @set:PropertyName("createAt")
