@@ -24,6 +24,7 @@ import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import com.a32b.plant.domain.usecase.studying.GetRecoverySessionUseCase
 import com.a32b.plant.domain.usecase.studying.RecoverStudySessionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,11 +32,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
-import kotlin.time.Duration.Companion.seconds
 
 data class AttendanceUiState(
     val count: Int = 0,
@@ -138,6 +137,9 @@ class HomeViewModel @Inject constructor(
     private val _isRecovering = MutableStateFlow(false)
     val isRecovering = _isRecovering.asStateFlow()
 
+    // 진행 중인 복구 세션 확인 — 저장·폐기를 시작하면 취소해 늦게 끝난 확인이 지운 세션을 되살리지 않게 함
+    private var recoveryCheckJob: Job? = null
+
     //박스 개봉 로딩
     private val _isBoxOpening = MutableStateFlow(false)
     val isBoxOpening = _isBoxOpening.asStateFlow()
@@ -182,35 +184,31 @@ class HomeViewModel @Inject constructor(
      */
     fun checkRecoverySession() {
         if (_isRecovering.value) return
-        viewModelScope.launch {
+        recoveryCheckJob = viewModelScope.launch {
             getRecoverySessionUseCase()
                 .onSuccess { session -> _recoverySession.value = session }
         }
     }
 
-    /** 오프라인에서 끝없이 기다리지 않도록 제한 시간을 두고, 실패하면 창을 유지해 다시 선택할 수 있게 함 */
+    /** 저장에 실패하거나 제한 시간이 지나면(AppError.Network) 창을 유지해 다시 선택할 수 있게 함 */
     fun recoverSession() {
         val session = _recoverySession.value ?: return
         if (_isRecovering.value) return
+        recoveryCheckJob?.cancel()
         _isRecovering.value = true
         viewModelScope.launch {
-            val result = withTimeoutOrNull(RECOVER_TIMEOUT) { recoverStudySessionUseCase(session) }
-            if (result == null) {
-                sendToast("네트워크 연결 상태를 확인해주세요.")
-            } else {
-                result
-                    .onSuccess {
-                        _recoverySession.value = null
-                        sendToast("학습 기록이 저장되었습니다.")
-                        deleteStudyingUserInfo()
+            recoverStudySessionUseCase(session)
+                .onSuccess {
+                    _recoverySession.value = null
+                    sendToast("학습 기록이 저장되었습니다.")
+                    deleteStudyingUserInfo()
+                }
+                .onFailure { error ->
+                    when (error) {
+                        is AppError.UnknownUser -> ensureCurrentUserUseCase()
+                        else -> sendToast(error.message)
                     }
-                    .onFailure { error ->
-                        when (error) {
-                            is AppError.UnknownUser -> ensureCurrentUserUseCase()
-                            else -> sendToast(error.message)
-                        }
-                    }
-            }
+                }
             _isRecovering.value = false
         }
     }
@@ -218,6 +216,7 @@ class HomeViewModel @Inject constructor(
     /** 로컬 백업만 지우면 바로 끝나므로 네트워크 상태와 상관없이 창을 닫음 */
     fun discardSession() {
         if (_isRecovering.value) return
+        recoveryCheckJob?.cancel()
         _isRecovering.value = true
         viewModelScope.launch {
             studyingRepository.clearLocalSession()
@@ -383,9 +382,5 @@ class HomeViewModel @Inject constructor(
                 _isBoxOpening.value = false
             }
         }
-    }
-
-    private companion object {
-        val RECOVER_TIMEOUT = 5.seconds
     }
 }

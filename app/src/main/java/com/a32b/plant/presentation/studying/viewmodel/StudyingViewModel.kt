@@ -40,7 +40,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDateTime
 import javax.inject.Inject
-import kotlin.time.Duration.Companion.seconds
 
 data class StudyLogUi(
     val log: String = "",
@@ -423,7 +422,7 @@ class StudyingViewModel @Inject constructor(
             // 저장이 끝나지 않은 채 화면을 떠나도 다시 이어서 공부하지 않고 홈 복구 창에서 처리되도록 종료 상태로 백업
             saveSession(StudyingSessionStatus.FINISHED)
 
-            val result = withTimeoutOrNull(5.seconds){
+            val result = withTimeoutOrNull(FinishStudyingUseCase.SAVE_TIMEOUT){
                 finishStudyingUseCase(
                     potId = potId,
                     timestamp = timestamp,
