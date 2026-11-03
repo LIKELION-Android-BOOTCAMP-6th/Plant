@@ -25,6 +25,33 @@ fun defaultConfettiParties(): List<Party> = listOf(
     )
 )
 
+fun festiveConfettiParties(): List<Party> = listOf(
+    // 왼쪽 하단 -> 오른쪽 위 축포
+    Party(
+        angle = 315,
+        spread = 50,
+        speed = 20f,
+        maxSpeed = 40f,
+        damping = 0.9f,
+        timeToLive = 3000L,
+        colors = listOf(0xfce18a, 0xff726d, 0xf4306d, 0xb48def),
+        emitter = Emitter(duration = 100, TimeUnit.MILLISECONDS).max(50),
+        position = Position.Relative(0.0, 1.0)
+    ),
+    // 오른쪽 하단 -> 왼쪽 위 축포
+    Party(
+        angle = 225,
+        spread = 50,
+        speed = 20f,
+        maxSpeed = 40f,
+        damping = 0.9f,
+        timeToLive = 3000L,
+        colors = listOf(0xb48def, 0x4CAF50, 0x2196F3, 0xfce18a),
+        emitter = Emitter(duration = 100, TimeUnit.MILLISECONDS).max(50),
+        position = Position.Relative(1.0, 1.0)
+    )
+)
+
 @Composable
 fun ConfettiOverlay(
     modifier: Modifier = Modifier,
