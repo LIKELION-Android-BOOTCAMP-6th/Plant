@@ -15,7 +15,7 @@ interface UserRemoteDataSource {
     suspend fun completeFirstLogin(uid: String, nickname: String): CompleteFirstLoginResult
     suspend fun updateProfile(uid: String, nickname: String, profileImg: String)
     suspend fun isNicknameTaken(nickname: String): Boolean
-    suspend fun registerNickname(nickname: String)
+    suspend fun registerNickname(uid: String, nickname: String)
     suspend fun deleteNickname(nickname: String)
     suspend fun checkAttendance(uid: String): AttendanceDecision
     suspend fun updateSessionToken(uid: String, token: String?)
