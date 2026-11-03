@@ -16,10 +16,6 @@ import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
 
-class InsufficientItemsException : Exception()
-class PotLevelMismatchException : Exception("이미 레벨업된 화분입니다.")
-class PotNotFoundException : Exception("화분 정보를 찾을 수 없습니다.")
-
 @Singleton
 class PotRemoteDataSourceImpl @Inject constructor(
     private val db: FirebaseFirestore
@@ -122,9 +118,10 @@ class PotRemoteDataSourceImpl @Inject constructor(
                 "item.${type.fieldKey}" to FieldValue.increment(-required.toLong())
             }
 
-            transaction.update(userRef, "items", updatedItems)
+            if  (updatedItems.isNotEmpty()) {
+                transaction.update(userRef, updatedItems)
+            }
             transaction.update(potRef, "potLevel", newLevel)
         }.await()
     }
 }
-

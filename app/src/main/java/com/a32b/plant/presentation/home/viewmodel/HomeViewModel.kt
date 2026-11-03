@@ -27,7 +27,6 @@ import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import com.a32b.plant.domain.usecase.studying.ClearStudyingSessionUseCase
 import com.a32b.plant.domain.usecase.studying.RecoverStudySessionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -400,27 +399,13 @@ class HomeViewModel @Inject constructor(
         return progress to text
     }
 
-    private var levelUpCheckJob: Job? = null
-
     // 레벨업 재검증
-    private fun recheckLevelUpCondition() {
-        levelUpCheckJob?.cancel()
+    private fun recheckLevelUpCondition(pot: Pot) {
+        val ready = pot.id.isNotEmpty() &&
+                pot != Pot.EMPTY &&
+                checkLevelUpConditionUseCase(pot.potLevel, pot.potTotalStudyingTime)
 
-        val pot = _displayPot.value
-        if (pot.id.isEmpty() || pot == Pot.EMPTY) {
-            _uiState.update { it.copy(levelUpReady = false) }
-            return
-        }
-
-        levelUpCheckJob = viewModelScope.launch {
-            checkLevelUpConditionUseCase(pot.potLevel, pot.potTotalStudyingTime)
-                .onSuccess { available ->
-                    _uiState.update { it.copy(levelUpReady = available) }
-                }
-                .onFailure {
-                    _uiState.update { it.copy(levelUpReady = false) }
-                }
-        }
+        _uiState.update { it.copy(levelUpReady = ready) }
     }
 
     //레벨업 함수
@@ -434,6 +419,7 @@ class HomeViewModel @Inject constructor(
                 .onFailure { e ->
                     _uiState.update { it.copy(isLoading = false) }
                     when (e) {
+                        is AppError.UnknownUser -> Unit
                         is AppError.InsufficientItems -> {
                             _uiState.update { it.copy(showInsufficientItemsDialog = true) }
                         }
@@ -456,8 +442,6 @@ class HomeViewModel @Inject constructor(
                 levelUpProgressText = text
             )
         }
-        viewModelScope.launch {
-            recheckLevelUpCondition()
-        }
+        recheckLevelUpCondition(pot)
     }
 }

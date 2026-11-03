@@ -165,7 +165,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                         todayStudyTime = todayStudyTime,
                         levelUpProgress = uiState.levelUpProgress,
                         levelUpProgressText = uiState.levelUpProgressText,
-                        levelUpAvailable = uiState.levelUpReady,
+                        levelUpReady = uiState.levelUpReady,
                         isLoading = uiState.isLoading,
                         onStartClick = {
                             if (!hasNoPot) {
@@ -464,7 +464,7 @@ fun MainPlantCard(
     todayStudyTime: String,
     levelUpProgress: Float,
     levelUpProgressText: String,
-    levelUpAvailable: Boolean,
+    levelUpReady: Boolean,
     isLoading: Boolean,
     onStartClick: () -> Unit,
     onLevelUpClick: () -> Unit,
@@ -577,7 +577,7 @@ fun MainPlantCard(
                 Button(
                     onClick = onLevelUpClick,
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = levelUpAvailable && !isLoading,
+                    enabled = levelUpReady && !isLoading,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
                     )
