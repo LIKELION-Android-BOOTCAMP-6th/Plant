@@ -25,6 +25,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -40,6 +41,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
@@ -47,6 +51,7 @@ import com.a32b.plant.domain.model.AttendanceReward
 import com.a32b.plant.domain.model.Item
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.type.ItemType
+import com.a32b.plant.domain.type.StudyingSessionStatus
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.ProfileImage
@@ -89,6 +94,17 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
     val todayStudyTime by viewModel.todayStudyTime.collectAsState()
 
     val hasNoPot = displayPot.id.isEmpty() || displayPot == Pot.EMPTY
+
+    // 결과 화면에서 돌아올 때도 저장되지 않은 세션을 다시 확인 (홈 ViewModel은 유지되어 init이 다시 실행되지 않음)
+    // LifecycleEventObserver는 등록 시점에 현재 상태까지 이벤트를 재생하므로 첫 진입에도 ON_RESUME이 발화됨
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.checkRecoverySession()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     recoverySession?.let { session ->
         RecoveryDialog(
@@ -779,7 +795,10 @@ private fun RecoveryDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "앱이 비정상 종료되어 저장되지 않은 학습 기록이 있습니다.",
+                    text = when (session.status) {
+                        StudyingSessionStatus.STUDYING -> "앱이 비정상 종료되어 저장되지 않은 학습 기록이 있습니다."
+                        StudyingSessionStatus.FINISHED -> "학습을 종료했지만 저장이 완료되지 않은 학습 기록이 있습니다."
+                    },
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(modifier = Modifier.height(4.dp))

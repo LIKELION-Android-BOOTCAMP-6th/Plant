@@ -35,6 +35,7 @@ class StudyingLocalDataSourceImpl @Inject constructor(
     private val LOG = stringPreferencesKey("log")
     private val STARTEDAT = longPreferencesKey("startedAt")
     private val IS_PAUSED = booleanPreferencesKey("isPaused")
+    private val STATUS = stringPreferencesKey("status")
 
     override suspend fun save(studying: StudyingSessionDto) {
         context.dataStore.edit { preferences ->
@@ -45,6 +46,7 @@ class StudyingLocalDataSourceImpl @Inject constructor(
             preferences[TIME] = studying.time
             preferences[STARTEDAT] = studying.startedAt
             preferences[IS_PAUSED] = studying.isPaused
+            studying.status?.let { preferences[STATUS] = it }
             studying.log?.let {
                 preferences[LOG] = Json.encodeToString(it)
             }
@@ -74,7 +76,8 @@ class StudyingLocalDataSourceImpl @Inject constructor(
             time = time,
             log = log,
             startedAt = startedAt,
-            isPaused = preferences[IS_PAUSED] ?: false // 이전 버전 백업에는 값이 없으므로 공부 중으로 처리
+            isPaused = preferences[IS_PAUSED] ?: false, // 이전 버전 백업에는 값이 없으므로 공부 중으로 처리
+            status = preferences[STATUS]
         )
     }
 

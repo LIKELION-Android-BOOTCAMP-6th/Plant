@@ -1,6 +1,5 @@
 package com.a32b.plant.domain.usecase.studying
 
-import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.result.Result
 import javax.inject.Inject
@@ -9,14 +8,16 @@ class ClearStudyingSessionUseCase @Inject constructor(
     private val repository: StudyingRepository,
 ) {
 
+    /**
+     * 로컬 백업을 먼저 지운 뒤 "공부 중" 표시(studying/{uid}) 삭제
+     * 서버 삭제가 실패하거나 거부돼도 로컬 백업은 지워지도록 순서를 둠
+     * 비정상 종료(isInterrupted)라면 로컬 백업은 복구용으로 남기고 서버 정보만 지움
+     */
     suspend operator fun invoke(isInterrupted: Boolean = false) : Result<Unit>{
-
-        val result = repository.deleteStudyingUserInfo()
-
-        //네트워크 오류가 아닐 경우 원격 실행 결과 리턴
-        if (result is Result.Failure && result.error !is AppError.Network) return result
-
-        //비정상 종료라면 studying 컬랙션에서 유저 정보만 지우고, 그게 아니라면 로컬 정보까지 지운 뒤 리턴
-        return if (!isInterrupted) repository.clearLocalSession() else result
+        if (!isInterrupted) {
+            val localResult = repository.clearLocalSession()
+            if (localResult is Result.Failure) return localResult
+        }
+        return repository.deleteStudyingUserInfo()
     }
 }

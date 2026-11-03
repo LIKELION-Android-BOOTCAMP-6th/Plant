@@ -5,6 +5,7 @@ import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.result.Result
+import com.a32b.plant.domain.type.StudyingSessionStatus
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import javax.inject.Inject
 
@@ -20,7 +21,7 @@ class StartStudyingSessionUseCase @Inject constructor(
     suspend operator fun invoke(tag: String, title: String, potId: String, time: Long, log: List<String>?, startedAt: Long, isPaused: Boolean) : Result<Unit> {
         return ensureCurrentUserUseCase {
             val localResult = repository.saveLocalSession(
-                StudyingSession(it.uid, tag, title, potId, time, log, startedAt, isPaused)
+                StudyingSession(it.uid, tag, title, potId, time, log, startedAt, isPaused, StudyingSessionStatus.STUDYING)
             )
             repository.initStudyingUser(
                 StudyingUser(it.uid, it.nickname, it.profileImg, tag, time)

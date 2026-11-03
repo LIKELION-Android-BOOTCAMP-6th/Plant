@@ -24,9 +24,10 @@ import com.a32b.plant.domain.usecase.pot.GetPotListUseCase
 import com.a32b.plant.domain.usecase.pot.GetTodayTotalStudyTimeUseCase
 import com.a32b.plant.domain.usecase.pot.LevelUpPotUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
-import com.a32b.plant.domain.usecase.studying.ClearStudyingSessionUseCase
+import com.a32b.plant.domain.usecase.studying.GetRecoverySessionUseCase
 import com.a32b.plant.domain.usecase.studying.RecoverStudySessionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -100,8 +101,8 @@ class HomeViewModel @Inject constructor(
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     private val getTodayTotalStudyTimeUseCase: GetTodayTotalStudyTimeUseCase,
     private val studyingRepository: StudyingRepository,
+    private val getRecoverySessionUseCase: GetRecoverySessionUseCase,
     private val recoverStudySessionUseCase: RecoverStudySessionUseCase,
-    private val clearStudyingSessionUseCase: ClearStudyingSessionUseCase,
     private val openBonusBoxUseCase: OpenBonusBoxUseCase,
     private val checkLevelUpConditionUseCase: CheckLevelUpConditionUseCase,
     private val levelUpPotUseCase: LevelUpPotUseCase
@@ -150,6 +151,9 @@ class HomeViewModel @Inject constructor(
     private val _isRecovering = MutableStateFlow(false)
     val isRecovering = _isRecovering.asStateFlow()
 
+    // 진행 중인 복구 세션 확인 — 새 확인이나 저장·폐기를 시작하면 취소해 늦게 끝난 확인이 지운 세션을 되살리지 않게 함
+    private var recoveryCheckJob: Job? = null
+
     //박스 개봉 로딩
     private val _isBoxOpening = MutableStateFlow(false)
     val isBoxOpening = _isBoxOpening.asStateFlow()
@@ -170,7 +174,6 @@ class HomeViewModel @Inject constructor(
                 _userItem.value = user.item
 
                 loadActivePot(uid = user.uid, lastSelectedPotId = user.lastSelectedPotId)
-                checkRecoverySession(user.uid)
             } ?: Unit
             loaded()
         }
@@ -193,23 +196,32 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private suspend fun checkRecoverySession(uid: String) {
-        studyingRepository.readLocalSession()
-            .onSuccess { session ->
-                if (session != null && session.userId == uid && session.time > 0L) {
-                    _recoverySession.value = session
-                }
-            }
+    /**
+     * 저장되지 않은 학습 세션 확인
+     * 결과 화면에서 돌아올 때는 ViewModel이 유지되므로, 홈이 다시 보일 때마다(ON_RESUME) 호출
+     * 복구 처리 중에는 지워지기 전의 백업을 다시 읽어 창이 되살아나지 않도록 건너뜀
+     */
+    fun checkRecoverySession() {
+        if (_isRecovering.value) return
+        recoveryCheckJob?.cancel()
+        recoveryCheckJob = viewModelScope.launch {
+            getRecoverySessionUseCase()
+                .onSuccess { session -> _recoverySession.value = session }
+        }
     }
 
+    /** 저장에 실패하거나 제한 시간이 지나면(AppError.Network) 창을 유지해 다시 선택할 수 있게 함 */
     fun recoverSession() {
         val session = _recoverySession.value ?: return
+        if (_isRecovering.value) return
+        recoveryCheckJob?.cancel()
         _isRecovering.value = true
         viewModelScope.launch {
             recoverStudySessionUseCase(session)
                 .onSuccess {
                     _recoverySession.value = null
                     sendToast("학습 기록이 저장되었습니다.")
+                    deleteStudyingUserInfo()
                 }
                 .onFailure { error ->
                     when (error) {
@@ -221,21 +233,28 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    /** 로컬 백업만 지우면 바로 끝나므로 네트워크 상태와 상관없이 창을 닫음 */
     fun discardSession() {
+        if (_isRecovering.value) return
+        recoveryCheckJob?.cancel()
         _isRecovering.value = true
         viewModelScope.launch {
-            clearStudyingSessionUseCase()
+            studyingRepository.clearLocalSession()
                 .onSuccess {
                     _recoverySession.value = null
+                    deleteStudyingUserInfo()
                 }
-                .onFailure { error ->
-                    when (error) {
-                        is AppError.UnknownUser -> ensureCurrentUserUseCase()
-                        else -> sendToast(error.message)
-                    }
-                }
+                .onFailure { error -> sendToast(error.message) }
             _isRecovering.value = false
         }
+    }
+
+    /**
+     * "공부 중" 표시(studying/{uid}) 삭제 — 오프라인이면 연결 후 반영되므로 완료를 기다리지 않음
+     * 실패해도 복구·폐기 결과에는 영향이 없어 별도 처리 없음 (에러 로그는 레포지토리에서 찍고 있음)
+     */
+    private fun deleteStudyingUserInfo() {
+        viewModelScope.launch { studyingRepository.deleteStudyingUserInfo() }
     }
 
     private fun loadActivePot(uid: String, lastSelectedPotId: String){
