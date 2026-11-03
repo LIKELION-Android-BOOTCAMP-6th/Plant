@@ -417,6 +417,12 @@ class HomeViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             levelUpPotUseCase(potId, currentPotLevel)
                 .onSuccess {
+                    val leveledUp = _displayPot.value.let {
+                        if (it.id == potId) it.copy(potLevel = currentPotLevel + 1) else it
+                    }
+
+                    updateProgressAndCondition(leveledUp)
+
                     _uiState.update { it.copy(isLoading = false) }
                     _eventChannel.send(HomeEvent.LevelUpSuccess)
                 }
