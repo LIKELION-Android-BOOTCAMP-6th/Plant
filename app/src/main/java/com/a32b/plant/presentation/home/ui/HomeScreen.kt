@@ -582,7 +582,7 @@ fun MainPlantCard(
                         containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
-                    Text("화분 레벨업", style = MaterialTheme.typography.titleMedium)
+                    Text("화분 레벨업", style = MaterialTheme.typography.labelLarge)
                 }
             }
 
