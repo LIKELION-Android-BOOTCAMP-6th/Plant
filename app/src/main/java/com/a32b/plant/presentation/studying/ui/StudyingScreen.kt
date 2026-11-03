@@ -78,6 +78,8 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
     val timerButtonText = if (uiState.isStudying) "일시정지" else "학습하기"
     val timerButtonBack = if (uiState.isStudying) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary
 
+    // 종료 저장 중에도 비활성화하지 않음 — 비활성화하면 기본 뒤로 가기로 화면을 떠나 저장이 취소됨
+    // 저장 중 호출은 ViewModel에서 무시
     BackHandler {
         viewModel.onChangeGoalCheckMode(StudyingGoalCheckMode.FINISH)
     }

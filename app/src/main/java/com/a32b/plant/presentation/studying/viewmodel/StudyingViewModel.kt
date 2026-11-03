@@ -57,6 +57,7 @@ data class StudyingUiState(
     val isLocalSaved: Boolean = true, // 로컬 저장 성공 여부 체크
     val startedAt: Long = 0L,
     val isLoading: Boolean = false,
+    val isFinished: Boolean = false, // 종료 확정 여부 — 종료 저장을 시작하면 화면을 떠날 때까지 true 유지
     val error: String? = null,
     val isGoalInputDialogShown: Boolean = true, //학습 목표 입력
     val goalCheckMode: StudyingGoalCheckMode? = null,
@@ -331,6 +332,8 @@ class StudyingViewModel @Inject constructor(
 
     /** 학습 목표 확인 다이얼로그 표출 모드 제어*/
     fun onChangeGoalCheckMode(mode: StudyingGoalCheckMode?) {
+        // 종료 저장 중·저장 후 뒤로 가기 등으로 확인 창이 다시 열려 종료가 한 번 더 실행되지 않도록 무시
+        if (_uiState.value.isFinished) return
         if (mode != null) {
             if (mode == StudyingGoalCheckMode.FINISH) {
                 val wasStudying = _uiState.value.isStudying
@@ -400,8 +403,11 @@ class StudyingViewModel @Inject constructor(
 
     /** 학습 완전 종료 시 (= 다이얼로그에서도 기록 입력 후 종료 버튼 클릭했을 때)    */
     fun onIsStudyFinishChange() {
+        // 종료 버튼 연타 시 학습 기록·학습 시간이 두 번 저장되지 않도록 한 번만 실행
+        // isLoading은 저장이 끝나면 풀리므로(결과 화면 이동 전) 별도 플래그로 막음
+        if (_uiState.value.isFinished) return
         sendServiceIntent(StudyingTimerService.ACTION_STOP)
-        _uiState.update { it.copy(isLoading = true, goalCheckMode = null) }
+        _uiState.update { it.copy(isLoading = true, isFinished = true, goalCheckMode = null) }
         onFinishStudyingClick()
     }
 
