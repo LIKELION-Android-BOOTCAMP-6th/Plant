@@ -137,7 +137,7 @@ class HomeViewModel @Inject constructor(
     private val _isRecovering = MutableStateFlow(false)
     val isRecovering = _isRecovering.asStateFlow()
 
-    // 진행 중인 복구 세션 확인 — 저장·폐기를 시작하면 취소해 늦게 끝난 확인이 지운 세션을 되살리지 않게 함
+    // 진행 중인 복구 세션 확인 — 새 확인이나 저장·폐기를 시작하면 취소해 늦게 끝난 확인이 지운 세션을 되살리지 않게 함
     private var recoveryCheckJob: Job? = null
 
     //박스 개봉 로딩
@@ -184,6 +184,7 @@ class HomeViewModel @Inject constructor(
      */
     fun checkRecoverySession() {
         if (_isRecovering.value) return
+        recoveryCheckJob?.cancel()
         recoveryCheckJob = viewModelScope.launch {
             getRecoverySessionUseCase()
                 .onSuccess { session -> _recoverySession.value = session }

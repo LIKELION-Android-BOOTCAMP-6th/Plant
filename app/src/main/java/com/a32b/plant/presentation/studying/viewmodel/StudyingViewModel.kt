@@ -443,7 +443,7 @@ class StudyingViewModel @Inject constructor(
                         }
                     }
             }
-            if (result == null) sendToast("네트워크 연결 상태를 확인해주세요.")
+            if (result == null) sendToast(AppError.Network().message)
 
             _uiState.update { it.copy(isLoading = false) }
 
