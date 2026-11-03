@@ -59,6 +59,7 @@ import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.presentation.core.component.ConfettiOverlay
+import com.a32b.plant.presentation.core.component.festiveConfettiParties
 import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.theme.primary
 import com.a32b.plant.presentation.theme.sub2
@@ -82,6 +83,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
     val isBoxOpening by viewModel.isBoxOpening.collectAsState()
     var bonusBoxResult by remember { mutableStateOf<List<ItemType>?>(null) }
     var showOpenDialog by remember { mutableStateOf(false) }
+    var showLevelUpConfetti by remember { mutableStateOf(false) }
 
     val uiState by viewModel.uiState.collectAsState()
     val todayStudyTime by viewModel.todayStudyTime.collectAsState()
@@ -129,6 +131,10 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
             when (event) {
                 is HomeEvent.ShowToast -> context.showToast(event.message)
                 is HomeEvent.BonusBoxResult -> bonusBoxResult = event.items
+                is HomeEvent.LevelUpSuccess -> {
+                    showLevelUpConfetti = true
+                    context.showToast("레벨업 성공!")
+                }
             }
         }
     }
@@ -261,6 +267,12 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
             BonusBoxResultDialog(
                 items = items,
                 onDismiss = { bonusBoxResult = null }
+            )
+        }
+        if (showLevelUpConfetti) {
+            ConfettiOverlay(
+                parties = remember { festiveConfettiParties() },
+                onFinished = { showLevelUpConfetti = false}
             )
         }
     }

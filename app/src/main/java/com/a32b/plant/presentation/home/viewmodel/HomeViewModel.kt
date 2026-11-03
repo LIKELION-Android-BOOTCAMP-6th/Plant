@@ -57,6 +57,7 @@ data class HomeUiState(
 sealed class HomeEvent {
     data class ShowToast(val message: String) : HomeEvent()
     data class BonusBoxResult(val items: List<ItemType>) : HomeEvent()
+    object LevelUpSuccess : HomeEvent()
 }
 
 private fun DailyCheckThisMonth.toAttendanceUiState(): AttendanceUiState {
@@ -417,6 +418,7 @@ class HomeViewModel @Inject constructor(
             levelUpPotUseCase(potId, currentPotLevel)
                 .onSuccess {
                     _uiState.update { it.copy(isLoading = false) }
+                    _eventChannel.send(HomeEvent.LevelUpSuccess)
                 }
                 .onFailure { e ->
                     _uiState.update { it.copy(isLoading = false) }
