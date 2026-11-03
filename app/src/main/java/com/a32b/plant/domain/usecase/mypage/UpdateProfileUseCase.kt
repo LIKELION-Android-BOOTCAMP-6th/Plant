@@ -46,7 +46,7 @@ class UpdateProfileUseCase @Inject constructor(
                 is Result.Failure -> return result
             }
 
-            val registerResult = userRepository.registerNickname(newNickname)
+            val registerResult = userRepository.registerNickname(currentUser.uid, newNickname)
             if (registerResult is Result.Failure) {
                 return registerResult
             }
@@ -69,6 +69,7 @@ class UpdateProfileUseCase @Inject constructor(
             newNickname != currentUser.nickname
         ) {
             return rollbackNicknameChange(
+                uid = currentUser.uid,
                 previousNickname = currentUser.nickname,
                 newNickname = newNickname,
                 originalFailure = updateResult
@@ -91,11 +92,12 @@ class UpdateProfileUseCase @Inject constructor(
     }
 
     private suspend fun rollbackNicknameChange(
+        uid: String,
         previousNickname: String,
         newNickname: String,
         originalFailure: Result.Failure
     ): Result.Failure {
-        val restoreResult = userRepository.registerNickname(previousNickname)
+        val restoreResult = userRepository.registerNickname(uid, previousNickname)
         if (restoreResult is Result.Failure) {
             originalFailure.error.addSuppressed(restoreResult.error)
         }

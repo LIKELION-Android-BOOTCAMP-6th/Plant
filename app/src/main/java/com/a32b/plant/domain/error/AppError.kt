@@ -16,6 +16,7 @@ sealed class AppError : Throwable() {
     data class NicknameTaken(override val message: String = "사용 중인 닉네임입니다.") : AppError()
     data class Custom(override val message: String) : AppError()
     data class Debug(override val message: String) : AppError() //외부로 노출하지 않고 조용히 처리하는 오류일 경우
+    data class InsufficientItems(override val message: String = "아이템이 부족합니다."): AppError()
 }
 
 // 수정하려던 댓글이 이미 삭제된 경우의 안내 문구 — Repository(에러)와 ViewModel(사전 확인)이 함께 사용

@@ -80,7 +80,7 @@ class UserRemoteDataSourceImpl @Inject constructor(
                 return@runTransaction CompleteFirstLoginResult.NicknameTaken
             }
 
-            txn.set(nicknameRef, mapOf("nickname" to nickname))
+            txn.set(nicknameRef, mapOf("nickname" to nickname, "uid" to uid))
             txn.update(
                 userRef,
                 "nickname", nickname,
@@ -110,10 +110,11 @@ class UserRemoteDataSourceImpl @Inject constructor(
         return doc.exists()
     }
 
-    override suspend fun registerNickname(nickname: String) {
+    // 보안 규칙이 uid로 소유자를 확인하므로 닉네임 문서에는 항상 uid를 함께 저장한다.
+    override suspend fun registerNickname(uid: String, nickname: String) {
         db.collection("nicknames")
             .document(nickname)
-            .set(mapOf("nickname" to nickname))
+            .set(mapOf("nickname" to nickname, "uid" to uid))
             .await()
     }
 
