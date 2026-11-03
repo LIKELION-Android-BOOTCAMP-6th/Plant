@@ -333,6 +333,7 @@ class StudyingViewModel @Inject constructor(
     /** 학습 목표 확인 다이얼로그 표출 모드 제어*/
     fun onChangeGoalCheckMode(mode: StudyingGoalCheckMode?) {
         // 종료 저장 중·저장 후 뒤로 가기 등으로 확인 창이 다시 열려 종료가 한 번 더 실행되지 않도록 무시
+        // 닫기(null)도 막음 — 통과하면 종료 후 타이머가 재개되고 FINISHED 백업이 STUDYING으로 덮임
         if (_uiState.value.isFinished) return
         if (mode != null) {
             if (mode == StudyingGoalCheckMode.FINISH) {
