@@ -3,7 +3,9 @@ package com.a32b.plant.data.source.remote.pot
 import android.util.Log
 import com.a32b.plant.data.model.PotDto
 import com.a32b.plant.data.model.StudyLogDto
+import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.Tag
+import com.a32b.plant.domain.type.ItemType
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Source
 import kotlinx.coroutines.channels.awaitClose
@@ -62,7 +64,7 @@ class PotRemoteDataSourceImpl @Inject constructor(
     }
 
     //화분 레벨 업데이트
-    override suspend fun updatePotLevel(uid: String, potId: String, newLevel: Int): Result<Unit> = runCatching {
+    override suspend fun updatePotLevel(uid: String, potId: String, newLevel: Int) {
         db.collection("users").document(uid)
             .collection("pots")
             .document(potId)
@@ -94,4 +96,43 @@ class PotRemoteDataSourceImpl @Inject constructor(
         }
     }
 
+    override suspend fun levelUpWithItemConsumption(
+        uid: String,
+        potId: String,
+        newLevel: Int,
+        items: Map<ItemType, Int>
+    ) {
+        val userRef = db.collection("users").document(uid)
+        val potRef = userRef.collection("pots").document(potId)
+
+        db.runTransaction { transaction ->
+            val userSnapshot = transaction.get(userRef)
+
+            val rawItemsMap = userSnapshot.get("items") as? Map<*, *> ?: emptyMap<Any, Any>()
+            val currentItemsMap = rawItemsMap.entries.associate { (k, v) ->
+                (k as? String).orEmpty() to (v as? Number)?.toLong().orElse(0L)
+            }
+
+            for ((itemType, requiredCount) in items) {
+                val key = itemType.name
+                val currentCount = (currentItemsMap[key] ?: 0L).toInt()
+
+                if (currentCount < requiredCount) {
+                    throw AppError.InsufficientItems()
+                }
+            }
+
+            val updatedItemsMap = currentItemsMap.toMutableMap()
+            for ((itemType, requiredCount) in items) {
+                val key = itemType.name
+                val currentCount = (updatedItemsMap[key] ?: 0L).toInt()
+                updatedItemsMap[key] = (currentCount - requiredCount).toLong()
+            }
+
+            transaction.update(userRef, "items", updatedItemsMap)
+            transaction.update(potRef, "potLevel", newLevel)
+        }.await()
+    }
+
+    private fun Long?.orElse(default: Long): Long = this ?: default
 }

@@ -391,7 +391,7 @@ class HomeViewModel @Inject constructor(
         val condition = PotLevelConditions.getCondition(pot.potLevel)
             ?: return 1f to "최고 레벨"
 
-        val maxMs = condition.requiredMaxHours * 3_600_000L
+        val maxMs = condition.maxHoursForProgress * 3_600_000L
         val progress = (pot.potTotalStudyingTime.toFloat() / maxMs).coerceIn(0f, 1f)
 
         val currentMin = pot.potTotalStudyingTime / 60_000
@@ -428,12 +428,9 @@ class HomeViewModel @Inject constructor(
                 .onFailure { e ->
                     _uiState.update { it.copy(isLoading = false) }
                     when (e) {
-                        is AppError.Custom -> {
-                            if (e.message.contains("부족")) {
-                                _uiState.update { it.copy(showInsufficientItemsDialog = true) }
-                            } else {
-                                sendToast(e.message)
-                            }
+                        is AppError.InsufficientItems -> {
+                            // [수정] 타입으로 안전하게 분기하여 아이템 부족 다이얼로그 표시
+                            _uiState.update { it.copy(showInsufficientItemsDialog = true) }
                         }
                         else -> sendToast(e.message)
                     }

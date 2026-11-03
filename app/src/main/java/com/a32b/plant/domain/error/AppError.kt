@@ -15,4 +15,5 @@ sealed class AppError : Throwable() {
     data class Permission(override val message: String = "권한이 없습니다.") : AppError()
     data class Custom(override val message: String) : AppError()
     data class Debug(override val message: String) : AppError() //외부로 노출하지 않고 조용히 처리하는 오류일 경우
+    data class InsufficientItems(override val message: String = "아이템이 부족합니다."): AppError()
 }

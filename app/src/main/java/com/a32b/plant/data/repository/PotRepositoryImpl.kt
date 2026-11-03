@@ -10,6 +10,7 @@ import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.PotRepository
 import com.a32b.plant.domain.result.Result
+import com.a32b.plant.domain.type.ItemType
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
@@ -50,7 +51,7 @@ class PotRepositoryImpl @Inject constructor(
 
     override suspend fun updatePotLevel(uid: String, potId: String, newLevel: Int): Result<Unit> {
         return safeRunCatching {
-            potRemoteDataSource.updatePotLevel(uid, potId, newLevel).getOrThrow()
+            potRemoteDataSource.updatePotLevel(uid, potId, newLevel)
         }.fold(
             onSuccess = { Result.Success(it) },
             onFailure = { e ->
@@ -157,5 +158,23 @@ class PotRepositoryImpl @Inject constructor(
         }
         is IllegalArgumentException -> AppError.Unknown()
         else -> if (isWrite) AppError.Upload() else AppError.Custom(defaultMessage)
+    }
+
+    //레벨업 및 아이템 차감
+    override suspend fun levelUpWithItemConsumption(
+        uid: String,
+        potId: String,
+        newLevel: Int,
+        items: Map<ItemType, Int>
+    ): Result<Unit> {
+        return safeRunCatching {
+            potRemoteDataSource.levelUpWithItemConsumption(uid, potId, newLevel, items)
+        }.fold(
+            onSuccess = { Result.Success(it) },
+            onFailure = { e ->
+                Log.e("PotRepository", "화분 레벨업 및 아이템 차감 실패", e)
+                Result.Failure(handleError(e, "화분 레벨업에 실패했습니다.", isWrite = true))
+            }
+        )
     }
 }

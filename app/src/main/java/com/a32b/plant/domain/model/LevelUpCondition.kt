@@ -3,21 +3,21 @@ package com.a32b.plant.domain.model
 import com.a32b.plant.domain.type.ItemType
 
 data class LevelUpCondition(
-    val requiredHours: Long,       // 아이템 소비 기준 시점 — 레벨업 버튼 활성화 기준
-    val requiredMaxHours: Long,    // 필요 학습 시간
+    val minHoursForLevelUp: Long,    // 레벨업 가능 최소 시간 — 레벨업 버튼 활성화 기준[cite: 5]
+    val maxHoursForProgress: Long,   // 진행도 바 기준 최대 시간 (필요 학습 시간)[cite: 5]
     val requiredItems: Map<ItemType, Int>
 )
 
 object PotLevelConditions {
     val table: Map<Int, LevelUpCondition> = mapOf(
         0 to LevelUpCondition(
-            requiredHours = 1L,
-            requiredMaxHours = 5L,
+            minHoursForLevelUp = 1L,
+            maxHoursForProgress = 5L,
             requiredItems = mapOf(ItemType.HEART to 1)
         ),
         1 to LevelUpCondition(
-            requiredHours = 5L,
-            requiredMaxHours = 15L,
+            minHoursForLevelUp = 5L,
+            maxHoursForProgress = 15L,
             requiredItems = mapOf(
                 ItemType.SUN to 3,
                 ItemType.WATER to 1,
@@ -25,8 +25,8 @@ object PotLevelConditions {
             )
         ),
         2 to LevelUpCondition(
-            requiredHours = 15L,
-            requiredMaxHours = 40L,
+            minHoursForLevelUp = 15L,
+            maxHoursForProgress = 40L,
             requiredItems = mapOf(
                 ItemType.WATER to 5,
                 ItemType.SUN to 15,
@@ -34,8 +34,8 @@ object PotLevelConditions {
             )
         ),
         3 to LevelUpCondition(
-            requiredHours = 30L,
-            requiredMaxHours = 90L,
+            minHoursForLevelUp = 30L,
+            maxHoursForProgress = 90L,
             requiredItems = mapOf(
                 ItemType.FERTILIZER to 3,
                 ItemType.SUN to 13,
@@ -43,8 +43,8 @@ object PotLevelConditions {
             )
         ),
         4 to LevelUpCondition(
-            requiredHours = 70L,
-            requiredMaxHours = 200L,
+            minHoursForLevelUp = 70L,
+            maxHoursForProgress = 200L,
             requiredItems = mapOf(
                 ItemType.NUTRIENT to 1,
                 ItemType.FERTILIZER to 10,
@@ -53,8 +53,8 @@ object PotLevelConditions {
             )
         ),
         5 to LevelUpCondition(
-            requiredHours = 150L,
-            requiredMaxHours = 500L,
+            minHoursForLevelUp = 150L,
+            maxHoursForProgress = 500L,
             requiredItems = mapOf(
                 ItemType.NUTRIENT to 5,
                 ItemType.FERTILIZER to 10,

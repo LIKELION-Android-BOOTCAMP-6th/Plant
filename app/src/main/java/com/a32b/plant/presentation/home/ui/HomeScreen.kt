@@ -59,6 +59,7 @@ import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.presentation.core.component.ConfettiOverlay
+import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.theme.primary
 import com.a32b.plant.presentation.theme.sub2
 import com.a32b.plant.presentation.theme.sub_green1
@@ -165,6 +166,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                         levelUpProgress = uiState.levelUpProgress,
                         levelUpProgressText = uiState.levelUpProgressText,
                         levelUpAvailable = uiState.levelUpAvailable,
+                        isLoading = uiState.isLoading,
                         onStartClick = {
                             if (!hasNoPot) {
                                 navController.navigate(
@@ -252,13 +254,15 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
             }
         }
 
+        if (uiState.isLoading){
+            LoadingBox()
+        }
         bonusBoxResult?.let { items ->
             BonusBoxResultDialog(
                 items = items,
                 onDismiss = { bonusBoxResult = null }
             )
         }
-
     }
 }
 
@@ -461,6 +465,7 @@ fun MainPlantCard(
     levelUpProgress: Float,
     levelUpProgressText: String,
     levelUpAvailable: Boolean,
+    isLoading: Boolean,
     onStartClick: () -> Unit,
     onLevelUpClick: () -> Unit,
     onChangeOrMakeClick: () -> Unit,
@@ -572,7 +577,7 @@ fun MainPlantCard(
                 Button(
                     onClick = onLevelUpClick,
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = levelUpAvailable,
+                    enabled = levelUpAvailable && !isLoading,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
                     )
