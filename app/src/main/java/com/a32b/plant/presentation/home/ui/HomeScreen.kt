@@ -190,6 +190,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                                 viewModel.onLevelUpClick(displayPot.id, displayPot.potLevel)
                             }
                         },
+
                         //화분 생성 이동 or 화분 변경 다이얼로그 오픈
                         onChangeOrMakeClick = {
                             if (hasNoPot) {

@@ -26,7 +26,7 @@ fun defaultConfettiParties(): List<Party> = listOf(
 )
 
 fun festiveConfettiParties(): List<Party> = listOf(
-    // 왼쪽 하단 -> 오른쪽 위로 쏘는 축포
+    // 왼쪽 하단 -> 오른쪽 위 축포
     Party(
         angle = 315,
         spread = 50,
@@ -38,7 +38,7 @@ fun festiveConfettiParties(): List<Party> = listOf(
         emitter = Emitter(duration = 100, TimeUnit.MILLISECONDS).max(50),
         position = Position.Relative(0.0, 1.0)
     ),
-    // 오른쪽 하단 -> 왼쪽 위로 쏘는 축포
+    // 오른쪽 하단 -> 왼쪽 위 축포
     Party(
         angle = 225,
         spread = 50,
