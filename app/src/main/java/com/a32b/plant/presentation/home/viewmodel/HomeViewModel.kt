@@ -2,6 +2,7 @@ package com.a32b.plant.presentation.home.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
+import com.a32b.plant.core.util.KST_ZONE_ID
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.domain.error.AppError
@@ -93,6 +94,14 @@ private fun DailyCheckThisMonth.toAttendanceUiState(): AttendanceUiState {
     }
 }
 
+// 유저 정보로 출석 상태를 다시 계산하되, 진행 중인 보상 다이얼로그와 출석 처리 중 상태는 유지한다
+private fun DailyCheckThisMonth.toAttendanceUiStateKeeping(
+    current: AttendanceUiState
+): AttendanceUiState = toAttendanceUiState().copy(
+    reward = current.reward,
+    isChecking = current.isChecking
+)
+
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val getActivePotUseCase: GetActivePotUseCase,
@@ -130,6 +139,10 @@ class HomeViewModel @Inject constructor(
     private val _attendanceUiState = MutableStateFlow(AttendanceUiState())
     val attendanceUiState = _attendanceUiState.asStateFlow()
 
+    private val _showAttendanceDialog = MutableStateFlow(false)
+    val showAttendanceDialog = _showAttendanceDialog.asStateFlow()
+    private var lastAutoAttendanceDate: LocalDate? = null
+
     // 일회성 화면 이벤트
     private val _eventChannel = Channel<HomeEvent>(Channel.BUFFERED)
     val events = _eventChannel.receiveAsFlow()
@@ -151,7 +164,8 @@ class HomeViewModel @Inject constructor(
     private val _isRecovering = MutableStateFlow(false)
     val isRecovering = _isRecovering.asStateFlow()
 
-    // 진행 중인 복구 세션 확인 — 새 확인이나 저장·폐기를 시작하면 취소해 늦게 끝난 확인이 지운 세션을 되살리지 않게 함
+    // 진행 중인 홈 복귀 처리(복구 세션 확인 → 자동 출석 판단)
+    // 새 복귀나 저장·폐기를 시작하면 취소해 늦게 끝난 확인이 지운 세션을 되살리지 않게 함
     private var recoveryCheckJob: Job? = null
 
     //박스 개봉 로딩
@@ -179,6 +193,56 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private fun maybeShowAutomaticAttendanceDialog() {
+        if (_recoverySession.value != null) return
+
+        val today = LocalDate.now(KST_ZONE_ID)
+        if (lastAutoAttendanceDate == today) return
+
+        lastAutoAttendanceDate = today
+        if (!_attendanceUiState.value.isAttendanceCompleted) {
+            _showAttendanceDialog.value = true
+        }
+    }
+
+    fun openAttendanceDialog() {
+        _showAttendanceDialog.value = true
+    }
+
+    fun closeAttendanceDialog() {
+        _showAttendanceDialog.value = false
+    }
+
+    /**
+     * 홈이 보일 때마다(ON_RESUME) 호출 — 첫 진입 포함
+     * 1. 저장되지 않은 학습 세션 확인 (결과 화면에서 돌아올 때는 ViewModel이 유지되어 init이 다시 실행되지 않음)
+     * 2. 복구 확인이 끝난 뒤에 자동 출석 판단 (두 창이 겹치지 않도록 순서 고정)
+     * 복구 처리 중에는 지워지기 전의 백업을 다시 읽어 창이 되살아나지 않도록 건너뜀
+     */
+    fun onHomeResumed() {
+        if (_isRecovering.value) return
+        recoveryCheckJob?.cancel()
+        recoveryCheckJob = viewModelScope.launch {
+            getRecoverySessionUseCase()
+                .onSuccess { session -> _recoverySession.value = session }
+            // 조회가 실패해도 판단을 진행한다. 실패 종류는 UnknownUser(아래 decideAutomaticAttendance가 currentUser null로 조용히 반환)
+            // 와 로컬 읽기 실패(이번 복귀에는 복구 창을 못 띄우며, 이후 백업이 발견되면 HomeScreen의 recoverySession == null 조건이 출석 창을 숨김)
+            // 현재 init은 동기 완료라 이 대기는 즉시 통과하며, init이 비동기가 될 때를 대비한 대기다
+            isLoading.first { !it }
+            decideAutomaticAttendance()
+        }
+    }
+
+    private fun decideAutomaticAttendance() {
+        // 같은 날 복귀는 아직 갱신되지 않은 유저 정보가 방금 한 출석 상태를 덮어쓰지 않도록 건너뛴다
+        if (lastAutoAttendanceDate == LocalDate.now(KST_ZONE_ID)) return
+
+        // 복구 세션 조회(getRecoverySessionUseCase)가 이미 ensureCurrentUserUseCase로 세션 만료를 알렸으므로
+        // 이벤트 중복을 막기 위해 여기서는 현재 값을 직접 읽고, 값이 없으면 이벤트 없이 반환한다
+        val user = userRepository.currentUser.value ?: return
+        _attendanceUiState.update { user.monthCheck.toAttendanceUiStateKeeping(it) }
+        maybeShowAutomaticAttendanceDialog()
+    }
 
     private fun observeUserItem() {
         viewModelScope.launch {
@@ -187,26 +251,11 @@ class HomeViewModel @Inject constructor(
                     _userItem.value = it.item
                     _userName.value = it.nickname
 
-                    val newState = it.monthCheck.toAttendanceUiState()
                     _attendanceUiState.update { currentUiState ->
-                        newState.copy(reward = currentUiState.reward)
+                        it.monthCheck.toAttendanceUiStateKeeping(currentUiState)
                     }
                 }
             }
-        }
-    }
-
-    /**
-     * 저장되지 않은 학습 세션 확인
-     * 결과 화면에서 돌아올 때는 ViewModel이 유지되므로, 홈이 다시 보일 때마다(ON_RESUME) 호출
-     * 복구 처리 중에는 지워지기 전의 백업을 다시 읽어 창이 되살아나지 않도록 건너뜀
-     */
-    fun checkRecoverySession() {
-        if (_isRecovering.value) return
-        recoveryCheckJob?.cancel()
-        recoveryCheckJob = viewModelScope.launch {
-            getRecoverySessionUseCase()
-                .onSuccess { session -> _recoverySession.value = session }
         }
     }
 
@@ -220,6 +269,7 @@ class HomeViewModel @Inject constructor(
             recoverStudySessionUseCase(session)
                 .onSuccess {
                     _recoverySession.value = null
+                    maybeShowAutomaticAttendanceDialog()
                     sendToast("학습 기록이 저장되었습니다.")
                     deleteStudyingUserInfo()
                 }
@@ -242,6 +292,7 @@ class HomeViewModel @Inject constructor(
             studyingRepository.clearLocalSession()
                 .onSuccess {
                     _recoverySession.value = null
+                    maybeShowAutomaticAttendanceDialog()
                     deleteStudyingUserInfo()
                 }
                 .onFailure { error -> sendToast(error.message) }

@@ -142,6 +142,7 @@ fun CommunityListScreen(
         BackHandler {
             navController.navigate(Routes.HomeMain) {
                 popUpTo(Routes.HomeMain) { inclusive = false }
+                launchSingleTop = true
             }
         }
 

@@ -74,17 +74,23 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 @Composable
-fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltViewModel()) {
+fun HomeScreen(
+    navController: NavController,
+    isSplashFinished: Boolean,
+    viewModel: HomeViewModel = hiltViewModel()
+) {
     val displayPot by viewModel.displayPot.collectAsState()
     val userName by viewModel.userName.collectAsState()
     val showPotChangeDialog by viewModel.showPotChangeDialog.collectAsState()
     val allPots by viewModel.allPots.collectAsState()
     val tempSelectedPot by viewModel.tempSelectedPot.collectAsState()
     val attendanceUiState by viewModel.attendanceUiState.collectAsState()
+    val showAttendanceDialog by viewModel.showAttendanceDialog.collectAsState()
     val userItem by viewModel.userItem.collectAsState()
     val recoverySession by viewModel.recoverySession.collectAsState()
     val isRecovering by viewModel.isRecovering.collectAsState()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val isBoxOpening by viewModel.isBoxOpening.collectAsState()
     var bonusBoxResult by remember { mutableStateOf<List<ItemType>?>(null) }
     var showOpenDialog by remember { mutableStateOf(false) }
@@ -95,12 +101,11 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
 
     val hasNoPot = displayPot.id.isEmpty() || displayPot == Pot.EMPTY
 
-    // 결과 화면에서 돌아올 때도 저장되지 않은 세션을 다시 확인 (홈 ViewModel은 유지되어 init이 다시 실행되지 않음)
+    // 홈이 보일 때마다 복구 세션 확인과 자동 출석 판단을 한 함수에서 순서대로 처리
     // LifecycleEventObserver는 등록 시점에 현재 상태까지 이벤트를 재생하므로 첫 진입에도 ON_RESUME이 발화됨
-    val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) viewModel.checkRecoverySession()
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.onHomeResumed()
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -115,12 +120,13 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
         )
     }
 
-    var showAttendanceDialog by remember { mutableStateOf(false) }
-    if (showAttendanceDialog) {
+    // 복구 창이 있으면 출석 창을 숨긴다 (복구 처리 후 showAttendanceDialog가 true로 남아 있으면 다시 나타난다)
+    // 다이얼로그는 별도 창이라 스플래시 위에 뜰 수 있어, 스플래시가 끝난 뒤에만 표시한다
+    if (showAttendanceDialog && isSplashFinished && recoverySession == null) {
         AttendanceCheckDialog(
             uiState = attendanceUiState,
             onCheckClick = { viewModel.checkAttendance() },
-            onDismiss = { showAttendanceDialog = false }
+            onDismiss = viewModel::closeAttendanceDialog
         )
     }
 
@@ -161,7 +167,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                 HomeTopBar(
                     userName = userName,
                     isAttendanceCompleted = attendanceUiState.isAttendanceCompleted,
-                    onAttendanceClick = { showAttendanceDialog = true }
+                    onAttendanceClick = viewModel::openAttendanceDialog
                 )
             },
             containerColor = MaterialTheme.colorScheme.background
