@@ -20,6 +20,12 @@ interface UserRepository {
     /** 로그인 세션을 종료한다. 구독을 해제하고 currentUser를 비운다. */
     fun endUserSession()
 
+    /** 회원탈퇴 중에는 users/{uid} 삭제를 세션 만료로 처리하지 않도록 표시한다. */
+    fun beginAccountDeletion(uid: String)
+
+    /** 회원탈퇴 중 표시를 해제한다. */
+    fun endAccountDeletion()
+
     suspend fun updateLastSelectedPot(uid: String, potId: String)
 
     suspend fun getUser(uid: String): Result<User?>
@@ -38,7 +44,8 @@ interface UserRepository {
     suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit>
     suspend fun updateProfile(user: User): Result<Unit>
     suspend fun isNicknameTaken(nickname: String): Result<Boolean>
-    suspend fun registerNickname(nickname: String): Result<Unit>
+    /** 닉네임 선점 문서에 소유자 uid를 함께 저장한다. 보안 규칙상 소유자만 삭제할 수 있다. */
+    suspend fun registerNickname(uid: String, nickname: String): Result<Unit>
     suspend fun deleteNickname(nickname: String): Result<Unit>
     suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success>
     /**
