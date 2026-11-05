@@ -13,7 +13,7 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration
 
-/**
+/*
  * 오프라인 쓰기의 서버 반영 확인 공통 함수 (#452).
  *
  * Firestore 쓰기(set/update/delete/batch)는 오프라인이어도 기기 캐시에 바로 반영되고,

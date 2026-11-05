@@ -69,8 +69,6 @@ npm --prefix rules-test test
 
 - 프로젝트 ID는 `demo-plant`를 쓴다. `demo-`로 시작하는 ID는 에뮬레이터 전용이라 실제 서버에 접속하지 않는다
 - 규칙은 루트의 `firestore.rules`(실제 배포 파일)를 그대로 읽는다
-- 에뮬레이터를 이미 켜 둔 상태라면 `npm --prefix rules-test run test:only`로 테스트만 실행할 수 있다
-  (이때는 `firebase emulators:start --project demo-plant`로 켜야 같은 프로젝트로 붙는다)
 
 | 파일 | 대상 |
 |---|---|
