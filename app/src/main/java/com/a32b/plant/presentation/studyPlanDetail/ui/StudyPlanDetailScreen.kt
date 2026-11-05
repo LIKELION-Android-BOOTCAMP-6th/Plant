@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
+import com.a32b.plant.presentation.core.component.plantCheckboxColors
 import com.a32b.plant.presentation.core.component.StudyGoalItem
 import com.a32b.plant.core.extension.isCompletedAt
 import com.a32b.plant.core.util.TimeFormatter
@@ -203,9 +204,7 @@ fun StudyPlanDetailScreen(
                                 Checkbox(
                                     checked = isAllSelected,
                                     onCheckedChange = { viewModel.toggleAllSelection(it) },
-                                    colors = CheckboxDefaults.colors(
-                                        uncheckedColor = MaterialTheme.colorScheme.outline
-                                    )
+                                    colors = plantCheckboxColors()
                                 )
                                 Text("전체 선택", style = MaterialTheme.typography.bodyMedium)
                             }
@@ -404,9 +403,7 @@ fun StudyRecordCard(
                 Checkbox(
                     checked = log.isSelected,
                     onCheckedChange = onSelectionChange,
-                    colors = CheckboxDefaults.colors(
-                        uncheckedColor = MaterialTheme.colorScheme.outline
-                    )
+                    colors = plantCheckboxColors()
                 )
                 Spacer(modifier = Modifier.width(5.dp))
             }
