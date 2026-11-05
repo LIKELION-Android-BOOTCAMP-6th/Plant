@@ -19,6 +19,7 @@ import androidx.navigation.NavController
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.presentation.core.component.ProfileImage
+import com.a32b.plant.presentation.core.component.TabTopBar
 import com.a32b.plant.presentation.pot.viewmodel.PotListViewModel
 
 @Composable
@@ -37,20 +38,7 @@ fun PotListScreen(
 
     Scaffold(
         topBar = {
-            // 상단 타이틀 및 조건부 추가 버튼 영역
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "나만의 정원",
-                    style = MaterialTheme.typography.displayLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-
+            TabTopBar(title = "내 화분") {
                 // 공부 중 탭(selectedTab == 0)일 때만 플러스 버튼 노출
                 if (selectedTab == 0) {
                     IconButton(
@@ -58,12 +46,9 @@ fun PotListScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = "화분 추가",
-                            tint = MaterialTheme.colorScheme.onSurface
+                            contentDescription = "화분 추가"
                         )
                     }
-                } else {
-                    Spacer(modifier = Modifier.size(48.dp))
                 }
             }
         }
