@@ -37,9 +37,7 @@ class UpdateProfileUseCase @Inject constructor(
             when (val result = userRepository.isNicknameTaken(newNickname)) {
                 is Result.Success -> {
                     if (result.data) {
-                        return Result.Failure(
-                            AppError.Custom("이미 사용중인 닉네임입니다.")
-                        )
+                        return Result.Failure(AppError.NicknameTaken())
                     }
                 }
 
@@ -123,9 +121,8 @@ class UpdateProfileUseCase @Inject constructor(
     }
 
     private fun validateNickname(nickname: String): String? {
-        val len = nickname.length
         return when {
-            len !in 2..10 -> "2~10자로 입력해주세요."
+            !NicknameRule.isValidLength(nickname) -> NicknameRule.LENGTH_MESSAGE
             !NicknameRule.isUsable(nickname) -> NicknameRule.UNUSABLE_MESSAGE
             else -> null
         }

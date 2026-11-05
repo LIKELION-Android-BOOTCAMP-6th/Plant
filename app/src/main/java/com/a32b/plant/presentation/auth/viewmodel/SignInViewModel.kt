@@ -49,7 +49,12 @@ class SignInViewModel @Inject constructor(
     }
 
     fun onNicknameChange(value: String) {
-        _uiState.update { it.copy(nicknameInput = value, nicknameError = null) }
+        _uiState.update {
+            it.copy(
+                nicknameInput = NicknameRule.limitInput(previous = it.nicknameInput, input = value),
+                nicknameError = null
+            )
+        }
     }
 
     fun tryStartGoogleSignIn(): Boolean {
@@ -90,8 +95,8 @@ class SignInViewModel @Inject constructor(
 
         val nickname = _uiState.value.nicknameInput.trim()
 
-        if (nickname.length !in 2..10) {
-            _uiState.update { it.copy(nicknameError = "2자 이상 10자 이하로 입력해주세요.") }
+        if (!NicknameRule.isValidLength(nickname)) {
+            _uiState.update { it.copy(nicknameError = NicknameRule.LENGTH_MESSAGE) }
             return
         }
 

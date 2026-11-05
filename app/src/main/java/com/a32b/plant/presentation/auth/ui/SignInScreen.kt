@@ -37,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.domain.util.NicknameRule
 import com.a32b.plant.presentation.auth.viewmodel.SignInEvent
 import com.a32b.plant.presentation.auth.viewmodel.SignInViewModel
 import com.a32b.plant.presentation.core.component.LoadableScreen
@@ -119,7 +120,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                         textStyle = MaterialTheme.typography.bodyMedium,
                         placeholder = {
                             Text(
-                                text = "2~10자 닉네임 입력",
+                                text = "${NicknameRule.MIN_LENGTH}~${NicknameRule.MAX_LENGTH}자 닉네임 입력",
                                 style = MaterialTheme.typography.labelMedium
                             )
                         },
