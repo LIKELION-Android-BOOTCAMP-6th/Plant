@@ -38,6 +38,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -458,14 +459,30 @@ fun HomeTopBar(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "${displayName}의 Garden",
+            // 닉네임과 " 정원"을 나눠 닉네임만 말줄임 처리 → 긴 닉네임에서도 " 정원"은 항상 보임
+            Row(
                 modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.displayLarge,
-                color = MaterialTheme.colorScheme.primary,
-                fontSize = 30.sp,
-                textAlign = TextAlign.Start
-            )
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = displayName,
+                    // fill = false: 짧은 닉네임일 때 " 정원"이 오른쪽 끝으로 밀려나지 않게 함
+                    modifier = Modifier.weight(1f, fill = false),
+                    style = MaterialTheme.typography.displayLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 25.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = " 정원",
+                    style = MaterialTheme.typography.displayLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 25.sp,
+                    maxLines = 1,
+                    softWrap = false
+                )
+            }
             IconButton(
                 onClick = onShopClick,
                 modifier = Modifier.offset(x = 6.dp)
