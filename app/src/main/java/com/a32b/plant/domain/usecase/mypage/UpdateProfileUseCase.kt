@@ -17,9 +17,9 @@ class UpdateProfileUseCase @Inject constructor(
     /**
      * 프로필(닉네임·이미지)을 변경하고, 성공 시 실제로 저장된 닉네임을 돌려준다.
      *
-     * 닉네임은 앞뒤 공백을 잘라낸 값으로 검사·저장한다.
-     * 잘라낸 값이 기존 닉네임(잘라낸 값)과 같으면 닉네임은 바뀌지 않은 것으로 보고 기존 값을 그대로 둔다.
-     * (공백이 들어간 기존 닉네임 사용자가 이미지만 바꿀 때 닉네임 변경으로 처리되지 않게)
+     * 닉네임은 [NicknameRule.normalize]로 정규화한 값(앞뒤 공백 제거 + 분리된 한글 자모 합치기)으로 검사·저장한다.
+     * 정규화한 값이 기존 닉네임(정규화한 값)과 같으면 닉네임은 바뀌지 않은 것으로 보고 기존 값을 그대로 둔다.
+     * (공백이나 분리형 자모가 들어간 기존 닉네임 사용자가 이미지만 바꿀 때 닉네임 변경으로 처리되지 않게)
      */
     suspend operator fun invoke(
         newNickname: String,
@@ -30,21 +30,21 @@ class UpdateProfileUseCase @Inject constructor(
             is Result.Failure -> return result
         }
 
-        val trimmedNickname = newNickname.trim()
-        val isNicknameChanged = trimmedNickname != currentUser.nickname.trim()
+        val normalizedNickname = NicknameRule.normalize(newNickname)
+        val isNicknameChanged = normalizedNickname != NicknameRule.normalize(currentUser.nickname)
 
         if (!isNicknameChanged && newImageLevel == currentUser.profileImg) {
             return Result.Failure(AppError.Custom("변경사항이 없습니다."))
         }
 
         if (isNicknameChanged) {
-            val nicknameError = validateNickname(trimmedNickname)
+            val nicknameError = validateNickname(normalizedNickname)
             if (nicknameError != null) {
                 return Result.Failure(AppError.Custom(nicknameError))
             }
         }
 
-        val savedNickname = if (isNicknameChanged) trimmedNickname else currentUser.nickname
+        val savedNickname = if (isNicknameChanged) normalizedNickname else currentUser.nickname
 
         if (isNicknameChanged) {
             when (val result = userRepository.isNicknameTaken(savedNickname)) {

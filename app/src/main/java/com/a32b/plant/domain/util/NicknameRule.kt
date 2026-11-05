@@ -1,5 +1,7 @@
 package com.a32b.plant.domain.util
 
+import java.text.Normalizer
+
 /**
  * 닉네임 입력 규칙 — 로그인(닉네임 설정)과 마이페이지(프로필 편집)가 함께 사용한다.
  *
@@ -34,13 +36,22 @@ object NicknameRule {
     private val reservedIdPattern = Regex("^__.*__$")
 
     /**
+     * 입력값을 검사·저장할 형태로 바꾼다. 검사([isValidLength], [isUsable]) 전에 반드시 이 값으로 바꿔서 넘긴다.
+     * - 앞뒤 공백 제거
+     * - NFC 정규화: 자모로 나뉜 한글(맥에서 복사한 글 등, 예: U+1109 U+1162 U+110A U+1161 U+11A8)을
+     *   완성형("새싹", U+C0C8 U+C2F9)으로 합쳐, 같은 모습의 닉네임이 다른 값으로 등록되지 않게 한다.
+     *   (NFKC는 쓰지 않는다. 키보드로 입력한 "ㅋ"(U+314B) 같은 자모까지 분리형 자모로 바꿔 [hasLookAlikeChar]에 걸림)
+     */
+    fun normalize(input: String): String = Normalizer.normalize(input.trim(), Normalizer.Form.NFC)
+
+    /**
      * 사용할 수 있는 닉네임인지 확인한다.
-     * - 앞뒤에 공백이 남아 있는 값 (호출하는 쪽에서 trim을 빠뜨려도 걸러지도록 여기서도 확인)
+     * - [normalize]를 거치지 않은 값 (호출하는 쪽에서 정규화를 빠뜨려도 걸러지도록 여기서도 확인)
      * - Firestore 문서 ID로 쓸 수 없는 값
      * - 화면에 보이지 않는 문자가 섞여 다른 닉네임과 똑같아 보이는 값 ([hasLookAlikeChar])
      */
     fun isUsable(nickname: String): Boolean =
-        nickname == nickname.trim() &&
+        nickname == normalize(nickname) &&
                 '/' !in nickname &&
                 nickname != "." &&
                 nickname != ".." &&
@@ -62,6 +73,12 @@ object NicknameRule {
         0x1D173..0x1D17A, 0xE0000..0xE0FFF
     )
 
+    // 분리형 한글 자모 (초성·중성·종성, 옛한글 확장 포함)
+    // [normalize] 후에도 남아 있다면 완성형으로 합쳐지지 않는 조각이다.
+    // 혼자 있는 초성 U+1100은 키보드로 입력하는 "ㄱ"(U+3131)과 거의 똑같이 보이므로 거부한다.
+    // (한국어 키보드는 완성형 글자와 U+3131~318E 자모만 입력하므로 일반 입력에는 영향 없음)
+    private val conjoiningJamo = listOf(0x1100..0x11FF, 0xA960..0xA97F, 0xD7B0..0xD7FF)
+
     // 서식·제어 문자, 짝이 맞지 않는 반쪽 문자(서로게이트), 기기 글꼴마다 다르게 보이는 사용자 정의 영역 문자
     private val blockedTypes = setOf(
         Character.FORMAT, Character.CONTROL, Character.SURROGATE, Character.PRIVATE_USE
@@ -70,6 +87,7 @@ object NicknameRule {
     /**
      * 보이지 않는 문자나 다른 공백 문자가 섞여, 다른 닉네임과 똑같아 보일 수 있는지 확인한다.
      * 예: "새"+U+200B+"싹", U+3164+"새싹" → "새싹"처럼 보임 / "새"+U+00A0+"싹", "새"+공백 2칸+"싹" → "새 싹"처럼 보임
+     *     / "새"+U+1100 → "새ㄱ"처럼 보임 (정규화 후에도 남은 분리형 자모)
      *
      * 이모지 닉네임은 허용해야 하므로, 이모지를 만드는 문자는 [defaultIgnorables]보다 먼저 검사해 이모지 사이에 있을 때만 허용한다.
      * (순서가 바뀌면 두 문자가 [defaultIgnorables]에 걸려 모든 이모지 조합이 막힘)
@@ -97,6 +115,7 @@ object NicknameRule {
                 cp.isVariationSelector() ->
                     !(prev.isEmoji() || (prev.isKeycapBase() && next == COMBINING_KEYCAP))
                 defaultIgnorables.any { cp in it } -> true
+                conjoiningJamo.any { cp in it } -> true
                 else -> Character.getType(cp).toByte() in blockedTypes
             }
         }
