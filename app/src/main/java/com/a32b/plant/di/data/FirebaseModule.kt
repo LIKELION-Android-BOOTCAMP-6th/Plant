@@ -23,5 +23,6 @@ object FirebaseModule {
 
     @Provides
     @Singleton
-    fun provideFunction() : FirebaseFunctions = FirebaseFunctions.getInstance()
+    // 함수 배포 지역(functions/index.js의 region)과 같아야 호출됨. 지정하지 않으면 us-central1로 요청함
+    fun provideFunction() : FirebaseFunctions = FirebaseFunctions.getInstance("asia-northeast3")
 }
