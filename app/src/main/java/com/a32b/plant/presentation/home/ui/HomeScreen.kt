@@ -167,6 +167,7 @@ fun HomeScreen(
                 HomeTopBar(
                     userName = userName,
                     isAttendanceCompleted = attendanceUiState.isAttendanceCompleted,
+                    onShopClick = viewModel::onShopClick,
                     onAttendanceClick = viewModel::openAttendanceDialog
                 )
             },
@@ -435,6 +436,7 @@ fun PotChangeDialog(
 fun HomeTopBar(
     userName: String,
     isAttendanceCompleted: Boolean,
+    onShopClick: () -> Unit,
     onAttendanceClick: () -> Unit
 ) {
     val displayName = if (userName.isBlank()) "사용자" else userName
@@ -464,6 +466,18 @@ fun HomeTopBar(
                 fontSize = 30.sp,
                 textAlign = TextAlign.Start
             )
+            IconButton(
+                onClick = onShopClick,
+                modifier = Modifier.offset(x = 6.dp)
+            ) {
+                // 투톤 색상은 drawable에 직접 지정 (출석체크 아이콘과 같은 방식)
+                // 그림이 차지하는 비율이 출석체크보다 작아 35dp로 시각적 크기를 맞춤
+                Image(
+                    painter = painterResource(id = R.drawable.ic_shop),
+                    contentDescription = "상점",
+                    modifier = Modifier.size(35.dp)
+                )
+            }
             IconButton(
                 onClick = onAttendanceClick,
                 modifier = Modifier.offset(x = 6.dp)
