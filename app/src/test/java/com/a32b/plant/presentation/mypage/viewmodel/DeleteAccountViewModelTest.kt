@@ -3,6 +3,7 @@ package com.a32b.plant.presentation.mypage.viewmodel
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.StudyLog
+import com.a32b.plant.domain.model.StudyingGoalDraft
 import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.domain.model.User
@@ -122,5 +123,8 @@ class DeleteAccountViewModelTest {
         override suspend fun saveLocalSession(studying: StudyingSession): Result<Unit> = error("Not used")
         override suspend fun readLocalSession(): Result<StudyingSession?> = error("Not used")
         override suspend fun clearLocalSession(): Result<Unit> = error("Not used")
+        override suspend fun saveLocalGoalDraft(draft: StudyingGoalDraft): Result<Unit> = error("Not used")
+        override suspend fun readLocalGoalDraft(): Result<StudyingGoalDraft?> = error("Not used")
+        override suspend fun clearLocalGoalDraft(): Result<Unit> = error("Not used")
     }
 }
