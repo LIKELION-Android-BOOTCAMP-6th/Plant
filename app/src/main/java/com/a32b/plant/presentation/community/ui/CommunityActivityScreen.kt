@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -47,6 +46,7 @@ import com.a32b.plant.presentation.community.viewmodel.CommunityActivityViewMode
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.LoadingBox
+import com.a32b.plant.presentation.core.component.plantCheckboxColors
 import com.a32b.plant.presentation.core.component.TagGroup
 import com.a32b.plant.presentation.core.extension.showToast
 
@@ -219,9 +219,7 @@ fun ContentList(
                             checked = list.id in selectedIds,
                             onCheckedChange = { onToggleSelection(list.id) },
                             modifier = Modifier.size(24.dp),
-                            colors = CheckboxDefaults.colors(
-                                uncheckedColor = MaterialTheme.colorScheme.outline
-                            )
+                            colors = plantCheckboxColors()
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                     }
