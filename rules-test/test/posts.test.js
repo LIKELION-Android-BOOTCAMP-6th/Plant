@@ -139,10 +139,16 @@ describe("posts", () => {
 
     it("댓글 작성자는 내용만 수정할 수 있다", async () => {
       await assertSucceeds(updateDoc(doc(asBob(), "posts", "post1", "comments", "c1"), {content: "수정"}));
+      await assertFails(updateDoc(doc(asBob(), "posts", "post1", "comments", "c1"), {isHidden: true}));
       await assertFails(updateDoc(doc(asAlice(), "posts", "post1", "comments", "c1"), {content: "남의 댓글 수정"}));
     });
 
-    it("댓글 작성자와 게시글 작성자는 삭제할 수 있다", async () => {
+    it("댓글 작성자는 본인 댓글을 삭제할 수 있다", async () => {
+      await assertSucceeds(deleteDoc(doc(asBob(), "posts", "post1", "comments", "c1")));
+    });
+
+    // 게시글 삭제(deletePost) 시 남의 댓글까지 지우는 데 필요 (#457에서도 유지)
+    it("게시글 작성자는 남의 댓글을 삭제할 수 있다", async () => {
       await assertSucceeds(deleteDoc(doc(asAlice(), "posts", "post1", "comments", "c1")));
     });
 

@@ -1,13 +1,16 @@
 # Firebase 에뮬레이터 실행 방법
 
 > 실제 Firebase 서버 대신 **내 PC에서** Auth·Firestore·Cloud Functions를 실행해 보는 환경 (#452).
-> 에뮬레이터 데이터는 실제 서버와 완전히 분리되어 있어, 마음껏 쓰고 지워도 실제 데이터·요금에 영향이 없다.
+> 에뮬레이터로 켠 Auth·Firestore·Functions의 데이터는 실제 서버와 분리되어 있어, 마음껏 쓰고 지워도 실제 데이터·요금에 영향이 없다.
+>
+> ⚠️ 단, **함수 코드에서 에뮬레이터로 켜지 않은 서비스**(Storage, Realtime Database 등)를 호출하면 **실서버로 간다.**
+> 그런 서비스를 함수에서 쓰게 되면 `firebase.json`의 `emulators`에 해당 에뮬레이터를 먼저 추가할 것. (아래 "실행 시 나오는 경고" 참고)
 
 ## 준비물 (처음 한 번)
 
 | 항목 | 버전 | 확인 명령 |
 |---|---|---|
-| Node.js | 24 (`functions/package.json`의 `engines`) | `node -v` |
+| Node.js | 24 (`functions/package.json`의 `engines`), 규칙 테스트는 **24.12 이상** | `node -v` |
 | Java (JDK) | 21 이상 (Firestore 에뮬레이터 실행에 필요) | `java -version` |
 | Firebase CLI | 최신 (`npm install -g firebase-tools`) | `firebase --version` |
 
@@ -74,6 +77,9 @@ npm --prefix rules-test test
 | `test/users.test.js` | `users`, 하위 `pots`·`logs` |
 | `test/posts.test.js` | `posts`(작성·수정·좋아요·신고), 하위 `comments`, `reports` |
 | `test/others.test.js` | `nicknames`, `feedbacks`, `studying`, `Tags` |
+
+- 테스트 파일은 `test/` 폴더에 `*.test.js`로 만든다 (하위 폴더도 자동 포함)
+- ⚠️ `test/` 폴더 안의 `.js` 파일은 이름과 관계없이 **전부 테스트로 실행**된다 (Node 기본 규칙). 공통 함수 파일은 `helpers.js`처럼 `test/` **밖**에 둔다
 
 테스트 이름에 `[현재 허용 - #번호에서 ...]`가 붙은 것은 **알려진 구멍을 현재 동작 그대로 기록한 테스트**다.
 해당 이슈에서 규칙을 고치면 `assertSucceeds` → `assertFails`로 바꾼다.

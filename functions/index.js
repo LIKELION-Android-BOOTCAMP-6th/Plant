@@ -24,6 +24,8 @@ const logger = require("firebase-functions/logger");
 //
 // region: Firestore DB 위치(asia-northeast3, 서울)와 맞춘다.
 // Firestore 트리거는 DB와 같은 지역이어야 하고, 같은 지역이면 지연·비용도 줄어든다.
+// 바꾸면 앱 FirebaseModule.provideFunction의 getInstance("...") 지역도 같이 바꿀 것
+// (다르면 앱이 함수를 찾지 못해 NOT_FOUND).
 // minInstances는 지정하지 않는다(기본 0) → 요청이 없을 때 과금 없음, 콜드 스타트는 감수.
 setGlobalOptions({
   region: "asia-northeast3",
