@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.a32b.plant.core.util.safeRunCatching
+import com.a32b.plant.data.model.StudyingGoalDraftDto
 import com.a32b.plant.data.model.StudyingSessionDto
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.catch
@@ -36,6 +37,11 @@ class StudyingLocalDataSourceImpl @Inject constructor(
     private val STARTEDAT = longPreferencesKey("startedAt")
     private val IS_PAUSED = booleanPreferencesKey("isPaused")
     private val STATUS = stringPreferencesKey("status")
+
+    // 목표 입력 창 임시 글 — 세션 백업과 따로 쓰고 읽음 (clear()에서는 함께 삭제)
+    private val DRAFT_USER_ID = stringPreferencesKey("goalDraftUserId")
+    private val DRAFT_POT_ID = stringPreferencesKey("goalDraftPotId")
+    private val DRAFT_LOGS = stringPreferencesKey("goalDraftLogs")
 
     override suspend fun save(studying: StudyingSessionDto) {
         context.dataStore.edit { preferences ->
@@ -83,5 +89,35 @@ class StudyingLocalDataSourceImpl @Inject constructor(
 
     override suspend fun clear() {
         context.dataStore.edit { it.clear() }
+    }
+
+    override suspend fun saveGoalDraft(draft: StudyingGoalDraftDto) {
+        context.dataStore.edit { preferences ->
+            preferences[DRAFT_USER_ID] = draft.userId
+            preferences[DRAFT_POT_ID] = draft.potId
+            preferences[DRAFT_LOGS] = Json.encodeToString(draft.logs)
+        }
+    }
+
+    override suspend fun readGoalDraft(): StudyingGoalDraftDto? {
+        val preferences = context.dataStore.data
+            .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+            .first()
+
+        val userId = preferences[DRAFT_USER_ID] ?: return null
+        val potId = preferences[DRAFT_POT_ID] ?: return null
+        val logs = preferences[DRAFT_LOGS]?.let {
+            safeRunCatching { Json.decodeFromString<List<String>>(it) }.getOrNull()
+        } ?: return null
+
+        return StudyingGoalDraftDto(userId = userId, potId = potId, logs = logs)
+    }
+
+    override suspend fun clearGoalDraft() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(DRAFT_USER_ID)
+            preferences.remove(DRAFT_POT_ID)
+            preferences.remove(DRAFT_LOGS)
+        }
     }
 }

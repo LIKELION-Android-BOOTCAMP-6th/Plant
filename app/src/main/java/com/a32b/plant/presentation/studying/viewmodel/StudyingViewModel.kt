@@ -20,6 +20,8 @@ import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import com.a32b.plant.domain.usecase.studying.ClearStudyingSessionUseCase
 import com.a32b.plant.domain.usecase.studying.FinishStudyingUseCase
 import com.a32b.plant.domain.usecase.studying.GetRecoverySessionUseCase
+import com.a32b.plant.domain.usecase.studying.GetStudyingGoalDraftUseCase
+import com.a32b.plant.domain.usecase.studying.SaveStudyingGoalDraftUseCase
 import com.a32b.plant.domain.usecase.studying.StartStudyingSessionUseCase
 import com.a32b.plant.domain.usecase.studying.UpdateLocalStudyingSessionUseCase
 import com.a32b.plant.presentation.core.type.StudyingGoalCheckMode
@@ -31,6 +33,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -65,6 +70,9 @@ data class StudyingUiState(
     val wasStudyingBeforeGoalCheckDialog: Boolean = false,
     val isEditing: Boolean = false,
     val logIndex: Int? = null,
+    // 목표 입력 창에서 작성 중인 글 — 창 안 remember에 두면 화면 재생성·닫기로 사라지므로 ViewModel이 들고 있음
+    val goalDraft: List<String> = listOf(""),
+    val isGoalDiscardConfirmShown: Boolean = false, // 작성 중인 글이 있는 상태에서 닫기를 눌렀을 때 버릴지 확인
 )
 
 sealed class StudyingEvent{
@@ -93,6 +101,8 @@ class StudyingViewModel @Inject constructor(
     private val finishStudyingUseCase: FinishStudyingUseCase,
     private val getRecoverySessionUseCase: GetRecoverySessionUseCase,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
+    private val saveStudyingGoalDraftUseCase: SaveStudyingGoalDraftUseCase,
+    private val getStudyingGoalDraftUseCase: GetStudyingGoalDraftUseCase,
     savedStateHandle: SavedStateHandle
 ) : BaseViewModel() {
     private val _eventChannel = Channel<StudyingEvent>(Channel.BUFFERED)
@@ -114,6 +124,8 @@ class StudyingViewModel @Inject constructor(
     private var savedGoalCheckMode: StudyingGoalCheckMode? = null
     // 최대 개수 안내 토스트를 마지막으로 띄운 시각 (elapsedRealtime 기준, 아직 안 띄웠으면 null)
     private var lastStudyLogLimitToastMs: Long? = null
+    // 목표 임시 글 저장 작업 — 입력마다 쓰지 않도록 마지막 입력 후 일정 시간 뒤에 저장
+    private var goalDraftSaveJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -141,6 +153,12 @@ class StudyingViewModel @Inject constructor(
             .onSuccess { session ->
                 // 종료한 세션은 이어서 공부하지 않으므로 공부 중이던 세션만 복원
                 if (session != null && session.potId == potId && session.status == StudyingSessionStatus.STUDYING) {
+                    // 목표 입력 단계(0초, 목표 없음)에서 앱이 종료된 세션 — 처음 시작할 때처럼 타이머를 멈춘 채
+                    // 목표 입력 창을 다시 띄우고 작성 중이던 글을 복원 (시간이 쌓인 세션은 아래에서 기존대로 복원, #253)
+                    if (session.time == 0L && session.log.orEmpty().none { it.isNotBlank() }) {
+                        restoreGoalDraft()
+                        return@onSuccess
+                    }
                     lastSaveMs = session.time
                     lastUpdateMs = session.time
                     _uiState.update {
@@ -156,6 +174,57 @@ class StudyingViewModel @Inject constructor(
                     if (!session.isPaused) startStopwatch()
                 }
             }
+    }
+
+    /** 같은 계정·같은 화분에서 작성 중이던 목표 임시 글을 입력 창에 복원 — 읽기 실패나 글이 없으면 빈 입력 창 그대로 */
+    private suspend fun restoreGoalDraft() {
+        getStudyingGoalDraftUseCase(potId).getOrNull()?.let { logs ->
+            _uiState.update { it.copy(goalDraft = logs.take(MAX_STUDY_LOG_SIZE)) }
+        }
+    }
+
+    /** 목표 입력 창 글 변경 — 처음 입력 창의 글만 로컬에 임시 저장 (수정 창은 재진입 시 다시 열리지 않으므로 저장하지 않음) */
+    fun onGoalDraftChange(logs: List<String>) {
+        _uiState.update { it.copy(goalDraft = logs) }
+        if (_uiState.value.isEditing) return
+        goalDraftSaveJob?.cancel()
+        goalDraftSaveJob = viewModelScope.launch {
+            delay(GOAL_DRAFT_SAVE_DELAY_MS)
+            saveStudyingGoalDraftUseCase(potId, logs) // 실패해도 입력·공부에는 영향 없으므로 별도 처리 없음
+        }
+    }
+
+    /** 목표 임시 글 삭제 — 대기 중인 저장이 삭제 뒤에 실행돼 글이 되살아나지 않도록 먼저 취소 */
+    private fun clearGoalDraft() {
+        val pendingSave = goalDraftSaveJob
+        goalDraftSaveJob = null
+        viewModelScope.launch {
+            pendingSave?.cancelAndJoin()
+            repository.clearLocalGoalDraft() // 실패해도 다음 입력에서 덮어쓰고, 다른 화분·계정 글은 조회 시 걸러지므로 별도 처리 없음
+        }
+    }
+
+    /** 목표 입력 창 닫기 버튼 — 작성한 내용이 있으면 버릴지 먼저 확인 */
+    fun onGoalInputDialogCloseRequest() {
+        val state = _uiState.value
+        val hasContent = if (state.isEditing) {
+            // 수정 창은 기존 목표가 채워져 있으므로 원래 글에서 바뀌었을 때만 확인
+            val index = state.logIndex
+            index != null && state.goalDraft.getOrNull(index).orEmpty() != state.studyLog.getOrNull(index)?.log.orEmpty()
+        } else {
+            state.goalDraft.any { it.isNotBlank() }
+        }
+        if (hasContent) _uiState.update { it.copy(isGoalDiscardConfirmShown = true) }
+        else onGoalInputDialogChange(false)
+    }
+
+    /** 버리기 확인 창에서 취소 — 입력 창과 작성 중인 글 유지 */
+    fun onGoalDiscardCancel() = _uiState.update { it.copy(isGoalDiscardConfirmShown = false) }
+
+    /** 버리기 확인 창에서 버리기 — 입력 창을 닫고 임시 글 삭제 */
+    fun onGoalDiscardConfirm() {
+        _uiState.update { it.copy(isGoalDiscardConfirmShown = false) }
+        onGoalInputDialogChange(false)
     }
 
     private fun observeTimer() {
@@ -294,7 +363,11 @@ class StudyingViewModel @Inject constructor(
             } else {
                 state.copy(isEditing = true, logIndex = index)
             }
-            newState.copy(isGoalInputDialogShown = true, goalCheckMode = null)
+            newState.copy(
+                isGoalInputDialogShown = true,
+                goalCheckMode = null,
+                goalDraft = newState.studyLog.map { it.log }
+            )
         }
     }
 
@@ -303,11 +376,17 @@ class StudyingViewModel @Inject constructor(
         if (!_uiState.value.isEditing) {
             if (value) {
                 val wasStudying = _uiState.value.isStudying
-                _uiState.update { it.copy(isGoalInputDialogShown = true, wasStudyingBeforeGoalInputDialog = wasStudying) }
+                _uiState.update { it.copy(
+                    isGoalInputDialogShown = true,
+                    wasStudyingBeforeGoalInputDialog = wasStudying,
+                    goalDraft = it.studyLog.map { log -> log.log }.ifEmpty { listOf("") }
+                ) }
                 onStudyingStatusChange(false)
             } else {
                 val restore = _uiState.value.wasStudyingBeforeGoalInputDialog
-                _uiState.update { it.copy(isGoalInputDialogShown = false) }
+                _uiState.update { it.copy(isGoalInputDialogShown = false, goalDraft = listOf("")) }
+                // 완료·닫기 모두 입력이 끝났으므로 임시 글 삭제
+                clearGoalDraft()
                 onStudyingStatusChange(restore)
             }
         } else {
@@ -320,7 +399,8 @@ class StudyingViewModel @Inject constructor(
             } else {
                 _uiState.update { it.copy(
                     isGoalInputDialogShown = false,
-                    goalCheckMode = savedGoalCheckMode
+                    goalCheckMode = savedGoalCheckMode,
+                    goalDraft = listOf("")
                 )}
                 savedGoalCheckMode = null
                 finishEditing()
@@ -493,6 +573,11 @@ class StudyingViewModel @Inject constructor(
 
     private fun sendToast(message: String, duration: Int = Toast.LENGTH_SHORT) {
         viewModelScope.launch { _eventChannel.send(StudyingEvent.ShowToast(message, duration)) }
+    }
+
+    companion object {
+        // 마지막 입력 후 임시 저장까지 기다리는 시간
+        private const val GOAL_DRAFT_SAVE_DELAY_MS = 500L
     }
 
 }
