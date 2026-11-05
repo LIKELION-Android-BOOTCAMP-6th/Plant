@@ -16,7 +16,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -68,7 +67,6 @@ import com.a32b.plant.presentation.core.component.ConfettiOverlay
 import com.a32b.plant.presentation.core.component.festiveConfettiParties
 import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.theme.primary
-import com.a32b.plant.presentation.theme.shopGreen
 import com.a32b.plant.presentation.theme.sub2
 import com.a32b.plant.presentation.theme.sub_green1
 import java.time.LocalDate
@@ -473,11 +471,12 @@ fun HomeTopBar(
                 onClick = onShopClick,
                 modifier = Modifier.offset(x = 6.dp)
             ) {
-                Icon(
+                // 투톤 색상은 drawable에 직접 지정 (출석체크 아이콘과 같은 방식)
+                // 그림이 차지하는 비율이 출석체크보다 작아 35dp로 시각적 크기를 맞춤
+                Image(
                     painter = painterResource(id = R.drawable.ic_shop),
                     contentDescription = "상점",
-                    tint = shopGreen,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(35.dp)
                 )
             }
             IconButton(
