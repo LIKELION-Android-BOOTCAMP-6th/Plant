@@ -46,7 +46,37 @@ firebase emulators:exec --only auth,firestore,functions "npm --prefix functions 
 ```
 
 에뮬레이터를 켜고 → 명령을 실행하고 → 끝나면 에뮬레이터를 끈다. 규칙 테스트·CI에서 사용.
-(`test` 스크립트는 보안 규칙 테스트 환경 구성 시 추가 예정)
+
+## 보안 규칙 테스트 (`rules-test/`)
+
+`firestore.rules`가 의도대로 허용·거부하는지 자동으로 검사한다 (`@firebase/rules-unit-testing`).
+batch + 규칙 검증 방식(#453·#455·#456)에서는 **규칙이 곧 서버 로직**이므로, 규칙을 고치면 반드시 테스트도 함께 추가·수정한다.
+
+처음 한 번:
+
+```bash
+npm --prefix rules-test ci
+```
+
+실행 (Firestore 에뮬레이터를 켜고 → 테스트 → 자동 종료):
+
+```bash
+npm --prefix rules-test test
+```
+
+- 프로젝트 ID는 `demo-plant`를 쓴다. `demo-`로 시작하는 ID는 에뮬레이터 전용이라 실제 서버에 접속하지 않는다
+- 규칙은 루트의 `firestore.rules`(실제 배포 파일)를 그대로 읽는다
+- 에뮬레이터를 이미 켜 둔 상태라면 `npm --prefix rules-test run test:only`로 테스트만 실행할 수 있다
+  (이때는 `firebase emulators:start --project demo-plant`로 켜야 같은 프로젝트로 붙는다)
+
+| 파일 | 대상 |
+|---|---|
+| `test/users.test.js` | `users`, 하위 `pots`·`logs` |
+| `test/posts.test.js` | `posts`(작성·수정·좋아요·신고), 하위 `comments`, `reports` |
+| `test/others.test.js` | `nicknames`, `feedbacks`, `studying`, `Tags` |
+
+테스트 이름에 `[현재 허용 - #번호에서 ...]`가 붙은 것은 **알려진 구멍을 현재 동작 그대로 기록한 테스트**다.
+해당 이슈에서 규칙을 고치면 `assertSucceeds` → `assertFails`로 바꾼다.
 
 ## 데이터를 남기고 싶을 때 (선택)
 
