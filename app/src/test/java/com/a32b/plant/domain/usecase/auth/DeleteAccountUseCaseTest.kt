@@ -239,7 +239,7 @@ class DeleteAccountUseCaseTest {
         }
         override suspend fun updateProfile(user: User): Result<Unit> = TODO()
         override suspend fun isNicknameTaken(nickname: String): Result<Boolean> = TODO()
-        override suspend fun registerNickname(nickname: String): Result<Unit> = TODO()
+        override suspend fun registerNickname(uid: String, nickname: String): Result<Unit> = TODO()
         override suspend fun deleteNickname(nickname: String): Result<Unit> {
             callOrder += "deleteNickname"
             return deleteNicknameResult
