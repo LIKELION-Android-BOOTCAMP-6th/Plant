@@ -202,7 +202,10 @@ fun StudyPlanDetailScreen(
                                 //전체 선택
                                 Checkbox(
                                     checked = isAllSelected,
-                                    onCheckedChange = { viewModel.toggleAllSelection(it) }
+                                    onCheckedChange = { viewModel.toggleAllSelection(it) },
+                                    colors = CheckboxDefaults.colors(
+                                        uncheckedColor = MaterialTheme.colorScheme.outline
+                                    )
                                 )
                                 Text("전체 선택", style = MaterialTheme.typography.bodyMedium)
                             }
@@ -402,7 +405,7 @@ fun StudyRecordCard(
                     checked = log.isSelected,
                     onCheckedChange = onSelectionChange,
                     colors = CheckboxDefaults.colors(
-                        checkedColor = MaterialTheme.colorScheme.primary
+                        uncheckedColor = MaterialTheme.colorScheme.outline
                     )
                 )
                 Spacer(modifier = Modifier.width(5.dp))
