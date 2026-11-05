@@ -93,7 +93,7 @@ class SignInViewModel @Inject constructor(
     fun confirmNickname() {
         if (_uiState.value.isNicknameLoading) return
 
-        val nickname = _uiState.value.nicknameInput.trim()
+        val nickname = NicknameRule.normalize(_uiState.value.nicknameInput)
 
         if (!NicknameRule.isValidLength(nickname)) {
             _uiState.update { it.copy(nicknameError = NicknameRule.LENGTH_MESSAGE) }
