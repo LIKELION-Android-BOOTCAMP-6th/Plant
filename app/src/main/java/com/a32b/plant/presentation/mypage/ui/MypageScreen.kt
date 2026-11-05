@@ -59,6 +59,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.domain.util.NicknameRule
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.ProfileImage
@@ -421,7 +422,7 @@ fun ProfileDialog(
     uiState: MyPageUiState,
     viewModel: MyPageViewModel
 ) {
-    val maxLength = 10
+    val maxLength = NicknameRule.MAX_LENGTH
 
     // 다이얼로그 안에서만 임시로 쓸 상태들 (입력 중인 값)
     var newUserName by remember { mutableStateOf(uiState.nickname) }
@@ -463,7 +464,7 @@ fun ProfileDialog(
                         },
                         placeholder = {
                             Text(
-                                text = "2~10자 닉네임을 입력해주세요",
+                                text = "${NicknameRule.MIN_LENGTH}~${NicknameRule.MAX_LENGTH}자 닉네임을 입력해주세요",
                                 style = MaterialTheme.typography.labelMedium
                             )
                         },
