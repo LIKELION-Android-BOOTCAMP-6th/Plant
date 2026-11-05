@@ -72,7 +72,7 @@ private fun TabTopBarTextActionPreview() {
 @Composable
 private fun TabTopBarIconActionPreview() {
     PlantTheme(darkTheme = false) {
-        TabTopBar(title = "나만의 정원") {
+        TabTopBar(title = "내 화분") {
             IconButton(onClick = {}) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = "화분 추가")
             }
