@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -179,7 +180,8 @@ fun HomeScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .background(MaterialTheme.colorScheme.background)
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                    // 좌우 여백 16dp: 앱바 타이틀·다른 탭 본문(내 화분, 마이페이지)과 왼쪽 끝을 맞춤
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
@@ -453,17 +455,25 @@ fun HomeTopBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            // 좌우 여백은 다른 탭 앱바(TabTopBar)와 같은 16dp
-            .padding(horizontal = 16.dp, vertical = 5.dp),
+            .padding(vertical = 5.dp),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                // 왼쪽 16dp: 다른 탭 앱바(TabTopBar)와 같은 여백
+                // 오른쪽 8dp: IconButton 안쪽 여백(48dp 중 그림 32dp → 8dp)과 합쳐
+                // 아이콘 그림 끝 여백이 왼쪽과 같은 16dp가 되도록 함
+                // (offset으로 밀면 레이아웃 자리는 그대로라 타이틀 쪽에 빈 공간이 생김)
+                .padding(start = 16.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // 크기는 다른 탭 앱바(TabTopBar)와 같은 displayLarge 기본값(22sp)
             // 닉네임과 " 정원"을 나눠 닉네임만 말줄임 처리 → 좁은 기기·긴 닉네임에서도 " 정원"은 항상 보임
             Row(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    // Text가 두 개라 TalkBack이 끊어 읽지 않도록 하나로 묶음
+                    .semantics(mergeDescendants = true) {},
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -483,12 +493,7 @@ fun HomeTopBar(
                     softWrap = false
                 )
             }
-            // offset 8dp: IconButton 안쪽 여백(48dp 중 그림 32dp → 8dp)만큼 밀어
-            // 오른쪽 아이콘 그림 끝 여백을 왼쪽 타이틀 여백(16dp)과 맞춤
-            IconButton(
-                onClick = onShopClick,
-                modifier = Modifier.offset(x = 8.dp)
-            ) {
+            IconButton(onClick = onShopClick) {
                 // 투톤 색상은 drawable에 직접 지정 (출석체크 아이콘과 같은 방식)
                 // 그림이 차지하는 비율이 출석체크보다 작아 35dp로 시각적 크기를 맞춤
                 Image(
@@ -497,10 +502,7 @@ fun HomeTopBar(
                     modifier = Modifier.size(35.dp)
                 )
             }
-            IconButton(
-                onClick = onAttendanceClick,
-                modifier = Modifier.offset(x = 8.dp)
-            ) {
+            IconButton(onClick = onAttendanceClick) {
                 Image(
                     painter = painterResource(
                         id = if (isAttendanceCompleted) {
@@ -517,7 +519,10 @@ fun HomeTopBar(
         Spacer(modifier = Modifier.height(15.dp))
         Text(
             text = dateString,
-            modifier = Modifier.fillMaxWidth(),
+            // 여백을 Row에만 비대칭으로 줬으므로, 날짜는 좌우 16dp를 따로 줘서 가운데 정렬 유지
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center
