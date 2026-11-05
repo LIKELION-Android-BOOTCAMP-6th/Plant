@@ -519,7 +519,7 @@ fun HomeTopBar(
         Spacer(modifier = Modifier.height(15.dp))
         Text(
             text = dateString,
-            // 여백을 Row에만 비대칭으로 줬으므로, 날짜는 좌우 16dp를 따로 줘서 가운데 정렬 유지
+            // 날짜가 길어져도(글꼴 크게 설정 등) 화면 끝에 붙지 않도록 좌우 16dp (앱바 타이틀 여백과 동일)
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
