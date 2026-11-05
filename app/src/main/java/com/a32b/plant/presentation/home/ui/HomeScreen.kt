@@ -167,7 +167,7 @@ fun HomeScreen(
                 HomeTopBar(
                     userName = userName,
                     isAttendanceCompleted = attendanceUiState.isAttendanceCompleted,
-                    onShopClick = { context.showToast("준비 중인 기능입니다") },
+                    onShopClick = viewModel::onShopClick,
                     onAttendanceClick = viewModel::openAttendanceDialog
                 )
             },
@@ -466,7 +466,6 @@ fun HomeTopBar(
                 fontSize = 30.sp,
                 textAlign = TextAlign.Start
             )
-            // 상점 화면 구현 전까지는 클릭 시 "준비 중" 토스트만 표시
             IconButton(
                 onClick = onShopClick,
                 modifier = Modifier.offset(x = 6.dp)

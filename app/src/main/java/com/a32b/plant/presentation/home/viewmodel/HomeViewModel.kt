@@ -205,6 +205,11 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    // 상점 화면 구현 전까지는 "준비 중" 토스트만 표시 (구현 후 네비게이션 이벤트로 교체)
+    fun onShopClick() {
+        sendToast("준비 중인 기능입니다")
+    }
+
     fun openAttendanceDialog() {
         _showAttendanceDialog.value = true
     }
