@@ -102,10 +102,10 @@ class MyPageViewModel @Inject constructor(
             updateProfileUseCase(
                 newNickname = nickname,
                 newImageLevel = imageLevel
-            ).onSuccess {
+            ).onSuccess { savedNickname ->
                 _uiState.update {
                     it.copy(
-                        nickname = nickname,
+                        nickname = savedNickname,
                         profileImg = imageLevel,
                         isUpdateSuccess = true,
                         isLoading = false,

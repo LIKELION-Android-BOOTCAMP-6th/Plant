@@ -5,6 +5,7 @@ import com.a32b.plant.di.UserModel
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
+import com.a32b.plant.domain.result.map
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import com.a32b.plant.domain.util.NicknameRule
 import javax.inject.Inject
@@ -13,28 +14,40 @@ class UpdateProfileUseCase @Inject constructor(
     private val userRepository: UserRepository,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase
 ) {
+    /**
+     * 프로필(닉네임·이미지)을 변경하고, 성공 시 실제로 저장된 닉네임을 돌려준다.
+     *
+     * 닉네임은 앞뒤 공백을 잘라낸 값으로 검사·저장한다.
+     * 잘라낸 값이 기존 닉네임(잘라낸 값)과 같으면 닉네임은 바뀌지 않은 것으로 보고 기존 값을 그대로 둔다.
+     * (공백이 들어간 기존 닉네임 사용자가 이미지만 바꿀 때 닉네임 변경으로 처리되지 않게)
+     */
     suspend operator fun invoke(
         newNickname: String,
         newImageLevel: String
-    ): Result<Unit> {
+    ): Result<String> {
         val currentUser = when (val result = ensureCurrentUserUseCase()) {
             is Result.Success -> result.data
             is Result.Failure -> return result
         }
 
-        val nicknameError = validateNickname(newNickname)
-        if (nicknameError != null) {
-            return Result.Failure(AppError.Custom(nicknameError))
-        }
+        val trimmedNickname = newNickname.trim()
+        val isNicknameChanged = trimmedNickname != currentUser.nickname.trim()
 
-        if (newNickname == currentUser.nickname &&
-            newImageLevel == currentUser.profileImg
-        ) {
+        if (!isNicknameChanged && newImageLevel == currentUser.profileImg) {
             return Result.Failure(AppError.Custom("변경사항이 없습니다."))
         }
 
-        if (newNickname != currentUser.nickname) {
-            when (val result = userRepository.isNicknameTaken(newNickname)) {
+        if (isNicknameChanged) {
+            val nicknameError = validateNickname(trimmedNickname)
+            if (nicknameError != null) {
+                return Result.Failure(AppError.Custom(nicknameError))
+            }
+        }
+
+        val savedNickname = if (isNicknameChanged) trimmedNickname else currentUser.nickname
+
+        if (isNicknameChanged) {
+            when (val result = userRepository.isNicknameTaken(savedNickname)) {
                 is Result.Success -> {
                     if (result.data) {
                         return Result.Failure(AppError.NicknameTaken())
@@ -44,7 +57,7 @@ class UpdateProfileUseCase @Inject constructor(
                 is Result.Failure -> return result
             }
 
-            val registerResult = userRepository.registerNickname(currentUser.uid, newNickname)
+            val registerResult = userRepository.registerNickname(currentUser.uid, savedNickname)
             if (registerResult is Result.Failure) {
                 return registerResult
             }
@@ -52,24 +65,22 @@ class UpdateProfileUseCase @Inject constructor(
             val deleteResult = userRepository.deleteNickname(currentUser.nickname)
             if (deleteResult is Result.Failure) {
                 return rollbackRegisteredNickname(
-                    newNickname = newNickname,
+                    newNickname = savedNickname,
                     originalFailure = deleteResult
                 )
             }
         }
         val updatedUser = currentUser.copy(
-            nickname = newNickname,
+            nickname = savedNickname,
             profileImg = newImageLevel
         )
         val updateResult = userRepository.updateProfile(updatedUser)
 
-        if (updateResult is Result.Failure &&
-            newNickname != currentUser.nickname
-        ) {
+        if (updateResult is Result.Failure && isNicknameChanged) {
             return rollbackNicknameChange(
                 uid = currentUser.uid,
                 previousNickname = currentUser.nickname,
-                newNickname = newNickname,
+                newNickname = savedNickname,
                 originalFailure = updateResult
             )
         }
@@ -86,7 +97,7 @@ class UpdateProfileUseCase @Inject constructor(
             )
         }
 
-        return updateResult
+        return updateResult.map { savedNickname }
     }
 
     private suspend fun rollbackNicknameChange(
