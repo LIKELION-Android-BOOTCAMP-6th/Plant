@@ -41,3 +41,6 @@ val googleButtonContentDark = Color(0xFFE3E3E3)
 
 // 다크 error(CF6262)가 secondaryContainer(757575) 위에서 대비 1.22:1이라 다크 전용 글자색
 val deleteAccountButtonContentDark = Color(0xFFEC928E)
+
+// 홈 상단바 상점 아이콘 전용 색상 (딥 포레스트) - 출석체크 아이콘의 연초록과 구분되도록 별도 상수로 둔다
+val shopGreen = Color(0xFF2D6E4F)

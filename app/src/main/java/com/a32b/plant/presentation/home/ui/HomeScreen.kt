@@ -16,6 +16,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -67,6 +68,7 @@ import com.a32b.plant.presentation.core.component.ConfettiOverlay
 import com.a32b.plant.presentation.core.component.festiveConfettiParties
 import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.theme.primary
+import com.a32b.plant.presentation.theme.shopGreen
 import com.a32b.plant.presentation.theme.sub2
 import com.a32b.plant.presentation.theme.sub_green1
 import java.time.LocalDate
@@ -167,6 +169,7 @@ fun HomeScreen(
                 HomeTopBar(
                     userName = userName,
                     isAttendanceCompleted = attendanceUiState.isAttendanceCompleted,
+                    onShopClick = { context.showToast("준비 중인 기능입니다") },
                     onAttendanceClick = viewModel::openAttendanceDialog
                 )
             },
@@ -435,6 +438,7 @@ fun PotChangeDialog(
 fun HomeTopBar(
     userName: String,
     isAttendanceCompleted: Boolean,
+    onShopClick: () -> Unit,
     onAttendanceClick: () -> Unit
 ) {
     val displayName = if (userName.isBlank()) "사용자" else userName
@@ -464,6 +468,18 @@ fun HomeTopBar(
                 fontSize = 30.sp,
                 textAlign = TextAlign.Start
             )
+            // 상점 화면 구현 전까지는 클릭 시 "준비 중" 토스트만 표시
+            IconButton(
+                onClick = onShopClick,
+                modifier = Modifier.offset(x = 6.dp)
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_shop),
+                    contentDescription = "상점",
+                    tint = shopGreen,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
             IconButton(
                 onClick = onAttendanceClick,
                 modifier = Modifier.offset(x = 6.dp)
