@@ -460,27 +460,27 @@ fun HomeTopBar(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 항상 2줄: 윗줄 "{닉네임}"(17sp) + 아랫줄 "정원"(22sp)
-            // 같은 글꼴·색에 크기 차이만 작게 둬서 두 줄이 "{닉네임} 정원" 한 타이틀로 읽히게 함
-            // 큰 글씨가 "정원" 두 글자뿐이라 우측 아이콘이 늘어나도 타이틀 자리가 모자라지 않음
-            Column(modifier = Modifier.weight(1f)) {
+            // 크기는 다른 탭 앱바(TabTopBar)와 같은 displayLarge 기본값(22sp)
+            // 닉네임과 " 정원"을 나눠 닉네임만 말줄임 처리 → 좁은 기기·긴 닉네임에서도 " 정원"은 항상 보임
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
                     text = displayName,
+                    // fill = false: 짧은 닉네임일 때 " 정원"이 오른쪽 끝으로 밀려나지 않게 함
+                    modifier = Modifier.weight(1f, fill = false),
                     style = MaterialTheme.typography.displayLarge,
                     color = MaterialTheme.colorScheme.primary,
-                    fontSize = 17.sp,
-                    // displayLarge 기본 줄 높이(36sp)는 17sp 글씨엔 너무 커서 줄임
-                    lineHeight = 23.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                // 두 줄이 붙어 보이지 않게 살짝 띄움
-                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "정원",
+                    text = " 정원",
                     style = MaterialTheme.typography.displayLarge,
                     color = MaterialTheme.colorScheme.primary,
-                    maxLines = 1
+                    maxLines = 1,
+                    softWrap = false
                 )
             }
             // offset 8dp: IconButton 안쪽 여백(48dp 중 그림 32dp → 8dp)만큼 밀어
