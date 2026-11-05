@@ -49,7 +49,12 @@ class SignInViewModel @Inject constructor(
     }
 
     fun onNicknameChange(value: String) {
-        _uiState.update { it.copy(nicknameInput = value, nicknameError = null) }
+        _uiState.update {
+            it.copy(
+                nicknameInput = NicknameRule.limitInput(previous = it.nicknameInput, input = value),
+                nicknameError = null
+            )
+        }
     }
 
     fun tryStartGoogleSignIn(): Boolean {

@@ -458,8 +458,7 @@ fun ProfileDialog(
                         textStyle = MaterialTheme.typography.bodyMedium,
                         value = newUserName,
                         onValueChange = {
-                            if (it.length <= maxLength)
-                                newUserName = it
+                            newUserName = NicknameRule.limitInput(previous = newUserName, input = it)
                             viewModel.resetNicknameError()
                         },
                         placeholder = {
