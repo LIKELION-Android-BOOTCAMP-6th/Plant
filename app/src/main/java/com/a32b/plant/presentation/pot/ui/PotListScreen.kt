@@ -130,12 +130,14 @@ fun PotGridItem(
             val imageSize = maxWidth.value.toInt()
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(bottom = 4.dp)
+                // Lv6은 그림이 이미지 위아래 끝까지 차 있어 카드 윗변·레벨 글자와 붙지 않도록 여백을 둔다
+                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
             ) {
                 ProfileImage(
                     level = "Lv.$potLevel",
                     size = imageSize
                 )
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Lv.$potLevel",
                     style = MaterialTheme.typography.titleSmall,
