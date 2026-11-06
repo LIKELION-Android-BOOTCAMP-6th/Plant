@@ -35,9 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.presentation.pot.viewmodel.NewBornTreeViewModel
-import com.a32b.plant.presentation.theme.primary
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -127,7 +125,7 @@ fun NewBornTreeScreen(navController: NavController,
                         Image(
                             painter = painterResource(R.drawable.ic_pot_lv0),
                             contentDescription = null,
-                            modifier = Modifier.size(120.dp)
+                            modifier = Modifier.size(170.dp)
                         )
                     }
                 }

@@ -119,17 +119,26 @@ fun PotGridItem(
         modifier = Modifier.fillMaxWidth()
             .clickable(onClick = onClick)
     ) {
-        Box(
+        // 카드 폭은 그리드 칸 폭에 맞추고, 높이는 이미지 + 레벨 글자만큼 늘어나게 둔다 (#477, #497)
+        BoxWithConstraints(
             modifier = Modifier
-                .size(80.dp)
+                .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.medium),
             contentAlignment = Alignment.Center
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // 새 화분 이미지는 그림이 작게 들어 있어 칸 폭만큼 이미지 영역으로 사용
+            // 큰 화면(폴드 펼침, 태블릿)에서 카드가 끝없이 커지지 않도록 최대 140dp로 제한
+            val imageSize = minOf(maxWidth, 140.dp).value.toInt()
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                // Lv6은 그림이 이미지 위아래 끝까지 차 있어 카드 윗변·레벨 글자와 붙지 않도록 여백을 둔다
+                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+            ) {
                 ProfileImage(
                     level = "Lv.$potLevel",
-                    size = 80
+                    size = imageSize
                 )
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Lv.$potLevel",
                     style = MaterialTheme.typography.titleSmall,
