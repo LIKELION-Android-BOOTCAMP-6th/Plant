@@ -348,7 +348,11 @@ class UserRepositoryImpl @Inject constructor(
             is FirebaseFirestoreException -> when (e.code) {
                 FirebaseFirestoreException.Code.UNAVAILABLE,
                 FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
-                // 중복 검사 직후 다른 사용자가 먼저 등록하면, 이미 있는 문서 덮어쓰기라 보안 규칙이 거부한다
+                // 보안 규칙이 거부하는 경우는 두 가지다.
+                // - 중복 검사 직후 다른 사용자가 먼저 등록함 (이미 있는 문서 덮어쓰기)
+                // - 닉네임 형식 위반 (#535, firestore.rules의 isValidNickname)
+                // 형식은 앱(NicknameRule)이 먼저 걸러 내므로 실제로는 대부분 중복이라 사용 중으로 안내한다.
+                // (형식 위반만 따로 구분하려면 거부 후 문서를 다시 읽어야 하므로 두지 않는다)
                 FirebaseFirestoreException.Code.PERMISSION_DENIED -> AppError.NicknameTaken()
                 else -> AppError.Custom("닉네임 등록 실패")
             }
