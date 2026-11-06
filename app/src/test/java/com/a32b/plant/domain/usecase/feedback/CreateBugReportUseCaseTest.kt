@@ -129,7 +129,7 @@ class CreateBugReportUseCaseTest {
         override suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit> = error("Unused")
         override suspend fun updateProfile(user: User): Result<Unit> = error("Unused")
         override suspend fun isNicknameTaken(nickname: String): Result<Boolean> = error("Unused")
-        override suspend fun registerNickname(nickname: String): Result<Unit> = error("Unused")
+        override suspend fun registerNickname(uid: String, nickname: String): Result<Unit> = error("Unused")
         override suspend fun deleteNickname(nickname: String): Result<Unit> = error("Unused")
         override suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success> = error("Unused")
         override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> = error("Unused")

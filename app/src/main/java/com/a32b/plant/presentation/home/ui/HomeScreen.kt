@@ -25,6 +25,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -40,6 +41,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
@@ -47,6 +51,7 @@ import com.a32b.plant.domain.model.AttendanceReward
 import com.a32b.plant.domain.model.Item
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.type.ItemType
+import com.a32b.plant.domain.type.StudyingSessionStatus
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.ProfileImage
@@ -59,6 +64,8 @@ import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.presentation.core.component.ConfettiOverlay
+import com.a32b.plant.presentation.core.component.festiveConfettiParties
+import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.theme.primary
 import com.a32b.plant.presentation.theme.sub2
 import com.a32b.plant.presentation.theme.sub_green1
@@ -67,24 +74,42 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 @Composable
-fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltViewModel()) {
+fun HomeScreen(
+    navController: NavController,
+    isSplashFinished: Boolean,
+    viewModel: HomeViewModel = hiltViewModel()
+) {
     val displayPot by viewModel.displayPot.collectAsState()
     val userName by viewModel.userName.collectAsState()
     val showPotChangeDialog by viewModel.showPotChangeDialog.collectAsState()
     val allPots by viewModel.allPots.collectAsState()
     val tempSelectedPot by viewModel.tempSelectedPot.collectAsState()
     val attendanceUiState by viewModel.attendanceUiState.collectAsState()
+    val showAttendanceDialog by viewModel.showAttendanceDialog.collectAsState()
     val userItem by viewModel.userItem.collectAsState()
     val recoverySession by viewModel.recoverySession.collectAsState()
     val isRecovering by viewModel.isRecovering.collectAsState()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val isBoxOpening by viewModel.isBoxOpening.collectAsState()
     var bonusBoxResult by remember { mutableStateOf<List<ItemType>?>(null) }
     var showOpenDialog by remember { mutableStateOf(false) }
+    var showLevelUpConfetti by remember { mutableStateOf(false) }
 
+    val uiState by viewModel.uiState.collectAsState()
     val todayStudyTime by viewModel.todayStudyTime.collectAsState()
 
     val hasNoPot = displayPot.id.isEmpty() || displayPot == Pot.EMPTY
+
+    // 홈이 보일 때마다 복구 세션 확인과 자동 출석 판단을 한 함수에서 순서대로 처리
+    // LifecycleEventObserver는 등록 시점에 현재 상태까지 이벤트를 재생하므로 첫 진입에도 ON_RESUME이 발화됨
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.onHomeResumed()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     recoverySession?.let { session ->
         RecoveryDialog(
@@ -95,12 +120,13 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
         )
     }
 
-    var showAttendanceDialog by remember { mutableStateOf(false) }
-    if (showAttendanceDialog) {
+    // 복구 창이 있으면 출석 창을 숨긴다 (복구 처리 후 showAttendanceDialog가 true로 남아 있으면 다시 나타난다)
+    // 다이얼로그는 별도 창이라 스플래시 위에 뜰 수 있어, 스플래시가 끝난 뒤에만 표시한다
+    if (showAttendanceDialog && isSplashFinished && recoverySession == null) {
         AttendanceCheckDialog(
             uiState = attendanceUiState,
             onCheckClick = { viewModel.checkAttendance() },
-            onDismiss = { showAttendanceDialog = false }
+            onDismiss = viewModel::closeAttendanceDialog
         )
     }
 
@@ -113,11 +139,24 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
         )
     }
 
+    if (uiState.showInsufficientItemsDialog) {
+        ConfirmDialog(
+            text = "아이템이 부족합니다",
+            semiText = "아이템 상점에서 구매할 수 있어요.",
+            onDismiss = { viewModel.onDismissInsufficientDialog() },
+            onConfirm = { viewModel.onDismissInsufficientDialog() }
+        )
+    }
+
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
                 is HomeEvent.ShowToast -> context.showToast(event.message)
                 is HomeEvent.BonusBoxResult -> bonusBoxResult = event.items
+                is HomeEvent.LevelUpSuccess -> {
+                    showLevelUpConfetti = true
+                    context.showToast("레벨업 성공!")
+                }
             }
         }
     }
@@ -128,7 +167,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                 HomeTopBar(
                     userName = userName,
                     isAttendanceCompleted = attendanceUiState.isAttendanceCompleted,
-                    onAttendanceClick = { showAttendanceDialog = true }
+                    onAttendanceClick = viewModel::openAttendanceDialog
                 )
             },
             containerColor = MaterialTheme.colorScheme.background
@@ -152,6 +191,10 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                         displayPot = displayPot,
                         hasNoPot = hasNoPot,
                         todayStudyTime = todayStudyTime,
+                        levelUpProgress = uiState.levelUpProgress,
+                        levelUpProgressText = uiState.levelUpProgressText,
+                        levelUpReady = uiState.levelUpReady,
+                        isLoading = uiState.isLoading,
                         onStartClick = {
                             if (!hasNoPot) {
                                 navController.navigate(
@@ -164,6 +207,12 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
                                     ))
                             }
                         },
+                        onLevelUpClick = {
+                            if (!hasNoPot && !uiState.isLoading) {
+                                viewModel.onLevelUpClick(displayPot.id, displayPot.potLevel)
+                            }
+                        },
+
                         //화분 생성 이동 or 화분 변경 다이얼로그 오픈
                         onChangeOrMakeClick = {
                             if (hasNoPot) {
@@ -234,13 +283,21 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = hiltView
             }
         }
 
+        if (uiState.isLoading){
+            LoadingBox()
+        }
         bonusBoxResult?.let { items ->
             BonusBoxResultDialog(
                 items = items,
                 onDismiss = { bonusBoxResult = null }
             )
         }
-
+        if (showLevelUpConfetti) {
+            ConfettiOverlay(
+                parties = remember { festiveConfettiParties() },
+                onFinished = { showLevelUpConfetti = false}
+            )
+        }
     }
 }
 
@@ -440,7 +497,12 @@ fun MainPlantCard(
     displayPot: Pot,
     hasNoPot: Boolean,
     todayStudyTime: String,
+    levelUpProgress: Float,
+    levelUpProgressText: String,
+    levelUpReady: Boolean,
+    isLoading: Boolean,
     onStartClick: () -> Unit,
+    onLevelUpClick: () -> Unit,
     onChangeOrMakeClick: () -> Unit,
     onRecordClick: () -> Unit
 ) {
@@ -527,14 +589,14 @@ fun MainPlantCard(
                             color = MaterialTheme.colorScheme.onSecondary
                         )
                         Text(
-                            text = "60% (30분/50분)", // 예시 텍스트 (추후 뷰모델 데이터와 연결)
+                            text = levelUpProgressText,
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSecondary,
                         )
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     LinearProgressIndicator(
-                        progress = { 0.6f }, // 예시 진행률 (0.0f ~ 1.0f)
+                        progress = { levelUpProgress },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(8.dp)
@@ -543,6 +605,19 @@ fun MainPlantCard(
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                         drawStopIndicator = {}
                     )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = onLevelUpClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = levelUpReady && !isLoading,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text("화분 레벨업", style = MaterialTheme.typography.labelLarge)
                 }
             }
 
@@ -726,7 +801,10 @@ private fun RecoveryDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "앱이 비정상 종료되어 저장되지 않은 학습 기록이 있습니다.",
+                    text = when (session.status) {
+                        StudyingSessionStatus.STUDYING -> "앱이 비정상 종료되어 저장되지 않은 학습 기록이 있습니다."
+                        StudyingSessionStatus.FINISHED -> "학습을 종료했지만 저장이 완료되지 않은 학습 기록이 있습니다."
+                    },
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(modifier = Modifier.height(4.dp))

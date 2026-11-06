@@ -2,6 +2,7 @@ package com.a32b.plant.presentation.home.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
+import com.a32b.plant.core.util.KST_ZONE_ID
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.domain.error.AppError
@@ -11,19 +12,23 @@ import com.a32b.plant.domain.model.AttendanceReward
 import com.a32b.plant.domain.model.DailyCheckThisMonth
 import com.a32b.plant.domain.model.Item
 import com.a32b.plant.domain.model.Pot
+import com.a32b.plant.domain.model.PotLevelConditions
 import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.type.ItemType
 import com.a32b.plant.domain.usecase.item.OpenBonusBoxUseCase
+import com.a32b.plant.domain.usecase.pot.CheckLevelUpConditionUseCase
 import com.a32b.plant.domain.usecase.pot.GetActivePotUseCase
 import com.a32b.plant.domain.usecase.pot.GetPotListUseCase
 import com.a32b.plant.domain.usecase.pot.GetTodayTotalStudyTimeUseCase
+import com.a32b.plant.domain.usecase.pot.LevelUpPotUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
-import com.a32b.plant.domain.usecase.studying.ClearStudyingSessionUseCase
+import com.a32b.plant.domain.usecase.studying.GetRecoverySessionUseCase
 import com.a32b.plant.domain.usecase.studying.RecoverStudySessionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,9 +48,18 @@ data class AttendanceUiState(
     val reward: AttendanceReward? = null
 )
 
+data class HomeUiState(
+    val levelUpReady: Boolean = false, //레벨업 버튼 활성화
+    val showInsufficientItemsDialog: Boolean = false, // 아이템 부족 다이얼로그
+    val levelUpProgress: Float = 0f,
+    val levelUpProgressText: String = "",
+    val isLoading: Boolean = false
+)
+
 sealed class HomeEvent {
     data class ShowToast(val message: String) : HomeEvent()
     data class BonusBoxResult(val items: List<ItemType>) : HomeEvent()
+    object LevelUpSuccess : HomeEvent()
 }
 
 private fun DailyCheckThisMonth.toAttendanceUiState(): AttendanceUiState {
@@ -80,6 +94,14 @@ private fun DailyCheckThisMonth.toAttendanceUiState(): AttendanceUiState {
     }
 }
 
+// 유저 정보로 출석 상태를 다시 계산하되, 진행 중인 보상 다이얼로그와 출석 처리 중 상태는 유지한다
+private fun DailyCheckThisMonth.toAttendanceUiStateKeeping(
+    current: AttendanceUiState
+): AttendanceUiState = toAttendanceUiState().copy(
+    reward = current.reward,
+    isChecking = current.isChecking
+)
+
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val getActivePotUseCase: GetActivePotUseCase,
@@ -88,9 +110,11 @@ class HomeViewModel @Inject constructor(
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     private val getTodayTotalStudyTimeUseCase: GetTodayTotalStudyTimeUseCase,
     private val studyingRepository: StudyingRepository,
+    private val getRecoverySessionUseCase: GetRecoverySessionUseCase,
     private val recoverStudySessionUseCase: RecoverStudySessionUseCase,
-    private val clearStudyingSessionUseCase: ClearStudyingSessionUseCase,
-    private val openBonusBoxUseCase: OpenBonusBoxUseCase
+    private val openBonusBoxUseCase: OpenBonusBoxUseCase,
+    private val checkLevelUpConditionUseCase: CheckLevelUpConditionUseCase,
+    private val levelUpPotUseCase: LevelUpPotUseCase
 ) : BaseViewModel() {
 
     private val _displayPot = MutableStateFlow(Pot.EMPTY)
@@ -115,6 +139,10 @@ class HomeViewModel @Inject constructor(
     private val _attendanceUiState = MutableStateFlow(AttendanceUiState())
     val attendanceUiState = _attendanceUiState.asStateFlow()
 
+    private val _showAttendanceDialog = MutableStateFlow(false)
+    val showAttendanceDialog = _showAttendanceDialog.asStateFlow()
+    private var lastAutoAttendanceDate: LocalDate? = null
+
     // 일회성 화면 이벤트
     private val _eventChannel = Channel<HomeEvent>(Channel.BUFFERED)
     val events = _eventChannel.receiveAsFlow()
@@ -136,9 +164,17 @@ class HomeViewModel @Inject constructor(
     private val _isRecovering = MutableStateFlow(false)
     val isRecovering = _isRecovering.asStateFlow()
 
+    // 진행 중인 홈 복귀 처리(복구 세션 확인 → 자동 출석 판단)
+    // 새 복귀나 저장·폐기를 시작하면 취소해 늦게 끝난 확인이 지운 세션을 되살리지 않게 함
+    private var recoveryCheckJob: Job? = null
+
     //박스 개봉 로딩
     private val _isBoxOpening = MutableStateFlow(false)
     val isBoxOpening = _isBoxOpening.asStateFlow()
+
+    // 레벨업 상태
+    private val _uiState = MutableStateFlow(HomeUiState())
+    val uiState = _uiState.asStateFlow()
 
     init {
         checkUserAndLoadData()
@@ -152,12 +188,61 @@ class HomeViewModel @Inject constructor(
                 _userItem.value = user.item
 
                 loadActivePot(uid = user.uid, lastSelectedPotId = user.lastSelectedPotId)
-                checkRecoverySession(user.uid)
             } ?: Unit
             loaded()
         }
     }
 
+    private fun maybeShowAutomaticAttendanceDialog() {
+        if (_recoverySession.value != null) return
+
+        val today = LocalDate.now(KST_ZONE_ID)
+        if (lastAutoAttendanceDate == today) return
+
+        lastAutoAttendanceDate = today
+        if (!_attendanceUiState.value.isAttendanceCompleted) {
+            _showAttendanceDialog.value = true
+        }
+    }
+
+    fun openAttendanceDialog() {
+        _showAttendanceDialog.value = true
+    }
+
+    fun closeAttendanceDialog() {
+        _showAttendanceDialog.value = false
+    }
+
+    /**
+     * 홈이 보일 때마다(ON_RESUME) 호출 — 첫 진입 포함
+     * 1. 저장되지 않은 학습 세션 확인 (결과 화면에서 돌아올 때는 ViewModel이 유지되어 init이 다시 실행되지 않음)
+     * 2. 복구 확인이 끝난 뒤에 자동 출석 판단 (두 창이 겹치지 않도록 순서 고정)
+     * 복구 처리 중에는 지워지기 전의 백업을 다시 읽어 창이 되살아나지 않도록 건너뜀
+     */
+    fun onHomeResumed() {
+        if (_isRecovering.value) return
+        recoveryCheckJob?.cancel()
+        recoveryCheckJob = viewModelScope.launch {
+            getRecoverySessionUseCase()
+                .onSuccess { session -> _recoverySession.value = session }
+            // 조회가 실패해도 판단을 진행한다. 실패 종류는 UnknownUser(아래 decideAutomaticAttendance가 currentUser null로 조용히 반환)
+            // 와 로컬 읽기 실패(이번 복귀에는 복구 창을 못 띄우며, 이후 백업이 발견되면 HomeScreen의 recoverySession == null 조건이 출석 창을 숨김)
+            // 현재 init은 동기 완료라 이 대기는 즉시 통과하며, init이 비동기가 될 때를 대비한 대기다
+            isLoading.first { !it }
+            decideAutomaticAttendance()
+        }
+    }
+
+    private fun decideAutomaticAttendance() {
+        // 같은 날 복귀는 아직 갱신되지 않은 유저 정보가 방금 한 출석 상태를 덮어쓰지 않도록 건너뛴다
+        if (lastAutoAttendanceDate == LocalDate.now(KST_ZONE_ID)) return
+
+        // 복구 세션 조회(getRecoverySessionUseCase)가 이미 ensureCurrentUserUseCase로 세션 만료를 알렸으므로
+        // 이벤트 중복을 막기 위해 여기서는 현재 값을 직접 읽고, 값이 없으면 이벤트 없이 반환한다
+        val user = userRepository.currentUser.value ?: return
+        _attendanceUiState.update { user.monthCheck.toAttendanceUiStateKeeping(it) }
+        maybeShowAutomaticAttendanceDialog()
+    }
 
     private fun observeUserItem() {
         viewModelScope.launch {
@@ -166,31 +251,27 @@ class HomeViewModel @Inject constructor(
                     _userItem.value = it.item
                     _userName.value = it.nickname
 
-                    val newState = it.monthCheck.toAttendanceUiState()
                     _attendanceUiState.update { currentUiState ->
-                        newState.copy(reward = currentUiState.reward)
-                    }                }
+                        it.monthCheck.toAttendanceUiStateKeeping(currentUiState)
+                    }
+                }
             }
         }
     }
 
-    private suspend fun checkRecoverySession(uid: String) {
-        studyingRepository.readLocalSession()
-            .onSuccess { session ->
-                if (session != null && session.userId == uid && session.time > 0L) {
-                    _recoverySession.value = session
-                }
-            }
-    }
-
+    /** 저장에 실패하거나 제한 시간이 지나면(AppError.Network) 창을 유지해 다시 선택할 수 있게 함 */
     fun recoverSession() {
         val session = _recoverySession.value ?: return
+        if (_isRecovering.value) return
+        recoveryCheckJob?.cancel()
         _isRecovering.value = true
         viewModelScope.launch {
             recoverStudySessionUseCase(session)
                 .onSuccess {
                     _recoverySession.value = null
+                    maybeShowAutomaticAttendanceDialog()
                     sendToast("학습 기록이 저장되었습니다.")
+                    deleteStudyingUserInfo()
                 }
                 .onFailure { error ->
                     when (error) {
@@ -202,21 +283,29 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    /** 로컬 백업만 지우면 바로 끝나므로 네트워크 상태와 상관없이 창을 닫음 */
     fun discardSession() {
+        if (_isRecovering.value) return
+        recoveryCheckJob?.cancel()
         _isRecovering.value = true
         viewModelScope.launch {
-            clearStudyingSessionUseCase()
+            studyingRepository.clearLocalSession()
                 .onSuccess {
                     _recoverySession.value = null
+                    maybeShowAutomaticAttendanceDialog()
+                    deleteStudyingUserInfo()
                 }
-                .onFailure { error ->
-                    when (error) {
-                        is AppError.UnknownUser -> ensureCurrentUserUseCase()
-                        else -> sendToast(error.message)
-                    }
-                }
+                .onFailure { error -> sendToast(error.message) }
             _isRecovering.value = false
         }
+    }
+
+    /**
+     * "공부 중" 표시(studying/{uid}) 삭제 — 오프라인이면 연결 후 반영되므로 완료를 기다리지 않음
+     * 실패해도 복구·폐기 결과에는 영향이 없어 별도 처리 없음 (에러 로그는 레포지토리에서 찍고 있음)
+     */
+    private fun deleteStudyingUserInfo() {
+        viewModelScope.launch { studyingRepository.deleteStudyingUserInfo() }
     }
 
     private fun loadActivePot(uid: String, lastSelectedPotId: String){
@@ -225,6 +314,7 @@ class HomeViewModel @Inject constructor(
                 getActivePotUseCase(uid = uid, lastSelectedPotId = lastSelectedPotId)
                     .collect { pot ->
                         _displayPot.value = pot
+                        updateProgressAndCondition(pot)
                         if (pot.id.isNotEmpty() && pot != Pot.EMPTY) {
                             fetchTodayStudyTime(uid, pot.id)
                         } else {
@@ -263,6 +353,8 @@ class HomeViewModel @Inject constructor(
     fun confirmPotChange() {
         _tempSelectedPot.value?.let { selected ->
             _displayPot.value = selected
+
+            updateProgressAndCondition(selected)
 
             viewModelScope.launch {
                 safeRunCatching {
@@ -364,5 +456,72 @@ class HomeViewModel @Inject constructor(
                 _isBoxOpening.value = false
             }
         }
+    }
+
+    //진행도 & 텍스트 계산
+    private fun computeProgress(pot: Pot): Pair<Float, String> {
+        val condition = PotLevelConditions.getCondition(pot.potLevel)
+            ?: return 1f to "최고 레벨"
+
+        val maxMs = condition.maxHoursForProgress * 3_600_000L
+        val progress = (pot.potTotalStudyingTime.toFloat() / maxMs).coerceIn(0f, 1f)
+
+        val currentMin = pot.potTotalStudyingTime / 60_000
+        val requiredMin = maxMs / 60_000
+        val text = "${(progress * 100).toInt()}% (${currentMin}분/${requiredMin}분)"
+        return progress to text
+    }
+
+    // 레벨업 재검증
+    private fun recheckLevelUpCondition(pot: Pot) {
+        val ready = pot.id.isNotEmpty() &&
+                pot != Pot.EMPTY &&
+                checkLevelUpConditionUseCase(pot.potLevel, pot.potTotalStudyingTime)
+
+        _uiState.update { it.copy(levelUpReady = ready) }
+    }
+
+    //레벨업 함수
+    fun onLevelUpClick(potId: String, currentPotLevel: Int) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            levelUpPotUseCase(potId, currentPotLevel)
+                .onSuccess {
+                    val leveledUp = _displayPot.value.let {
+                        if (it.id == potId) it.copy(potLevel = currentPotLevel + 1) else it
+                    }
+
+                    updateProgressAndCondition(leveledUp)
+
+                    _uiState.update { it.copy(isLoading = false) }
+                    _eventChannel.send(HomeEvent.LevelUpSuccess)
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(isLoading = false) }
+                    when (e) {
+                        is AppError.UnknownUser -> Unit
+                        is AppError.InsufficientItems -> {
+                            _uiState.update { it.copy(showInsufficientItemsDialog = true) }
+                        }
+                        else -> sendToast(e.message)
+                    }
+                }
+        }
+    }
+
+    fun onDismissInsufficientDialog() {
+        _uiState.update { it.copy(showInsufficientItemsDialog = false) }
+    }
+
+    //바 계산 & 레벨업 조건 검증 일괄 처리용
+    private fun updateProgressAndCondition(pot: Pot) {
+        val (progress, text) = computeProgress(pot)
+        _uiState.update {
+            it.copy(
+                levelUpProgress = progress,
+                levelUpProgressText = text
+            )
+        }
+        recheckLevelUpCondition(pot)
     }
 }

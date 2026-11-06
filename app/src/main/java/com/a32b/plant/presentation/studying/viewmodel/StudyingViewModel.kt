@@ -12,11 +12,14 @@ import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.domain.repository.StudyingRepository
+import com.a32b.plant.domain.result.getOrNull
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
+import com.a32b.plant.domain.type.StudyingSessionStatus
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import com.a32b.plant.domain.usecase.studying.ClearStudyingSessionUseCase
 import com.a32b.plant.domain.usecase.studying.FinishStudyingUseCase
+import com.a32b.plant.domain.usecase.studying.GetRecoverySessionUseCase
 import com.a32b.plant.domain.usecase.studying.StartStudyingSessionUseCase
 import com.a32b.plant.domain.usecase.studying.UpdateLocalStudyingSessionUseCase
 import com.a32b.plant.presentation.core.type.StudyingGoalCheckMode
@@ -37,7 +40,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDateTime
 import javax.inject.Inject
-import kotlin.time.Duration.Companion.seconds
 
 data class StudyLogUi(
     val log: String = "",
@@ -55,6 +57,7 @@ data class StudyingUiState(
     val isLocalSaved: Boolean = true, // 로컬 저장 성공 여부 체크
     val startedAt: Long = 0L,
     val isLoading: Boolean = false,
+    val isFinished: Boolean = false, // 종료 확정 여부 — 종료 저장을 시작하면 화면을 떠날 때까지 true 유지
     val error: String? = null,
     val isGoalInputDialogShown: Boolean = true, //학습 목표 입력
     val goalCheckMode: StudyingGoalCheckMode? = null,
@@ -88,6 +91,7 @@ class StudyingViewModel @Inject constructor(
     private val updateLocalStudyingSessionUseCase: UpdateLocalStudyingSessionUseCase,
     private val clearStudyingSessionUseCase: ClearStudyingSessionUseCase,
     private val finishStudyingUseCase: FinishStudyingUseCase,
+    private val getRecoverySessionUseCase: GetRecoverySessionUseCase,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     savedStateHandle: SavedStateHandle
 ) : BaseViewModel() {
@@ -113,6 +117,12 @@ class StudyingViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            // 종료했지만 저장되지 않은 세션을 새 공부가 덮어쓰지 않도록, 시작하지 않고 홈 복구 창으로 보냄
+            if (hasUnsavedFinishedSession()) {
+                sendToast("저장되지 않은 학습 기록이 있어 홈으로 이동합니다.")
+                _eventChannel.send(StudyingEvent.NavigateToHome)
+                return@launch
+            }
             restoreFromLocalBackup()
             // 로컬 복구 결과(타이머·목표 다이얼로그 표시 여부)가 확정된 뒤 화면 노출
             // 원격 등록(initStudyingUser)은 화면 표시와 무관하므로 기다리지 않음
@@ -123,10 +133,14 @@ class StudyingViewModel @Inject constructor(
         observeTimer()
     }
 
+    private suspend fun hasUnsavedFinishedSession(): Boolean =
+        getRecoverySessionUseCase().getOrNull()?.status == StudyingSessionStatus.FINISHED
+
     private suspend fun restoreFromLocalBackup() {
         repository.readLocalSession()
             .onSuccess { session ->
-                if (session != null && session.potId == potId) {
+                // 종료한 세션은 이어서 공부하지 않으므로 공부 중이던 세션만 복원
+                if (session != null && session.potId == potId && session.status == StudyingSessionStatus.STUDYING) {
                     lastSaveMs = session.time
                     lastUpdateMs = session.time
                     _uiState.update {
@@ -135,10 +149,11 @@ class StudyingViewModel @Inject constructor(
                             startedAt = session.startedAt,
                             studyLog = session.log?.map { log -> StudyLogUi(log = log) }?.filter { it.log.isNotBlank() } ?: emptyList(),
                             isGoalInputDialogShown = false,
-                            isStudying = true
+                            isStudying = !session.isPaused
                         )
                     }
-                    startStopwatch()
+                    // 일시정지 중이었으면 사용자가 재개할 때까지 타이머를 시작하지 않는다
+                    if (!session.isPaused) startStopwatch()
                 }
             }
     }
@@ -165,26 +180,21 @@ class StudyingViewModel @Inject constructor(
     fun onStartedAtChange(value : Long) = _uiState.update { it.copy(startedAt = value) }
 
     /** 비정상 종료 대비 로컬 디비에 데이터 저장   */
-    private suspend fun saveSession(){
-        updateLocalStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title, potId, _uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt)
+    private suspend fun saveSession(status: StudyingSessionStatus = StudyingSessionStatus.STUDYING){
+        updateLocalStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title, potId, _uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt, isPaused = !_uiState.value.isStudying, status = status)
             .onSuccess { _uiState.update { it.copy(isLocalSaved = true) } }
             .onFailure { e ->
                 if (e is AppError.Custom) _uiState.update { it.copy(isLocalSaved = false) }
             }
     }
 
-    /** 최초 시작 시 로컬 + 원격 db에 현재 사용자 정보 저장 */
+    /**
+     * 최초 시작 시 로컬 + 원격 db에 현재 사용자 정보 저장
+     * 실패해도 공부는 계속하므로 별도 처리 없음 (UnknownUser는 유즈케이스에서 처리, 에러 로그는 레포지토리에서 찍고 있음)
+     */
     suspend fun initStudyingUser(){
         withContext(Dispatchers.IO){
-            startStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title,potId,_uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt)
-                .onFailure { e ->
-                    when (e){
-                        is AppError.UnknownUser -> Unit //유즈케이스에서 호출했으므로 따로 호출 x
-                        is AppError.Local, is AppError.Custom -> Unit //에러 로그는 레포지토리에서 찍고 있음
-                        is AppError.Network -> sendToast(e.message)
-                        else -> _uiState.update { it.copy(error = e.message) }
-                    }
-                }
+            startStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title,potId,_uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt, isPaused = !_uiState.value.isStudying)
         }
     }
 
@@ -211,6 +221,8 @@ class StudyingViewModel @Inject constructor(
     }
 
     private fun startStopwatch() {
+        // 재개 직후 앱이 종료돼도 일시정지 상태로 복원되지 않도록 바로 저장한다
+        viewModelScope.launch { saveSession() }
         sendServiceIntent(StudyingTimerService.ACTION_START) {
             putExtra(StudyingTimerService.EXTRA_ACCUMULATED, _uiState.value.timer)
         }
@@ -265,7 +277,7 @@ class StudyingViewModel @Inject constructor(
             )
         }
         viewModelScope.launch {
-            updateLocalStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title, potId, _uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt)
+            updateLocalStudyingSessionUseCase(_uiState.value.tag, _uiState.value.title, potId, _uiState.value.timer, _uiState.value.studyLog.map { it.log }, startedAt = _uiState.value.startedAt, isPaused = !_uiState.value.isStudying)
         }
     }
 
@@ -312,12 +324,17 @@ class StudyingViewModel @Inject constructor(
                 )}
                 savedGoalCheckMode = null
                 finishEditing()
+                // 일시정지 중에는 주기 저장이 돌지 않으므로 수정한 목표를 바로 백업한다
+                viewModelScope.launch { saveSession() }
             }
         }
     }
 
     /** 학습 목표 확인 다이얼로그 표출 모드 제어*/
     fun onChangeGoalCheckMode(mode: StudyingGoalCheckMode?) {
+        // 종료 저장 중·저장 후 뒤로 가기 등으로 확인 창이 다시 열려 종료가 한 번 더 실행되지 않도록 무시
+        // 닫기(null)도 막음 — 통과하면 종료 후 타이머가 재개되고 FINISHED 백업이 STUDYING으로 덮임
+        if (_uiState.value.isFinished) return
         if (mode != null) {
             if (mode == StudyingGoalCheckMode.FINISH) {
                 val wasStudying = _uiState.value.isStudying
@@ -387,8 +404,11 @@ class StudyingViewModel @Inject constructor(
 
     /** 학습 완전 종료 시 (= 다이얼로그에서도 기록 입력 후 종료 버튼 클릭했을 때)    */
     fun onIsStudyFinishChange() {
+        // 종료 버튼 연타 시 학습 기록·학습 시간이 두 번 저장되지 않도록 한 번만 실행
+        // isLoading은 저장이 끝나면 풀리므로(결과 화면 이동 전) 별도 플래그로 막음
+        if (_uiState.value.isFinished) return
         sendServiceIntent(StudyingTimerService.ACTION_STOP)
-        _uiState.update { it.copy(isLoading = true, goalCheckMode = null) }
+        _uiState.update { it.copy(isLoading = true, isFinished = true, goalCheckMode = null) }
         onFinishStudyingClick()
     }
 
@@ -406,8 +426,10 @@ class StudyingViewModel @Inject constructor(
         val resultTimestamp = "${TimeFormatter.formatWithDayOfWeek(LocalDateTime.now())} ${startTime} ~ ${getCurrentTime()}"
 
         viewModelScope.launch(Dispatchers.IO){
+            // 저장이 끝나지 않은 채 화면을 떠나도 다시 이어서 공부하지 않고 홈 복구 창에서 처리되도록 종료 상태로 백업
+            saveSession(StudyingSessionStatus.FINISHED)
 
-            val result = withTimeoutOrNull(5.seconds){
+            val result = withTimeoutOrNull(FinishStudyingUseCase.SAVE_TIMEOUT){
                 finishStudyingUseCase(
                     potId = potId,
                     timestamp = timestamp,
@@ -428,7 +450,7 @@ class StudyingViewModel @Inject constructor(
                         }
                     }
             }
-            if (result == null) sendToast("네트워크 연결 상태를 확인해주세요.")
+            if (result == null) sendToast(AppError.Network().message)
 
             _uiState.update { it.copy(isLoading = false) }
 

@@ -30,6 +30,7 @@ import com.a32b.plant.presentation.studying.ui.StudyingScreen
 @Composable
 fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewModel) {
 
+    val splashUiState by viewModel.uiState.collectAsState()
     val destination by viewModel.destination.collectAsState()
     destination?.let { startRoute ->
         NavHost(navController = navController,
@@ -40,7 +41,12 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
             popExitTransition = { fadeOut(animationSpec = tween(400)) }
         ) {
 
-            composable<Routes.HomeMain> { HomeScreen(navController) }
+            composable<Routes.HomeMain> {
+                HomeScreen(
+                    navController,
+                    isSplashFinished = splashUiState.isFirstScreenReady && splashUiState.isSplashExitFinished
+                )
+            }
             composable<Routes.Mypage> { MyPageScreen(navController) }
             composable<Routes.AccountManage> { AccountManageScreen(navController) }
 

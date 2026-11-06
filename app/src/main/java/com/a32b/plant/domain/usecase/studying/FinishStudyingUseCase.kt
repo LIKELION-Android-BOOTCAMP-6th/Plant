@@ -7,6 +7,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.seconds
 
 class FinishStudyingUseCase @Inject constructor(
     private val repository: StudyingRepository
@@ -20,5 +21,10 @@ class FinishStudyingUseCase @Inject constructor(
             )
             results.firstOrNull { it is Result.Failure } ?: Result.Success(Unit)
         }
+    }
+
+    companion object {
+        /** 학습 기록 저장 제한 시간 — 오프라인에서는 쓰기가 끝나지 않으므로 호출부가 이 시간만 기다림 */
+        val SAVE_TIMEOUT = 5.seconds
     }
 }

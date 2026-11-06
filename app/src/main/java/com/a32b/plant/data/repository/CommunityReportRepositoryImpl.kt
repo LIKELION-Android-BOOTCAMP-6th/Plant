@@ -44,7 +44,9 @@ class CommunityReportRepositoryImpl @Inject constructor(
         is FirebaseFirestoreException -> when (e.code) {
             FirebaseFirestoreException.Code.UNAVAILABLE,
             FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
-            FirebaseFirestoreException.Code.PERMISSION_DENIED -> AppError.Permission()
+            // 정상 사용 중에는 대상이 삭제됐거나 같은 신고가 동시에 제출된 경우에만 발생
+            FirebaseFirestoreException.Code.PERMISSION_DENIED ->
+                AppError.Custom("삭제되었거나 신고할 수 없는 콘텐츠입니다.")
             else -> AppError.Custom("신고 처리 중 오류가 발생했습니다.")
         }
         else -> AppError.Unknown()
