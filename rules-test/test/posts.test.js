@@ -2,7 +2,7 @@
 const {describe, it, before, after, beforeEach} = require("node:test");
 const {assertFails, assertSucceeds} = require("@firebase/rules-unit-testing");
 const {
-  arrayUnion, deleteDoc, doc, getDoc, increment, serverTimestamp, setDoc, updateDoc, writeBatch,
+  arrayUnion, deleteDoc, doc, getDoc, increment, runTransaction, serverTimestamp, setDoc, updateDoc, writeBatch,
 } = require("firebase/firestore");
 const {ALICE, BOB, createTestEnv, seed} = require("../helpers");
 
@@ -155,6 +155,39 @@ describe("posts", () => {
     it("제3자는 댓글을 삭제할 수 없다", async () => {
       const carol = testEnv.authenticatedContext("carol").firestore();
       await assertFails(deleteDoc(doc(carol, "posts", "post1", "comments", "c1")));
+    });
+
+    // 앱이 실제로 보내는 쓰기(CommunityRemoteDataSourceImpl)가 새 규칙에서 막히지 않는지 (#528)
+    function commentActivity(uid, commentId) {
+      return {
+        id: "", uid, type: "댓글", title: "제목", targetId: "post1",
+        comment: "안녕", commentId, createAt: serverTimestamp(),
+      };
+    }
+
+    it("앱의 댓글 작성 batch(댓글 + activity, commentCount 없음)는 허용", async () => {
+      const db = asBob();
+      const batch = writeBatch(db);
+      batch.set(doc(db, "posts", "post1", "comments", "c2"), {
+        user: {uid: BOB}, content: "안녕", activityId: "a2", commentId: "c2",
+        createdAt: serverTimestamp(), reportCount: 0, isHidden: false,
+      });
+      batch.set(doc(db, "activities", "a2"), commentActivity(BOB, "c2"));
+      await assertSucceeds(batch.commit());
+    });
+
+    it("앱의 댓글 삭제 트랜잭션(댓글 + activity 삭제, commentCount 없음)은 허용", async () => {
+      await seed(testEnv, async (db) => {
+        await setDoc(doc(db, "activities", "a1"), {...commentActivity(BOB, "c1"), createAt: new Date()});
+      });
+      const db = asBob();
+      await assertSucceeds(runTransaction(db, async (txn) => {
+        const commentRef = doc(db, "posts", "post1", "comments", "c1");
+        const snapshot = await txn.get(commentRef);
+        if (!snapshot.exists()) throw new Error("댓글이 없음");
+        txn.delete(commentRef);
+        txn.delete(doc(db, "activities", "a1"));
+      }));
     });
 
     it("삭제된(없는) 게시글에는 댓글을 만들 수 없다", async () => {

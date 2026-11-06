@@ -219,12 +219,15 @@ class CommunityDetailViewModel @Inject constructor(
                     } else {
                         // 좋아요/북마크가 디바운스 대기 중이거나 서버 커밋이 진행 중이면, 아직 반영되지 않은
                         // 서버의 이전 값으로 덮어쓰지 않고 로컬에서 들고 있던 값을 그대로 유지한다.
+                        // 댓글 수는 항상 화면에 보이던 값을 유지하고 아래 댓글 목록 조회가 성공했을 때만 바꾼다 (#528)
+                        // (서버 commentCount는 트리거 반영 전 이전 값일 수 있어, 댓글 목록 조회만 실패하면 숫자가 내려가 보임)
                         val current = _post.value
                         val merged = fetchedPost.copy(
                             isLiked = if (isLikeUncommitted()) current?.isLiked ?: fetchedPost.isLiked else fetchedPost.isLiked,
                             likeCount = if (isLikeUncommitted()) current?.likeCount ?: fetchedPost.likeCount else fetchedPost.likeCount,
                             isBookmarked = if (isBookmarkUncommitted()) current?.isBookmarked ?: fetchedPost.isBookmarked else fetchedPost.isBookmarked,
-                            bookmarkCount = if (isBookmarkUncommitted()) current?.bookmarkCount ?: fetchedPost.bookmarkCount else fetchedPost.bookmarkCount
+                            bookmarkCount = if (isBookmarkUncommitted()) current?.bookmarkCount ?: fetchedPost.bookmarkCount else fetchedPost.bookmarkCount,
+                            commentCount = current?.commentCount ?: fetchedPost.commentCount
                         )
                         _post.value = merged
                         onIsSharedChange()
@@ -686,6 +689,8 @@ class CommunityDetailViewModel @Inject constructor(
     // commentCount는 댓글 생성·삭제 트리거(functions)가 나중에(보통 수 초 이내) 세어 저장하므로,
     // 작성·삭제 직후 refresh()에서 받은 게시글에는 아직 이전 값이 들어 있을 수 있다.
     // 트리거도 같은 comments 문서 개수를 세므로 반영이 끝나면 두 값은 같아진다
+    // 서버 commentCount는 화면에 게시글이 아직 없을 때(처음 로딩, 처음 로딩 실패 후 다시 시도) 댓글 목록 조회가
+    // 실패한 경우에만 남는다 (refresh()는 화면에 보이던 값을 유지하고 댓글 목록 조회가 성공했을 때만 이 함수로 바꿈)
     private fun applyCommentCountFromList(count: Int) {
         _post.update { it?.copy(commentCount = count) }
     }
