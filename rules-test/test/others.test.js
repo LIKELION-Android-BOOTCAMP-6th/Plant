@@ -44,6 +44,7 @@ describe("기타 컬렉션", () => {
     });
 
     // 닉네임 형식 검사 (#535) — 앱(NicknameRule)이 허용하는 닉네임은 규칙도 허용해야 한다
+    // 허용·거부 값은 앱 유닛 테스트(app/src/test/.../domain/util/NicknameRuleTest.kt)와 같은 값을 쓴다. 한쪽을 바꾸면 함께 바꿀 것
     const register = (nickname) =>
       setDoc(doc(asBob(), "nicknames", nickname), {nickname, uid: BOB});
 
