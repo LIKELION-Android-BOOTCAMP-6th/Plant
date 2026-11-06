@@ -784,26 +784,41 @@ fun BonusBoxResultDialog(
     var showConfetti by remember { mutableStateOf(true) }
 
     val itemCounts = remember(items) {
-        items.groupingBy { it }.eachCount()
+        items.groupingBy { it }.eachCount().toSortedMap()
     }
     Box(modifier = Modifier.fillMaxSize()){
         AlertDialog(
             onDismissRequest = onDismiss,
             title = {
-                Text("보너스 박스 개봉 결과!", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = "보너스 박스 개봉 결과!",
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center
+                )
             },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    itemCounts.forEach { (type, count) ->
-                        Text(
-                            text = "${type.kor} x${count} 획득!",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        itemCounts.forEach { (type, count) ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Image(
+                                    painter = painterResource(id = type.resId),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Text(
+                                    text = "${type.kor} x${count} 획득!",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
                     }
                 }
             },
