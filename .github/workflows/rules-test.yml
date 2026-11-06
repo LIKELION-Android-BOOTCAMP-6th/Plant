@@ -1,0 +1,71 @@
+name: Firestore Rules Test
+
+# 규칙이 곧 서버 로직(batch + 규칙 검증)이므로, 규칙 테스트가 깨지면 PR에서 바로 잡는다 (#539)
+# - 앱 빌드(android-build.yml)와 별도 워크플로라 서로의 실패에 영향 없음
+# - 경로 조건 없이 항상 실행: 나중에 "머지 필수 검사"로 지정해도 건너뛴 PR이 대기 상태로 막히지 않음
+# - 머지 후(push)에도 실행: 각자는 통과했지만 합치면 깨지는 PR 조합을 잡고,
+#   develop·main에 캐시를 만들어 다른 PR도 재사용 (PR에서 만든 캐시는 그 PR에서만 쓰임)
+on:
+  pull_request:
+    branches: [ develop, main ]
+  push:
+    branches: [ develop, main ]
+
+permissions:
+  contents: read
+
+jobs:
+  rules-test:
+    runs-on: ubuntu-latest
+    # node --test에는 기본 제한 시간이 없어, 테스트·에뮬레이터가 멈추면 GitHub 기본값(6시간)까지 붙잡힘
+    # 평소 2분 이내이므로 10분이면 충분 (step이 아닌 job 단위라 설치 단계 멈춤도 포함)
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Firestore 에뮬레이터는 Java 21 이상 필요 (Android 빌드는 17이라 job 분리)
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      # @firebase/rules-unit-testing@6은 Node 24.12 이상 필요 (rules-test/package.json의 engines)
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: rules-test/package-lock.json
+
+      # 프로젝트 ID가 demo-plant(에뮬레이터 전용)라 로그인·시크릿 불필요
+      - name: Install Firebase CLI
+        id: firebase-cli
+        run: |
+          npm install -g firebase-tools@15
+          echo "version=$(firebase --version)" >> "$GITHUB_OUTPUT"
+
+      # 에뮬레이터 jar를 매번 내려받지 않도록 캐시 (CLI 버전이 바뀌면 새로 받음)
+      - name: Cache Firebase emulators
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ runner.os }}-${{ steps.firebase-cli.outputs.version }}
+
+      - name: Install rules-test dependencies
+        run: npm --prefix rules-test ci
+
+      # 에뮬레이터가 뜨지 않거나 테스트가 하나라도 실패하면 0이 아닌 코드로 끝나 job 실패
+      - name: Run Firestore rules tests
+        run: npm --prefix rules-test test
+
+      # timeout-minutes 초과는 "취소(cancelled)"로 처리되어 failure()만으로는 실행되지 않음
+      # → 멈춤(시간 초과)일 때가 로그가 가장 필요하므로 cancelled()도 포함
+      - name: Upload emulator logs on failure
+        if: ${{ failure() || cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: rules-test-logs
+          path: rules-test/*.log
+          if-no-files-found: ignore

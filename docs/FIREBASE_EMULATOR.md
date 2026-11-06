@@ -82,6 +82,26 @@ npm --prefix rules-test test
 테스트 이름에 `[현재 허용 - #번호에서 ...]`가 붙은 것은 **알려진 구멍을 현재 동작 그대로 기록한 테스트**다.
 해당 이슈에서 규칙을 고치면 `assertSucceeds` → `assertFails`로 바꾼다.
 
+### CI에서도 실행됨 (#539)
+
+GitHub Actions(`.github/workflows/rules-test.yml`)가 같은 명령(`npm --prefix rules-test test`)을 자동으로 실행한다.
+
+| 언제 | 결과 확인 위치 |
+|---|---|
+| `develop`·`main` 대상 PR (열기·푸시할 때마다) | PR의 **Firestore Rules Test** 검사 |
+| `develop`·`main`에 머지된 뒤 | PR 화면이 없으므로 **Actions 탭** 또는 해당 커밋 옆 ✅/❌ |
+
+- 규칙 테스트가 하나라도 실패하면 검사가 실패(❌)로 표시된다
+  - `develop`은 앱 빌드(`build`)와 함께 **머지 필수 검사**로 지정되어 있어, ❌면 머지 버튼이 막힌다
+  - 브랜치 보호 규칙에 등록된 이름은 job 이름인 `rules-test`. **워크플로의 job 이름을 바꾸면 보호 규칙도 함께 바꿀 것** (안 바꾸면 모든 PR이 "Expected — Waiting for status"로 영원히 대기)
+- 머지 후 실행은 **각자는 통과했지만 합치면 깨지는 PR 조합**을 잡고, 캐시를 develop·main에 만들어 다른 PR도 재사용하게 한다 (PR에서 만든 캐시는 그 PR 안에서만 쓰임)
+- 앱 빌드(`android-build.yml`)와 **별도 워크플로**라 한쪽이 실패해도 다른 쪽 결과에 영향 없음
+- 경로 조건 없이 **모든 PR에서 실행**한다 (나중에 머지 필수 검사로 지정해도 건너뛴 PR이 대기 상태로 막히지 않도록)
+- 10분 안에 끝나지 않으면(테스트·에뮬레이터 멈춤) 실패로 처리된다. 평소에는 2분 이내
+- CI 환경: JDK 21, Node 24, `firebase-tools@15`. 에뮬레이터 프로그램은 `~/.cache/firebase/emulators`로 캐시
+- 실패·시간 초과 시 에뮬레이터 로그(`rules-test/*.log`)가 실행 결과의 Artifacts(`rules-test-logs`)에 올라간다 (실행 결과 페이지 **Summary** 맨 아래)
+- CI가 있어도 규칙을 고쳤다면 **푸시 전에 로컬에서 먼저 돌려 보는 것**을 권장 (CI 결과를 기다리는 시간 절약)
+
 ## 데이터를 남기고 싶을 때 (선택)
 
 기본적으로 에뮬레이터를 끄면 데이터가 사라진다. 다음 실행 때 이어서 쓰려면:
