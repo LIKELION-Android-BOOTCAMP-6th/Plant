@@ -799,11 +799,21 @@ fun BonusBoxResultDialog(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     itemCounts.forEach { (type, count) ->
-                        Text(
-                            text = "${type.kor} x${count} 획득!",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Image(
+                                painter = painterResource(id = type.resId),
+                                contentDescription = type.kor,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Text(
+                                text = "${type.kor} x${count} 획득!",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
             },
