@@ -60,8 +60,10 @@ jobs:
       - name: Run Firestore rules tests
         run: npm --prefix rules-test test
 
+      # timeout-minutes 초과는 "취소(cancelled)"로 처리되어 failure()만으로는 실행되지 않음
+      # → 멈춤(시간 초과)일 때가 로그가 가장 필요하므로 cancelled()도 포함
       - name: Upload emulator logs on failure
-        if: failure()
+        if: ${{ failure() || cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: rules-test-logs
