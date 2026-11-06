@@ -123,6 +123,7 @@ class BugReportViewModelTest {
             runCurrent()
 
             assertEquals(listOf("feedback-1", "feedback-1"), repository.submittedIds)
+            assertEquals(1, repository.createFeedbackIdCalls)
             assertEquals(2, repository.createCalls)
             assertEquals(
                 listOf(
@@ -205,7 +206,8 @@ class BugReportViewModelTest {
 
         override fun createFeedbackId(): String {
             createFeedbackIdCalls++
-            return "feedback-1"
+            // 호출마다 다른 ID를 돌려줘야, 재시도 때 ID를 새로 만드는 회귀를 테스트가 잡는다
+            return "feedback-$createFeedbackIdCalls"
         }
 
         override suspend fun createFeedback(
