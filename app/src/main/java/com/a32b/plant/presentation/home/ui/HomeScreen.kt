@@ -784,7 +784,7 @@ fun BonusBoxResultDialog(
     var showConfetti by remember { mutableStateOf(true) }
 
     val itemCounts = remember(items) {
-        items.groupingBy { it }.eachCount()
+        items.groupingBy { it }.eachCount().toSortedMap()
     }
     Box(modifier = Modifier.fillMaxSize()){
         AlertDialog(
@@ -795,24 +795,24 @@ fun BonusBoxResultDialog(
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    itemCounts.forEach { (type, count) ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Image(
-                                painter = painterResource(id = type.resId),
-                                contentDescription = type.kor,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Text(
-                                text = "${type.kor} x${count} 획득!",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        itemCounts.forEach { (type, count) ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Image(
+                                    painter = painterResource(id = type.resId),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Text(
+                                    text = "${type.kor} x${count} 획득!",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
                         }
                     }
                 }
