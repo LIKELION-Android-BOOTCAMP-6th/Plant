@@ -1,6 +1,7 @@
 package com.a32b.plant.domain.repository
 
 import com.a32b.plant.domain.model.StudyLog
+import com.a32b.plant.domain.model.StudyingGoalDraft
 import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.domain.result.Result
@@ -35,5 +36,12 @@ interface StudyingRepository {
     suspend fun readLocalSession(): Result<StudyingSession?>
 
     suspend fun clearLocalSession(): Result<Unit>
+
+    /** 목표 입력 창 임시 글 로컬 저장/읽기/삭제 */
+    suspend fun saveLocalGoalDraft(draft: StudyingGoalDraft): Result<Unit>
+
+    suspend fun readLocalGoalDraft(): Result<StudyingGoalDraft?>
+
+    suspend fun clearLocalGoalDraft(): Result<Unit>
 
 }

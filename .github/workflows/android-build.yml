@@ -9,10 +9,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -25,3 +25,7 @@ jobs:
 
       - name: Build with Gradle
         run: ./gradlew assembleDebug --no-daemon
+
+      # 테스트 코드는 assembleDebug에 포함되지 않아, 인터페이스 변경으로 테스트 Fake가 깨져도 잡히지 않는다 (#518)
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest --no-daemon

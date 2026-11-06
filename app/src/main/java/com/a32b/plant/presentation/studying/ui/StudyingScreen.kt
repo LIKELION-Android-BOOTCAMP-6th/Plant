@@ -81,6 +81,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
     // 종료 저장 중에도 비활성화하지 않음 — 비활성화하면 기본 뒤로 가기로 화면을 떠나 백업 삭제·결과 화면 이동이 취소됨
     // (서버 쓰기는 이미 반영돼, 남은 백업으로 홈 복구 창에서 다시 저장하면 중복 저장됨)
     // 저장 중 호출은 ViewModel에서 무시
+    // 홈이 보이면 타이머 서비스를 중지하므로(#514), 타이머를 유지한 채 홈으로 보내는 경로를 만들면 HomeViewModel.onHomeResumed를 함께 확인할 것
     BackHandler {
         viewModel.onChangeGoalCheckMode(StudyingGoalCheckMode.FINISH)
     }
@@ -219,10 +220,9 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
                 initialIndex = uiState.logIndex ?: 0,
                 tag = uiState.tag,
                 title = uiState.title,
-                studyLogs = uiState.studyLog.map { it.log },
-                onDismiss = {
-                    viewModel.onGoalInputDialogChange(false)
-                },
+                logs = uiState.goalDraft,
+                onLogsChange = viewModel::onGoalDraftChange,
+                onDismiss = viewModel::onGoalInputDialogCloseRequest,
                 onConfirm = {
                     viewModel.setStudyLog(it)
                     viewModel.onGoalInputDialogChange(false)
@@ -232,6 +232,15 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
                     viewModel.onStudyLogChanged(index = index, log = log)
                     viewModel.onGoalInputDialogChange(false)
                 }
+            )
+        }
+        // 입력 창 위에 띄워야 하므로 입력 창 다음에 둠 — 바깥 터치·뒤로 가기는 취소로 처리해 글 유지
+        if (uiState.isGoalDiscardConfirmShown) {
+            ConfirmDialog(
+                text = "작성한 내용을 버릴까요?",
+                confirmBtnText = "버리기",
+                onDismiss = viewModel::onGoalDiscardCancel,
+                onConfirm = viewModel::onGoalDiscardConfirm
             )
         }
         uiState.goalCheckMode?.let {

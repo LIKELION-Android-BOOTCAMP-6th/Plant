@@ -7,6 +7,7 @@ import com.a32b.plant.data.source.local.StudyingLocalDataSource
 import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.mapper.toDto
 import com.a32b.plant.domain.error.AppError
+import com.a32b.plant.domain.model.StudyingGoalDraft
 import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.StudyingUser
@@ -173,6 +174,36 @@ class StudyingRepositoryImpl @Inject constructor(
         onFailure = {e ->
             Log.e("studying", "세션 초기화", e)
             Result.Failure(AppError.Local("세션 초기화 실패"))
+        }
+    )
+
+    override suspend fun saveLocalGoalDraft(draft: StudyingGoalDraft): Result<Unit> = safeRunCatching {
+        local.saveGoalDraft(draft.toDto())
+    }.fold(
+        onSuccess = { Result.Success(Unit) },
+        onFailure = { e ->
+            Log.e("studying", "학습 목표 임시 글 저장", e)
+            Result.Failure(AppError.Local("임시 저장 실패"))
+        }
+    )
+
+    override suspend fun readLocalGoalDraft(): Result<StudyingGoalDraft?> = safeRunCatching {
+        local.readGoalDraft()
+    }.fold(
+        onSuccess = { Result.Success(it?.toDomain()) },
+        onFailure = { e ->
+            Log.e("studying", "학습 목표 임시 글 읽기", e)
+            Result.Failure(AppError.Local("불러오기 실패"))
+        }
+    )
+
+    override suspend fun clearLocalGoalDraft(): Result<Unit> = safeRunCatching {
+        local.clearGoalDraft()
+    }.fold(
+        onSuccess = { Result.Success(Unit) },
+        onFailure = { e ->
+            Log.e("studying", "학습 목표 임시 글 삭제", e)
+            Result.Failure(AppError.Local("임시 글 삭제 실패"))
         }
     )
 

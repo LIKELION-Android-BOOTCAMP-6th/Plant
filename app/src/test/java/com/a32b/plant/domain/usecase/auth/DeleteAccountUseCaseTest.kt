@@ -3,6 +3,7 @@ package com.a32b.plant.domain.usecase.auth
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.StudyLog
+import com.a32b.plant.domain.model.StudyingGoalDraft
 import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.domain.model.User
@@ -287,5 +288,8 @@ class DeleteAccountUseCaseTest {
             clearLocalSessionCalls++
             return Result.Success(Unit)
         }
+        override suspend fun saveLocalGoalDraft(draft: StudyingGoalDraft): Result<Unit> = TODO()
+        override suspend fun readLocalGoalDraft(): Result<StudyingGoalDraft?> = TODO()
+        override suspend fun clearLocalGoalDraft(): Result<Unit> = TODO()
     }
 }

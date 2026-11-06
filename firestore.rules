@@ -61,8 +61,54 @@ service cloud.firestore {
       return newValue('reportCount', 0) == 0 && newValue('isHidden', false) == false;
     }
 
+    // 닉네임 형식 검사 (#535) — 앱의 NicknameRule.normalize·isUsable과 같은 기준 중 정규식으로 막을 수 있는 범위
+    // 앱이 허용하는 닉네임을 규칙이 거부하면 안 되므로, 앱보다 엄격하게 만들지 않는다.
+    // - 앞뒤 공백: 앱은 normalize에서 trim하므로 공백이 남아 있으면 앱을 거치지 않은 값
+    // - 연속 공백: "새  싹"이 "새 싹"처럼 보임
+    // - 일반 공백(U+0020) 외 공백 문자(\p{Z}: U+00A0, U+3000 등), 제어 문자(\p{Cc}), 서식 문자(\p{Cf}), 사용자 정의 영역 문자(\p{Co})
+    //   (서로게이트는 Firestore 문자열(UTF-8)에 들어올 수 없어 따로 검사하지 않음)
+    // - 점자 공백(U+2800), 기본적으로 화면에 표시하지 않는 문자(Default_Ignorable_Code_Point: 한글 채움 문자 등)
+    // - 분리형 한글 자모(U+1100–11FF, U+A960–A97F, U+D7B0–D7FF): 규칙은 NFC 정규화를 할 수 없어 범위로 막는다
+    //   (앱은 NFC로 완성형으로 합친 뒤 저장하므로 정상 입력은 영향 없음. 키보드 자모 U+3131–318E는 막지 않음)
+    // 이모지에 쓰이는 결합 문자(ZWJ, U+200D)·모양 선택 문자(U+FE00–FE0F, U+E0100–E01EF)는 막지 않는다.
+    // 이모지 사이에 있는지 같은 위치 판단은 앱(NicknameRule.hasLookAlikeChar)에 맡긴다.
+    // (ZWJ는 서식 문자(\p{Cf})라서 검사 전에 지우고, 일반 공백도 \p{Z}에 걸리지 않게 지운 뒤 검사한다)
+    function isValidNickname(nickname) {
+      let rest = nickname.replace('[ \\x{200D}]', '');
+      return nickname is string &&
+        nickname.size() > 0 &&
+        nickname.trim() == nickname &&
+        !nickname.matches('(?s).*  .*') &&
+        !rest.matches('(?s).*[' +
+          '\\p{Z}\\p{Cc}\\p{Cf}\\p{Co}\\x{2800}' +
+          '\\x{00AD}\\x{034F}\\x{061C}\\x{115F}-\\x{1160}\\x{17B4}-\\x{17B5}' +
+          '\\x{180B}-\\x{180F}\\x{200B}-\\x{200C}\\x{200E}-\\x{200F}\\x{202A}-\\x{202E}\\x{2060}-\\x{206F}\\x{3164}' +
+          '\\x{FEFF}\\x{FFA0}\\x{FFF0}-\\x{FFF8}\\x{1BCA0}-\\x{1BCA3}' +
+          '\\x{1D173}-\\x{1D17A}\\x{E0000}-\\x{E00FF}\\x{E01F0}-\\x{E0FFF}' +
+          '\\x{1100}-\\x{11FF}\\x{A960}-\\x{A97F}\\x{D7B0}-\\x{D7FF}' +
+          '].*');
+    }
+
+    // 닉네임 필드를 바꾸는 쓰기는 그 닉네임의 nicknames 문서를 본인이 가지고 있어야 한다 (#535)
+    // getAfter: 첫 로그인(completeFirstLogin)은 nicknames 생성과 users 수정을 한 트랜잭션에서 하므로
+    //           쓰기 전 상태(get)로는 아직 문서가 없어 거부된다
+    // 문서가 없거나 경로로 쓸 수 없는 값('/' 포함, 빈 문자열 등)이면 오류 → 거부
+    function ownsNicknameAfterWrite(nickname) {
+      return nickname is string &&
+        nickname.size() > 0 &&
+        getAfter(/databases/$(database)/documents/nicknames/$(nickname)).data.get('uid', '') == request.auth.uid;
+    }
+
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, delete: if isUid(userId);
+
+      // 생성: 앱은 빈 닉네임으로 만든다 (createUser). 탈퇴처럼 문서를 지운 뒤 다른 사람 닉네임으로 다시 만드는 것을 막는다
+      allow create: if isUid(userId) &&
+        (newValue('nickname', '') == '' || ownsNicknameAfterWrite(request.resource.data.nickname));
+
+      // 수정: nickname을 바꾸지 않는 쓰기(이미지, 다크모드, gold, 출석, 아이템, 세션 토큰 등)는 검사하지 않는다
+      allow update: if isUid(userId) &&
+        (!changedKeys().hasAny(['nickname']) || ownsNicknameAfterWrite(request.resource.data.get('nickname', null)));
 
       match /pots/{potsId} {
         allow read, create, update, delete: if request.auth.uid == userId;
@@ -95,9 +141,7 @@ service cloud.firestore {
         // 좋아요: 본인 게시글에는 추가 불가, 해제는 허용 (예전 데이터 정리용)
         (selfToggled('likedBy', 'likeCount') && (!isPostAuthor() || selfRemoved('likedBy'))) ||
         selfToggled('bookmarkedBy', 'bookmarkCount') ||
-        // 댓글 작성(+1)/삭제(-1)
-        onlyCountChangedBy('commentCount', 1) ||
-        onlyCountChangedBy('commentCount', -1) ||
+        // commentCount는 앱이 쓰지 않는다 — 댓글 생성·삭제 트리거(functions/index.js, Admin SDK라 규칙 무관)가 세어 저장 (#528)
         // 신고: 작성자가 아닌 사용자가 신고 문서 생성과 함께 +1만 (#430 완료 후 클라이언트 쓰기 제거 예정)
         (!isPostAuthor() && onlyCountChangedBy('reportCount', 1) && reportCreatedInSameWrite(postId))
       );
@@ -118,9 +162,12 @@ service cloud.firestore {
 
         allow read: if signedIn();
 
+        // 게시글이 있어야 한다 (#528): 예전에는 같은 batch의 commentCount +1이 없는 게시글에서 실패해
+        // 삭제된 게시글에 댓글이 생기지 않았는데, 그 쓰기를 없애면서 규칙으로 막는다
         allow create: if signedIn() &&
           request.resource.data.user.uid == request.auth.uid &&
-          hasInitialModeration();
+          hasInitialModeration() &&
+          exists(/databases/$(database)/documents/posts/$(postId));
 
         allow update: if signedIn() && (
           (isCommentAuthor() && (changedKeys().hasOnly(['content']) || isWithdrawalAnonymize())) ||
@@ -209,11 +256,13 @@ service cloud.firestore {
     // 닉네임 선점 문서: 소유자 uid를 함께 저장하고, 소유자만 삭제 가능
     // 이미 있는 문서에 set()하면 update로 평가되어 거부됨 (덮어쓰기 방지)
     // 없는 문서 삭제는 허용 (users와 nicknames가 어긋나도 닉네임 변경·회원탈퇴가 막히지 않게)
+    // 형식 검사(isValidNickname)는 생성에만 적용 — 이미 있는 문서는 그대로 두고 삭제도 기존대로 허용
     match /nicknames/{nickname} {
       allow read: if signedIn();
       allow create: if signedIn() &&
         request.resource.data.keys().hasOnly(['nickname', 'uid']) &&
         request.resource.data.nickname == nickname &&
+        isValidNickname(nickname) &&
         request.resource.data.uid == request.auth.uid;
       allow delete: if signedIn() && (resource == null || resource.data.get('uid', '') == request.auth.uid);
     }

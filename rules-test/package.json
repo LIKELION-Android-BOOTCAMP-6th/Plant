@@ -1,0 +1,15 @@
+{
+  "name": "rules-test",
+  "description": "Firestore 보안 규칙 테스트 (#452) - Firestore 에뮬레이터에서 실행",
+  "private": true,
+  "scripts": {
+    "test": "firebase emulators:exec --only firestore --project demo-plant \"node --test --test-concurrency=1\""
+  },
+  "engines": {
+    "node": ">=24.12"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "firebase": "^13.2.0"
+  }
+}

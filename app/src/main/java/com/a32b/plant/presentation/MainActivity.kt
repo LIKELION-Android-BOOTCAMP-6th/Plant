@@ -45,6 +45,7 @@ import com.a32b.plant.presentation.core.component.BottomBar
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
 import com.a32b.plant.presentation.splash.SplashViewModel
+import com.a32b.plant.presentation.studying.service.StudyingTimerServiceController
 import com.a32b.plant.presentation.theme.PlantTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
@@ -61,6 +62,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var signOutUseCase: SignOutUseCase
+
+    @Inject
+    lateinit var studyingTimerServiceController: StudyingTimerServiceController
 
     // 시스템 바에 적용할 앱 다크모드 설정. null이면 아직 값을 읽기 전
     private var appDarkMode: Boolean? = null
@@ -120,9 +124,10 @@ class MainActivity : ComponentActivity() {
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
 
                     /** 현재 유저 정보를 못 찾을 시
-                    1. 로그아웃(앱 세션 클리어)
-                    2. 로그인 화면으로 이동
-                    3. 유저 정보 조회 실패 다이얼로그 표출
+                    1. 학습 타이머 서비스와 알림 정리
+                    2. 로그아웃(앱 세션 클리어)
+                    3. 로그인 화면으로 이동
+                    4. 유저 정보 조회 실패 다이얼로그 표출
                      */
                     var sessionExpiredReasonOrdinal by rememberSaveable { mutableStateOf<Int?>(null) }
                     val sessionExpiredReason = sessionExpiredReasonOrdinal?.let { SessionExpiredReason.entries[it] }
@@ -134,6 +139,12 @@ class MainActivity : ComponentActivity() {
                                 val alreadyAtSignIn = navController.currentBackStackEntry
                                     ?.destination?.hasRoute<Routes.SignIn>() == true
                                 if (alreadyAtSignIn) return@collect
+
+                                // 아래 이동으로 학습 화면이 백스택에서 지워지면 타이머를 멈출 곳이 없으므로 이동 전에 정리 (#545)
+                                // 서비스가 없으면 아무 일도 하지 않으므로 공부 중이 아닐 때 호출해도 무해하다
+                                // 백그라운드에서 만료되면 이벤트가 STARTED까지 대기하므로 앱으로 돌아왔을 때 멈춘다.
+                                // 더 빨리 멈추려고 이 이벤트의 수집자를 추가하면 Channel이 이벤트를 나눠 가져가 이 처리가 누락될 수 있음
+                                studyingTimerServiceController.stop()
 
                                 signOutUseCase()
 

@@ -26,8 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,7 +46,9 @@ fun StudyingGoalInputDialog(
     initialIndex: Int = 0,
     tag: String,
     title: String,
-    studyLogs: List<String>,
+    // 작성 중인 글은 ViewModel이 들고 있음 (화면 재생성·강제 종료 후에도 유지되도록) — 변경은 onLogsChange로 전달
+    logs: List<String>,
+    onLogsChange: (List<String>) -> Unit,
     onDismiss: () -> Unit,
     onConfirm: (List<String>) -> Unit,
     onConfirmEdit: (String) -> Unit = {}
@@ -55,16 +56,15 @@ fun StudyingGoalInputDialog(
     val maxLength = 100
     val maxLogSize = MAX_STUDY_LOG_SIZE
 
-    val localLogs = remember(studyLogs) {
-        mutableStateListOf<String>().apply {
-            if (studyLogs.isEmpty()) add("") else addAll(studyLogs)
-        }
-    }
-    // localLogs가 새로 만들어지면 index도 새 목록 범위 안으로 다시 맞춤 (범위 밖 index로 쓰기 시 크래시 방지)
-    var index by remember(localLogs) { mutableIntStateOf(initialIndex.coerceIn(0, localLogs.lastIndex)) }
-    val currentText = localLogs.getOrElse(index) { "" }
+    val localLogs = logs.ifEmpty { listOf("") }
+    // 보고 있던 칸은 화면 재생성 후에도 유지, 목록이 줄어든 경우를 대비해 읽을 때 범위 안으로 맞춤 (범위 밖 index로 쓰기 시 크래시 방지)
+    var savedIndex by rememberSaveable(isEditing, initialIndex) { mutableIntStateOf(initialIndex) }
+    val index = savedIndex.coerceIn(0, localLogs.lastIndex)
+    val currentText = localLogs[index]
     val canGoPrev = index > 0
     val canGoNext = index < localLogs.lastIndex
+
+    fun updateLog(at: Int, value: String) = onLogsChange(localLogs.toMutableList().apply { this[at] = value })
 
     val focusManager = LocalFocusManager.current
 
@@ -109,7 +109,7 @@ fun StudyingGoalInputDialog(
                         IconButton(
                             onClick = {
                                 focusManager.clearFocus()
-                                if (canGoPrev) index--
+                                if (canGoPrev) savedIndex = index - 1
                             },
                             enabled = canGoPrev,
                             // 자리는 유지해야 입력창 너비가 변하지 않으므로 숨김은 alpha로 처리
@@ -134,7 +134,7 @@ fun StudyingGoalInputDialog(
                             shape = RoundedCornerShape(10.dp),
                             onValueChange = { newValue ->
                                 if (newValue.length <= maxLength) {
-                                    localLogs[index] = newValue
+                                    updateLog(index, newValue)
                                 }
                             },
                             modifier = Modifier.fillMaxWidth().fillMaxHeight(0.9f),
@@ -167,7 +167,7 @@ fun StudyingGoalInputDialog(
                         IconButton(
                             onClick = {
                                 focusManager.clearFocus()
-                                if (canGoNext) index++
+                                if (canGoNext) savedIndex = index + 1
                             },
                             enabled = canGoNext,
                             modifier = Modifier
@@ -193,8 +193,8 @@ fun StudyingGoalInputDialog(
                         Button(
                             onClick = {
                                 if (localLogs.size < maxLogSize){
-                                    localLogs.add("")
-                                    index = localLogs.size - 1
+                                    onLogsChange(localLogs + "")
+                                    savedIndex = localLogs.size // 추가된 마지막 칸
                                 }
                             },
                             enabled = localLogs.size < maxLogSize,
@@ -215,13 +215,13 @@ fun StudyingGoalInputDialog(
                         onClick = {
                             if (!isEditing){
                                 if (localLogs.size > 1) {
-                                    localLogs.removeAt(index)
-                                    if (index >= localLogs.size) index = localLogs.size - 1
+                                    onLogsChange(localLogs.filterIndexed { i, _ -> i != index })
+                                    if (index >= localLogs.size - 1) savedIndex = localLogs.size - 2
                                 } else {
-                                    localLogs[0] = ""
+                                    updateLog(0, "")
                                 }
                             } else{
-                                localLogs[index] = ""
+                                updateLog(index, "")
                             }
 
                         },
@@ -235,7 +235,7 @@ fun StudyingGoalInputDialog(
                     ) { Text("삭제", style = MaterialTheme.typography.bodySmall) }
 
                     Button(
-                        onClick = {if (isEditing) onConfirmEdit(localLogs[index]) else onConfirm(localLogs.toList())},
+                        onClick = {if (isEditing) onConfirmEdit(localLogs[index]) else onConfirm(localLogs)},
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.weight(1f).height(38.dp),
                         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),

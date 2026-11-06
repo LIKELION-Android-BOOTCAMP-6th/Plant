@@ -37,7 +37,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -167,6 +169,7 @@ fun HomeScreen(
                 HomeTopBar(
                     userName = userName,
                     isAttendanceCompleted = attendanceUiState.isAttendanceCompleted,
+                    onShopClick = viewModel::onShopClick,
                     onAttendanceClick = viewModel::openAttendanceDialog
                 )
             },
@@ -177,7 +180,8 @@ fun HomeScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .background(MaterialTheme.colorScheme.background)
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                    // 좌우 여백 16dp: 앱바 타이틀·다른 탭 본문(내 화분, 마이페이지)과 왼쪽 끝을 맞춤
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
@@ -435,6 +439,7 @@ fun PotChangeDialog(
 fun HomeTopBar(
     userName: String,
     isAttendanceCompleted: Boolean,
+    onShopClick: () -> Unit,
     onAttendanceClick: () -> Unit
 ) {
     val displayName = if (userName.isBlank()) "사용자" else userName
@@ -450,24 +455,54 @@ fun HomeTopBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 30.dp, vertical = 5.dp),
+            .padding(vertical = 5.dp),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                // 왼쪽 16dp: 다른 탭 앱바(TabTopBar)와 같은 여백
+                // 오른쪽 8dp: IconButton 안쪽 여백(48dp 중 그림 32dp → 8dp)과 합쳐
+                // 아이콘 그림 끝 여백이 왼쪽과 같은 16dp가 되도록 함
+                // (offset으로 밀면 레이아웃 자리는 그대로라 타이틀 쪽에 빈 공간이 생김)
+                .padding(start = 16.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "${displayName}의 Garden",
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.displayLarge,
-                color = MaterialTheme.colorScheme.primary,
-                fontSize = 30.sp,
-                textAlign = TextAlign.Start
-            )
-            IconButton(
-                onClick = onAttendanceClick,
-                modifier = Modifier.offset(x = 6.dp)
+            // 크기는 다른 탭 앱바(TabTopBar)와 같은 displayLarge 기본값(22sp)
+            // 닉네임과 " 정원"을 나눠 닉네임만 말줄임 처리 → 좁은 기기·긴 닉네임에서도 " 정원"은 항상 보임
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    // Text가 두 개라 TalkBack이 끊어 읽지 않도록 하나로 묶음
+                    .semantics(mergeDescendants = true) {},
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                Text(
+                    text = displayName,
+                    // fill = false: 짧은 닉네임일 때 " 정원"이 오른쪽 끝으로 밀려나지 않게 함
+                    modifier = Modifier.weight(1f, fill = false),
+                    style = MaterialTheme.typography.displayLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = " 정원",
+                    style = MaterialTheme.typography.displayLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    softWrap = false
+                )
+            }
+            IconButton(onClick = onShopClick) {
+                // 투톤 색상은 drawable에 직접 지정 (출석체크 아이콘과 같은 방식)
+                // 그림이 차지하는 비율이 출석체크보다 작아 35dp로 시각적 크기를 맞춤
+                Image(
+                    painter = painterResource(id = R.drawable.ic_shop),
+                    contentDescription = "상점",
+                    modifier = Modifier.size(35.dp)
+                )
+            }
+            IconButton(onClick = onAttendanceClick) {
                 Image(
                     painter = painterResource(
                         id = if (isAttendanceCompleted) {
@@ -484,7 +519,10 @@ fun HomeTopBar(
         Spacer(modifier = Modifier.height(15.dp))
         Text(
             text = dateString,
-            modifier = Modifier.fillMaxWidth(),
+            // 날짜가 길어져도(글꼴 크게 설정 등) 화면 끝에 붙지 않도록 좌우 16dp (앱바 타이틀 여백과 동일)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center
@@ -688,7 +726,8 @@ fun HomeItemBoxSection(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
+            // 상단 MainPlantCard와 같은 배경색으로 통일
+            color = MaterialTheme.colorScheme.secondary,
             tonalElevation = 2.dp
         ) {
             LazyRow(
@@ -745,26 +784,41 @@ fun BonusBoxResultDialog(
     var showConfetti by remember { mutableStateOf(true) }
 
     val itemCounts = remember(items) {
-        items.groupingBy { it }.eachCount()
+        items.groupingBy { it }.eachCount().toSortedMap()
     }
     Box(modifier = Modifier.fillMaxSize()){
         AlertDialog(
             onDismissRequest = onDismiss,
             title = {
-                Text("보너스 박스 개봉 결과!", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = "보너스 박스 개봉 결과!",
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center
+                )
             },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    itemCounts.forEach { (type, count) ->
-                        Text(
-                            text = "${type.kor} x${count} 획득!",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        itemCounts.forEach { (type, count) ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Image(
+                                    painter = painterResource(id = type.resId),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Text(
+                                    text = "${type.kor} x${count} 획득!",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
                     }
                 }
             },

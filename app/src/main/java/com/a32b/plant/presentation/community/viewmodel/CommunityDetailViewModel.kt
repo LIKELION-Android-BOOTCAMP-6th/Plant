@@ -172,7 +172,15 @@ class CommunityDetailViewModel @Inject constructor(
                 }
 
             commentsDeferred.await()
-                .onSuccess { comments -> _uiState.update { it.copy(commentList = comments) } }
+                .onSuccess { comments ->
+                    _uiState.update { it.copy(commentList = comments) }
+                    // 방금 댓글을 쓰고 목록을 새로고침한 뒤 들어온 경우처럼 서버 값이 아직 이전 값이면 목록 화면도 맞춤
+                    val serverCount = _post.value?.commentCount
+                    applyCommentCountFromList(comments.size)
+                    if (serverCount != null && serverCount != comments.size) {
+                        postUpdateNotifier.notifyPostUpdated(PostUpdate(postId = postId, commentCount = comments.size))
+                    }
+                }
                 .onFailure { e -> sendToast(e.message) }
 
             loaded() // BaseViewModel: 성공/실패 모두 최초 시도 후 LoadableScreen 해제
@@ -195,6 +203,8 @@ class CommunityDetailViewModel @Inject constructor(
 
             val postDeferred = async { repository.getPostDetail(postId) }
             val commentsDeferred = async { repository.getComments(postId) }
+            // 게시글을 다시 받아왔을 때만 목록 화면에 알림 — 댓글 수까지 맞춘 뒤 한 번에 보내려고 댓글 처리 뒤로 미룸
+            var shouldNotifyPost = false
 
             postDeferred.await()
                 .onSuccess { fetchedPost ->
@@ -209,17 +219,19 @@ class CommunityDetailViewModel @Inject constructor(
                     } else {
                         // 좋아요/북마크가 디바운스 대기 중이거나 서버 커밋이 진행 중이면, 아직 반영되지 않은
                         // 서버의 이전 값으로 덮어쓰지 않고 로컬에서 들고 있던 값을 그대로 유지한다.
+                        // 댓글 수는 항상 화면에 보이던 값을 유지하고 아래 댓글 목록 조회가 성공했을 때만 바꾼다 (#528)
+                        // (서버 commentCount는 트리거 반영 전 이전 값일 수 있어, 댓글 목록 조회만 실패하면 숫자가 내려가 보임)
                         val current = _post.value
                         val merged = fetchedPost.copy(
                             isLiked = if (isLikeUncommitted()) current?.isLiked ?: fetchedPost.isLiked else fetchedPost.isLiked,
                             likeCount = if (isLikeUncommitted()) current?.likeCount ?: fetchedPost.likeCount else fetchedPost.likeCount,
                             isBookmarked = if (isBookmarkUncommitted()) current?.isBookmarked ?: fetchedPost.isBookmarked else fetchedPost.isBookmarked,
-                            bookmarkCount = if (isBookmarkUncommitted()) current?.bookmarkCount ?: fetchedPost.bookmarkCount else fetchedPost.bookmarkCount
+                            bookmarkCount = if (isBookmarkUncommitted()) current?.bookmarkCount ?: fetchedPost.bookmarkCount else fetchedPost.bookmarkCount,
+                            commentCount = current?.commentCount ?: fetchedPost.commentCount
                         )
                         _post.value = merged
                         onIsSharedChange()
-                        // 댓글 작성/삭제/수정, 신고, 좋아요·북마크 보정 등 상호작용 결과를 목록 화면에 즉시 반영
-                        notifyPostChanged(merged)
+                        shouldNotifyPost = true
                     }
                 }
                 .onFailure { e -> sendToast(e.message) }
@@ -245,10 +257,15 @@ class CommunityDetailViewModel @Inject constructor(
                             it.copy(commentList = mergedComments)
                         }
                     }
+                    // 등록 중인 임시 댓글도 목록에 보이므로 개수에 포함 (등록 시점의 +1과 같은 기준)
+                    applyCommentCountFromList(mergedComments.size)
                     if (isEditingCommentDeleted) sendToast(COMMENT_ALREADY_DELETED_MESSAGE)
                     else if (isEditBlockedByBlindPost) sendToast(BLIND_POST_COMMENT_EDIT_BLOCKED_MESSAGE)
                 }
                 .onFailure { e -> sendToast(e.message) }
+
+            // 댓글 작성/삭제/수정, 신고, 좋아요·북마크 보정 등 상호작용 결과를 목록 화면에 즉시 반영
+            if (shouldNotifyPost) _post.value?.let { notifyPostChanged(it) }
 
             _uiState.update { it.copy(isRefreshing = false) }
         }
@@ -660,12 +677,22 @@ class CommunityDetailViewModel @Inject constructor(
 
     // 댓글 등록(+1)·등록 실패 롤백(-1)·삭제(-1) 시 댓글 수를 로컬 값 기준으로 먼저 반영하고 목록 화면에 알림
     // 이탈 후에는 refresh()가 실행되지 않아 목록이 바뀐 댓글 수를 모르기 때문
-    // (화면에 머물러 있으면 뒤이은 refresh()가 서버 값으로 다시 알려 보정)
+    // (화면에 머물러 있으면 뒤이은 refresh()가 댓글 목록 개수로 다시 알려 보정)
     private fun notifyCommentCountChanged(delta: Int) {
         val post = _post.value ?: return
         val updatedCount = (post.commentCount + delta).coerceAtLeast(0)
         _post.value = post.copy(commentCount = updatedCount)
         postUpdateNotifier.notifyPostUpdated(PostUpdate(postId = postId, commentCount = updatedCount))
+    }
+
+    // 상세 화면의 댓글 수는 서버 commentCount 대신 불러온 댓글 목록 개수로 표시한다 (#528)
+    // commentCount는 댓글 생성·삭제 트리거(functions)가 나중에 세어 저장하므로,
+    // 작성·삭제 직후 refresh()에서 받은 게시글에는 아직 이전 값이 들어 있을 수 있다.
+    // 트리거도 같은 comments 문서 개수를 세므로 반영이 끝나면 두 값은 같아진다
+    // 서버 commentCount는 화면에 게시글이 아직 없을 때(처음 로딩, 처음 로딩 실패 후 다시 시도) 댓글 목록 조회가
+    // 실패한 경우에만 남는다 (refresh()는 화면에 보이던 값을 유지하고 댓글 목록 조회가 성공했을 때만 이 함수로 바꿈)
+    private fun applyCommentCountFromList(count: Int) {
+        _post.update { it?.copy(commentCount = count) }
     }
 
     override fun onCleared() {
