@@ -211,7 +211,8 @@ service cloud.firestore {
     // 없는 문서 삭제는 허용 (users와 nicknames가 어긋나도 닉네임 변경·회원탈퇴가 막히지 않게)
     match /nicknames/{nickname} {
       allow read: if signedIn();
-      allow create: if signedIn() &&
+      allow create: if false &&
+
         request.resource.data.keys().hasOnly(['nickname', 'uid']) &&
         request.resource.data.nickname == nickname &&
         request.resource.data.uid == request.auth.uid;
