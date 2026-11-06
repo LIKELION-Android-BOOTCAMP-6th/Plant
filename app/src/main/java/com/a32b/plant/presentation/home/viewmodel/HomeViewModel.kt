@@ -27,6 +27,7 @@ import com.a32b.plant.domain.usecase.pot.LevelUpPotUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import com.a32b.plant.domain.usecase.studying.GetRecoverySessionUseCase
 import com.a32b.plant.domain.usecase.studying.RecoverStudySessionUseCase
+import com.a32b.plant.presentation.studying.service.StudyingTimerServiceController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -114,7 +115,8 @@ class HomeViewModel @Inject constructor(
     private val recoverStudySessionUseCase: RecoverStudySessionUseCase,
     private val openBonusBoxUseCase: OpenBonusBoxUseCase,
     private val checkLevelUpConditionUseCase: CheckLevelUpConditionUseCase,
-    private val levelUpPotUseCase: LevelUpPotUseCase
+    private val levelUpPotUseCase: LevelUpPotUseCase,
+    private val studyingTimerServiceController: StudyingTimerServiceController
 ) : BaseViewModel() {
 
     private val _displayPot = MutableStateFlow(Pot.EMPTY)
@@ -225,6 +227,10 @@ class HomeViewModel @Inject constructor(
      * 복구 처리 중에는 지워지기 전의 백업을 다시 읽어 창이 되살아나지 않도록 건너뜀
      */
     fun onHomeResumed() {
+        // 학습 화면은 뒤로 가기를 막아 종료 처리를 거쳐야만 떠나므로, 홈이 보이는 동안 돌아야 할 타이머는 없다
+        // 학습 화면 없이 홈으로 들어온 경우(화면 상태 저장 전 프로세스 종료, 밀어서 종료 등) 남은 서비스와 알림을 정리 (#514, #509)
+        // 복구 창 처리보다 먼저 멈춰, 창을 처리하지 않고 나가도 알림이 남지 않게 함
+        studyingTimerServiceController.stop()
         if (_isRecovering.value) return
         recoveryCheckJob?.cancel()
         recoveryCheckJob = viewModelScope.launch {
