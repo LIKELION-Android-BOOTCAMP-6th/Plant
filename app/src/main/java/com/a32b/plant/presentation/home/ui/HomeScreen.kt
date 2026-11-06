@@ -726,7 +726,10 @@ fun HomeItemBoxSection(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
+            // 상단 MainPlantCard와 같은 배경색으로 통일
+            color = MaterialTheme.colorScheme.secondary,
+            // secondary로 바꾸면 기본 글자색이 onSecondary(힌트용 회색)가 되므로 메인 폰트색 유지
+            contentColor = MaterialTheme.colorScheme.onSurface,
             tonalElevation = 2.dp
         ) {
             LazyRow(
