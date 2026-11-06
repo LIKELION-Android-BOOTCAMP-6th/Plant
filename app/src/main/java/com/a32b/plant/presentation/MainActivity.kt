@@ -140,8 +140,10 @@ class MainActivity : ComponentActivity() {
                                     ?.destination?.hasRoute<Routes.SignIn>() == true
                                 if (alreadyAtSignIn) return@collect
 
-                                // 아래 이동으로 학습 화면이 백스택에서 지워지면 타이머를 멈출 곳이 없으므로 여기서 정리 (#545)
-                                // 로그아웃이 실패해도 알림이 남지 않도록 먼저 호출. 서비스가 없으면 아무 일도 하지 않는다
+                                // 아래 이동으로 학습 화면이 백스택에서 지워지면 타이머를 멈출 곳이 없으므로 이동 전에 정리 (#545)
+                                // 서비스가 없으면 아무 일도 하지 않으므로 공부 중이 아닐 때 호출해도 무해하다
+                                // 백그라운드에서 만료되면 이벤트가 STARTED까지 대기하므로 앱으로 돌아왔을 때 멈춘다.
+                                // 더 빨리 멈추려고 이 이벤트의 수집자를 추가하면 Channel이 이벤트를 나눠 가져가 이 처리가 누락될 수 있음
                                 studyingTimerServiceController.stop()
 
                                 signOutUseCase()
