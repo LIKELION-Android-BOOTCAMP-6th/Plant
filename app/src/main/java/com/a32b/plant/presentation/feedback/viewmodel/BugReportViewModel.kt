@@ -1,11 +1,11 @@
 package com.a32b.plant.presentation.feedback.viewmodel
 
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.util.NETWORK_SLOW_MESSAGE
+import com.a32b.plant.core.util.appVersionName
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.FeedbackSubmissionResult
 import com.a32b.plant.domain.repository.FeedbackRepository
@@ -60,7 +60,7 @@ class BugReportViewModel @Inject constructor(
             it.copy(
                 deviceModel = Build.MODEL,
                 androidVersion = Build.VERSION.SDK_INT.toString(),
-                appVersion = readAppVersion(context)
+                appVersion = context.appVersionName()
             )
         }
     }
@@ -114,21 +114,7 @@ class BugReportViewModel @Inject constructor(
         }
     }
 
-    private fun readAppVersion(context: Context): String {
-        val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.packageManager.getPackageInfo(
-                context.packageName,
-                PackageManager.PackageInfoFlags.of(0)
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            context.packageManager.getPackageInfo(context.packageName, 0)
-        }
-        return packageInfo.versionName ?: UNKNOWN_APP_VERSION
-    }
-
     companion object {
-        private const val UNKNOWN_APP_VERSION = "unknown"
         private const val SUCCESS_MESSAGE = "버그 제보가 접수되었습니다."
     }
 }
