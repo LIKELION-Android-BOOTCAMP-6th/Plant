@@ -686,7 +686,7 @@ class CommunityDetailViewModel @Inject constructor(
     }
 
     // 상세 화면의 댓글 수는 서버 commentCount 대신 불러온 댓글 목록 개수로 표시한다 (#528)
-    // commentCount는 댓글 생성·삭제 트리거(functions)가 나중에(보통 수 초 이내) 세어 저장하므로,
+    // commentCount는 댓글 생성·삭제 트리거(functions)가 나중에 세어 저장하므로,
     // 작성·삭제 직후 refresh()에서 받은 게시글에는 아직 이전 값이 들어 있을 수 있다.
     // 트리거도 같은 comments 문서 개수를 세므로 반영이 끝나면 두 값은 같아진다
     // 서버 commentCount는 화면에 게시글이 아직 없을 때(처음 로딩, 처음 로딩 실패 후 다시 시도) 댓글 목록 조회가
