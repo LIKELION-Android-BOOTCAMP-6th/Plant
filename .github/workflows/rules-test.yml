@@ -22,18 +22,18 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Firestore 에뮬레이터는 Java 21 이상 필요 (Android 빌드는 17이라 job 분리)
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           java-version: '21'
           distribution: 'temurin'
 
       # @firebase/rules-unit-testing@6은 Node 24.12 이상 필요 (rules-test/package.json의 engines)
       - name: Set up Node.js 24
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: 'npm'
@@ -48,7 +48,7 @@ jobs:
 
       # 에뮬레이터 jar를 매번 내려받지 않도록 캐시 (CLI 버전이 바뀌면 새로 받음)
       - name: Cache Firebase emulators
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/firebase/emulators
           key: firebase-emulators-${{ runner.os }}-${{ steps.firebase-cli.outputs.version }}
@@ -64,7 +64,7 @@ jobs:
       # → 멈춤(시간 초과)일 때가 로그가 가장 필요하므로 cancelled()도 포함
       - name: Upload emulator logs on failure
         if: ${{ failure() || cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rules-test-logs
           path: rules-test/*.log
