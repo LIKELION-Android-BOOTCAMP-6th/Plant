@@ -93,6 +93,13 @@ describe("users", () => {
       await assertSucceeds(setDoc(doc(asBob(), "users", BOB), {nickname: "", profileImg: "1", isFirstLogin: true}));
     });
 
+    it("본인이 선점한 닉네임으로는 문서를 만들 수 있다", async () => {
+      await seed(testEnv, async (db) => {
+        await setDoc(doc(db, "nicknames", "밥"), {nickname: "밥", uid: BOB});
+      });
+      await assertSucceeds(setDoc(doc(asBob(), "users", BOB), {nickname: "밥"}));
+    });
+
     it("문서를 지운 뒤 다른 사람 닉네임으로 다시 만들 수 없다", async () => {
       await seed(testEnv, async (db) => {
         await setDoc(doc(db, "nicknames", "밥"), {nickname: "밥", uid: BOB});

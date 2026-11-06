@@ -107,6 +107,13 @@ describe("기타 컬렉션", () => {
       }
     });
 
+    // 알려진 한계: 결합 문자(ZWJ)·모양 선택 문자(VS)가 이모지 사이에 있는지는 규칙에서 판단하지 않는다
+    // (막으면 앱이 허용한 이모지 닉네임이 서버에서 거부됨). 이모지가 아닌 글자 사이의 ZWJ·VS는 앱(NicknameRule)이 막는다
+    it("[알려진 한계 - 앱이 막음] 이모지가 아닌 글자 사이의 ZWJ·VS는 규칙에서 통과", async () => {
+      await assertSucceeds(register("새‍싹"));
+      await assertSucceeds(register("새️싹"));
+    });
+
     it("규칙 이전에 만들어진 형식 위반 닉네임 문서도 소유자는 삭제할 수 있다", async () => {
       await seed(testEnv, async (db) => {
         await setDoc(doc(db, "nicknames", "앨리스 "), {nickname: "앨리스 ", uid: ALICE});
