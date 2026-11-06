@@ -1,7 +1,8 @@
 // nicknames, feedbacks, studying, Tags 규칙 테스트
+const assert = require("node:assert/strict");
 const {describe, it, before, after, beforeEach} = require("node:test");
 const {assertFails, assertSucceeds} = require("@firebase/rules-unit-testing");
-const {deleteDoc, doc, getDoc, serverTimestamp, setDoc} = require("firebase/firestore");
+const {deleteDoc, doc, getDoc, runTransaction, serverTimestamp, setDoc, writeBatch} = require("firebase/firestore");
 const {ALICE, BOB, createTestEnv, seed} = require("../helpers");
 
 describe("기타 컬렉션", () => {
@@ -38,7 +39,7 @@ describe("기타 컬렉션", () => {
       await assertFails(setDoc(doc(asBob(), "nicknames", "밥"), {nickname: "다른이름", uid: BOB}));
     });
 
-    it("소유자만 삭제할 수 있다", async () => {
+    it("소유자만 삭제할 수 있다 (users 문서가 없어 사용 중이 아닌 닉네임)", async () => {
       await assertFails(deleteDoc(doc(asBob(), "nicknames", "앨리스")));
       await assertSucceeds(deleteDoc(doc(asAlice(), "nicknames", "앨리스")));
     });
@@ -115,11 +116,161 @@ describe("기타 컬렉션", () => {
       await assertSucceeds(register("새️싹"));
     });
 
-    it("규칙 이전에 만들어진 형식 위반 닉네임 문서도 소유자는 삭제할 수 있다", async () => {
+    it("규칙 이전에 만들어진 형식 위반 닉네임 문서도 사용 중이 아니면 소유자는 삭제할 수 있다", async () => {
       await seed(testEnv, async (db) => {
         await setDoc(doc(db, "nicknames", "앨리스 "), {nickname: "앨리스 ", uid: ALICE});
       });
       await assertSucceeds(deleteDoc(doc(asAlice(), "nicknames", "앨리스 ")));
+    });
+
+    // 삭제: 소유자이면서 삭제 후 내 users.nickname이 이 닉네임이 아닐 때만 (#549)
+    // beforeEach는 nicknames/앨리스(ALICE 소유)와 Tags만 넣고 users 문서는 넣지 않으므로, 필요한 users 문서는 테스트마다 넣는다
+    describe("삭제 - 사용 중인 닉네임 (#549)", () => {
+      const seedUser = (uid, data) => seed(testEnv, async (db) => {
+        await setDoc(doc(db, "users", uid), data);
+      });
+
+      // #530의 UserRemoteDataSourceImpl.updateProfile 트랜잭션과 같은 흐름 (#530을 바꾸면 함께 수정할 것)
+      // 서버 users 문서의 닉네임을 이전 닉네임으로 보고, 새 닉네임 생성·이전 닉네임 삭제·users 수정을 한 번에 커밋한다
+      const changeNicknameInTransaction = (db, uid, newNickname) =>
+        runTransaction(db, async (txn) => {
+          const userRef = doc(db, "users", uid);
+          const newNicknameRef = doc(db, "nicknames", newNickname);
+          const currentNickname = (await txn.get(userRef)).get("nickname") ?? "";
+          if ((await txn.get(newNicknameRef)).exists()) {
+            return "NicknameTaken";
+          }
+          txn.set(newNicknameRef, {nickname: newNickname, uid});
+          if (currentNickname !== "") {
+            txn.delete(doc(db, "nicknames", currentNickname));
+          }
+          txn.update(userRef, {nickname: newNickname, profileImg: "2"});
+          return "Updated";
+        });
+
+      it("users.nickname이 이 닉네임이면 닉네임 문서만 지울 수 없다", async () => {
+        await seedUser(ALICE, {nickname: "앨리스"});
+        await assertFails(deleteDoc(doc(asAlice(), "nicknames", "앨리스")));
+      });
+
+      it("닉네임 변경: 새 닉네임 생성·이전 닉네임 삭제·users 수정을 한 트랜잭션에서 하면 허용 (updateProfile)", async () => {
+        await seedUser(ALICE, {nickname: "앨리스", profileImg: "1"});
+        const db = asAlice();
+        assert.equal(await assertSucceeds(changeNicknameInTransaction(db, ALICE, "새싹")), "Updated");
+        assert.equal((await getDoc(doc(db, "nicknames", "앨리스"))).exists(), false);
+        assert.equal((await getDoc(doc(db, "nicknames", "새싹"))).get("uid"), ALICE);
+        assert.equal((await getDoc(doc(db, "users", ALICE))).get("nickname"), "새싹");
+      });
+
+      it("닉네임 변경: 쓰기 순서와 상관없이 같은 쓰기의 결과로 판단한다 (batch, 삭제를 먼저)", async () => {
+        await seedUser(ALICE, {nickname: "앨리스"});
+        const db = asAlice();
+        const batch = writeBatch(db);
+        batch.delete(doc(db, "nicknames", "앨리스"));
+        batch.update(doc(db, "users", ALICE), {nickname: "새싹"});
+        batch.set(doc(db, "nicknames", "새싹"), {nickname: "새싹", uid: ALICE});
+        await assertSucceeds(batch.commit());
+      });
+
+      // 삭제가 없는 경우: 트랜잭션이 이전 닉네임이 빈 값이면 delete를 건너뛰는 분기 (#530)
+      it("닉네임 변경: users.nickname이 빈 값이면 이전 닉네임 삭제 없이 허용", async () => {
+        await seedUser(ALICE, {nickname: "", isFirstLogin: true});
+        assert.equal(await assertSucceeds(changeNicknameInTransaction(asAlice(), ALICE, "새싹")), "Updated");
+      });
+
+      it("닉네임 변경: 이전 닉네임 문서가 없어도 허용 (데이터 어긋남)", async () => {
+        await seedUser(ALICE, {nickname: "옛이름"});
+        assert.equal(await assertSucceeds(changeNicknameInTransaction(asAlice(), ALICE, "새싹")), "Updated");
+      });
+
+      it("닉네임 변경: 다른 사람이 쓰는 닉네임이면 아무것도 쓰지 않는다", async () => {
+        await seed(testEnv, async (db) => {
+          await setDoc(doc(db, "nicknames", "밥"), {nickname: "밥", uid: BOB});
+        });
+        await seedUser(ALICE, {nickname: "앨리스", profileImg: "1"});
+        const db = asAlice();
+        assert.equal(await assertSucceeds(changeNicknameInTransaction(db, ALICE, "밥")), "NicknameTaken");
+        assert.equal((await getDoc(doc(db, "nicknames", "앨리스"))).exists(), true);
+        assert.equal((await getDoc(doc(db, "users", ALICE))).get("nickname"), "앨리스");
+      });
+
+      it("닉네임 변경: users.nickname을 바꾸지 않고 이전 닉네임 문서만 지우면 거부 (새 닉네임 생성이 같은 쓰기에 있어도)", async () => {
+        await seedUser(ALICE, {nickname: "앨리스"});
+        const db = asAlice();
+        const batch = writeBatch(db);
+        batch.set(doc(db, "nicknames", "새싹"), {nickname: "새싹", uid: ALICE});
+        batch.delete(doc(db, "nicknames", "앨리스"));
+        await assertFails(batch.commit());
+      });
+
+      it("닉네임 변경: users의 다른 필드만 함께 바꿔도 닉네임이 그대로면 거부", async () => {
+        await seedUser(ALICE, {nickname: "앨리스"});
+        const db = asAlice();
+        const batch = writeBatch(db);
+        batch.update(doc(db, "users", ALICE), {profileImg: "2"});
+        batch.delete(doc(db, "nicknames", "앨리스"));
+        await assertFails(batch.commit());
+      });
+
+      it("닉네임 변경: 따로 요청하면 이전 닉네임 삭제는 거부, 새 닉네임 되돌리기는 허용 (이전 빌드 흐름)", async () => {
+        await seedUser(ALICE, {nickname: "앨리스"});
+        const db = asAlice();
+        await assertSucceeds(setDoc(doc(db, "nicknames", "새싹"), {nickname: "새싹", uid: ALICE}));
+        await assertFails(deleteDoc(doc(db, "nicknames", "앨리스")));
+        // rollbackNicknameChange·rollbackRegisteredNickname: 아직 users.nickname이 아닌 새 닉네임 문서는 지울 수 있다
+        await assertSucceeds(deleteDoc(doc(db, "nicknames", "새싹")));
+      });
+
+      it("회원탈퇴: users 문서를 지운 뒤에는 닉네임 문서를 지울 수 있다 (DeleteAccountUseCase 순서)", async () => {
+        await seedUser(ALICE, {nickname: "앨리스"});
+        await assertSucceeds(deleteDoc(doc(asAlice(), "users", ALICE)));
+        await assertSucceeds(deleteDoc(doc(asAlice(), "nicknames", "앨리스")));
+      });
+
+      // existsAfter 대신 exists를 쓰면 이 테스트가 실패한다 (같은 쓰기의 users 삭제가 반영되는지 확인)
+      it("회원탈퇴: users 문서 삭제와 닉네임 문서 삭제를 한 batch로 해도 허용", async () => {
+        await seedUser(ALICE, {nickname: "앨리스"});
+        const db = asAlice();
+        const batch = writeBatch(db);
+        batch.delete(doc(db, "nicknames", "앨리스"));
+        batch.delete(doc(db, "users", ALICE));
+        await assertSucceeds(batch.commit());
+      });
+
+      it("users 문서에 nickname 필드가 없으면 소유자는 지울 수 있다", async () => {
+        await seedUser(ALICE, {gold: 100});
+        await assertSucceeds(deleteDoc(doc(asAlice(), "nicknames", "앨리스")));
+      });
+
+      it("주인 없는 문서(내 소유지만 users.nickname은 다른 값)는 정리할 수 있다", async () => {
+        await seedUser(ALICE, {nickname: "다른이름"});
+        await assertSucceeds(deleteDoc(doc(asAlice(), "nicknames", "앨리스")));
+      });
+
+      it("없는 닉네임 문서 삭제는 users.nickname과 상관없이 허용", async () => {
+        await seedUser(ALICE, {nickname: "없는이름"});
+        await assertSucceeds(deleteDoc(doc(asAlice(), "nicknames", "없는이름")));
+      });
+
+      it("로그인하지 않으면 지울 수 없다", async () => {
+        await assertFails(deleteDoc(doc(asGuest(), "nicknames", "앨리스")));
+      });
+
+      it("다른 사람 소유 닉네임 문서는 소유자의 users 문서가 없어도, 요청자의 닉네임이 달라도 지울 수 없다", async () => {
+        // 소유자(ALICE)의 users 문서가 없어 사용 중이 아닌 상태여도 거부
+        await assertFails(deleteDoc(doc(asBob(), "nicknames", "앨리스")));
+        // 요청자(BOB)의 users.nickname이 다른 값이어도 거부
+        await seedUser(BOB, {nickname: "밥"});
+        await assertFails(deleteDoc(doc(asBob(), "nicknames", "앨리스")));
+      });
+
+      it("규칙 이전에 만들어진 형식 위반 닉네임도 users.nickname이 그 값이면 단독 삭제는 거부", async () => {
+        await seed(testEnv, async (db) => {
+          await setDoc(doc(db, "nicknames", "앨리스 "), {nickname: "앨리스 ", uid: ALICE});
+        });
+        await seedUser(ALICE, {nickname: "앨리스 "});
+        await assertFails(deleteDoc(doc(asAlice(), "nicknames", "앨리스 ")));
+      });
     });
   });
 

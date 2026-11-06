@@ -46,7 +46,7 @@ describe("users", () => {
       await assertSucceeds(updateDoc(doc(asAlice(), "users", ALICE), {nickname: "앨리스", profileImg: "2"}));
     });
 
-    it("본인이 선점한 닉네임으로는 바꿀 수 있다 (UpdateProfileUseCase: registerNickname 후 updateProfile)", async () => {
+    it("이미 본인 소유인 닉네임 문서가 있으면 그 닉네임으로 바꿀 수 있다", async () => {
       await seed(testEnv, async (db) => {
         await setDoc(doc(db, "nicknames", "새이름"), {nickname: "새이름", uid: ALICE});
       });

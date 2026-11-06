@@ -99,6 +99,19 @@ service cloud.firestore {
         getAfter(/databases/$(database)/documents/nicknames/$(nickname)).data.get('uid', '') == request.auth.uid;
     }
 
+    // 닉네임 문서를 지운 뒤 내 users 문서가 그 닉네임을 쓰고 있지 않아야 한다 (#549)
+    // (문서만 지워 다른 사람이 같은 닉네임을 다시 등록하게 만드는 것을 막음)
+    // existsAfter·getAfter: 같은 쓰기(트랜잭션·batch)의 다른 쓰기까지 반영한 상태로 판단한다
+    // - 닉네임 변경(#530 updateProfile 트랜잭션): users.nickname을 새 닉네임으로 바꾸면서 이전 닉네임 문서를 지우면 통과
+    //   (get이 아니라 getAfter를 쓰는 이유는 ownsNicknameAfterWrite와 같다)
+    // - 회원탈퇴(DeleteAccountUseCase): users 문서를 먼저 지운 뒤 닉네임 문서를 지우면 통과
+    // users 문서가 없으면 getAfter가 오류이므로 existsAfter를 먼저 확인한다
+    // users 문서는 있는데 nickname 필드가 없으면 이 닉네임을 쓰지 않는 것으로 본다
+    function nicknameReleasedAfterWrite(nickname) {
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return !existsAfter(userPath) || getAfter(userPath).data.get('nickname', '') != nickname;
+    }
+
     match /users/{userId} {
       allow read, delete: if isUid(userId);
 
@@ -253,10 +266,11 @@ service cloud.firestore {
         request.resource.data.createdAt == request.time;
     }
 
-    // 닉네임 선점 문서: 소유자 uid를 함께 저장하고, 소유자만 삭제 가능
+    // 닉네임 선점 문서: 소유자 uid를 함께 저장한다
     // 이미 있는 문서에 set()하면 update로 평가되어 거부됨 (덮어쓰기 방지)
+    // 삭제는 소유자이면서, 삭제 후 내 users.nickname이 이 닉네임이 아닐 때만 (#549, nicknameReleasedAfterWrite)
     // 없는 문서 삭제는 허용 (users와 nicknames가 어긋나도 닉네임 변경·회원탈퇴가 막히지 않게)
-    // 형식 검사(isValidNickname)는 생성에만 적용 — 이미 있는 문서는 그대로 두고 삭제도 기존대로 허용
+    // 형식 검사(isValidNickname)는 생성에만 적용 — 이미 있는 문서는 형식과 상관없이 위 조건으로 삭제
     match /nicknames/{nickname} {
       allow read: if signedIn();
       allow create: if signedIn() &&
@@ -264,7 +278,10 @@ service cloud.firestore {
         request.resource.data.nickname == nickname &&
         isValidNickname(nickname) &&
         request.resource.data.uid == request.auth.uid;
-      allow delete: if signedIn() && (resource == null || resource.data.get('uid', '') == request.auth.uid);
+      allow delete: if signedIn() && (
+        resource == null ||
+        (resource.data.get('uid', '') == request.auth.uid && nicknameReleasedAfterWrite(nickname))
+      );
     }
   }
 }
