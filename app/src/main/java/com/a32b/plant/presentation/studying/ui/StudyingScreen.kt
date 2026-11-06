@@ -81,6 +81,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
     // 종료 저장 중에도 비활성화하지 않음 — 비활성화하면 기본 뒤로 가기로 화면을 떠나 백업 삭제·결과 화면 이동이 취소됨
     // (서버 쓰기는 이미 반영돼, 남은 백업으로 홈 복구 창에서 다시 저장하면 중복 저장됨)
     // 저장 중 호출은 ViewModel에서 무시
+    // 홈이 보이면 타이머 서비스를 중지하므로(#514), 타이머를 유지한 채 홈으로 보내는 경로를 만들면 HomeViewModel.onHomeResumed를 함께 확인할 것
     BackHandler {
         viewModel.onChangeGoalCheckMode(StudyingGoalCheckMode.FINISH)
     }
