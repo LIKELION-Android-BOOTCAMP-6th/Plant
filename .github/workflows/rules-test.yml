@@ -3,8 +3,12 @@ name: Firestore Rules Test
 # 규칙이 곧 서버 로직(batch + 규칙 검증)이므로, 규칙 테스트가 깨지면 PR에서 바로 잡는다 (#539)
 # - 앱 빌드(android-build.yml)와 별도 워크플로라 서로의 실패에 영향 없음
 # - 경로 조건 없이 항상 실행: 나중에 "머지 필수 검사"로 지정해도 건너뛴 PR이 대기 상태로 막히지 않음
+# - 머지 후(push)에도 실행: 각자는 통과했지만 합치면 깨지는 PR 조합을 잡고,
+#   develop·main에 캐시를 만들어 다른 PR도 재사용 (PR에서 만든 캐시는 그 PR에서만 쓰임)
 on:
   pull_request:
+    branches: [ develop, main ]
+  push:
     branches: [ develop, main ]
 
 permissions:
@@ -13,6 +17,9 @@ permissions:
 jobs:
   rules-test:
     runs-on: ubuntu-latest
+    # node --test에는 기본 제한 시간이 없어, 테스트·에뮬레이터가 멈추면 GitHub 기본값(6시간)까지 붙잡힘
+    # 평소 2분 이내이므로 10분이면 충분 (step이 아닌 job 단위라 설치 단계 멈춤도 포함)
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v4
