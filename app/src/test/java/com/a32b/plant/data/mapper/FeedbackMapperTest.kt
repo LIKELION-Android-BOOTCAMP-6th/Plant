@@ -38,7 +38,7 @@ class FeedbackMapperTest {
         assertEquals("1.0", payload["appVersion"])
         assertEquals("pending", payload["status"])
         assertEquals("앱 실행 후 저장 버튼 선택", payload["reproductionSteps"])
-        assertEquals("SM-G965N", payload["deviceModel"])
+        assertEquals("test-model", payload["deviceModel"])
         assertEquals("28", payload["androidVersion"])
         assertTrue(payload["createdAt"] is FieldValue)
         assertEquals(FieldValue.serverTimestamp(), payload["createdAt"])
@@ -93,7 +93,7 @@ class FeedbackMapperTest {
         category = BugCategory.UI_BUG,
         description = "화면이 멈춥니다.",
         reproductionSteps = reproductionSteps,
-        deviceModel = "SM-G965N",
+        deviceModel = "test-model",
         androidVersion = "28",
         appVersion = "1.0"
     )

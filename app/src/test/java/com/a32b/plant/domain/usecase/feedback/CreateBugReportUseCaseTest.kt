@@ -32,7 +32,7 @@ class CreateBugReportUseCaseTest {
             category = BugCategory.FEATURE_ERROR,
             description = "저장 버튼을 누르면 앱이 종료됩니다.",
             reproductionSteps = "   ",
-            deviceModel = "SM-G965N",
+            deviceModel = "test-model",
             androidVersion = "28",
             appVersion = "1.0"
         )
@@ -44,7 +44,7 @@ class CreateBugReportUseCaseTest {
         assertEquals("uid-1", feedback.reporterId)
         assertEquals(BugCategory.FEATURE_ERROR, feedback.category)
         assertEquals("저장 버튼을 누르면 앱이 종료됩니다.", feedback.description)
-        assertEquals("SM-G965N", feedback.deviceModel)
+        assertEquals("test-model", feedback.deviceModel)
         assertEquals("28", feedback.androidVersion)
         assertEquals("1.0", feedback.appVersion)
         assertEquals(null, feedback.reproductionSteps)
