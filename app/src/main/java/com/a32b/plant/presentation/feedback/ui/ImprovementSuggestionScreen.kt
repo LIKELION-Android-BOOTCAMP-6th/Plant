@@ -128,7 +128,7 @@ fun ImprovementSuggestionScreen(
                 }
             )
 
-            Text("설명", style = MaterialTheme.typography.titleSmall)
+            Text("제안 내용", style = MaterialTheme.typography.titleSmall)
             PostInputField(
                 value = uiState.description,
                 onValueChange = viewModel::onDescriptionChanged,

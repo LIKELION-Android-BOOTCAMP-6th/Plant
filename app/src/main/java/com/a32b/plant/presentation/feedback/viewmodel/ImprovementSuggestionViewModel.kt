@@ -70,29 +70,31 @@ class ImprovementSuggestionViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
-            createImprovementSuggestionUseCase(
-                feedbackId = feedbackId,
-                category = category,
-                description = state.description,
-                appVersion = state.appVersion
-            ).onSuccess { result ->
-                hasSubmitted = true
-                _uiState.update { it.copy(isLoading = false) }
-                when (result) {
-                    FeedbackSubmissionResult.Saved -> {
-                        _eventChannel.send(ImprovementSuggestionEvent.ShowToast(SUCCESS_MESSAGE))
-                        _eventChannel.send(ImprovementSuggestionEvent.NavigateBack)
+            try {
+                createImprovementSuggestionUseCase(
+                    feedbackId = feedbackId,
+                    category = category,
+                    description = state.description,
+                    appVersion = state.appVersion
+                ).onSuccess { result ->
+                    hasSubmitted = true
+                    when (result) {
+                        FeedbackSubmissionResult.Saved -> {
+                            _eventChannel.send(ImprovementSuggestionEvent.ShowToast(SUCCESS_MESSAGE))
+                            _eventChannel.send(ImprovementSuggestionEvent.NavigateBack)
+                        }
+                        FeedbackSubmissionResult.Pending -> {
+                            _eventChannel.send(ImprovementSuggestionEvent.ShowToast(NETWORK_SLOW_MESSAGE))
+                            _eventChannel.send(ImprovementSuggestionEvent.NavigateBack)
+                        }
                     }
-                    FeedbackSubmissionResult.Pending -> {
-                        _eventChannel.send(ImprovementSuggestionEvent.ShowToast(NETWORK_SLOW_MESSAGE))
-                        _eventChannel.send(ImprovementSuggestionEvent.NavigateBack)
+                }.onFailure { error ->
+                    if (error !is AppError.UnknownUser) {
+                        _eventChannel.send(ImprovementSuggestionEvent.ShowToast(error.message))
                     }
                 }
-            }.onFailure { error ->
+            } finally {
                 _uiState.update { it.copy(isLoading = false) }
-                if (error !is AppError.UnknownUser) {
-                    _eventChannel.send(ImprovementSuggestionEvent.ShowToast(error.message))
-                }
             }
         }
     }

@@ -84,32 +84,34 @@ class BugReportViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
-            createBugReportUseCase(
-                feedbackId = feedbackId,
-                category = category,
-                description = state.description,
-                reproductionSteps = state.reproductionSteps,
-                deviceModel = state.deviceModel,
-                androidVersion = state.androidVersion,
-                appVersion = state.appVersion
-            ).onSuccess { result ->
-                hasSubmitted = true
-                _uiState.update { it.copy(isLoading = false) }
-                when (result) {
-                    FeedbackSubmissionResult.Saved -> {
-                        _eventChannel.send(BugReportEvent.ShowToast(SUCCESS_MESSAGE))
-                        _eventChannel.send(BugReportEvent.NavigateBack)
+            try {
+                createBugReportUseCase(
+                    feedbackId = feedbackId,
+                    category = category,
+                    description = state.description,
+                    reproductionSteps = state.reproductionSteps,
+                    deviceModel = state.deviceModel,
+                    androidVersion = state.androidVersion,
+                    appVersion = state.appVersion
+                ).onSuccess { result ->
+                    hasSubmitted = true
+                    when (result) {
+                        FeedbackSubmissionResult.Saved -> {
+                            _eventChannel.send(BugReportEvent.ShowToast(SUCCESS_MESSAGE))
+                            _eventChannel.send(BugReportEvent.NavigateBack)
+                        }
+                        FeedbackSubmissionResult.Pending -> {
+                            _eventChannel.send(BugReportEvent.ShowToast(NETWORK_SLOW_MESSAGE))
+                            _eventChannel.send(BugReportEvent.NavigateBack)
+                        }
                     }
-                    FeedbackSubmissionResult.Pending -> {
-                        _eventChannel.send(BugReportEvent.ShowToast(NETWORK_SLOW_MESSAGE))
-                        _eventChannel.send(BugReportEvent.NavigateBack)
+                }.onFailure { error ->
+                    if (error !is AppError.UnknownUser) {
+                        _eventChannel.send(BugReportEvent.ShowToast(error.message))
                     }
                 }
-            }.onFailure { error ->
+            } finally {
                 _uiState.update { it.copy(isLoading = false) }
-                if (error !is AppError.UnknownUser) {
-                    _eventChannel.send(BugReportEvent.ShowToast(error.message))
-                }
             }
         }
     }
