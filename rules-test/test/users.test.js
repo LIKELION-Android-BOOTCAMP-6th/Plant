@@ -46,7 +46,7 @@ describe("users", () => {
       await assertSucceeds(updateDoc(doc(asAlice(), "users", ALICE), {nickname: "앨리스", profileImg: "2"}));
     });
 
-    it("본인이 선점한 닉네임으로는 바꿀 수 있다 (UpdateProfileUseCase: registerNickname 후 updateProfile)", async () => {
+    it("이미 본인 소유인 닉네임 문서가 있으면 그 닉네임으로 바꿀 수 있다", async () => {
       await seed(testEnv, async (db) => {
         await setDoc(doc(db, "nicknames", "새이름"), {nickname: "새이름", uid: ALICE});
       });
@@ -79,6 +79,41 @@ describe("users", () => {
         await txn.get(nicknameRef);
         txn.set(nicknameRef, {nickname: "밥", uid: BOB});
         txn.update(userRef, {nickname: "밥", isFirstLogin: false});
+      }));
+    });
+
+    it("프로필 변경: 새 nicknames 생성 + 이전 nicknames 삭제 + users 수정을 한 트랜잭션에서 하면 허용 (updateProfile)", async () => {
+      await seed(testEnv, async (db) => {
+        await setDoc(doc(db, "users", ALICE), {nickname: "앨리스", profileImg: "1"});
+        await setDoc(doc(db, "nicknames", "앨리스"), {nickname: "앨리스", uid: ALICE});
+      });
+      const db = asAlice();
+      await assertSucceeds(runTransaction(db, async (txn) => {
+        const userRef = doc(db, "users", ALICE);
+        const newNicknameRef = doc(db, "nicknames", "새이름");
+        const oldNicknameRef = doc(db, "nicknames", "앨리스");
+        await txn.get(userRef);
+        await txn.get(newNicknameRef);
+        txn.set(newNicknameRef, {nickname: "새이름", uid: ALICE});
+        txn.delete(oldNicknameRef);
+        txn.update(userRef, {nickname: "새이름", profileImg: "2"});
+      }));
+    });
+
+    it("프로필 변경: 이전 닉네임 문서가 없어도 트랜잭션은 허용 (데이터 어긋남)", async () => {
+      await seed(testEnv, async (db) => {
+        await setDoc(doc(db, "users", ALICE), {nickname: "옛이름", profileImg: "1"});
+      });
+      const db = asAlice();
+      await assertSucceeds(runTransaction(db, async (txn) => {
+        const userRef = doc(db, "users", ALICE);
+        const newNicknameRef = doc(db, "nicknames", "새이름");
+        const oldNicknameRef = doc(db, "nicknames", "옛이름");
+        await txn.get(userRef);
+        await txn.get(newNicknameRef);
+        txn.set(newNicknameRef, {nickname: "새이름", uid: ALICE});
+        txn.delete(oldNicknameRef);
+        txn.update(userRef, {nickname: "새이름", profileImg: "2"});
       }));
     });
 
