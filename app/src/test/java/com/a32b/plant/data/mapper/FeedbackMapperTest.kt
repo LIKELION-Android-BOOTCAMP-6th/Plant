@@ -4,8 +4,8 @@ import com.a32b.plant.domain.model.Feedback
 import com.a32b.plant.domain.type.BugCategory
 import com.a32b.plant.domain.type.FeedbackType
 import com.a32b.plant.domain.type.ImprovementCategory
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FieldValue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -46,7 +46,7 @@ class FeedbackMapperTest {
     }
 
     @Test
-    fun blankOptionalReproductionStepsAreOmittedFromPayload() {
+    fun nullReproductionStepsAreOmittedFromPayload() {
         val payload = createFeedback(reproductionSteps = null).toFirestoreMap()
 
         assertFalse(payload.containsKey("reproductionSteps"))

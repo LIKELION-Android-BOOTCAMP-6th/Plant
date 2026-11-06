@@ -24,7 +24,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -33,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.domain.type.ImprovementCategory
@@ -50,7 +50,7 @@ fun ImprovementSuggestionScreen(
     viewModel: ImprovementSuggestionViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.loadAppVersion()
@@ -142,7 +142,7 @@ fun ImprovementSuggestionScreen(
                 enabled = uiState.canSubmit,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("제출", style = MaterialTheme.typography.bodyMedium)
+                Text("제출", style = MaterialTheme.typography.labelLarge)
             }
             Spacer(modifier = Modifier.height(24.dp))
         }

@@ -43,6 +43,7 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindCommunityReportRepository(impl: CommunityReportRepositoryImpl): CommunityReportRepository
+
     @Binds
     @Singleton
     abstract fun bindFeedbackRepository(impl: FeedbackRepositoryImpl): FeedbackRepository

@@ -44,6 +44,7 @@ abstract class DataSourceModule {
     @Binds
     @Singleton
     abstract fun bindCommunityReportRemoteDataSource(impl: CommunityReportRemoteDataSourceImpl): CommunityReportRemoteDataSource
+
     @Binds
     @Singleton
     abstract fun bindFeedbackRemoteDataSource(impl: FeedbackRemoteDataSourceImpl): FeedbackRemoteDataSource
