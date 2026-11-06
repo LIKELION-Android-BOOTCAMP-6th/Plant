@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.a32b.plant.R
+import com.a32b.plant.presentation.core.component.plantCheckboxColors
 import com.a32b.plant.presentation.core.type.StudyingGoalCheckMode
 import com.a32b.plant.presentation.studying.StudyingConstants.MAX_STUDY_LOG_SIZE
 import com.a32b.plant.presentation.studying.StudyingConstants.STUDY_LOG_LIMIT_STATE_DESCRIPTION
@@ -159,7 +160,11 @@ fun StudyLogItem(log: StudyLogUi, onEdit: () -> Unit, onCompleted: (Boolean) -> 
             .padding(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Checkbox(checked = log.isCompleted, onCheckedChange = onCompleted)
+        Checkbox(
+            checked = log.isCompleted,
+            onCheckedChange = onCompleted,
+            colors = plantCheckboxColors()
+        )
         Spacer(modifier = Modifier.width(7.dp))
         Text(
             text = log.log,
