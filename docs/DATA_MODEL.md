@@ -75,7 +75,7 @@ posts
     │   ├── name: String
     │   ├── parentId: String
     │   └── no: Int
-    ├── commentCount: Int
+    ├── commentCount: Int          ← 앱은 쓰지 않음, 댓글 생성·삭제 트리거(functions)가 댓글 수를 세어 저장 (#528)
     ├── likeCount: Int
     ├── likedBy: List<String>
     ├── bookmarkCount: Int
