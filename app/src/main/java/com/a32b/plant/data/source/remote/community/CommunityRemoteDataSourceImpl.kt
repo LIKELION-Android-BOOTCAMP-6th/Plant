@@ -197,11 +197,11 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         val commentWithAct = comment.copy(activityId = activityRef.id, commentId = commentRef.id)
         val activityWithCo = activity.copy(targetId = postId, commentId = commentRef.id)
 
-        val postRef = commentRef.parent.parent!!
+        // commentCount는 쓰지 않는다 — 댓글 생성 트리거(functions)가 댓글 수를 세어 저장 (#528)
+        // 삭제된 게시글에 댓글을 다는 것은 보안 규칙(게시글 exists 확인)이 거부한다
         db.runBatch { batch ->
             batch.set(commentRef, commentWithAct.toDto())
             batch.set(activityRef, activityWithCo.toDto())
-            batch.update(postRef, "commentCount", FieldValue.increment(1))
         }.await()
     }
 
@@ -227,21 +227,16 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
     override suspend fun deleteComment(postId: String, commentId: String, deleteActivity: Boolean): Boolean {
         val commentRef = db.collection("posts").document(postId)
             .collection("comments").document(commentId)
-        val postRef = commentRef.parent.parent!!
-
-        // exists() 체크 → delete() → commentCount 감소를 트랜잭션으로 묶어 TOCTOU 방지 + 포스트 부재 시 NOT_FOUND 방어
+        // exists() 체크 → delete()를 트랜잭션으로 묶어 TOCTOU 방지 (이미 지워진 댓글이면 false)
+        // commentCount는 쓰지 않는다 — 댓글 삭제 트리거(functions)가 댓글 수를 다시 세어 저장 (#528)
         // activity 삭제도 같은 트랜잭션에 포함 — 트랜잭션은 await() 취소와 무관하게 SDK에서 끝까지 실행되므로
         // 화면 이탈로 코루틴이 취소돼도 댓글만 지워지고 activity가 남는 상태가 생기지 않는다
         return db.runTransaction { txn ->
             val commentSnapshot = txn.get(commentRef)
             if (!commentSnapshot.exists()) return@runTransaction false
 
-            val postSnapshot = txn.get(postRef)
             val actId = commentSnapshot.getString("activityId")
             txn.delete(commentRef)
-            if (postSnapshot.exists()) {
-                txn.update(postRef, "commentCount", FieldValue.increment(-1))
-            }
             if (deleteActivity && !actId.isNullOrEmpty()) {
                 txn.delete(db.collection("activities").document(actId))
             }

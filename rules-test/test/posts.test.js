@@ -157,10 +157,26 @@ describe("posts", () => {
       await assertFails(deleteDoc(doc(carol, "posts", "post1", "comments", "c1")));
     });
 
-    // 알려진 구멍: 댓글 없이 commentCount를 ±1 할 수 있다 → #528에서 Cloud Functions 트리거로 해결
-    // #528 작업 후에는 이 테스트를 assertFails로 바꾼다
-    it("[현재 허용 - #528에서 해결 예정] 댓글 없이 commentCount +1", async () => {
-      await assertSucceeds(updateDoc(doc(asBob(), "posts", "post1"), {commentCount: increment(1)}));
+    it("삭제된(없는) 게시글에는 댓글을 만들 수 없다", async () => {
+      const comment = {user: {uid: BOB}, content: "안녕", reportCount: 0, isHidden: false};
+      await assertFails(setDoc(doc(asBob(), "posts", "no-post", "comments", "c2"), comment));
+    });
+
+    // commentCount는 댓글 생성·삭제 트리거(Admin SDK)만 쓴다 (#528)
+    it("commentCount는 누구도 직접 바꿀 수 없다 (+1/-1, 작성자 포함)", async () => {
+      await assertFails(updateDoc(doc(asBob(), "posts", "post1"), {commentCount: increment(1)}));
+      await assertFails(updateDoc(doc(asBob(), "posts", "post1"), {commentCount: increment(-1)}));
+      await assertFails(updateDoc(doc(asAlice(), "posts", "post1"), {commentCount: increment(1)}));
+    });
+
+    it("댓글 작성 batch에 commentCount +1을 함께 넣으면 거부 (예전 앱 방식)", async () => {
+      const db = asBob();
+      const batch = writeBatch(db);
+      batch.set(doc(db, "posts", "post1", "comments", "c2"), {
+        user: {uid: BOB}, content: "안녕", reportCount: 0, isHidden: false,
+      });
+      batch.update(doc(db, "posts", "post1"), {commentCount: increment(1)});
+      await assertFails(batch.commit());
     });
   });
 });
