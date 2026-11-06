@@ -70,6 +70,17 @@ npm --prefix rules-test test
 - 프로젝트 ID는 `demo-plant`를 쓴다. `demo-`로 시작하는 ID는 에뮬레이터 전용이라 실제 서버에 접속하지 않는다
 - 규칙은 루트의 `firestore.rules`(실제 배포 파일)를 그대로 읽는다
 
+### CI에서도 실행됨 (#539)
+
+`develop`·`main` 대상 PR마다 GitHub Actions(`.github/workflows/rules-test.yml`)가 같은 명령(`npm --prefix rules-test test`)을 자동으로 실행한다.
+
+- 규칙 테스트가 하나라도 실패하면 PR의 **Firestore Rules Test** 검사가 실패로 표시된다 → 머지 전에 확인
+- 앱 빌드(`android-build.yml`)와 **별도 워크플로**라 한쪽이 실패해도 다른 쪽 결과에 영향 없음
+- 경로 조건 없이 **모든 PR에서 실행**한다 (나중에 머지 필수 검사로 지정해도 건너뛴 PR이 대기 상태로 막히지 않도록)
+- CI 환경: JDK 21, Node 24, `firebase-tools@15`. 에뮬레이터 프로그램은 `~/.cache/firebase/emulators`로 캐시
+- 실패 시 에뮬레이터 로그(`rules-test/*.log`)가 실행 결과의 Artifacts(`rules-test-logs`)에 올라간다
+- CI가 있어도 규칙을 고쳤다면 **푸시 전에 로컬에서 먼저 돌려 보는 것**을 권장 (CI 결과를 기다리는 시간 절약)
+
 | 파일 | 대상 |
 |---|---|
 | `test/users.test.js` | `users`, 하위 `pots`·`logs` |
