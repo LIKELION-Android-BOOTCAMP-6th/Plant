@@ -790,7 +790,12 @@ fun BonusBoxResultDialog(
         AlertDialog(
             onDismissRequest = onDismiss,
             title = {
-                Text("보너스 박스 개봉 결과!", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = "보너스 박스 개봉 결과!",
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center
+                )
             },
             text = {
                 Column(
