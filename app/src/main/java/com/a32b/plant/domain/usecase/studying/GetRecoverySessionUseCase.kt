@@ -21,6 +21,6 @@ class GetRecoverySessionUseCase @Inject constructor(
             is Result.Failure -> return Result.Failure(result.error)
         }
         return repository.readLocalSession()
-            .map { session -> session?.takeIf { it.userId == user.uid && it.time > 0L } }
+            .map { session -> session?.takeIf { it.isRecoverableBy(user.uid) } }
     }
 }
