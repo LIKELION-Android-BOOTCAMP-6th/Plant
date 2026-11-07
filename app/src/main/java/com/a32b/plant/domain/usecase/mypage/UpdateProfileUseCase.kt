@@ -40,7 +40,7 @@ class UpdateProfileUseCase @Inject constructor(
         if (isNicknameChanged) {
             val nicknameError = validateNickname(normalizedNickname)
             if (nicknameError != null) {
-                return Result.Failure(AppError.Custom(nicknameError))
+                return Result.Failure(AppError.NicknameInvalid(nicknameError))
             }
         }
 
