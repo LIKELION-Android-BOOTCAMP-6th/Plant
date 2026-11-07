@@ -2,6 +2,7 @@ package com.a32b.plant.presentation.mypage.ui
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -96,6 +97,11 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                     navController.navigate(Routes.SignIn) {
                         popUpTo(0) { inclusive = true }
                     }
+                is MyPageEvent.ShowToast ->
+                    context.showToast(
+                        event.message,
+                        if (event.isLong) Toast.LENGTH_LONG else Toast.LENGTH_SHORT
+                    )
                 is MyPageEvent.OpenUrl -> {
                     try {
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(event.url)))

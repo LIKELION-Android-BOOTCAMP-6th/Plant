@@ -108,7 +108,7 @@ class UpdateProfileUseCaseTest {
         listOf(tooShort, tooLong).forEach { result ->
             assertTrue(result is Result.Failure)
             val error = (result as Result.Failure).error
-            assertTrue(error is AppError.Custom)
+            assertTrue(error is AppError.NicknameInvalid)
             assertEquals(NicknameRule.LENGTH_MESSAGE, error.message)
         }
         assertTrue(users.updatedUsers.isEmpty())
@@ -140,6 +140,20 @@ class UpdateProfileUseCaseTest {
         assertTrue((result as Result.Failure).error is AppError.Network)
         assertEquals(1, users.updatedUsers.size)
         assertNull(CurrentUser.user.value)
+    }
+
+    @Test
+    fun `image only change save failure is not a nickname input error`() = runTest {
+        val users = FakeUserRepository(testUser(nickname = "새싹", profileImg = "1"))
+        users.updateResult = Result.Failure(AppError.Custom("프로필 수정에 실패했습니다."))
+        val useCase = createUseCase(users)
+
+        val result = useCase("새싹", "2")
+
+        assertTrue(result is Result.Failure)
+        val error = (result as Result.Failure).error
+        assertTrue(error is AppError.Custom)
+        assertEquals("프로필 수정에 실패했습니다.", error.message)
     }
 
     @Test
@@ -182,7 +196,7 @@ class UpdateProfileUseCaseTest {
 
         assertTrue(result is Result.Failure)
         val error = (result as Result.Failure).error
-        assertTrue(error is AppError.Custom)
+        assertTrue(error is AppError.NicknameInvalid)
         assertEquals(NicknameRule.UNUSABLE_MESSAGE, error.message)
         assertTrue(users.updatedUsers.isEmpty())
     }
