@@ -68,9 +68,9 @@ import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.presentation.core.component.ConfettiOverlay
 import com.a32b.plant.presentation.core.component.festiveConfettiParties
 import com.a32b.plant.presentation.core.component.LoadingBox
+import com.a32b.plant.presentation.theme.LocalIsDarkTheme
 import com.a32b.plant.presentation.theme.primary
-import com.a32b.plant.presentation.theme.sub2
-import com.a32b.plant.presentation.theme.sub_green1
+import androidx.compose.ui.graphics.Color
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -370,7 +370,7 @@ fun PotChangeDialog(
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
                                     .clickable { onPotSelected(pot) },
-                                color = if (isSelected) sub_green1 else sub2,
+                                color = potSlotContainerColor(isSelected),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Row(
@@ -392,7 +392,7 @@ fun PotChangeDialog(
                                     Text(
                                         text = "Lv.${pot.potLevel}",
                                         style = MaterialTheme.typography.labelMedium,
-                                        color = if(isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSecondary
+                                        color = if(isSelected) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSecondary
                                     )
                                 }
                             }
@@ -430,6 +430,16 @@ fun PotChangeDialog(
     )
 }
 
+// 화분 변경 다이얼로그의 칸 배경색 (화분 칸, 새 화분 만들기 칸 공용)
+// 라이트는 surfaceVariant(sub2)·secondary(sub_green1)로 기존과 같고,
+// 다크의 surfaceVariant는 밝은 색이라 onSurface 글자가 보이지 않아 카드 색(primaryContainer)을 쓴다
+@Composable
+private fun potSlotContainerColor(isSelected: Boolean): Color = when {
+    isSelected -> MaterialTheme.colorScheme.secondary
+    LocalIsDarkTheme.current -> MaterialTheme.colorScheme.primaryContainer
+    else -> MaterialTheme.colorScheme.surfaceVariant
+}
+
 // 화분 변경 다이얼로그의 '+ 새로운 화분 만들기' 칸 (화분 칸과 같은 모양)
 @Composable
 private fun NewPotSlot(onClick: () -> Unit) {
@@ -438,7 +448,7 @@ private fun NewPotSlot(onClick: () -> Unit) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick),
-        color = sub2,
+        color = potSlotContainerColor(isSelected = false),
         shape = RoundedCornerShape(12.dp)
     ) {
         Box(
@@ -450,7 +460,7 @@ private fun NewPotSlot(onClick: () -> Unit) {
             Text(
                 text = "+ 새로운 화분 만들기",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.tertiary
             )
         }
     }
