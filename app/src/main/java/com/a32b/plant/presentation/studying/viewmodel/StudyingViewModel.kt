@@ -10,8 +10,10 @@ import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.error.AppError
+import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.domain.repository.StudyingRepository
+import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.getOrNull
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
@@ -19,7 +21,6 @@ import com.a32b.plant.domain.type.StudyingSessionStatus
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import com.a32b.plant.domain.usecase.studying.ClearStudyingSessionUseCase
 import com.a32b.plant.domain.usecase.studying.FinishStudyingUseCase
-import com.a32b.plant.domain.usecase.studying.GetRecoverySessionUseCase
 import com.a32b.plant.domain.usecase.studying.GetStudyingGoalDraftUseCase
 import com.a32b.plant.domain.usecase.studying.SaveStudyingGoalDraftUseCase
 import com.a32b.plant.domain.usecase.studying.StartStudyingSessionUseCase
@@ -99,7 +100,7 @@ class StudyingViewModel @Inject constructor(
     private val updateLocalStudyingSessionUseCase: UpdateLocalStudyingSessionUseCase,
     private val clearStudyingSessionUseCase: ClearStudyingSessionUseCase,
     private val finishStudyingUseCase: FinishStudyingUseCase,
-    private val getRecoverySessionUseCase: GetRecoverySessionUseCase,
+    private val userRepository: UserRepository,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     private val saveStudyingGoalDraftUseCase: SaveStudyingGoalDraftUseCase,
     private val getStudyingGoalDraftUseCase: GetStudyingGoalDraftUseCase,
@@ -129,13 +130,15 @@ class StudyingViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            // 종료 세션 차단과 이어서 공부 복원이 같은 백업을 보도록 한 번만 읽음 — 읽기 실패는 백업 없음과 같이 새 세션으로 시작
+            val backup = repository.readLocalSession().getOrNull()
             // 종료했지만 저장되지 않은 세션을 새 공부가 덮어쓰지 않도록, 시작하지 않고 홈 복구 창으로 보냄
-            if (hasUnsavedFinishedSession()) {
+            if (isUnsavedFinishedSession(backup)) {
                 sendToast("저장되지 않은 학습 기록이 있어 홈으로 이동합니다.")
                 _eventChannel.send(StudyingEvent.NavigateToHome)
                 return@launch
             }
-            restoreFromLocalBackup()
+            restoreFromLocalBackup(backup)
             // 로컬 복구 결과(타이머·목표 다이얼로그 표시 여부)가 확정된 뒤 화면 노출
             // 원격 등록(initStudyingUser)은 화면 표시와 무관하므로 기다리지 않음
             loaded()
@@ -145,35 +148,39 @@ class StudyingViewModel @Inject constructor(
         observeTimer()
     }
 
-    private suspend fun hasUnsavedFinishedSession(): Boolean =
-        getRecoverySessionUseCase().getOrNull()?.status == StudyingSessionStatus.FINISHED
+    /**
+     * 홈 복구 창이 처리할 종료 세션인지 — 복구 대상 기준은 홈 복구 창과 같은 StudyingSession.isRecoverableBy 사용
+     * 유저 정보가 없으면 막지 않고 진행 (기존과 동일). 세션 만료 알림은 이어지는 initStudyingUser가 보내므로
+     * 알림이 두 번 가지 않도록 여기서는 ensureCurrentUserUseCase 대신 현재 값을 직접 읽음
+     */
+    private fun isUnsavedFinishedSession(session: StudyingSession?): Boolean {
+        if (session == null || session.status != StudyingSessionStatus.FINISHED) return false
+        val uid = userRepository.currentUser.value?.uid ?: return false
+        return session.isRecoverableBy(uid)
+    }
 
-    private suspend fun restoreFromLocalBackup() {
-        repository.readLocalSession()
-            .onSuccess { session ->
-                // 종료한 세션은 이어서 공부하지 않으므로 공부 중이던 세션만 복원
-                if (session != null && session.potId == potId && session.status == StudyingSessionStatus.STUDYING) {
-                    // 목표 입력 단계(0초, 목표 없음)에서 앱이 종료된 세션 — 처음 시작할 때처럼 타이머를 멈춘 채
-                    // 목표 입력 창을 다시 띄우고 작성 중이던 글을 복원 (시간이 쌓인 세션은 아래에서 기존대로 복원, #253)
-                    if (session.time == 0L && session.log.orEmpty().none { it.isNotBlank() }) {
-                        restoreGoalDraft()
-                        return@onSuccess
-                    }
-                    lastSaveMs = session.time
-                    lastUpdateMs = session.time
-                    _uiState.update {
-                        it.copy(
-                            timer = session.time,
-                            startedAt = session.startedAt,
-                            studyLog = session.log?.map { log -> StudyLogUi(log = log) }?.filter { it.log.isNotBlank() } ?: emptyList(),
-                            isGoalInputDialogShown = false,
-                            isStudying = !session.isPaused
-                        )
-                    }
-                    // 일시정지 중이었으면 사용자가 재개할 때까지 타이머를 시작하지 않는다
-                    if (!session.isPaused) startStopwatch()
-                }
-            }
+    private suspend fun restoreFromLocalBackup(session: StudyingSession?) {
+        // 종료한 세션은 이어서 공부하지 않으므로 공부 중이던 세션만 복원
+        if (session == null || session.potId != potId || session.status != StudyingSessionStatus.STUDYING) return
+        // 목표 입력 단계(0초, 목표 없음)에서 앱이 종료된 세션 — 처음 시작할 때처럼 타이머를 멈춘 채
+        // 목표 입력 창을 다시 띄우고 작성 중이던 글을 복원 (시간이 쌓인 세션은 아래에서 기존대로 복원, #253)
+        if (session.time == 0L && session.log.orEmpty().none { it.isNotBlank() }) {
+            restoreGoalDraft()
+            return
+        }
+        lastSaveMs = session.time
+        lastUpdateMs = session.time
+        _uiState.update {
+            it.copy(
+                timer = session.time,
+                startedAt = session.startedAt,
+                studyLog = session.log?.map { log -> StudyLogUi(log = log) }?.filter { it.log.isNotBlank() } ?: emptyList(),
+                isGoalInputDialogShown = false,
+                isStudying = !session.isPaused
+            )
+        }
+        // 일시정지 중이었으면 사용자가 재개할 때까지 타이머를 시작하지 않는다
+        if (!session.isPaused) startStopwatch()
     }
 
     /** 같은 계정·같은 화분에서 작성 중이던 목표 임시 글을 입력 창에 복원 — 읽기 실패나 글이 없으면 빈 입력 창 그대로 */
