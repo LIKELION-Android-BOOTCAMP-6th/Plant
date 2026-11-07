@@ -354,11 +354,11 @@ fun PotChangeDialog(
                             color = MaterialTheme.colorScheme.tertiary
                         )
                     }
-                    // 목록이 비어 있을 때(처음 열 때 불러오기 전·실패 시)는 안내 문구 아래에 바로 표시
+                    // 목록이 비어 있을 때(예: 아직 목록을 한 번도 불러오지 못했을 때)는 안내 문구 아래에 바로 표시
                     NewPotSlot(onClick = onCreateNewClick)
                 } else {
                     // weight(fill = false): 목록이 짧으면 내용 높이만큼만, 길면 남은 공간까지만 차지해서
-                    // 다이얼로그 최대 높이를 넘지 않고 그 안에서 스크롤되게 한다
+                    // 본문 영역 최대 높이(heightIn(max = 300.dp))를 넘지 않고 그 안에서 스크롤되게 한다
                     LazyColumn(
                         modifier = Modifier.weight(1f, fill = false),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
