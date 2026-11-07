@@ -354,9 +354,11 @@ fun PotChangeDialog(
                             color = MaterialTheme.colorScheme.tertiary
                         )
                     }
+                    // 화분이 없을 때는 목록이 없으므로 안내 문구 아래에 바로 표시
+                    NewPotSlot(onClick = onCreateNewClick)
                 } else {
                     // weight(fill = false): 목록이 짧으면 내용 높이만큼만, 길면 남은 공간까지만 차지해서
-                    // 아래 '+ 새로운 화분 만들기' 버튼이 다이얼로그 밖으로 밀려나지 않게 한다
+                    // 다이얼로그 최대 높이를 넘지 않고 그 안에서 스크롤되게 한다
                     LazyColumn(
                         modifier = Modifier.weight(1f, fill = false),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -395,20 +397,11 @@ fun PotChangeDialog(
                                 }
                             }
                         }
+                        // 목록 마지막 칸: 끝까지 스크롤해야 보이는 새 화분 생성 칸
+                        item {
+                            NewPotSlot(onClick = onCreateNewClick)
+                        }
                     }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // 새 화분 생성 버튼 (다이얼로그 내부 추가 옵션)
-                TextButton(
-                    onClick = onCreateNewClick,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "+ 새로운 화분 만들기",
-                        color = MaterialTheme.colorScheme.primary
-                    )
                 }
             }
         },
@@ -435,6 +428,32 @@ fun PotChangeDialog(
         },
         shape = RoundedCornerShape(24.dp)
     )
+}
+
+// 화분 변경 다이얼로그의 '+ 새로운 화분 만들기' 칸 (화분 칸과 같은 모양)
+@Composable
+private fun NewPotSlot(onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        color = sub2,
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "+ 새로운 화분 만들기",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
 }
 
 
