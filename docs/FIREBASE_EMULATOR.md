@@ -45,10 +45,15 @@ firebase emulators:start
 ## 스크립트 실행 후 자동 종료 (테스트용)
 
 ```bash
-firebase emulators:exec --only auth,firestore,functions "npm --prefix functions test"
+firebase emulators:exec --only firestore,functions --project demo-plant "node 실행할스크립트.js"
 ```
 
-에뮬레이터를 켜고 → 명령을 실행하고 → 끝나면 에뮬레이터를 끈다. 규칙 테스트·CI에서 사용.
+에뮬레이터를 켜고 → 따옴표 안의 명령을 실행하고 → 끝나면 에뮬레이터를 끈다. 명령이 0이 아닌 코드로 끝나면 `emulators:exec`도 실패로 끝난다.
+
+- `--project demo-plant`를 꼭 붙인다. 빼면 `.firebaserc`의 운영 프로젝트 ID로 실행되어, 에뮬레이터로 켜지 않은 서비스 호출이 실서버로 갈 수 있다
+- `--only`에는 스크립트가 쓰는 에뮬레이터만 넣는다 (예: 함수 트리거 확인은 `firestore,functions`)
+- 규칙 테스트(`npm --prefix rules-test test`)도 내부적으로 이 명령을 쓴다 (`rules-test/package.json`의 `test` 스크립트)
+- `functions/`에는 테스트 스크립트·테스트 도구가 없다. `firebase-functions-test`가 `firebase-admin` 14를 지원하지 않아 제거함 (#554). 함수 동작은 이 명령으로 에뮬레이터를 켜고 Admin SDK로 문서를 쓰고 읽는 스크립트로 확인한다
 
 ## 보안 규칙 테스트 (`rules-test/`)
 
