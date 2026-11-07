@@ -355,7 +355,10 @@ fun PotChangeDialog(
                         )
                     }
                 } else {
+                    // weight(fill = false): 목록이 짧으면 내용 높이만큼만, 길면 남은 공간까지만 차지해서
+                    // 아래 '+ 새로운 화분 만들기' 버튼이 다이얼로그 밖으로 밀려나지 않게 한다
                     LazyColumn(
+                        modifier = Modifier.weight(1f, fill = false),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(pots) { pot ->
