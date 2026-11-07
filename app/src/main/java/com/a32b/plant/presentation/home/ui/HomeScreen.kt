@@ -354,7 +354,7 @@ fun PotChangeDialog(
                             color = MaterialTheme.colorScheme.tertiary
                         )
                     }
-                    // 화분이 없을 때는 목록이 없으므로 안내 문구 아래에 바로 표시
+                    // 목록이 비어 있을 때(처음 열 때 불러오기 전·실패 시)는 안내 문구 아래에 바로 표시
                     NewPotSlot(onClick = onCreateNewClick)
                 } else {
                     // weight(fill = false): 목록이 짧으면 내용 높이만큼만, 길면 남은 공간까지만 차지해서
@@ -397,7 +397,7 @@ fun PotChangeDialog(
                                 }
                             }
                         }
-                        // 목록 마지막 칸: 끝까지 스크롤해야 보이는 새 화분 생성 칸
+                        // 목록 마지막 칸: 목록이 길면 끝까지 스크롤해야 보이는 새 화분 생성 칸
                         item {
                             NewPotSlot(onClick = onCreateNewClick)
                         }
@@ -432,7 +432,7 @@ fun PotChangeDialog(
 
 // 화분 변경 다이얼로그의 칸 배경색 (화분 칸, 새 화분 만들기 칸 공용)
 // 라이트는 surfaceVariant(sub2)·secondary(sub_green1)로 기존과 같고,
-// 다크의 surfaceVariant는 밝은 색이라 onSurface 글자가 보이지 않아 카드 색(primaryContainer)을 쓴다
+// 다크의 surfaceVariant는 밝은 색이라 onSurface 글자 대비가 약 2.3:1로 낮아 카드 색(primaryContainer)을 쓴다
 @Composable
 private fun potSlotContainerColor(isSelected: Boolean): Color = when {
     isSelected -> MaterialTheme.colorScheme.secondary
