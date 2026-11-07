@@ -53,10 +53,11 @@ fun PotListScreen(
             }
         }
     ) { innerPadding ->
+        // 하단바·내비바 여백은 MainActivity의 바깥 Scaffold가 이미 처리하므로 상단(topBar) 여백만 적용 (#355)
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(top = innerPadding.calculateTopPadding())
                 .padding(horizontal = 16.dp)
         ) {
             // 탭 레이아웃 ("공부 중 | 기른 화분")
