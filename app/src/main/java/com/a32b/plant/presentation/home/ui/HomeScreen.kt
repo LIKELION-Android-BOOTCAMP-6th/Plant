@@ -195,14 +195,15 @@ fun HomeScreen(
         ) { paddingValues ->
             // 홈 본문 배치 (#376) — 자세한 규칙은 HomeBodyLayout 참고
             // 화면 높이(maxHeight)를 본문 최소 높이로 넘겨, 남는 공간 계산의 기준으로 쓴다
-            // 단, 최소 높이는 720dp까지만: 폰은 화면 전체를 쓰고, 태블릿은 720dp 영역을 화면 가운데에 둬서 위쪽이 과하게 비지 않게 한다
+            // 단, 최소 높이는 720dp까지만: 폰은 화면 전체를 쓰고, 태블릿은 카드가 과하게 커지지 않게 720dp 기준으로 계산한다
+            // 본문은 위쪽 기준(TopCenter)으로 둬서 태블릿에서도 카드가 날짜 바로 아래에 오게 한다 (#566, 가운데 정렬이면 위쪽이 빔)
             // verticalScroll은 안전장치: 이미지를 최소로 줄여도 안 들어가는 극단적인 경우(큰 글꼴, 분할 화면 등 세로가 매우 짧을 때)에만 실제로 스크롤된다
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
                     .background(MaterialTheme.colorScheme.background),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.TopCenter
             ) {
                 // 본문 높이가 560dp 미만이면(세로가 짧은 소형 폰, 또는 큰 글꼴로 상단바·하단 탭바가 커져 본문이 줄어든 경우) 간격 모드로 여백을 줄여 한 화면에 담는다
                 // 360x760dp급은 간격 모드 없이도 다 들어가는 것을 확인함
@@ -1105,7 +1106,8 @@ fun BonusBoxOpenDialog(
  *    본문이 화면보다 길어져 바깥 verticalScroll로 내려 볼 수 있게 한다 (버튼이 잘리지 않게)
  *    → intrinsic 계산을 쓰므로 카드 안에 SubcomposeLayout 기반 컴포넌트(Lazy 목록, BoxWithConstraints 등)를
  *      넣으면 런타임 크래시가 난다 (MainPlantCard 주석 참고)
- * 4. 남는 세로 공간은 카드 위:아이템박스 아래 = 3:1로 나눈다
+ * 4. 카드는 맨 위(날짜 바로 아래)에 붙이고, 남는 세로 공간은 전부 아이템박스 아래로 보낸다 (#566)
+ *    → 화분이 없어 카드가 낮을 때도 카드가 아래로 밀려 보이지 않는다
  */
 @Composable
 private fun HomeBodyLayout(
@@ -1131,12 +1133,12 @@ private fun HomeBodyLayout(
         )
 
         val contentHeight = card.height + gap + itemBox.height
+        // 레이아웃 높이는 그대로 화면 높이 이상으로 둔다 (남는 공간이 아이템박스 아래 빈 영역이 됨)
         val layoutHeight = maxOf(targetHeight, contentHeight)
-        val top = (layoutHeight - contentHeight) * 3 / 4
 
         layout(constraints.maxWidth, layoutHeight) {
-            card.place((constraints.maxWidth - card.width) / 2, top)
-            itemBox.place((constraints.maxWidth - itemBox.width) / 2, top + card.height + gap)
+            card.place((constraints.maxWidth - card.width) / 2, 0)
+            itemBox.place((constraints.maxWidth - itemBox.width) / 2, card.height + gap)
         }
     }
 }
