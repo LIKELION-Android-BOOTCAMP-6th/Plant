@@ -138,10 +138,6 @@ class UserRemoteDataSourceImpl @Inject constructor(
         }.await()
     }
 
-    override suspend fun deleteNickname(nickname: String) {
-        db.collection("nicknames").document(nickname).delete().await()
-    }
-
     override suspend fun checkAttendance(uid: String): AttendanceDecision {
         val userRef = db.collection("users").document(uid)
 

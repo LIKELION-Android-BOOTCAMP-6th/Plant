@@ -145,7 +145,7 @@ class UpdateProfileUseCaseTest {
     @Test
     fun `image only change save failure is not a nickname input error`() = runTest {
         val users = FakeUserRepository(testUser(nickname = "새싹", profileImg = "1"))
-        users.updateResult = Result.Failure(AppError.Custom("프로필 수정에 실패했습니다."))
+        users.updateResult = Result.Failure(AppError.Custom("프로필 저장에 실패했습니다. 잠시 후 다시 시도해주세요."))
         val useCase = createUseCase(users)
 
         val result = useCase("새싹", "2")
@@ -153,7 +153,7 @@ class UpdateProfileUseCaseTest {
         assertTrue(result is Result.Failure)
         val error = (result as Result.Failure).error
         assertTrue(error is AppError.Custom)
-        assertEquals("프로필 수정에 실패했습니다.", error.message)
+        assertEquals("프로필 저장에 실패했습니다. 잠시 후 다시 시도해주세요.", error.message)
     }
 
     @Test
@@ -238,7 +238,6 @@ class UpdateProfileUseCaseTest {
             updatedUsers += user
             return updateResult
         }
-        override suspend fun deleteNickname(nickname: String): Result<Unit> = TODO()
         override suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success> = TODO()
         override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> = TODO()
     }

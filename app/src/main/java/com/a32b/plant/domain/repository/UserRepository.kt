@@ -53,7 +53,6 @@ interface UserRepository {
      * 이미 같은 값으로 반영된 상태면 성공으로 처리한다.
      */
     suspend fun updateProfile(user: User): Result<Unit>
-    suspend fun deleteNickname(nickname: String): Result<Unit>
     suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success>
     /**
      * 세션 토큰을 저장한다. 제한 시간 안에 서버 응답이 없어도 쓰기는 큐에 남아 나중에 반영되므로 성공으로 반환한다.

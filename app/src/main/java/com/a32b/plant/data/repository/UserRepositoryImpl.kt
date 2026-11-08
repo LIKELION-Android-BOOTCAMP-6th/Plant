@@ -288,13 +288,6 @@ class UserRepositoryImpl @Inject constructor(
         onFailure = { e -> Result.Failure(handleUpdateProfileError(e)) }
     )
 
-    override suspend fun deleteNickname(nickname: String): Result<Unit> = safeRunCatching {
-        userRemoteDataSource.deleteNickname(nickname)
-    }.fold(
-        onSuccess = { Result.Success(Unit) },
-        onFailure = { e -> Result.Failure(handleError(e, "닉네임 삭제 실패")) }
-    )
-
     override suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success> = safeRunCatching {
         userRemoteDataSource.checkAttendance(uid)
     }.fold(
@@ -363,6 +356,6 @@ class UserRepositoryImpl @Inject constructor(
     private fun handleUpdateProfileError(e: Throwable): AppError {
         Log.e("UserRepository", "프로필 수정 실패: ${e.message}", e)
 
-        return if (isNetworkError(e)) AppError.Network() else AppError.Custom("프로필 수정에 실패했습니다.")
+        return if (isNetworkError(e)) AppError.Network() else AppError.Custom("프로필 저장에 실패했습니다. 잠시 후 다시 시도해주세요.")
     }
 }

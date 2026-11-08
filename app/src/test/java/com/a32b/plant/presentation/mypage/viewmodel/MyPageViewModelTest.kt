@@ -118,7 +118,7 @@ class MyPageViewModelTest {
             Dispatchers.setMain(dispatcher)
             val users = FakeUserRepository(
                 testUser(),
-                updateProfileResult = Result.Failure(AppError.Custom("프로필 수정에 실패했습니다."))
+                updateProfileResult = Result.Failure(AppError.Custom("프로필 저장에 실패했습니다. 잠시 후 다시 시도해주세요."))
             )
             val viewModel = createViewModel(users)
             val events = collectEvents(viewModel, dispatcher)
@@ -128,7 +128,7 @@ class MyPageViewModelTest {
 
             assertNull(viewModel.uiState.value.nicknameError)
             assertEquals(
-                listOf(MyPageEvent.ShowToast("프로필 수정에 실패했습니다.", false)),
+                listOf(MyPageEvent.ShowToast("프로필 저장에 실패했습니다. 잠시 후 다시 시도해주세요.", false)),
                 events
             )
             assertFalse(viewModel.uiState.value.isLoading)
@@ -242,7 +242,6 @@ class MyPageViewModelTest {
             updateProfileGate?.await()
             return updateProfileResult
         }
-        override suspend fun deleteNickname(nickname: String): Result<Unit> = error("Unused")
         override suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success> = error("Unused")
         override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> = error("Unused")
     }
