@@ -30,6 +30,7 @@ import com.a32b.plant.presentation.core.component.plantCheckboxColors
 import com.a32b.plant.presentation.core.component.StudyGoalItem
 import com.a32b.plant.core.extension.isCompletedAt
 import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.domain.util.PotNameRule
 import com.a32b.plant.presentation.theme.fontColorSub
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -296,7 +297,7 @@ fun StudyPlanDetailScreen(
                                     Spacer(modifier = Modifier.height(16.dp))
 
                                     // 화분 생성(NewBornTreeScreen)과 동일한 글자 수 제한
-                                    val maxLength = 15
+                                    val maxLength = PotNameRule.MAX_LENGTH
 
                                     // 입력창
                                     OutlinedTextField(
