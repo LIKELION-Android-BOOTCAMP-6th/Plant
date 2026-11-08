@@ -4,6 +4,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
@@ -175,90 +177,103 @@ fun HomeScreen(
             },
             containerColor = MaterialTheme.colorScheme.background
         ) { paddingValues ->
-            Column(
+            // 소형 화면에서 카드+아이템박스가 화면보다 길면 잘리지 않게 세로 스크롤을 허용한다
+            // 스크롤 안에서는 weight가 남는 공간을 못 받으므로, 화면 높이(maxHeight)를 최소 높이로 지정한다 (#376)
+            // 단, 최소 높이는 720dp까지만: 폰은 화면 전체를 쓰고, 태블릿은 720dp 영역을 화면 가운데에 둬서 위쪽이 과하게 비지 않게 한다
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .background(MaterialTheme.colorScheme.background)
-                    // 좌우 여백 16dp: 앱바 타이틀·다른 탭 본문(내 화분, 마이페이지)과 왼쪽 끝을 맞춤
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .background(MaterialTheme.colorScheme.background),
+                contentAlignment = Alignment.Center
             ) {
-                // 화면이 커져서 남는 세로 공간은 카드 위:아이템박스 아래 = 3:1로 나눈다
-                // 카드와 아이템박스 사이는 18dp로 고정해, 기기 크기와 상관없이 두 영역이 붙어 보이게 한다 (#376)
-                Spacer(modifier = Modifier.weight(3f))
-                MainPlantCard(
-                    displayPot = displayPot,
-                    hasNoPot = hasNoPot,
-                    todayStudyTime = todayStudyTime,
-                    levelUpProgress = uiState.levelUpProgress,
-                    levelUpProgressText = uiState.levelUpProgressText,
-                    levelUpReady = uiState.levelUpReady,
-                    isLoading = uiState.isLoading,
-                    onStartClick = {
-                        if (!hasNoPot) {
-                            navController.navigate(
-                                Routes.Studying(
-                                    potId = displayPot.id.ifEmpty { "default_pot" },
-                                    tagId = displayPot.tagId,
-                                    tagName = displayPot.tagName,
-                                    title = displayPot.name.ifEmpty { "공부 목표" },
-                                    level = "Lv.${displayPot.potLevel}"
-                                ))
-                        }
-                    },
-                    onLevelUpClick = {
-                        if (!hasNoPot && !uiState.isLoading) {
-                            viewModel.onLevelUpClick(displayPot.id, displayPot.potLevel)
-                        }
-                    },
+                Column(
+                    modifier = Modifier
+                        // 태블릿처럼 넓은 화면에서 카드가 과하게 늘어나지 않게 최대 너비 제한 (아이템 6개가 한 줄에 보이는 너비)
+                        .widthIn(max = 480.dp)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .heightIn(min = maxHeight.coerceAtMost(720.dp))
+                        // 좌우 여백 16dp: 앱바 타이틀·다른 탭 본문(내 화분, 마이페이지)과 왼쪽 끝을 맞춤
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // 화면이 커져서 남는 세로 공간은 카드 위:아이템박스 아래 = 3:1로 나눈다
+                    // 카드와 아이템박스 사이는 18dp로 고정해, 기기 크기와 상관없이 두 영역이 붙어 보이게 한다 (#376)
+                    Spacer(modifier = Modifier.weight(3f))
+                    MainPlantCard(
+                        displayPot = displayPot,
+                        hasNoPot = hasNoPot,
+                        todayStudyTime = todayStudyTime,
+                        levelUpProgress = uiState.levelUpProgress,
+                        levelUpProgressText = uiState.levelUpProgressText,
+                        levelUpReady = uiState.levelUpReady,
+                        isLoading = uiState.isLoading,
+                        onStartClick = {
+                            if (!hasNoPot) {
+                                navController.navigate(
+                                    Routes.Studying(
+                                        potId = displayPot.id.ifEmpty { "default_pot" },
+                                        tagId = displayPot.tagId,
+                                        tagName = displayPot.tagName,
+                                        title = displayPot.name.ifEmpty { "공부 목표" },
+                                        level = "Lv.${displayPot.potLevel}"
+                                    ))
+                            }
+                        },
+                        onLevelUpClick = {
+                            if (!hasNoPot && !uiState.isLoading) {
+                                viewModel.onLevelUpClick(displayPot.id, displayPot.potLevel)
+                            }
+                        },
 
-                    //화분 생성 이동 or 화분 변경 다이얼로그 오픈
-                    onChangeOrMakeClick = {
-                        if (hasNoPot) {
-                            navController.navigate(Routes.NewBornTree)
-                        } else {
-                            viewModel.setShowPotChangeDialog(true)
-                        }
-                    },
-                    onRecordClick = {
-                        if (!hasNoPot) {
-                            navController.navigate(
-                                Routes.StudyPlanDetail(
-                                    potId = displayPot.id.ifEmpty { "default_pot" }
-                                )
-                            )
-                        }
-                    } // 상세 기록 이동
-                )
-                Spacer(modifier = Modifier.height(18.dp))
-                HomeItemBoxSection(
-                    item = userItem,
-                    onItemClick = { clickedType ->
-                        if (clickedType == ItemType.BOX) {
-                            if (isBoxOpening) return@HomeItemBoxSection
-                            if (userItem.box <= 0) {
-                                context.showToast("보유한 보너스 박스가 없습니다.")
+                        //화분 생성 이동 or 화분 변경 다이얼로그 오픈
+                        onChangeOrMakeClick = {
+                            if (hasNoPot) {
+                                navController.navigate(Routes.NewBornTree)
                             } else {
-                                showOpenDialog = true // 오픈 수량 선택 다이얼로그 호출
+                                viewModel.setShowPotChangeDialog(true)
+                            }
+                        },
+                        onRecordClick = {
+                            if (!hasNoPot) {
+                                navController.navigate(
+                                    Routes.StudyPlanDetail(
+                                        potId = displayPot.id.ifEmpty { "default_pot" }
+                                    )
+                                )
+                            }
+                        } // 상세 기록 이동
+                    )
+                    Spacer(modifier = Modifier.height(18.dp))
+                    HomeItemBoxSection(
+                        item = userItem,
+                        onItemClick = { clickedType ->
+                            if (clickedType == ItemType.BOX) {
+                                if (isBoxOpening) return@HomeItemBoxSection
+                                if (userItem.box <= 0) {
+                                    context.showToast("보유한 보너스 박스가 없습니다.")
+                                } else {
+                                    showOpenDialog = true // 오픈 수량 선택 다이얼로그 호출
+                                }
                             }
                         }
-                    }
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                //수량 선택 다이얼로그
-                if (showOpenDialog) {
-                    BonusBoxOpenDialog(
-                        maxCount = userItem.box,
-                        isOpening = isBoxOpening,
-                        onDismiss = {if (!isBoxOpening) showOpenDialog = false },
-                        onConfirm = { count ->
-                            showOpenDialog = false
-                            viewModel.openBoxes(count)
-                        }
                     )
-                }
+                    Spacer(modifier = Modifier.weight(1f))
+                    //수량 선택 다이얼로그
+                    if (showOpenDialog) {
+                        BonusBoxOpenDialog(
+                            maxCount = userItem.box,
+                            isOpening = isBoxOpening,
+                            onDismiss = {if (!isBoxOpening) showOpenDialog = false },
+                            onConfirm = { count ->
+                                showOpenDialog = false
+                                viewModel.openBoxes(count)
+                            }
+                        )
+                    }
 
+                }
             }
 
             // 화분 변경 다이얼로그
