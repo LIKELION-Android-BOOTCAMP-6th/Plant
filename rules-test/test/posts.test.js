@@ -143,6 +143,17 @@ describe("posts", () => {
       await assertFails(updateDoc(doc(asAlice(), "posts", "post1", "comments", "c1"), {content: "남의 댓글 수정"}));
     });
 
+    // 회원탈퇴 시 익명화는 deleteAccount 함수(Admin SDK)가 처리한다 → 앱 예외 제거 (#457, #431)
+    it("댓글 작성자도 익명화 형태(content + user)로는 수정할 수 없다", async () => {
+      await assertFails(updateDoc(doc(asBob(), "posts", "post1", "comments", "c1"), {
+        content: "- 삭제된 댓글입니다. -",
+        user: {uid: "", nickname: "(알 수 없음)", profileImg: ""},
+      }));
+      await assertFails(updateDoc(doc(asBob(), "posts", "post1", "comments", "c1"), {
+        user: {uid: ALICE},
+      }));
+    });
+
     it("댓글 작성자는 본인 댓글을 삭제할 수 있다", async () => {
       await assertSucceeds(deleteDoc(doc(asBob(), "posts", "post1", "comments", "c1")));
     });
@@ -210,6 +221,25 @@ describe("posts", () => {
       });
       batch.update(doc(db, "posts", "post1"), {commentCount: increment(1)});
       await assertFails(batch.commit());
+    });
+  });
+
+  // likes 하위 컬렉션(예전 좋아요 방식)은 앱이 쓰지 않아 규칙을 제거함 (#457)
+  describe("likes", () => {
+    beforeEach(async () => {
+      await seed(testEnv, async (db) => {
+        await setDoc(doc(db, "posts", "post1", "likes", BOB), {uid: BOB});
+      });
+    });
+
+    it("본인 문서·게시글 작성자 모두 삭제할 수 없다", async () => {
+      await assertFails(deleteDoc(doc(asBob(), "posts", "post1", "likes", BOB)));
+      await assertFails(deleteDoc(doc(asAlice(), "posts", "post1", "likes", BOB)));
+    });
+
+    it("읽기·생성도 거부", async () => {
+      await assertFails(getDoc(doc(asBob(), "posts", "post1", "likes", BOB)));
+      await assertFails(setDoc(doc(asAlice(), "posts", "post1", "likes", ALICE), {uid: ALICE}));
     });
   });
 });

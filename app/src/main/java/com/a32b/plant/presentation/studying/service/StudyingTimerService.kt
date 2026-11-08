@@ -147,5 +147,9 @@ class StudyingTimerService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         scope.cancel()
+        // stopService로 멈춘 뒤 서비스 표시가 없는 일반 알림으로 남아 지워지지 않는 경우가 있었다 (#509 검증 중 확인).
+        // 시스템이 포그라운드 알림을 지운 뒤 직전에 보낸 알림 갱신(notify)이 반영된 것으로 추정하며,
+        // 위에서 갱신을 멈춘 뒤 직접 지워 마지막 갱신이 남지 않게 한다.
+        (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).cancel(NOTIFICATION_ID)
     }
 }

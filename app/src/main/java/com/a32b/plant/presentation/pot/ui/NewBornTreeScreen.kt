@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.a32b.plant.presentation.core.component.TagSheet
 import com.a32b.plant.domain.model.Tag
+import com.a32b.plant.domain.util.PotNameRule
 import com.a32b.plant.presentation.core.extension.showToast
 
 @Composable
@@ -166,7 +167,7 @@ fun NewBornTreeScreen(navController: NavController,
             }
             // 제목 입력
             item {
-                val maxLength = 15
+                val maxLength = PotNameRule.MAX_LENGTH
 
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("화분 이름",
@@ -190,7 +191,7 @@ fun NewBornTreeScreen(navController: NavController,
                         },
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = { Text(
-                            text="이름을 입력하세요 (최대 15글자)",
+                            text="이름을 입력하세요 (최대 ${maxLength}글자)",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSecondary
                         )},
