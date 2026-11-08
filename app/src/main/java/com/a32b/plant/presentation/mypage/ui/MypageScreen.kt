@@ -443,9 +443,12 @@ fun ProfileDialog(
     var newUserName by remember { mutableStateOf(uiState.nickname) }
     var selectedImageLevel by remember { mutableStateOf(uiState.profileImg) }
 
+    // 저장 중에는 바깥 터치·뒤로가기로 닫히지 않게 한다 (저장은 최대 10초 안에 끝남)
     Dialog(onDismissRequest = {
-        viewModel.clearProfileState()
-        onDismiss()
+        if (!uiState.isLoading) {
+            viewModel.clearProfileState()
+            onDismiss()
+        }
     }) {
         Card(
             modifier = Modifier
@@ -534,6 +537,7 @@ fun ProfileDialog(
                             viewModel.clearProfileState()
                             onDismiss()
                         },
+                        enabled = !uiState.isLoading,
                         modifier = Modifier
                             .height(45.dp)
                             .weight(1f),
