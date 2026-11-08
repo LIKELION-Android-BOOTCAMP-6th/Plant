@@ -7,6 +7,7 @@ import com.a32b.plant.domain.model.AutoLoginResult
 import com.a32b.plant.domain.repository.AuthRepository
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
+import com.a32b.plant.domain.session.SessionExpiredReason
 import javax.inject.Inject
 
 class CheckAutoLoginUseCase @Inject constructor(
@@ -17,10 +18,7 @@ class CheckAutoLoginUseCase @Inject constructor(
     suspend operator fun invoke(): Result<AutoLoginResult> {
         // 앱 화면이 없는 동안(Activity만 종료되고 프로세스는 살아 있음) 이전 세션이 만료를 감지했다면
         // 먼저 감지한 쪽을 우선해 로그아웃한다. 새 토큰을 쓰면 그사이 로그인한 다른 기기가 로그아웃되기 때문 (#509)
-        userRepository.takeExpiredSessionReason()?.let { reason ->
-            signOutUseCase()
-            return Result.Success(AutoLoginResult.SessionExpired(reason))
-        }
+        takeExpiredSession()?.let { return Result.Success(it) }
 
         val uid = authRepository.currentUid()
             ?: return Result.Success(AutoLoginResult.NotLoggedIn)
@@ -29,6 +27,12 @@ class CheckAutoLoginUseCase @Inject constructor(
         if (getUserResult is Result.Failure) return getUserResult
         val snapshot = (getUserResult as Result.Success).data
         val user = snapshot.user
+
+        // 유저 조회(서버 대기 제한 2초) 동안에도 이전 리스너는 살아 있으므로, 그사이 감지된 만료가 있는지 한 번 더 확인한다.
+        // 토큰을 쓰기 전과 유저 문서 없음 처리 전에 확인해야 다른 기기를 로그아웃시키거나 안내를 빠뜨리지 않는다.
+        // 이 확인 뒤 토큰 저장이 끝날 때까지(대기 제한 1.5초) 감지되는 경우는 막지 못한다.
+        // 그때는 홈으로 들어간 뒤 남아 있던 이벤트로 로그아웃된다.
+        takeExpiredSession()?.let { return Result.Success(it) }
 
         // 세션은 있는데 Firestore 프로필이 없거나, 닉네임 미설정 상태면 로그인 화면으로 되돌린다.
         if (user == null || user.isFirstLogin == true) {
@@ -55,5 +59,12 @@ class CheckAutoLoginUseCase @Inject constructor(
         CurrentUser.set(UserModel(uid, user.nickname, user.profileImg))
 
         return Result.Success(AutoLoginResult.LoggedIn(uid, user))
+    }
+
+    /** 남아 있는 세션 만료 사유가 있으면 로그아웃하고 결과를 돌려준다. 없으면 null */
+    private fun takeExpiredSession(): AutoLoginResult.SessionExpired? {
+        val reason: SessionExpiredReason = userRepository.takeExpiredSessionReason() ?: return null
+        signOutUseCase()
+        return AutoLoginResult.SessionExpired(reason)
     }
 }

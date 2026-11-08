@@ -12,10 +12,12 @@ import com.a32b.plant.domain.usecase.auth.CheckAutoLoginUseCase
 import com.a32b.plant.domain.usecase.mypage.ObserveDarkModeUseCase
 import com.a32b.plant.domain.usecase.pot.GetActivePotUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -25,10 +27,13 @@ data class SplashUiState(
     val isLoading: Boolean = true,
     val isDarkMode: Boolean = false,
     val isFirstScreenReady: Boolean = false,
-    val isSplashExitFinished: Boolean = false,
-    // 자동 로그인에서 발견한, 앱 화면이 없는 동안 감지된 세션 만료 사유. MainActivity가 안내한 뒤 비운다 (#509)
-    val sessionExpiredReason: SessionExpiredReason? = null
+    val isSplashExitFinished: Boolean = false
 )
+
+sealed class SplashEvent {
+    /** 자동 로그인에서 발견한, 앱 화면이 없는 동안 감지된 세션 만료 안내 (#509) */
+    data class ShowSessionExpired(val reason: SessionExpiredReason) : SplashEvent()
+}
 
 @HiltViewModel
 class SplashViewModel @Inject constructor(
@@ -43,6 +48,10 @@ class SplashViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(SplashUiState())
     val uiState = _uiState.asStateFlow()
+
+    // 수집하는 곳은 MainActivity 한 곳만 둔다. 여러 곳에서 수집하면 이벤트를 나눠 가져간다.
+    private val _event = Channel<SplashEvent>(Channel.BUFFERED)
+    val event = _event.receiveAsFlow()
 
     init {
         observeDarkMode()
@@ -61,11 +70,6 @@ class SplashViewModel @Inject constructor(
     /** 첫 화면에 표시할 데이터가 준비되어 스플래시를 끝내도 될 때 호출 */
     fun onFirstScreenReady() {
         _uiState.update { it.copy(isFirstScreenReady = true) }
-    }
-
-    /** 세션 만료 안내를 넘겨받은 뒤 호출 (Activity가 다시 만들어져도 중복 안내하지 않도록 비움) */
-    fun onSessionExpiredReasonConsumed() {
-        _uiState.update { it.copy(sessionExpiredReason = null) }
     }
 
     /** 스플래시가 끝났다고 볼 수 있을 때 호출 (Android 12 이하와 신호가 오지 않는 경우에는 대체 시점에 호출) */
@@ -91,7 +95,7 @@ class SplashViewModel @Inject constructor(
                         is AutoLoginResult.LoggedIn -> startHome(result.uid, result.user.lastSelectedPotId)
                         AutoLoginResult.NotLoggedIn -> startSignIn()
                         is AutoLoginResult.SessionExpired -> {
-                            _uiState.update { it.copy(sessionExpiredReason = result.reason) }
+                            _event.send(SplashEvent.ShowSessionExpired(result.reason))
                             startSignIn()
                         }
                     }

@@ -52,6 +52,9 @@ class UserRepositoryImpl @Inject constructor(
     private var sessionJob: Job? = null
     @Volatile
     private var localSessionToken: String? = null
+    // 이 기기가 저장 중인 새 토큰. 세션이 다시 시작되기 전까지 리스너가 이 토큰을 다른 기기 로그인으로 오인하지 않게 한다 (#509)
+    @Volatile
+    private var pendingSessionToken: String? = null
     // 리스너가 감지한 세션 만료 중 아직 로그아웃 처리(endUserSession)되지 않은 사유
     @Volatile
     private var expiredSessionReason: SessionExpiredReason? = null
@@ -79,6 +82,8 @@ class UserRepositoryImpl @Inject constructor(
         // 곧바로 읽어도 null로 오인해 로그인 에러 처리하지 않도록 한다.
         _currentUser.value = user
         localSessionToken = user.activeSessionToken
+        // 저장 중이던 토큰은 위에서 이 세션의 토큰(저장 실패 시 null)으로 넘어갔으므로 비운다.
+        pendingSessionToken = null
 
         sessionJob?.cancel()
         sessionJob = scope.launch {
@@ -95,7 +100,11 @@ class UserRepositoryImpl @Inject constructor(
                     }
                     val remoteToken = dto.activeSessionToken
                     val currentToken = localSessionToken
-                    if (currentToken != null && remoteToken != null && currentToken != remoteToken) {
+                    // 이 기기가 저장 중인 토큰(pendingSessionToken)도 자기 토큰으로 본다.
+                    // Activity만 종료되고 살아 있던 이전 리스너가 재실행 시 자동 로그인의 토큰 저장을 받는 경우 (#509)
+                    if (currentToken != null && remoteToken != null &&
+                        remoteToken != currentToken && remoteToken != pendingSessionToken
+                    ) {
                         // authRepository.signOut()은 이벤트를 받은 MainActivity의 signOutUseCase()에서 처리된다.
                         expireUserSession(SessionExpiredReason.DUPLICATE_LOGIN)
                         return@collect
@@ -110,6 +119,7 @@ class UserRepositoryImpl @Inject constructor(
         sessionJob = null
         _currentUser.value = null
         localSessionToken = null
+        pendingSessionToken = null
     }
 
     /**
@@ -137,11 +147,10 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> {
-        // 이 기기가 토큰을 바꾸면 남아 있는 이전 리스너는 이전 토큰과 비교해 자기 쓰기를 중복 로그인으로 오인한다.
-        // (Activity만 종료되고 프로세스가 살아 있는 상태에서 재실행하면 자동 로그인이 이 순서로 호출함, #509)
-        // 쓰기 전에 리스너만 멈추고 currentUser는 유지한다. 새 리스너는 이어서 호출되는 startUserSession이 시작한다.
-        sessionJob?.cancel()
-        sessionJob = null
+        // 리스너가 남아 있으면(Activity만 종료되고 프로세스가 살아 있는 상태에서 재실행) 이 쓰기를 다른 기기 로그인으로
+        // 오인하지 않도록 저장 전에 알려 둔다 (#509). 리스너를 멈추지 않으므로 호출부가 중간에 취소돼도 감지가 끊기지 않는다.
+        // 로그아웃(null)은 서버 토큰이 null이면 비교하지 않으므로 표시하지 않는다.
+        if (token != null) pendingSessionToken = token
         // 일반 write의 await()는 서버 응답 전까지 끝나지 않으므로 호출부와 분리해 대기 시간만 제한한다.
         val write = scope.async {
             safeRunCatching {
@@ -149,6 +158,8 @@ class UserRepositoryImpl @Inject constructor(
             }.onFailure {
                 // 시간 초과 후 서버가 거부하면 이 토큰은 반영되지 않으므로 중복 로그인 비교에서 제외한다.
                 if (token != null && localSessionToken == token) localSessionToken = null
+                // 거부된 토큰은 서버에 남지 않으므로 자기 토큰 표시도 거둔다.
+                if (token != null && pendingSessionToken == token) pendingSessionToken = null
             }
         }
         val result = withTimeoutOrNull(SESSION_TOKEN_WRITE_TIMEOUT_MS) { write.await() }
