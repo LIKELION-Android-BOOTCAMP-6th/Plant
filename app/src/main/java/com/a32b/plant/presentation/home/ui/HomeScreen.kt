@@ -182,60 +182,55 @@ fun HomeScreen(
                     .background(MaterialTheme.colorScheme.background)
                     // 좌우 여백 16dp: 앱바 타이틀·다른 탭 본문(내 화분, 마이페이지)과 왼쪽 끝을 맞춤
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f, fill = false),
-                    contentAlignment = Alignment.Center
-                ) {
-                    MainPlantCard(
-                        displayPot = displayPot,
-                        hasNoPot = hasNoPot,
-                        todayStudyTime = todayStudyTime,
-                        levelUpProgress = uiState.levelUpProgress,
-                        levelUpProgressText = uiState.levelUpProgressText,
-                        levelUpReady = uiState.levelUpReady,
-                        isLoading = uiState.isLoading,
-                        onStartClick = {
-                            if (!hasNoPot) {
-                                navController.navigate(
-                                    Routes.Studying(
-                                        potId = displayPot.id.ifEmpty { "default_pot" },
-                                        tagId = displayPot.tagId,
-                                        tagName = displayPot.tagName,
-                                        title = displayPot.name.ifEmpty { "공부 목표" },
-                                        level = "Lv.${displayPot.potLevel}"
-                                    ))
-                            }
-                        },
-                        onLevelUpClick = {
-                            if (!hasNoPot && !uiState.isLoading) {
-                                viewModel.onLevelUpClick(displayPot.id, displayPot.potLevel)
-                            }
-                        },
+                // 화면이 커져서 남는 세로 공간은 카드 위:아이템박스 아래 = 3:1로 나눈다
+                // 카드와 아이템박스 사이는 18dp로 고정해, 기기 크기와 상관없이 두 영역이 붙어 보이게 한다 (#376)
+                Spacer(modifier = Modifier.weight(3f))
+                MainPlantCard(
+                    displayPot = displayPot,
+                    hasNoPot = hasNoPot,
+                    todayStudyTime = todayStudyTime,
+                    levelUpProgress = uiState.levelUpProgress,
+                    levelUpProgressText = uiState.levelUpProgressText,
+                    levelUpReady = uiState.levelUpReady,
+                    isLoading = uiState.isLoading,
+                    onStartClick = {
+                        if (!hasNoPot) {
+                            navController.navigate(
+                                Routes.Studying(
+                                    potId = displayPot.id.ifEmpty { "default_pot" },
+                                    tagId = displayPot.tagId,
+                                    tagName = displayPot.tagName,
+                                    title = displayPot.name.ifEmpty { "공부 목표" },
+                                    level = "Lv.${displayPot.potLevel}"
+                                ))
+                        }
+                    },
+                    onLevelUpClick = {
+                        if (!hasNoPot && !uiState.isLoading) {
+                            viewModel.onLevelUpClick(displayPot.id, displayPot.potLevel)
+                        }
+                    },
 
-                        //화분 생성 이동 or 화분 변경 다이얼로그 오픈
-                        onChangeOrMakeClick = {
-                            if (hasNoPot) {
-                                navController.navigate(Routes.NewBornTree)
-                            } else {
-                                viewModel.setShowPotChangeDialog(true)
-                            }
-                        },
-                        onRecordClick = {
-                            if (!hasNoPot) {
-                                navController.navigate(
-                                    Routes.StudyPlanDetail(
-                                        potId = displayPot.id.ifEmpty { "default_pot" }
-                                    )
+                    //화분 생성 이동 or 화분 변경 다이얼로그 오픈
+                    onChangeOrMakeClick = {
+                        if (hasNoPot) {
+                            navController.navigate(Routes.NewBornTree)
+                        } else {
+                            viewModel.setShowPotChangeDialog(true)
+                        }
+                    },
+                    onRecordClick = {
+                        if (!hasNoPot) {
+                            navController.navigate(
+                                Routes.StudyPlanDetail(
+                                    potId = displayPot.id.ifEmpty { "default_pot" }
                                 )
-                            }
-                        } // 상세 기록 이동
-                    )
-                }
+                            )
+                        }
+                    } // 상세 기록 이동
+                )
                 Spacer(modifier = Modifier.height(18.dp))
                 HomeItemBoxSection(
                     item = userItem,
@@ -250,6 +245,7 @@ fun HomeScreen(
                         }
                     }
                 )
+                Spacer(modifier = Modifier.weight(1f))
                 //수량 선택 다이얼로그
                 if (showOpenDialog) {
                     BonusBoxOpenDialog(
