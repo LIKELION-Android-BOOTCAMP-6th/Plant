@@ -26,6 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -48,6 +49,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -180,6 +182,11 @@ fun HomeScreen(
                 HomeTopBar(
                     userName = userName,
                     isAttendanceCompleted = attendanceUiState.isAttendanceCompleted,
+                    // 중복 이동 방지용 안전장치: 맨 위가 이미 버그 제보 화면이면 새로 쌓지 않음
+                    // (실기기 연타로는 두 번 쌓이는 현상이 재현되지 않았음)
+                    onBugReportClick = {
+                        navController.navigate(Routes.BugReport) { launchSingleTop = true }
+                    },
                     onShopClick = viewModel::onShopClick,
                     onAttendanceClick = viewModel::openAttendanceDialog
                 )
@@ -491,6 +498,7 @@ private fun NewPotSlot(onClick: () -> Unit) {
 fun HomeTopBar(
     userName: String,
     isAttendanceCompleted: Boolean,
+    onBugReportClick: () -> Unit,
     onShopClick: () -> Unit,
     onAttendanceClick: () -> Unit
 ) {
@@ -543,6 +551,31 @@ fun HomeTopBar(
                     color = MaterialTheme.colorScheme.primary,
                     maxLines = 1,
                     softWrap = false
+                )
+            }
+            // 비공개 테스트 기간 버그 제보 바로가기 (#349) — 마이페이지 '버그 제보'와 같은 화면으로 이동
+            // 상점 아이콘은 35dp 칸 중 실제 그림이 위아래 약 23dp라, 두 줄 글자 높이(약 22~23dp)를 그 그림에 맞춤
+            // 터치 영역은 IconButton과 같은 48dp를 보장
+            Box(
+                modifier = Modifier
+                    .minimumInteractiveComponentSize()
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(role = Role.Button, onClick = onBugReportClick)
+                    .padding(horizontal = 4.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "버그\n제보",
+                    // 상점 아이콘 그림은 칸 중앙보다 약간 아래에 그려져 있어, 글자도 1dp 내려 위아래 끝을 맞춤
+                    // (offset은 레이아웃 자리를 바꾸지 않아 터치 영역·옆 요소 배치에 영향 없음)
+                    modifier = Modifier.offset(y = 1.dp),
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 11.sp,
+                        lineHeight = 13.sp
+                    ),
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2
                 )
             }
             IconButton(onClick = onShopClick) {
