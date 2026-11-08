@@ -562,6 +562,9 @@ fun HomeTopBar(
             ) {
                 Text(
                     text = "버그\n제보",
+                    // 상점 아이콘 그림은 칸 중앙보다 약간 아래에 그려져 있어, 글자도 1dp 내려 위아래 끝을 맞춤
+                    // (offset은 레이아웃 자리를 바꾸지 않아 터치 영역·옆 요소 배치에 영향 없음)
+                    modifier = Modifier.offset(y = 1.dp),
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontSize = 11.sp,
                         lineHeight = 13.sp
