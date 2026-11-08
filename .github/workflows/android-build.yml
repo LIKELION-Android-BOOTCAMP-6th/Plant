@@ -3,6 +3,10 @@ name: Android Build Check
 on:
   pull_request:
     branches: [ develop, main ]
+  # 머지 후(push)에도 실행: develop·main에 Gradle 배포 파일 캐시를 만들어 PR이 읽을 수 있게 한다
+  # (PR에서 만든 캐시는 그 PR에서만 쓰여 다른 PR에 도움이 안 됨)
+  push:
+    branches: [ develop, main ]
 
 jobs:
   build:
@@ -23,8 +27,27 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # Gradle 배포 파일(gradle-x.y.z-bin.zip)은 GitHub release에서 받는데, 그쪽 장애(504·시간 초과) 때
+      # 매번 새로 받으면 모든 PR의 빌드 검사가 실패한다. 캐시에 있으면 다운로드를 건너뛴다
+      # 키는 gradle-wrapper.properties만으로 정해, 의존성이 바뀌어도 Gradle 버전이 같으면 계속 재사용한다
+      - name: Restore Gradle wrapper distribution
+        id: gradle-wrapper-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.gradle/wrapper/dists
+          key: gradle-wrapper-${{ runner.os }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties') }}
+
       - name: Build with Gradle
         run: ./gradlew assembleDebug --no-daemon
+
+      # push(develop·main)일 때만 저장: PR에서 저장하면 그 PR 안에서만 쓰여 저장 공간만 차지한다
+      # 빌드가 성공했을 때만 저장해(if에 상태 함수가 없으면 success()가 기본), 받다가 끊긴 파일이 캐시에 들어가지 않게 한다
+      - name: Save Gradle wrapper distribution
+        if: github.event_name == 'push' && steps.gradle-wrapper-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.gradle/wrapper/dists
+          key: ${{ steps.gradle-wrapper-cache.outputs.cache-primary-key }}
 
       # 테스트 코드는 assembleDebug에 포함되지 않아, 인터페이스 변경으로 테스트 Fake가 깨져도 잡히지 않는다 (#518)
       - name: Run unit tests
