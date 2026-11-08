@@ -23,7 +23,7 @@ interface UserRepository {
 
     /**
      * 세션 구독이 만료(중복 로그인, 유저 문서 삭제)를 감지했지만 아직 endUserSession으로 처리되지 않았다면
-     * 그 사유를 돌려주고 비운다. 없으면 null.
+     * 그 사유를 돌려주고 비운다. 없으면 null. startUserSession으로 새 세션이 시작돼도 비워진다.
      * Activity만 종료되고 프로세스가 살아 있는 동안 감지된 만료를 다음 자동 로그인이 이어받는 데 쓴다 (#509).
      */
     fun takeExpiredSessionReason(): SessionExpiredReason?
