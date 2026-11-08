@@ -443,7 +443,7 @@ fun ProfileDialog(
     var newUserName by remember { mutableStateOf(uiState.nickname) }
     var selectedImageLevel by remember { mutableStateOf(uiState.profileImg) }
 
-    // 저장 중에는 바깥 터치·뒤로가기로 닫히지 않게 한다 (저장은 최대 10초 안에 끝남)
+    // 저장 중에는 바깥 터치·뒤로가기로 닫히지 않게 한다 (저장 대기는 최대 10초 제한으로 끝나 로딩이 풀림)
     Dialog(onDismissRequest = {
         if (!uiState.isLoading) {
             viewModel.clearProfileState()
