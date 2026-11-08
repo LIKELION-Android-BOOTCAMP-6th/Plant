@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
@@ -294,14 +295,36 @@ fun StudyPlanDetailScreen(
 
                                     Spacer(modifier = Modifier.height(16.dp))
 
+                                    // 화분 생성(NewBornTreeScreen)과 동일한 글자 수 제한
+                                    val maxLength = 15
+
                                     // 입력창
                                     OutlinedTextField(
                                         value = editNameText,
-                                        onValueChange = { editNameText = it },
+                                        onValueChange = { input ->
+                                            // 글자가 줄어드는 입력은 항상 허용
+                                            // (제한 도입 전에 15자를 넘겨 저장된 이름도 지워서 줄일 수 있도록)
+                                            if (input.length <= maxLength || input.length < editNameText.length) {
+                                                editNameText = input
+                                            } else {
+                                                context.showToast("${maxLength}글자 이하로 입력해주세요.")
+                                            }
+                                        },
                                         textStyle = MaterialTheme.typography.titleMedium,
                                         placeholder = { Text("화분 이름을 입력하세요", style = MaterialTheme.typography.bodyMedium,) },
                                         modifier = Modifier.fillMaxWidth(),
                                         singleLine = true,
+                                        // 우측 하단 실시간 글자 수 표시 (15자 도달 시 붉은색)
+                                        supportingText = {
+                                            Text(
+                                                text = "${editNameText.length} / $maxLength",
+                                                modifier = Modifier.fillMaxWidth(),
+                                                textAlign = TextAlign.End,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = if (editNameText.length >= maxLength) MaterialTheme.colorScheme.error
+                                                        else MaterialTheme.colorScheme.outline
+                                            )
+                                        },
                                         shape = RoundedCornerShape(12.dp),
                                         colors = OutlinedTextFieldDefaults.colors(
     //                                        focusedBorderColor = Color(0xFFA5C16C), // 강조색 (primary)
