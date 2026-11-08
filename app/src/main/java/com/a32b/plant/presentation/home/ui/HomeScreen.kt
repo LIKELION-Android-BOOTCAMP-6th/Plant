@@ -582,6 +582,12 @@ fun HomeTopBar(
     }
 }
 
+/**
+ * 홈 메인카드
+ * 주의: HomeBodyLayout이 카드 최소 높이를 intrinsic(minIntrinsicHeight)으로 계산한다 (#376).
+ * 카드 안에 LazyRow/LazyColumn, BoxWithConstraints 같은 SubcomposeLayout 기반 컴포넌트를 넣으면
+ * 컴파일은 되지만 홈 화면을 열 때 런타임 크래시가 나므로 넣지 말 것.
+ */
 @Composable
 fun MainPlantCard(
     displayPot: Pot,
@@ -1060,10 +1066,12 @@ fun BonusBoxOpenDialog(
  * content에는 [메인카드, 아이템박스] 순서로 정확히 두 개를 넣는다.
  *
  * 1. 아이템박스는 원래 크기 그대로 둔다
- * 2. 카드는 "본문 최소 높이 - 아이템박스 - 간격 18dp"까지만 높이를 받는다
+ * 2. 카드는 "본문 최소 높이 - 아이템박스 - 간격(18dp, 간격 모드 9dp)"까지만 높이를 받는다
  *    → 모자라면 카드 안 화분 이미지가 줄어들어(shrinkableImageHeight) 한 화면에 다 담긴다
  * 3. 이미지를 최소로 줄여도 안 들어가면 카드 최소 높이(minIntrinsicHeight)를 그대로 주고,
  *    본문이 화면보다 길어져 바깥 verticalScroll로 내려 볼 수 있게 한다 (버튼이 잘리지 않게)
+ *    → intrinsic 계산을 쓰므로 카드 안에 SubcomposeLayout 기반 컴포넌트(Lazy 목록, BoxWithConstraints 등)를
+ *      넣으면 런타임 크래시가 난다 (MainPlantCard 주석 참고)
  * 4. 남는 세로 공간은 카드 위:아이템박스 아래 = 3:1로 나눈다
  */
 @Composable
@@ -1081,7 +1089,7 @@ private fun HomeBodyLayout(
 
         val itemBox = itemBoxMeasurable.measure(childConstraints)
 
-        // 바깥 heightIn(min = 화면 높이)으로 받은 최소 높이가 기준 (스크롤 안이라 maxHeight는 무한대)
+        // 화면 높이(최대 720dp)에서 위아래 여백(8dp씩)을 뺀 값이 기준 (스크롤 안이라 maxHeight는 무한대)
         val targetHeight = constraints.minHeight
         val cardAvailable = targetHeight - itemBox.height - gap
         val cardMinHeight = cardMeasurable.minIntrinsicHeight(constraints.maxWidth)
@@ -1109,7 +1117,8 @@ private fun HomeBodyLayout(
 private fun Modifier.shrinkableImageHeight(min: Dp, max: Dp): Modifier =
     this.then(ShrinkableHeightModifier(min, max))
 
-private class ShrinkableHeightModifier(
+// data class: min·max가 같으면 같은 modifier로 취급해, 다시 그릴 때마다 크기를 다시 재지 않게 한다
+private data class ShrinkableHeightModifier(
     private val min: Dp,
     private val max: Dp
 ) : LayoutModifier {
