@@ -1,8 +1,7 @@
 package com.a32b.plant.core.navigation
 
+import androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -27,6 +26,8 @@ import com.a32b.plant.presentation.studyPlanDetail.ui.StudyPlanDetailScreen
 import com.a32b.plant.presentation.studying.ui.StudyResultScreen
 import com.a32b.plant.presentation.studying.ui.StudyingScreen
 
+private const val NAV_TRANSITION_DURATION_MS = 400
+
 @Composable
 fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewModel) {
 
@@ -35,10 +36,14 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
     destination?.let { startRoute ->
         NavHost(navController = navController,
             startDestination = startRoute,
-            enterTransition = { fadeIn(animationSpec = tween(400)) },
-            exitTransition = { fadeOut(animationSpec = tween(400)) },
-            popEnterTransition = { fadeIn(animationSpec = tween(400)) },
-            popExitTransition = { fadeOut(animationSpec = tween(400)) }
+            // 뒤로가기 제스처(Predictive Back)는 손가락 위치만큼 전환을 진행시키므로,
+            // 제스처 방향(왼쪽 → 오른쪽)과 같은 가로 slide로 통일해 버튼·하단바·제스처 복귀가 같은 전환으로 보이게 한다 (#389)
+            // - 이동: 새 화면이 오른쪽에서 들어오고 이전 화면은 왼쪽으로 나감
+            // - 복귀(popBackStack, 제스처, 하단바 홈 탭처럼 popUpTo로 위 화면을 지우는 이동): 반대 방향
+            enterTransition = { slideIntoContainer(SlideDirection.Start, tween(NAV_TRANSITION_DURATION_MS)) },
+            exitTransition = { slideOutOfContainer(SlideDirection.Start, tween(NAV_TRANSITION_DURATION_MS)) },
+            popEnterTransition = { slideIntoContainer(SlideDirection.End, tween(NAV_TRANSITION_DURATION_MS)) },
+            popExitTransition = { slideOutOfContainer(SlideDirection.End, tween(NAV_TRANSITION_DURATION_MS)) }
         ) {
 
             composable<Routes.HomeMain> {
