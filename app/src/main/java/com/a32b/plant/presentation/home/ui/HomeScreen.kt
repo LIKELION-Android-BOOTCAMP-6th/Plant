@@ -195,14 +195,15 @@ fun HomeScreen(
         ) { paddingValues ->
             // 홈 본문 배치 (#376) — 자세한 규칙은 HomeBodyLayout 참고
             // 화면 높이(maxHeight)를 본문 최소 높이로 넘겨, 남는 공간 계산의 기준으로 쓴다
-            // 단, 최소 높이는 720dp까지만: 폰은 화면 전체를 쓰고, 태블릿은 720dp 영역을 화면 가운데에 둬서 위쪽이 과하게 비지 않게 한다
+            // 단, 최소 높이는 720dp까지만: 본문이 720dp 이하면 본문 전체를 기준으로 쓰고, 그보다 높으면(태블릿 등) 카드가 과하게 커지지 않게 720dp를 기준으로 계산한다
+            // 본문은 위쪽 기준(TopCenter)으로 둬서 태블릿에서도 카드가 날짜 바로 아래에 오게 한다 (#566, 가운데 정렬이면 위쪽이 빔)
             // verticalScroll은 안전장치: 이미지를 최소로 줄여도 안 들어가는 극단적인 경우(큰 글꼴, 분할 화면 등 세로가 매우 짧을 때)에만 실제로 스크롤된다
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
                     .background(MaterialTheme.colorScheme.background),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.TopCenter
             ) {
                 // 본문 높이가 560dp 미만이면(세로가 짧은 소형 폰, 또는 큰 글꼴로 상단바·하단 탭바가 커져 본문이 줄어든 경우) 간격 모드로 여백을 줄여 한 화면에 담는다
                 // 360x760dp급은 간격 모드 없이도 다 들어가는 것을 확인함
@@ -637,10 +638,10 @@ fun MainPlantCard(
     // 화면 높이가 모자랄 때 여백·간격을 줄이는 모드 (#376)
     compact: Boolean = false
 ) {
+    // 카드 높이는 HomeBodyLayout이 정해 준다 (남는 세로 공간만큼 카드가 늘어남, #566)
+    // 그래서 wrapContentHeight를 쓰지 않는다: 쓰면 받은 높이를 무시하고 내용 크기로 줄어든다
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .wrapContentHeight(),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.secondary
@@ -650,7 +651,10 @@ fun MainPlantCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                // 카드가 늘어난 만큼 채우고, 내용은 세로 가운데에 모은다 (#566)
+                .fillMaxHeight()
                 .padding(horizontal = 20.dp, vertical = 14.dp.compactIf(compact)),
+            verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             //상단 태그
@@ -1099,13 +1103,17 @@ fun BonusBoxOpenDialog(
  * content에는 [메인카드, 아이템박스] 순서로 정확히 두 개를 넣는다.
  *
  * 1. 아이템박스는 원래 크기 그대로 둔다
- * 2. 카드는 "본문 최소 높이 - 아이템박스 - 간격(18dp, 간격 모드 9dp)"까지만 높이를 받는다
+ * 2. 카드는 "본문 최소 높이 - 아이템박스 - 간격(18dp, 간격 모드 9dp)"만큼 높이를 받는다
  *    → 모자라면 카드 안 화분 이미지가 줄어들어(shrinkableImageHeight) 한 화면에 다 담긴다
  * 3. 이미지를 최소로 줄여도 안 들어가면 카드 최소 높이(minIntrinsicHeight)를 그대로 주고,
  *    본문이 화면보다 길어져 바깥 verticalScroll로 내려 볼 수 있게 한다 (버튼이 잘리지 않게)
  *    → intrinsic 계산을 쓰므로 카드 안에 SubcomposeLayout 기반 컴포넌트(Lazy 목록, BoxWithConstraints 등)를
  *      넣으면 런타임 크래시가 난다 (MainPlantCard 주석 참고)
- * 4. 남는 세로 공간은 카드 위:아이템박스 아래 = 3:1로 나눈다
+ * 4. 카드는 맨 위(날짜 바로 아래)에 붙이고, 남는 세로 공간만큼 카드 자체를 늘린다 (#566)
+ *    → 카드는 날짜 바로 아래, 아이템박스는 본문 아래쪽에 와서 두 박스가 본문을 고르게 채운다
+ *    → 화분 유무로 카드 내용 높이가 달라도 빈 띠가 생기지 않고, 늘어난 공간은 카드 안 위아래 여백이 된다
+ *    → 간격(18dp)은 그대로라 두 박스 사이가 벌어지지 않는다 (#376)
+ *    → 단, 기준 높이는 최대 720dp라서 본문이 720dp보다 높으면(태블릿 등) 넘는 만큼은 아이템박스 아래 빈 공간으로 남는다
  */
 @Composable
 private fun HomeBodyLayout(
@@ -1126,17 +1134,19 @@ private fun HomeBodyLayout(
         val targetHeight = constraints.minHeight
         val cardAvailable = targetHeight - itemBox.height - gap
         val cardMinHeight = cardMeasurable.minIntrinsicHeight(constraints.maxWidth)
+        // 카드 높이를 고정해서 준다: 공간이 남으면 카드가 늘어나고, 조금 모자라면 그 높이 안에서 이미지가 줄어들고,
+        // 최소 높이보다도 모자라면 최소 높이 그대로 둔다(바깥 스크롤)
+        val cardHeight = maxOf(cardAvailable, cardMinHeight)
         val card = cardMeasurable.measure(
-            childConstraints.copy(maxHeight = maxOf(cardAvailable, cardMinHeight))
+            childConstraints.copy(minHeight = cardHeight, maxHeight = cardHeight)
         )
 
         val contentHeight = card.height + gap + itemBox.height
         val layoutHeight = maxOf(targetHeight, contentHeight)
-        val top = (layoutHeight - contentHeight) * 3 / 4
 
         layout(constraints.maxWidth, layoutHeight) {
-            card.place((constraints.maxWidth - card.width) / 2, top)
-            itemBox.place((constraints.maxWidth - itemBox.width) / 2, top + card.height + gap)
+            card.place((constraints.maxWidth - card.width) / 2, 0)
+            itemBox.place((constraints.maxWidth - itemBox.width) / 2, card.height + gap)
         }
     }
 }
