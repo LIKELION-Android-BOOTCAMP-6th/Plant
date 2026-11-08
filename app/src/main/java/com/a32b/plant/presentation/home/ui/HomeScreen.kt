@@ -638,10 +638,10 @@ fun MainPlantCard(
     // 화면 높이가 모자랄 때 여백·간격을 줄이는 모드 (#376)
     compact: Boolean = false
 ) {
+    // 카드 높이는 HomeBodyLayout이 정해 준다 (남는 세로 공간만큼 카드가 늘어남, #566)
+    // 그래서 wrapContentHeight를 쓰지 않는다: 쓰면 받은 높이를 무시하고 내용 크기로 줄어든다
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .wrapContentHeight(),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.secondary
@@ -651,7 +651,10 @@ fun MainPlantCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                // 카드가 늘어난 만큼 채우고, 내용은 세로 가운데에 모은다 (#566)
+                .fillMaxHeight()
                 .padding(horizontal = 20.dp, vertical = 14.dp.compactIf(compact)),
+            verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             //상단 태그
@@ -1100,14 +1103,16 @@ fun BonusBoxOpenDialog(
  * content에는 [메인카드, 아이템박스] 순서로 정확히 두 개를 넣는다.
  *
  * 1. 아이템박스는 원래 크기 그대로 둔다
- * 2. 카드는 "본문 최소 높이 - 아이템박스 - 간격(18dp, 간격 모드 9dp)"까지만 높이를 받는다
+ * 2. 카드는 "본문 최소 높이 - 아이템박스 - 간격(18dp, 간격 모드 9dp)"만큼 높이를 받는다
  *    → 모자라면 카드 안 화분 이미지가 줄어들어(shrinkableImageHeight) 한 화면에 다 담긴다
  * 3. 이미지를 최소로 줄여도 안 들어가면 카드 최소 높이(minIntrinsicHeight)를 그대로 주고,
  *    본문이 화면보다 길어져 바깥 verticalScroll로 내려 볼 수 있게 한다 (버튼이 잘리지 않게)
  *    → intrinsic 계산을 쓰므로 카드 안에 SubcomposeLayout 기반 컴포넌트(Lazy 목록, BoxWithConstraints 등)를
  *      넣으면 런타임 크래시가 난다 (MainPlantCard 주석 참고)
- * 4. 카드는 맨 위(날짜 바로 아래)에 붙이고, 남는 세로 공간은 전부 아이템박스 아래로 보낸다 (#566)
- *    → 화분이 없어 카드가 낮을 때도 카드가 아래로 밀려 보이지 않는다
+ * 4. 카드는 맨 위(날짜 바로 아래)에 붙이고, 남는 세로 공간만큼 카드 자체를 늘린다 (#566)
+ *    → 카드는 날짜 바로 아래, 아이템박스는 화면 아래쪽에 와서 두 박스가 화면을 고르게 채운다
+ *    → 화분 유무로 카드 내용 높이가 달라도 빈 띠가 생기지 않고, 늘어난 공간은 카드 안 위아래 여백이 된다
+ *    → 간격(18dp)은 그대로라 두 박스 사이가 벌어지지 않는다 (#376)
  */
 @Composable
 private fun HomeBodyLayout(
@@ -1128,12 +1133,13 @@ private fun HomeBodyLayout(
         val targetHeight = constraints.minHeight
         val cardAvailable = targetHeight - itemBox.height - gap
         val cardMinHeight = cardMeasurable.minIntrinsicHeight(constraints.maxWidth)
+        // 카드 높이를 고정해서 준다: 공간이 남으면 카드가 늘어나고, 모자라면 최소 높이 그대로(바깥 스크롤)
+        val cardHeight = maxOf(cardAvailable, cardMinHeight)
         val card = cardMeasurable.measure(
-            childConstraints.copy(maxHeight = maxOf(cardAvailable, cardMinHeight))
+            childConstraints.copy(minHeight = cardHeight, maxHeight = cardHeight)
         )
 
         val contentHeight = card.height + gap + itemBox.height
-        // 레이아웃 높이는 그대로 화면 높이 이상으로 둔다 (남는 공간이 아이템박스 아래 빈 영역이 됨)
         val layoutHeight = maxOf(targetHeight, contentHeight)
 
         layout(constraints.maxWidth, layoutHeight) {
