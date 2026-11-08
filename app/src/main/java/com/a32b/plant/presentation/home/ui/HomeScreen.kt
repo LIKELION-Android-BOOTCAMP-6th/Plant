@@ -37,6 +37,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.IntrinsicMeasurable
+import androidx.compose.ui.layout.IntrinsicMeasureScope
+import androidx.compose.ui.layout.LayoutModifier
+import androidx.compose.ui.layout.Measurable
+import androidx.compose.ui.layout.MeasureResult
+import androidx.compose.ui.layout.MeasureScope
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.semantics
@@ -177,9 +186,10 @@ fun HomeScreen(
             },
             containerColor = MaterialTheme.colorScheme.background
         ) { paddingValues ->
-            // 소형 화면에서 카드+아이템박스가 화면보다 길면 잘리지 않게 세로 스크롤을 허용한다
-            // 스크롤 안에서는 weight가 남는 공간을 못 받으므로, 화면 높이(maxHeight)를 최소 높이로 지정한다 (#376)
+            // 홈 본문 배치 (#376) — 자세한 규칙은 HomeBodyLayout 참고
+            // 화면 높이(maxHeight)를 본문 최소 높이로 넘겨, 남는 공간 계산의 기준으로 쓴다
             // 단, 최소 높이는 720dp까지만: 폰은 화면 전체를 쓰고, 태블릿은 720dp 영역을 화면 가운데에 둬서 위쪽이 과하게 비지 않게 한다
+            // verticalScroll은 안전장치: 이미지를 최소로 줄여도 안 들어가는 극단적인 경우(큰 글꼴, 분할 화면)에만 실제로 스크롤된다
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
@@ -187,7 +197,11 @@ fun HomeScreen(
                     .background(MaterialTheme.colorScheme.background),
                 contentAlignment = Alignment.Center
             ) {
-                Column(
+                // 본문 높이가 560dp 미만이면(세로가 짧은 소형 폰) 간격 모드로 여백을 줄여 한 화면에 담는다
+                // 360x760dp급은 간격 모드 없이도 다 들어가는 것을 확인함
+                val compact = maxHeight < 560.dp
+                HomeBodyLayout(
+                    compact = compact,
                     modifier = Modifier
                         // 태블릿처럼 넓은 화면에서 카드가 과하게 늘어나지 않게 최대 너비 제한 (아이템 6개가 한 줄에 보이는 너비)
                         .widthIn(max = 480.dp)
@@ -195,13 +209,10 @@ fun HomeScreen(
                         .verticalScroll(rememberScrollState())
                         .heightIn(min = maxHeight.coerceAtMost(720.dp))
                         // 좌우 여백 16dp: 앱바 타이틀·다른 탭 본문(내 화분, 마이페이지)과 왼쪽 끝을 맞춤
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    // 화면이 커져서 남는 세로 공간은 카드 위:아이템박스 아래 = 3:1로 나눈다
-                    // 카드와 아이템박스 사이는 18dp로 고정해, 기기 크기와 상관없이 두 영역이 붙어 보이게 한다 (#376)
-                    Spacer(modifier = Modifier.weight(3f))
                     MainPlantCard(
+                        compact = compact,
                         displayPot = displayPot,
                         hasNoPot = hasNoPot,
                         todayStudyTime = todayStudyTime,
@@ -245,8 +256,8 @@ fun HomeScreen(
                             }
                         } // 상세 기록 이동
                     )
-                    Spacer(modifier = Modifier.height(18.dp))
                     HomeItemBoxSection(
+                        compact = compact,
                         item = userItem,
                         onItemClick = { clickedType ->
                             if (clickedType == ItemType.BOX) {
@@ -259,20 +270,18 @@ fun HomeScreen(
                             }
                         }
                     )
-                    Spacer(modifier = Modifier.weight(1f))
-                    //수량 선택 다이얼로그
-                    if (showOpenDialog) {
-                        BonusBoxOpenDialog(
-                            maxCount = userItem.box,
-                            isOpening = isBoxOpening,
-                            onDismiss = {if (!isBoxOpening) showOpenDialog = false },
-                            onConfirm = { count ->
-                                showOpenDialog = false
-                                viewModel.openBoxes(count)
-                            }
-                        )
-                    }
-
+                }
+                //수량 선택 다이얼로그 (별도 창이라 본문 배치와 무관해 HomeBodyLayout 밖에 둔다)
+                if (showOpenDialog) {
+                    BonusBoxOpenDialog(
+                        maxCount = userItem.box,
+                        isOpening = isBoxOpening,
+                        onDismiss = {if (!isBoxOpening) showOpenDialog = false },
+                        onConfirm = { count ->
+                            showOpenDialog = false
+                            viewModel.openBoxes(count)
+                        }
+                    )
                 }
             }
 
@@ -585,7 +594,9 @@ fun MainPlantCard(
     onStartClick: () -> Unit,
     onLevelUpClick: () -> Unit,
     onChangeOrMakeClick: () -> Unit,
-    onRecordClick: () -> Unit
+    onRecordClick: () -> Unit,
+    // 화면 높이가 모자랄 때 여백·간격을 줄이는 모드 (#376)
+    compact: Boolean = false
 ) {
     Card(
         modifier = Modifier
@@ -600,7 +611,7 @@ fun MainPlantCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 14.dp),
+                .padding(horizontal = 20.dp, vertical = 14.dp.compactIf(compact)),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             //상단 태그
@@ -617,7 +628,7 @@ fun MainPlantCard(
                         color = MaterialTheme.colorScheme.tertiary,
                     )
                 }
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(6.dp.compactIf(compact)))
             }
             Text(
                 text = if(hasNoPot) "공부 화분이 없습니다" else displayPot.name.ifEmpty { "실험용" },
@@ -625,19 +636,29 @@ fun MainPlantCard(
                 color = MaterialTheme.colorScheme.tertiary
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp.compactIf(compact)))
 
+            // 화면 높이가 모자라면 이미지가 먼저 줄어든다 (100dp → 최소 48dp, 간격 모드면 40dp, #376)
+            // weight(fill = false): 카드 안 다른 요소를 다 놓고 남은 높이까지만 차지
+            val imageSlotModifier = Modifier
+                .weight(1f, fill = false)
+                .shrinkableImageHeight(min = if (compact) 40.dp else 48.dp, max = 100.dp)
             if(hasNoPot){
                 Box(
-                    modifier = Modifier.size(100.dp),
+                    // 로고는 원형 배경이라 높이에 맞춰 정사각형 유지
+                    modifier = imageSlotModifier.aspectRatio(1f, matchHeightConstraintsFirst = true),
                     contentAlignment = Alignment.Center
                 ){
                     getLogoImage()
                 }
             } else {
-                ProfileImage(level = "Lv.${displayPot.potLevel}", size = 100)
+                ProfileImage(
+                    level = "Lv.${displayPot.potLevel}",
+                    size = 100,
+                    modifier = imageSlotModifier
+                )
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp.compactIf(compact)))
 
             // 화분 하나의 오늘 총 학습 시간
             Text(
@@ -645,17 +666,17 @@ fun MainPlantCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSecondary,
             )
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(2.dp.compactIf(compact)))
             Text(
                 text = if(hasNoPot) "00:00:00" else todayStudyTime,
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.tertiary,
                 fontSize = 26.sp
             )
-            Spacer(modifier = Modifier.height(5.dp))
+            Spacer(modifier = Modifier.height(5.dp.compactIf(compact)))
 
             if (!hasNoPot) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(8.dp.compactIf(compact)))
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -675,7 +696,7 @@ fun MainPlantCard(
                             color = MaterialTheme.colorScheme.onSecondary,
                         )
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(4.dp.compactIf(compact)))
                     LinearProgressIndicator(
                         progress = { levelUpProgress },
                         modifier = Modifier
@@ -688,7 +709,7 @@ fun MainPlantCard(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(8.dp.compactIf(compact)))
 
                 Button(
                     onClick = onLevelUpClick,
@@ -702,7 +723,7 @@ fun MainPlantCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(5.dp))
+            Spacer(modifier = Modifier.height(5.dp.compactIf(compact)))
 
 
             //공부 시작 버튼
@@ -714,7 +735,7 @@ fun MainPlantCard(
                 Text("공부 시작", style = MaterialTheme.typography.titleMedium)
             }
 
-            Spacer(modifier = Modifier.height(5.dp))
+            Spacer(modifier = Modifier.height(5.dp.compactIf(compact)))
 
             //화분변경 / 기록 버튼 (가로 배치)
             Row(
@@ -742,7 +763,9 @@ fun MainPlantCard(
 @Composable
 fun HomeItemBoxSection(
     item: Item,
-    onItemClick: (ItemType) -> Unit
+    onItemClick: (ItemType) -> Unit,
+    // 화면 높이가 모자랄 때 여백·아이콘을 줄이는 모드 (#376)
+    compact: Boolean = false
 ) {
     val displayItems = listOf(
         ItemType.HEART to item.heart,
@@ -757,7 +780,7 @@ fun HomeItemBoxSection(
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp.compactIf(compact))
     ) {
         Text(
             text = "아이템 : ${totalCount}개",
@@ -776,7 +799,7 @@ fun HomeItemBoxSection(
             LazyRow(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp),
+                    .padding(horizontal = 12.dp, vertical = 12.dp.compactIf(compact)),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(displayItems) { (type, count) ->
@@ -794,14 +817,14 @@ fun HomeItemBoxSection(
                                     baseModifier
                                 }
                             }
-                            .padding(vertical = 4.dp),
+                            .padding(vertical = 4.dp.compactIf(compact)),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        verticalArrangement = Arrangement.spacedBy(4.dp.compactIf(compact))
                     ) {
                         Image(
                             painter = painterResource(id = type.resId),
                             contentDescription = type.kor,
-                            modifier = Modifier.size(40.dp)
+                            modifier = Modifier.size(if (compact) 32.dp else 40.dp)
                         )
                         Text(
                             text = type.kor,
@@ -1031,3 +1054,86 @@ fun BonusBoxOpenDialog(
         shape = RoundedCornerShape(24.dp)
     )
 }
+
+/**
+ * 홈 본문(메인카드 + 아이템박스) 배치 (#376)
+ * content에는 [메인카드, 아이템박스] 순서로 정확히 두 개를 넣는다.
+ *
+ * 1. 아이템박스는 원래 크기 그대로 둔다
+ * 2. 카드는 "본문 최소 높이 - 아이템박스 - 간격 18dp"까지만 높이를 받는다
+ *    → 모자라면 카드 안 화분 이미지가 줄어들어(shrinkableImageHeight) 한 화면에 다 담긴다
+ * 3. 이미지를 최소로 줄여도 안 들어가면 카드 최소 높이(minIntrinsicHeight)를 그대로 주고,
+ *    본문이 화면보다 길어져 바깥 verticalScroll로 내려 볼 수 있게 한다 (버튼이 잘리지 않게)
+ * 4. 남는 세로 공간은 카드 위:아이템박스 아래 = 3:1로 나눈다
+ */
+@Composable
+private fun HomeBodyLayout(
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+    content: @Composable () -> Unit
+) {
+    Layout(content = content, modifier = modifier) { measurables, constraints ->
+        require(measurables.size == 2) { "HomeBodyLayout에는 메인카드와 아이템박스 두 개만 넣어야 합니다" }
+        val (cardMeasurable, itemBoxMeasurable) = measurables
+        val gap = 18.dp.compactIf(compact).roundToPx()
+        // 세로는 제한 없이 재고, 가로는 본문 너비에 맞춘다
+        val childConstraints = constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity)
+
+        val itemBox = itemBoxMeasurable.measure(childConstraints)
+
+        // 바깥 heightIn(min = 화면 높이)으로 받은 최소 높이가 기준 (스크롤 안이라 maxHeight는 무한대)
+        val targetHeight = constraints.minHeight
+        val cardAvailable = targetHeight - itemBox.height - gap
+        val cardMinHeight = cardMeasurable.minIntrinsicHeight(constraints.maxWidth)
+        val card = cardMeasurable.measure(
+            childConstraints.copy(maxHeight = maxOf(cardAvailable, cardMinHeight))
+        )
+
+        val contentHeight = card.height + gap + itemBox.height
+        val layoutHeight = maxOf(targetHeight, contentHeight)
+        val top = (layoutHeight - contentHeight) * 3 / 4
+
+        layout(constraints.maxWidth, layoutHeight) {
+            card.place((constraints.maxWidth - card.width) / 2, top)
+            itemBox.place((constraints.maxWidth - itemBox.width) / 2, top + card.height + gap)
+        }
+    }
+}
+
+/**
+ * 받은 높이 안에서 [min]~[max] 사이로 높이를 정한다 (#376)
+ * 공간이 넉넉하면 [max], 모자라면 받은 높이만큼 줄어들고, [min]보다 작아지지는 않는다.
+ * "최소 몇 dp가 필요한지" 물어보면(minIntrinsicHeight) [min]으로 답해,
+ * 바깥에서 카드의 최소 높이를 "이미지를 최소로 줄였을 때" 기준으로 계산할 수 있게 한다.
+ */
+private fun Modifier.shrinkableImageHeight(min: Dp, max: Dp): Modifier =
+    this.then(ShrinkableHeightModifier(min, max))
+
+private class ShrinkableHeightModifier(
+    private val min: Dp,
+    private val max: Dp
+) : LayoutModifier {
+    override fun MeasureScope.measure(
+        measurable: Measurable,
+        constraints: Constraints
+    ): MeasureResult {
+        val height = constraints.maxHeight
+            .coerceAtMost(max.roundToPx())
+            .coerceAtLeast(min.roundToPx())
+        val placeable = measurable.measure(constraints.copy(minHeight = height, maxHeight = height))
+        return layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+    }
+
+    override fun IntrinsicMeasureScope.minIntrinsicHeight(
+        measurable: IntrinsicMeasurable,
+        width: Int
+    ): Int = min.roundToPx()
+
+    override fun IntrinsicMeasureScope.maxIntrinsicHeight(
+        measurable: IntrinsicMeasurable,
+        width: Int
+    ): Int = max.roundToPx()
+}
+
+/** 간격 모드일 때 여백·간격을 절반으로 줄인다 (#376) */
+private fun Dp.compactIf(compact: Boolean): Dp = if (compact) this / 2 else this
