@@ -7,6 +7,7 @@ import com.a32b.plant.domain.model.AutoLoginResult
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
+import com.a32b.plant.domain.session.SessionExpiredReason
 import com.a32b.plant.domain.usecase.auth.CheckAutoLoginUseCase
 import com.a32b.plant.domain.usecase.mypage.ObserveDarkModeUseCase
 import com.a32b.plant.domain.usecase.pot.GetActivePotUseCase
@@ -24,7 +25,9 @@ data class SplashUiState(
     val isLoading: Boolean = true,
     val isDarkMode: Boolean = false,
     val isFirstScreenReady: Boolean = false,
-    val isSplashExitFinished: Boolean = false
+    val isSplashExitFinished: Boolean = false,
+    // 자동 로그인에서 발견한, 앱 화면이 없는 동안 감지된 세션 만료 사유. MainActivity가 안내한 뒤 비운다 (#509)
+    val sessionExpiredReason: SessionExpiredReason? = null
 )
 
 @HiltViewModel
@@ -60,6 +63,11 @@ class SplashViewModel @Inject constructor(
         _uiState.update { it.copy(isFirstScreenReady = true) }
     }
 
+    /** 세션 만료 안내를 넘겨받은 뒤 호출 (Activity가 다시 만들어져도 중복 안내하지 않도록 비움) */
+    fun onSessionExpiredReasonConsumed() {
+        _uiState.update { it.copy(sessionExpiredReason = null) }
+    }
+
     /** 스플래시가 끝났다고 볼 수 있을 때 호출 (Android 12 이하와 신호가 오지 않는 경우에는 대체 시점에 호출) */
     fun onSplashExitFinished() {
         _uiState.update { it.copy(isSplashExitFinished = true) }
@@ -82,6 +90,10 @@ class SplashViewModel @Inject constructor(
                     when (result) {
                         is AutoLoginResult.LoggedIn -> startHome(result.uid, result.user.lastSelectedPotId)
                         AutoLoginResult.NotLoggedIn -> startSignIn()
+                        is AutoLoginResult.SessionExpired -> {
+                            _uiState.update { it.copy(sessionExpiredReason = result.reason) }
+                            startSignIn()
+                        }
                     }
                 }
                 .onFailure {

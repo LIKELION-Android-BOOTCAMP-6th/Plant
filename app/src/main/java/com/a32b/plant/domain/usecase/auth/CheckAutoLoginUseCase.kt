@@ -11,9 +11,17 @@ import javax.inject.Inject
 
 class CheckAutoLoginUseCase @Inject constructor(
     private val authRepository: AuthRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val signOutUseCase: SignOutUseCase
 ) {
     suspend operator fun invoke(): Result<AutoLoginResult> {
+        // 앱 화면이 없는 동안(Activity만 종료되고 프로세스는 살아 있음) 이전 세션이 만료를 감지했다면
+        // 먼저 감지한 쪽을 우선해 로그아웃한다. 새 토큰을 쓰면 그사이 로그인한 다른 기기가 로그아웃되기 때문 (#509)
+        userRepository.takeExpiredSessionReason()?.let { reason ->
+            signOutUseCase()
+            return Result.Success(AutoLoginResult.SessionExpired(reason))
+        }
+
         val uid = authRepository.currentUid()
             ?: return Result.Success(AutoLoginResult.NotLoggedIn)
 

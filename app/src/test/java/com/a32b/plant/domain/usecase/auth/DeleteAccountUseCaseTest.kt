@@ -209,6 +209,7 @@ class DeleteAccountUseCaseTest {
             clock.calls += "endUserSession"
             currentUser.value = null
         }
+        override fun takeExpiredSessionReason(): SessionExpiredReason? = TODO()
         override suspend fun updateLastSelectedPot(uid: String, potId: String) = Unit
         override suspend fun getUser(uid: String): Result<User?> = TODO()
         override suspend fun getUserPreferringServer(uid: String): Result<UserSnapshot> = TODO()
