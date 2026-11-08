@@ -123,8 +123,7 @@ class UpdateProfileUseCaseTest {
         override fun observeDarkMode(): Flow<Boolean> = emptyFlow()
         override fun startUserSession(user: User): Unit = error("Unused")
         override fun endUserSession(): Unit = error("Unused")
-        override fun beginAccountDeletion(uid: String): Unit = error("Unused")
-        override fun endAccountDeletion(): Unit = error("Unused")
+        override fun takeExpiredSessionReason(): SessionExpiredReason? = error("Unused")
         override suspend fun updateLastSelectedPot(uid: String, potId: String): Unit = error("Unused")
         override suspend fun getUser(uid: String): Result<User?> = error("Unused")
         override suspend fun getUserPreferringServer(uid: String): Result<UserSnapshot> = error("Unused")
@@ -140,6 +139,5 @@ class UpdateProfileUseCaseTest {
         override suspend fun deleteNickname(nickname: String): Result<Unit> = error("Unused")
         override suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success> = error("Unused")
         override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> = error("Unused")
-        override suspend fun deleteUserData(uid: String): Result<Unit> = error("Unused")
     }
 }
