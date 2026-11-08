@@ -68,9 +68,9 @@ import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.presentation.core.component.ConfettiOverlay
 import com.a32b.plant.presentation.core.component.festiveConfettiParties
 import com.a32b.plant.presentation.core.component.LoadingBox
+import com.a32b.plant.presentation.theme.LocalIsDarkTheme
 import com.a32b.plant.presentation.theme.primary
-import com.a32b.plant.presentation.theme.sub2
-import com.a32b.plant.presentation.theme.sub_green1
+import androidx.compose.ui.graphics.Color
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -354,8 +354,13 @@ fun PotChangeDialog(
                             color = MaterialTheme.colorScheme.tertiary
                         )
                     }
+                    // 목록이 비어 있을 때(예: 아직 목록을 한 번도 불러오지 못했을 때)는 안내 문구 아래에 바로 표시
+                    NewPotSlot(onClick = onCreateNewClick)
                 } else {
+                    // weight(fill = false): 목록이 짧으면 내용 높이만큼만, 길면 남은 공간까지만 차지해서
+                    // 본문 영역 최대 높이(heightIn(max = 300.dp))를 넘지 않고 그 안에서 스크롤되게 한다
                     LazyColumn(
+                        modifier = Modifier.weight(1f, fill = false),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(pots) { pot ->
@@ -365,7 +370,7 @@ fun PotChangeDialog(
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
                                     .clickable { onPotSelected(pot) },
-                                color = if (isSelected) sub_green1 else sub2,
+                                color = potSlotContainerColor(isSelected),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Row(
@@ -387,25 +392,16 @@ fun PotChangeDialog(
                                     Text(
                                         text = "Lv.${pot.potLevel}",
                                         style = MaterialTheme.typography.labelMedium,
-                                        color = if(isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSecondary
+                                        color = if(isSelected) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSecondary
                                     )
                                 }
                             }
                         }
+                        // 목록 마지막 칸: 목록이 길면 끝까지 스크롤해야 보이는 새 화분 생성 칸
+                        item {
+                            NewPotSlot(onClick = onCreateNewClick)
+                        }
                     }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // 새 화분 생성 버튼 (다이얼로그 내부 추가 옵션)
-                TextButton(
-                    onClick = onCreateNewClick,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "+ 새로운 화분 만들기",
-                        color = MaterialTheme.colorScheme.primary
-                    )
                 }
             }
         },
@@ -432,6 +428,42 @@ fun PotChangeDialog(
         },
         shape = RoundedCornerShape(24.dp)
     )
+}
+
+// 화분 변경 다이얼로그의 칸 배경색 (화분 칸, 새 화분 만들기 칸 공용)
+// 라이트는 surfaceVariant(sub2)·secondary(sub_green1)로 기존과 같고,
+// 다크의 surfaceVariant는 밝은 색이라 onSurface 글자 대비가 약 2.3:1로 낮아 카드 색(primaryContainer)을 쓴다
+@Composable
+private fun potSlotContainerColor(isSelected: Boolean): Color = when {
+    isSelected -> MaterialTheme.colorScheme.secondary
+    LocalIsDarkTheme.current -> MaterialTheme.colorScheme.primaryContainer
+    else -> MaterialTheme.colorScheme.surfaceVariant
+}
+
+// 화분 변경 다이얼로그의 '+ 새로운 화분 만들기' 칸 (화분 칸과 같은 모양)
+@Composable
+private fun NewPotSlot(onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        color = potSlotContainerColor(isSelected = false),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "+ 새로운 화분 만들기",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.tertiary
+            )
+        }
+    }
 }
 
 
