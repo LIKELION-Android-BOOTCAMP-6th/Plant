@@ -52,7 +52,12 @@ class UserRepositoryImpl @Inject constructor(
     private var sessionJob: Job? = null
     @Volatile
     private var localSessionToken: String? = null
-    private val accountDeletionUid = MutableStateFlow<String?>(null)
+    // 이 기기가 저장 중인 새 토큰. 세션이 다시 시작되기 전까지 리스너가 이 토큰을 다른 기기 로그인으로 오인하지 않게 한다 (#509)
+    @Volatile
+    private var pendingSessionToken: String? = null
+    // 리스너가 감지한 세션 만료 중 아직 로그아웃 처리(endUserSession)되지 않은 사유
+    @Volatile
+    private var expiredSessionReason: SessionExpiredReason? = null
     // 읽기 실패와 재구독 사이에도 마지막 정상 테마를 유지한다. 영구 저장은 DataStore가 담당한다.
     private val lastKnownDarkMode = MutableStateFlow(false)
 
@@ -71,10 +76,14 @@ class UserRepositoryImpl @Inject constructor(
             }
 
     override fun startUserSession(user: User) {
+        // 새 세션이 시작되면 이전 세션의 만료 사유는 더 이상 의미가 없다.
+        expiredSessionReason = null
         // 초기값을 즉시 세팅해 HomeViewModel 등이 init에서 currentUser.value를
         // 곧바로 읽어도 null로 오인해 로그인 에러 처리하지 않도록 한다.
         _currentUser.value = user
         localSessionToken = user.activeSessionToken
+        // 새 세션이 시작되면 저장 중이던 토큰 표시는 필요 없으므로 비운다 (자동 로그인·로그인에서는 위에서 이 세션의 토큰으로 넘어감)
+        pendingSessionToken = null
 
         sessionJob?.cancel()
         sessionJob = scope.launch {
@@ -85,25 +94,19 @@ class UserRepositoryImpl @Inject constructor(
                 .catch { e -> Log.e("UserRepository", "currentUser 실시간 구독 실패: ${e.message}", e) }
                 .collect { dto ->
                     if (dto == null) {
-                        if (accountDeletionUid.value == user.uid) {
-                            // 회원탈퇴가 직접 users/{uid} 문서를 삭제하는 동안에는
-                            // 화면의 탈퇴 작업이 세션 만료 이벤트로 취소되지 않게 한다.
-                            return@collect
-                        }
-                        // Firestore 유저 문서가 삭제된 경우. 리스너를 먼저 종료해야
-                        // 이후 스냅샷에서 이벤트가 반복 발생하지 않는다.
-                        endUserSession()
-                        sessionExpiredNotifier.notifySessionExpired(SessionExpiredReason.USER_NOT_FOUND)
+                        // Firestore 유저 문서가 삭제된 경우
+                        expireUserSession(SessionExpiredReason.USER_NOT_FOUND)
                         return@collect
                     }
                     val remoteToken = dto.activeSessionToken
                     val currentToken = localSessionToken
-                    if (currentToken != null && remoteToken != null && currentToken != remoteToken) {
-                        // 리스너를 먼저 종료해야 이후 스냅샷에서 이벤트가 반복 발생하지 않는다.
-                        // MainActivity도 signOutUseCase()를 통해 endUserSession()을 재호출하나
-                        // 멱등적이므로 문제없다. authRepository.signOut()은 그쪽에서 처리된다.
-                        endUserSession()
-                        sessionExpiredNotifier.notifySessionExpired(SessionExpiredReason.DUPLICATE_LOGIN)
+                    // 이 기기가 저장 중인 토큰(pendingSessionToken)도 자기 토큰으로 본다.
+                    // Activity만 종료되고 살아 있던 이전 리스너가 재실행 시 자동 로그인의 토큰 저장을 받는 경우 (#509)
+                    if (currentToken != null && remoteToken != null &&
+                        remoteToken != currentToken && remoteToken != pendingSessionToken
+                    ) {
+                        // authRepository.signOut()은 이벤트를 받은 MainActivity의 signOutUseCase()에서 처리된다.
+                        expireUserSession(SessionExpiredReason.DUPLICATE_LOGIN)
                         return@collect
                     }
                     _currentUser.value = dto.toDomain()
@@ -111,22 +114,43 @@ class UserRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun endUserSession() {
+    private fun stopUserSession() {
         sessionJob?.cancel()
         sessionJob = null
         _currentUser.value = null
         localSessionToken = null
+        pendingSessionToken = null
     }
 
-    override fun beginAccountDeletion(uid: String) {
-        accountDeletionUid.value = uid
+    /**
+     * 리스너가 세션 만료를 감지했을 때 세션을 정리하고 사유를 남긴 뒤 이벤트를 보낸다.
+     * 리스너를 먼저 종료해야 이후 스냅샷에서 이벤트가 반복 발생하지 않는다.
+     * 사유는 이벤트를 처리할 화면이 없을 때(Activity만 종료되고 프로세스는 살아 있는 경우)
+     * 다음 자동 로그인이 이어받을 수 있도록 남겨 둔다 (#509).
+     */
+    private fun expireUserSession(reason: SessionExpiredReason) {
+        stopUserSession()
+        expiredSessionReason = reason
+        sessionExpiredNotifier.notifySessionExpired(reason)
     }
 
-    override fun endAccountDeletion() {
-        accountDeletionUid.value = null
+    override fun endUserSession() {
+        // MainActivity가 만료 이벤트를 처리하며 호출하는 경로도 여기를 지나므로, 처리된 사유는 함께 비운다.
+        stopUserSession()
+        expiredSessionReason = null
+    }
+
+    override fun takeExpiredSessionReason(): SessionExpiredReason? {
+        val reason = expiredSessionReason
+        expiredSessionReason = null
+        return reason
     }
 
     override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> {
+        // 리스너가 남아 있으면(Activity만 종료되고 프로세스가 살아 있는 상태에서 재실행) 이 쓰기를 다른 기기 로그인으로
+        // 오인하지 않도록 저장 전에 알려 둔다 (#509). 리스너를 멈추지 않으므로 호출부가 중간에 취소돼도 감지가 끊기지 않는다.
+        // 로그아웃(null)은 서버 토큰이 null이면 비교하지 않으므로 표시하지 않는다.
+        if (token != null) pendingSessionToken = token
         // 일반 write의 await()는 서버 응답 전까지 끝나지 않으므로 호출부와 분리해 대기 시간만 제한한다.
         val write = scope.async {
             safeRunCatching {
@@ -134,6 +158,8 @@ class UserRepositoryImpl @Inject constructor(
             }.onFailure {
                 // 시간 초과 후 서버가 거부하면 이 토큰은 반영되지 않으므로 중복 로그인 비교에서 제외한다.
                 if (token != null && localSessionToken == token) localSessionToken = null
+                // 거부된 토큰은 서버에 남지 않으므로 자기 토큰 표시도 거둔다.
+                if (token != null && pendingSessionToken == token) pendingSessionToken = null
             }
         }
         val result = withTimeoutOrNull(SESSION_TOKEN_WRITE_TIMEOUT_MS) { write.await() }
@@ -282,13 +308,6 @@ class UserRepositoryImpl @Inject constructor(
             }
         },
         onFailure = { e -> Result.Failure(handleAttendanceError(e)) }
-    )
-
-    override suspend fun deleteUserData(uid: String): Result<Unit> = safeRunCatching {
-        userRemoteDataSource.deleteUserData(uid)
-    }.fold(
-        onSuccess = { Result.Success(Unit) },
-        onFailure = { e -> Result.Failure(handleError(e, "유저 데이터 삭제 실패")) }
     )
 
 

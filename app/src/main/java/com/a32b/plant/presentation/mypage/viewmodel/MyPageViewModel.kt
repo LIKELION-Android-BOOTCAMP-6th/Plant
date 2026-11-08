@@ -42,6 +42,7 @@ data class MyPageUiState(
 sealed class MyPageEvent {
     object NavigateToSignIn : MyPageEvent()// 로그인화면 보내기용 ************
     data class OpenUrl(val url: String) : MyPageEvent()
+    data class ShowToast(val message: String, val isLong: Boolean) : MyPageEvent()
 }
 
 @HiltViewModel
@@ -99,39 +100,39 @@ class MyPageViewModel @Inject constructor(
 
         _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
-            updateProfileUseCase(
-                newNickname = nickname,
-                newImageLevel = imageLevel
-            ).onSuccess { savedNickname ->
-                _uiState.update {
-                    it.copy(
-                        nickname = savedNickname,
-                        profileImg = imageLevel,
-                        isUpdateSuccess = true,
-                        isLoading = false,
-                        nicknameError = null
-                    )
+            try {
+                updateProfileUseCase(
+                    newNickname = nickname,
+                    newImageLevel = imageLevel
+                ).onSuccess { savedNickname ->
+                    _uiState.update {
+                        it.copy(
+                            nickname = savedNickname,
+                            profileImg = imageLevel,
+                            isUpdateSuccess = true,
+                            nicknameError = null
+                        )
+                    }
+                }.onFailure { e ->
+                    // 닉네임 값 자체의 문제(형식·중복)만 입력칸 인라인 에러, 네트워크·저장 실패 등 상황 에러는 토스트
+                    val isInputError = e is AppError.NicknameInvalid || e is AppError.NicknameTaken
+                    _uiState.update {
+                        it.copy(
+                            nicknameError = if (isInputError) e.message else null
+                        )
+                    }
+                    if (!isInputError && e !is AppError.UnknownUser) {
+                        _eventChannel.send(MyPageEvent.ShowToast(e.message, isLong = e is AppError.Network))
+                    }
                 }
-            }.onFailure { e ->
+            } finally {
                 _uiState.update { it.copy(isLoading = false) }
-                if (e !is AppError.UnknownUser) {
-                    notifyUpdateFailure(e.message)
-                }
             }
         }
     }
 
     fun resetNicknameError() {
         _uiState.update { it.copy(nicknameError = null) }
-    }
-
-    fun notifyUpdateFailure(errorMessage: String) {
-        _uiState.update {
-            it.copy(
-                isUpdateSuccess = false,
-                nicknameError = errorMessage
-            )
-        }
     }
 
     fun clearProfileState() {

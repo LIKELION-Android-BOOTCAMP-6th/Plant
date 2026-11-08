@@ -2,14 +2,18 @@ package com.a32b.plant.data.repository
 
 import android.util.Log
 import com.a32b.plant.core.util.safeRunCatching
+import com.a32b.plant.data.error.toFunctionsAppError
 import com.a32b.plant.data.source.remote.auth.AuthRemoteDataSource
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.repository.AuthRepository
 import com.a32b.plant.domain.result.Result
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.auth.FirebaseAuthException
+import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import javax.inject.Inject
 import javax.inject.Singleton
+
+private const val DELETE_ACCOUNT_RETRY_MESSAGE = "탈퇴 처리 중 문제가 발생했습니다. 다시 시도해주세요."
 
 @Singleton
 class AuthRepositoryImpl @Inject constructor(
@@ -35,19 +39,36 @@ class AuthRepositoryImpl @Inject constructor(
         authRemoteDataSource.reauthenticateWithGoogle(idToken)
     }.fold(
         onSuccess = { Result.Success(Unit) },
-        onFailure = { e -> Result.Failure(handleAuthError(e, "구글 재인증 실패")) }
+        onFailure = { e ->
+            Result.Failure(accountNotFoundOrNull(e) ?: handleAuthError(e, "구글 재인증 실패"))
+        }
     )
 
-    override suspend fun deleteAuthAccount(): Result<Unit> = safeRunCatching {
-        authRemoteDataSource.deleteAuthAccount()
+    override suspend fun refreshIdToken(): Result<Unit> = safeRunCatching {
+        authRemoteDataSource.refreshIdToken()
     }.fold(
         onSuccess = { Result.Success(Unit) },
         onFailure = { e ->
-            val error = if (e.message?.contains("RECENT_LOGIN_REQUIRED") == true) {
-                Log.e("AuthRepository", "계정 삭제 실패 - 재인증 필요", e)
-                AppError.Custom("보안을 위해 재로그인 후 다시 시도해주세요.")
-            } else {
-                handleAuthError(e, "계정 삭제 실패")
+            val error = accountNotFoundOrNull(e) ?: when (e) {
+                // 방금 재인증한 뒤라 거의 없지만, 로그인 정보가 없으면 다시 로그인하도록 안내한다
+                is IllegalStateException -> AppError.Auth()
+                else -> handleAuthError(e, "토큰 갱신 실패")
+            }
+            Result.Failure(error)
+        }
+    )
+
+    override suspend fun deleteAccount(): Result<Unit> = safeRunCatching {
+        authRemoteDataSource.deleteAccount()
+    }.fold(
+        onSuccess = { Result.Success(Unit) },
+        onFailure = { e ->
+            Log.e("AuthRepository", "회원탈퇴 함수 호출 실패: ${e.message}", e)
+            // 서버 내부 오류는 함수가 원인을 숨기고 보내므로, 다시 호출하면 이어서 처리된다는 안내로 바꾼다.
+            // 네트워크·재인증 필요(failed-precondition 문구) 등은 그대로 전달한다.
+            val error = when (val mapped = e.toFunctionsAppError()) {
+                is AppError.Server, is AppError.Unknown -> AppError.Custom(DELETE_ACCOUNT_RETRY_MESSAGE)
+                else -> mapped
             }
             Result.Failure(error)
         }
@@ -56,6 +77,18 @@ class AuthRepositoryImpl @Inject constructor(
     override fun signOut() {
         authRemoteDataSource.signOut()
     }
+
+    /**
+     * 서버에서 Auth 계정이 이미 지워진 경우(이전 탈퇴 요청은 성공했는데 응답만 받지 못함).
+     * 재인증·토큰 갱신이 ERROR_USER_NOT_FOUND로 실패한다.
+     */
+    private fun accountNotFoundOrNull(e: Throwable): AppError? =
+        if ((e as? FirebaseAuthInvalidUserException)?.errorCode == "ERROR_USER_NOT_FOUND") {
+            Log.w("AuthRepository", "Auth 계정이 이미 삭제됨", e)
+            AppError.AccountNotFound()
+        } else {
+            null
+        }
 
     private fun handleAuthError(e: Throwable, logMessage: String): AppError {
         Log.e("AuthRepository", "$logMessage: ${e.message}", e)

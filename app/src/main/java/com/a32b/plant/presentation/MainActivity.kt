@@ -44,6 +44,7 @@ import com.a32b.plant.domain.session.SessionExpiredReason
 import com.a32b.plant.presentation.core.component.BottomBar
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
+import com.a32b.plant.presentation.splash.SplashEvent
 import com.a32b.plant.presentation.splash.SplashViewModel
 import com.a32b.plant.presentation.studying.service.StudyingTimerServiceController
 import com.a32b.plant.presentation.theme.PlantTheme
@@ -135,6 +136,9 @@ class MainActivity : ComponentActivity() {
 
                     LaunchedEffect(Unit) {
                         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            // NavHost 그래프가 설정되기 전에 navigate하면 크래시하므로 첫 화면이 생길 때까지 수집을 미룬다 (#509)
+                            // 그 전에 발생한 이벤트는 Channel에 남아 있다가 수집을 시작하면 전달되므로 유실되지 않는다
+                            navController.currentBackStackEntryFlow.first()
                             sessionExpiredObserver.event.collect { reason ->
                                 val alreadyAtSignIn = navController.currentBackStackEntry
                                     ?.destination?.hasRoute<Routes.SignIn>() == true
@@ -153,6 +157,20 @@ class MainActivity : ComponentActivity() {
                                 }
 
                                 sessionExpiredReasonOrdinal = reason.ordinal
+                            }
+                        }
+                    }
+
+                    // 앱 화면이 없는 동안 감지된 세션 만료는 자동 로그인이 로그아웃까지 하고 로그인 화면으로 시작하므로
+                    // 위 이벤트 처리(로그인 화면이면 건너뜀) 대신 여기서 타이머 정리와 안내만 한다 (#509)
+                    // 이 컴포저블보다 먼저 보낸 이벤트는 Channel에 남아 있다가 수집을 시작하면 전달된다
+                    LaunchedEffect(Unit) {
+                        viewModel.event.collect { event ->
+                            when (event) {
+                                is SplashEvent.ShowSessionExpired -> {
+                                    studyingTimerServiceController.stop()
+                                    sessionExpiredReasonOrdinal = event.reason.ordinal
+                                }
                             }
                         }
                     }

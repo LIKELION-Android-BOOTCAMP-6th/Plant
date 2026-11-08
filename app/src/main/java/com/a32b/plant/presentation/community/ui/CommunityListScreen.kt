@@ -1,6 +1,5 @@
 package com.a32b.plant.presentation.community.ui
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.DisposableEffect
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -137,13 +136,6 @@ fun CommunityListScreen(
                         viewModel.loadMore()
                     }
                 }
-        }
-
-        BackHandler {
-            navController.navigate(Routes.HomeMain) {
-                popUpTo(Routes.HomeMain) { inclusive = false }
-                launchSingleTop = true
-            }
         }
 
         // 당겨서 새로고침 + 화면 콘텐츠 영역

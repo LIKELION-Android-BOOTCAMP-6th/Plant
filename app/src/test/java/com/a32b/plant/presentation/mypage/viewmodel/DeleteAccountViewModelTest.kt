@@ -68,6 +68,48 @@ class DeleteAccountViewModelTest {
         }
     }
 
+    // 이전 탈퇴 요청이 서버에서 끝났는데 응답만 받지 못한 뒤 다시 시도한 경우 (#457)
+    @Test
+    fun alreadyDeletedAccountDuringReauthenticationCompletesDeletion() = runTest {
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val users = FakeUserRepository(User.create().copy(uid = "uid-1"))
+            val auth = FakeAuthRepository(
+                reauthenticationResult = Result.Failure(AppError.AccountNotFound()),
+                refreshResult = Result.Failure(AppError.AccountNotFound())
+            )
+            val notifier = CountingSessionExpiredNotifier()
+            val viewModel = DeleteAccountViewModel(
+                deleteAccountUseCase = DeleteAccountUseCase(
+                    authRepository = auth,
+                    userRepository = users,
+                    studyingRepository = FakeStudyingRepository(),
+                    ensureCurrentUserUseCase = EnsureCurrentUserUseCase(users, notifier)
+                ),
+                authRepository = auth,
+                sessionExpiredNotifier = notifier
+            )
+            val events = mutableListOf<DeleteAccountEvent>()
+            backgroundScope.launch(dispatcher) { viewModel.events.toList(events) }
+
+            viewModel.reauthenticateWithGoogleAndDelete("token")
+            runCurrent()
+
+            assertEquals(
+                listOf(
+                    DeleteAccountEvent.ShowToast("회원탈퇴가 완료되었습니다."),
+                    DeleteAccountEvent.NavigateToSignIn
+                ),
+                events
+            )
+            assertEquals(0, notifier.calls)
+            assertFalse(viewModel.uiState.value.isLoading)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     private class CountingSessionExpiredNotifier : SessionExpiredNotifier {
         var calls = 0
         override fun notifySessionExpired(reason: SessionExpiredReason) {
@@ -76,7 +118,8 @@ class DeleteAccountViewModelTest {
     }
 
     private class FakeAuthRepository(
-        private val reauthenticationResult: Result<Unit>
+        private val reauthenticationResult: Result<Unit>,
+        private val refreshResult: Result<Unit> = Result.Failure(AppError.Network())
     ) : AuthRepository {
         override fun currentUid(): String? = "uid-1"
         override fun currentEmail(): String? = null
@@ -84,7 +127,8 @@ class DeleteAccountViewModelTest {
         override fun getSignInProvider(): String? = "google.com"
         override suspend fun signInWithGoogle(idToken: String): Result<String> = error("Not used")
         override suspend fun reauthenticateWithGoogle(idToken: String): Result<Unit> = reauthenticationResult
-        override suspend fun deleteAuthAccount(): Result<Unit> = error("Not used")
+        override suspend fun refreshIdToken(): Result<Unit> = refreshResult
+        override suspend fun deleteAccount(): Result<Unit> = error("Not used")
         override fun signOut() = Unit
     }
 
@@ -94,22 +138,22 @@ class DeleteAccountViewModelTest {
         override val currentUser = MutableStateFlow(user)
         override fun observeDarkMode(): Flow<Boolean> = emptyFlow()
         override fun startUserSession(user: User) = error("Not used")
-        override fun endUserSession() = error("Not used")
-        override fun beginAccountDeletion(uid: String) = error("Not used")
-        override fun endAccountDeletion() = error("Not used")
+        override fun endUserSession() {
+            currentUser.value = null
+        }
+        override fun takeExpiredSessionReason(): SessionExpiredReason? = error("Not used")
         override suspend fun updateLastSelectedPot(uid: String, potId: String) = error("Not used")
         override suspend fun getUser(uid: String): Result<User?> = error("Not used")
         override suspend fun getUserPreferringServer(uid: String): Result<UserSnapshot> = error("Not used")
         override suspend fun createUser(uid: String): Result<User> = error("Not used")
         override suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit> = error("Not used")
-        override suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit> = error("Not used")
+        override suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit> = Result.Success(Unit)
         override suspend fun updateProfile(user: User): Result<Unit> = error("Not used")
         override suspend fun isNicknameTaken(nickname: String): Result<Boolean> = error("Not used")
         override suspend fun registerNickname(uid: String, nickname: String): Result<Unit> = error("Not used")
         override suspend fun deleteNickname(nickname: String): Result<Unit> = error("Not used")
         override suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success> = error("Not used")
         override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> = error("Not used")
-        override suspend fun deleteUserData(uid: String): Result<Unit> = error("Not used")
     }
 
     private class FakeStudyingRepository : StudyingRepository {
@@ -122,7 +166,7 @@ class DeleteAccountViewModelTest {
         override suspend fun deleteStudyingUserInfo(): Result<Unit> = error("Not used")
         override suspend fun saveLocalSession(studying: StudyingSession): Result<Unit> = error("Not used")
         override suspend fun readLocalSession(): Result<StudyingSession?> = error("Not used")
-        override suspend fun clearLocalSession(): Result<Unit> = error("Not used")
+        override suspend fun clearLocalSession(): Result<Unit> = Result.Success(Unit)
         override suspend fun saveLocalGoalDraft(draft: StudyingGoalDraft): Result<Unit> = error("Not used")
         override suspend fun readLocalGoalDraft(): Result<StudyingGoalDraft?> = error("Not used")
         override suspend fun clearLocalGoalDraft(): Result<Unit> = error("Not used")

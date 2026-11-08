@@ -221,20 +221,9 @@ describe("기타 컬렉션", () => {
         await assertSucceeds(deleteDoc(doc(db, "nicknames", "새싹")));
       });
 
-      it("회원탈퇴: users 문서를 지운 뒤에는 닉네임 문서를 지울 수 있다 (DeleteAccountUseCase 순서)", async () => {
-        await seedUser(ALICE, {nickname: "앨리스"});
-        await assertSucceeds(deleteDoc(doc(asAlice(), "users", ALICE)));
+      // 앱은 users 문서를 지울 수 없다(회원탈퇴는 deleteAccount 함수가 처리, #457). users 문서가 없는 경우는 데이터 어긋남이다
+      it("users 문서가 없으면(데이터 어긋남) 소유자는 닉네임 문서를 지울 수 있다", async () => {
         await assertSucceeds(deleteDoc(doc(asAlice(), "nicknames", "앨리스")));
-      });
-
-      // existsAfter 대신 exists를 쓰면 이 테스트가 실패한다 (같은 쓰기의 users 삭제가 반영되는지 확인)
-      it("회원탈퇴: users 문서 삭제와 닉네임 문서 삭제를 한 batch로 해도 허용", async () => {
-        await seedUser(ALICE, {nickname: "앨리스"});
-        const db = asAlice();
-        const batch = writeBatch(db);
-        batch.delete(doc(db, "nicknames", "앨리스"));
-        batch.delete(doc(db, "users", ALICE));
-        await assertSucceeds(batch.commit());
       });
 
       it("users 문서에 nickname 필드가 없으면 소유자는 지울 수 있다", async () => {

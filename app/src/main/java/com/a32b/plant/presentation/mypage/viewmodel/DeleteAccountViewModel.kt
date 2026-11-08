@@ -67,11 +67,18 @@ class DeleteAccountViewModel @Inject constructor(
             authRepository.reauthenticateWithGoogle(idToken)
                 .onSuccess { performDelete() }
                 .onFailure { error ->
-                    _uiState.update { it.copy(isLoading = false) }
-                    if (error is AppError.UnknownUser) {
-                        sessionExpiredNotifier.notifySessionExpired()
-                    } else {
-                        _eventChannel.send(DeleteAccountEvent.ShowToast(error.message))
+                    when (error) {
+                        // 이전 탈퇴 요청이 서버에서 끝났는데 응답만 받지 못한 경우.
+                        // UseCase가 같은 상황을 확인해 로컬 정리 후 완료로 처리한다.
+                        is AppError.AccountNotFound -> performDelete()
+                        is AppError.UnknownUser -> {
+                            _uiState.update { it.copy(isLoading = false) }
+                            sessionExpiredNotifier.notifySessionExpired()
+                        }
+                        else -> {
+                            _uiState.update { it.copy(isLoading = false) }
+                            _eventChannel.send(DeleteAccountEvent.ShowToast(error.message))
+                        }
                     }
                 }
         }

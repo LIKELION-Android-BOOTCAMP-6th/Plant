@@ -2,6 +2,7 @@ package com.a32b.plant.presentation.mypage.ui
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -96,6 +97,11 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                     navController.navigate(Routes.SignIn) {
                         popUpTo(0) { inclusive = true }
                     }
+                is MyPageEvent.ShowToast ->
+                    context.showToast(
+                        event.message,
+                        if (event.isLong) Toast.LENGTH_LONG else Toast.LENGTH_SHORT
+                    )
                 is MyPageEvent.OpenUrl -> {
                     try {
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(event.url)))
@@ -141,6 +147,7 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                 modifier = Modifier.padding(top = innerPadding.calculateTopPadding()),
                 uiState = uiState,
                 onProfileClick = {
+                    viewModel.resetNicknameError()
                     viewModel.getImageLevelList()
                     showProfileDialog = true
                 },
@@ -154,6 +161,8 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                     context.showToast("준비 중입니다.")
                 },
                 onPrivacyClick = { viewModel.onPrivacyPolicyClick() },
+                onBugReportClick = { navController.navigate(Routes.BugReport) },
+                onImprovementSuggestionClick = { navController.navigate(Routes.ImprovementSuggestion) },
                 onLogoutClick = {
                     showLogoutDialog = true
                 },
@@ -174,6 +183,8 @@ private fun MyPageContent(
     onGuideClick: () -> Unit,
     onTermsClick: () -> Unit,
     onPrivacyClick: () -> Unit,
+    onBugReportClick: () -> Unit,
+    onImprovementSuggestionClick: () -> Unit,
     onAccountManageClick: () -> Unit,
     onLogoutClick: () -> Unit
 ) {
@@ -206,6 +217,8 @@ private fun MyPageContent(
                 ButtonTemplate(text = "사용 가이드", onClick = onGuideClick)
                 ButtonTemplate(text = "서비스 이용약관", onClick = onTermsClick)
                 ButtonTemplate(text = "개인정보처리방침", onClick = onPrivacyClick)
+                ButtonTemplate(text = "버그 제보", onClick = onBugReportClick)
+                ButtonTemplate(text = "개선사항 제안", onClick = onImprovementSuggestionClick)
                 ButtonTemplate(text = "계정 관리", onClick = onAccountManageClick)
                 ButtonTemplate(text = "로그아웃", onClick = onLogoutClick)
             }
@@ -229,6 +242,8 @@ private fun MyPageContentPreview() {
             onGuideClick = {},
             onTermsClick = {},
             onPrivacyClick = {},
+            onBugReportClick = {},
+            onImprovementSuggestionClick = {},
             onAccountManageClick = {},
             onLogoutClick = {}
         )

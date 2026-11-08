@@ -7,15 +7,18 @@ import com.a32b.plant.domain.model.AutoLoginResult
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
+import com.a32b.plant.domain.session.SessionExpiredReason
 import com.a32b.plant.domain.usecase.auth.CheckAutoLoginUseCase
 import com.a32b.plant.domain.usecase.mypage.ObserveDarkModeUseCase
 import com.a32b.plant.domain.usecase.pot.GetActivePotUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -26,6 +29,11 @@ data class SplashUiState(
     val isFirstScreenReady: Boolean = false,
     val isSplashExitFinished: Boolean = false
 )
+
+sealed class SplashEvent {
+    /** 자동 로그인에서 발견한, 앱 화면이 없는 동안 감지된 세션 만료 안내 (#509) */
+    data class ShowSessionExpired(val reason: SessionExpiredReason) : SplashEvent()
+}
 
 @HiltViewModel
 class SplashViewModel @Inject constructor(
@@ -40,6 +48,10 @@ class SplashViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(SplashUiState())
     val uiState = _uiState.asStateFlow()
+
+    // 수집하는 곳은 MainActivity 한 곳만 둔다. 여러 곳에서 수집하면 이벤트를 나눠 가져간다.
+    private val _event = Channel<SplashEvent>(Channel.BUFFERED)
+    val event = _event.receiveAsFlow()
 
     init {
         observeDarkMode()
@@ -82,6 +94,10 @@ class SplashViewModel @Inject constructor(
                     when (result) {
                         is AutoLoginResult.LoggedIn -> startHome(result.uid, result.user.lastSelectedPotId)
                         AutoLoginResult.NotLoggedIn -> startSignIn()
+                        is AutoLoginResult.SessionExpired -> {
+                            _event.send(SplashEvent.ShowSessionExpired(result.reason))
+                            startSignIn()
+                        }
                     }
                 }
                 .onFailure {
