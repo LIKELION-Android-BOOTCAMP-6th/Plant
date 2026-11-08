@@ -195,7 +195,7 @@ fun HomeScreen(
         ) { paddingValues ->
             // 홈 본문 배치 (#376) — 자세한 규칙은 HomeBodyLayout 참고
             // 화면 높이(maxHeight)를 본문 최소 높이로 넘겨, 남는 공간 계산의 기준으로 쓴다
-            // 단, 최소 높이는 720dp까지만: 폰은 화면 전체를 쓰고, 태블릿은 카드가 과하게 커지지 않게 720dp 기준으로 계산한다
+            // 단, 최소 높이는 720dp까지만: 본문이 720dp 이하면 본문 전체를 기준으로 쓰고, 그보다 높으면(태블릿 등) 카드가 과하게 커지지 않게 720dp를 기준으로 계산한다
             // 본문은 위쪽 기준(TopCenter)으로 둬서 태블릿에서도 카드가 날짜 바로 아래에 오게 한다 (#566, 가운데 정렬이면 위쪽이 빔)
             // verticalScroll은 안전장치: 이미지를 최소로 줄여도 안 들어가는 극단적인 경우(큰 글꼴, 분할 화면 등 세로가 매우 짧을 때)에만 실제로 스크롤된다
             BoxWithConstraints(
@@ -1134,7 +1134,8 @@ private fun HomeBodyLayout(
         val targetHeight = constraints.minHeight
         val cardAvailable = targetHeight - itemBox.height - gap
         val cardMinHeight = cardMeasurable.minIntrinsicHeight(constraints.maxWidth)
-        // 카드 높이를 고정해서 준다: 공간이 남으면 카드가 늘어나고, 모자라면 최소 높이 그대로(바깥 스크롤)
+        // 카드 높이를 고정해서 준다: 공간이 남으면 카드가 늘어나고, 조금 모자라면 그 높이 안에서 이미지가 줄어들고,
+        // 최소 높이보다도 모자라면 최소 높이 그대로 둔다(바깥 스크롤)
         val cardHeight = maxOf(cardAvailable, cardMinHeight)
         val card = cardMeasurable.measure(
             childConstraints.copy(minHeight = cardHeight, maxHeight = cardHeight)
