@@ -303,12 +303,18 @@ fun StudyPlanDetailScreen(
                                     OutlinedTextField(
                                         value = editNameText,
                                         onValueChange = { input ->
-                                            // 글자가 줄어드는 입력은 항상 허용
-                                            // (제한 도입 전에 15자를 넘겨 저장된 이름도 지워서 줄일 수 있도록)
-                                            if (input.length <= maxLength || input.length < editNameText.length) {
-                                                editNameText = input
-                                            } else {
-                                                context.showToast("${maxLength}글자 이하로 입력해주세요.")
+                                            when {
+                                                // 붙여넣기로 줄바꿈이 새로 들어오면 반영하지 않음 (생성 화면과 같은 방식)
+                                                // singleLine은 키보드 엔터만 막고 붙여넣은 줄바꿈은 막지 않음.
+                                                // 개수가 늘어날 때만 막아, 이미 줄바꿈이 들어간 채 저장된 이름도 수정·삭제할 수 있게 함
+                                                input.count { it == '\n' } > editNameText.count { it == '\n' } -> Unit
+
+                                                // 글자가 줄어드는 입력은 허용 (위의 줄바꿈 검사는 먼저 적용)
+                                                // (제한 도입 전에 15자를 넘겨 저장된 이름도 지워서 줄일 수 있도록)
+                                                input.length <= maxLength || input.length < editNameText.length ->
+                                                    editNameText = input
+
+                                                else -> context.showToast("${maxLength}글자 이하로 입력해주세요.")
                                             }
                                         },
                                         textStyle = MaterialTheme.typography.titleMedium,
