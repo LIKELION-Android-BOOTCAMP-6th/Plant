@@ -182,7 +182,10 @@ fun HomeScreen(
                 HomeTopBar(
                     userName = userName,
                     isAttendanceCompleted = attendanceUiState.isAttendanceCompleted,
-                    onBugReportClick = { navController.navigate(Routes.BugReport) },
+                    // 화면 전환(페이드) 중 빠른 두 번 탭으로 버그 제보 화면이 두 번 쌓이지 않도록 launchSingleTop 사용
+                    onBugReportClick = {
+                        navController.navigate(Routes.BugReport) { launchSingleTop = true }
+                    },
                     onShopClick = viewModel::onShopClick,
                     onAttendanceClick = viewModel::openAttendanceDialog
                 )
