@@ -149,10 +149,12 @@ SplashViewModel.checkAuthLogin()
   endUserSession()   getSignInProvider()       notifySessionExpired()
   signOut()          → Google 재인증            → MainActivity 이벤트 수신
      │               (reauthenticateWithGoogle) → signOut()
-     ▼               → endUserSession()        → SignInScreen 이동
-  SignInScreen       → deleteUserData()        → 세션 만료 다이얼로그 표시
-                     → deleteAuthAccount()
-                     → SignInScreen
+     ▼               → refreshIdToken()        → SignInScreen 이동
+  SignInScreen       → endUserSession()        → 세션 만료 다이얼로그 표시
+                     → deleteAccount() 함수 호출
+                       (서버: 데이터 → 닉네임 → users → Auth 삭제, #457)
+                     → 성공: signOut() → SignInScreen
+                       실패: startUserSession() 복구 → 재시도 안내
 ```
 
 #### EnsureCurrentUser 가드

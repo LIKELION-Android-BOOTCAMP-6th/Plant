@@ -19,5 +19,4 @@ interface UserRemoteDataSource {
     suspend fun deleteNickname(nickname: String)
     suspend fun checkAttendance(uid: String): AttendanceDecision
     suspend fun updateSessionToken(uid: String, token: String?)
-    suspend fun deleteUserData(uid: String)
 }

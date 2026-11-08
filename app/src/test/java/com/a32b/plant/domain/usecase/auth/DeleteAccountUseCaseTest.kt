@@ -26,108 +26,114 @@ import org.junit.Test
 
 class DeleteAccountUseCaseTest {
     @Test
-    fun `failed cleanup keeps current user and a later invocation succeeds`() = runBlocking {
-        val user = testUser(token = "session-1")
-        val users = FakeUserRepository(user)
-        var sessionExpiredEvents = 0
-        val useCase = createUseCase(users, FakeAuthRepository("uid-1")) {
-            sessionExpiredEvents++
-        }
-
-        assertTrue(useCase() is Result.Failure)
-        assertEquals(0, sessionExpiredEvents)
-        assertTrue(users.startedSessions.isEmpty())
-        assertEquals(0, users.endUserSessionCalls)
-        assertEquals(user, users.currentUser.value)
-        assertEquals(listOf("begin", "deleteUserData", "end"), users.callOrder)
-
-        users.deleteUserDataResult = Result.Success(Unit)
-        users.deleteNicknameResult = Result.Success(Unit)
-
-        assertTrue(useCase() is Result.Success)
-        assertEquals(0, sessionExpiredEvents)
-        assertTrue(users.startedSessions.isEmpty())
-        assertEquals(1, users.endUserSessionCalls)
-        assertTrue(users.currentUser.value == null)
-        assertEquals(
-            listOf("begin", "deleteUserData", "end", "begin", "deleteUserData", "endUserSession", "deleteNickname", "end"),
-            users.callOrder
-        )
-    }
-
-    @Test
-    fun `nickname deletion failure does not restore deleted user session`() = runBlocking {
-        val users = FakeUserRepository(
-            testUser("session-1"),
-            deleteUserDataResult = Result.Success(Unit),
-            deleteNicknameResult = Result.Failure(AppError.Network())
-        )
-        val auth = FakeAuthRepository("uid-1")
-        var sessionExpiredEvents = 0
-        val useCase = createUseCase(users, auth) {
-            sessionExpiredEvents++
-        }
-
-        val result = useCase()
-
-        assertTrue(result is Result.Failure)
-        assertEquals(1, sessionExpiredEvents)
-        assertTrue(users.startedSessions.isEmpty())
-        assertTrue(users.currentUser.value == null)
-        assertEquals(0, auth.deleteAuthAccountCalls)
-        assertEquals(
-            listOf("begin", "deleteUserData", "endUserSession", "deleteNickname", "end"),
-            users.callOrder
-        )
-    }
-
-    @Test
-    fun `auth deletion failure does not restore deleted user document`() = runBlocking {
-        val users = FakeUserRepository(
-            testUser("session-1"),
-            deleteUserDataResult = Result.Success(Unit),
-            deleteNicknameResult = Result.Success(Unit)
-        )
+    fun `successful deletion ends session signs out and clears local settings`() = runBlocking {
+        val clock = CallClock()
+        val users = FakeUserRepository(testUser(), clock)
+        val auth = FakeAuthRepository(clock)
         val study = FakeStudyingRepository()
         var sessionExpiredEvents = 0
-        val useCase = createUseCase(
-            users,
-            FakeAuthRepository("uid-1", Result.Failure(AppError.Auth())),
-            study
-        ) {
-            sessionExpiredEvents++
-        }
+        val useCase = createUseCase(users, auth, study) { sessionExpiredEvents++ }
 
-        val result = useCase()
+        assertTrue(useCase() is Result.Success)
 
-        assertTrue(result is Result.Failure)
-        assertEquals(1, sessionExpiredEvents)
+        assertEquals(0, sessionExpiredEvents)
+        // 토큰 갱신 → 구독 해제 → 함수 호출 → 로컬 정리(구독 해제는 멱등) → 로그아웃 순서
+        assertEquals(
+            listOf("refreshIdToken", "endUserSession", "deleteAccount", "endUserSession", "signOut"),
+            clock.calls
+        )
         assertTrue(users.startedSessions.isEmpty())
-        assertEquals(1, users.endUserSessionCalls)
         assertTrue(users.currentUser.value == null)
-        assertTrue(users.darkModeUpdates.isEmpty())
-        assertEquals(0, study.clearLocalSessionCalls)
+        assertEquals(listOf(false), users.darkModeUpdates)
+        assertEquals(1, study.clearLocalSessionCalls)
     }
 
     @Test
-    fun `cancellation before document deletion preserves user and retry succeeds`() = runBlocking {
-        val user = testUser("session-1")
+    fun `function failure restores session keeps local settings and retry succeeds`() = runBlocking {
+        val clock = CallClock()
+        val user = testUser()
+        val users = FakeUserRepository(user, clock)
+        val auth = FakeAuthRepository(clock, deleteAccountResult = Result.Failure(AppError.Network()))
+        val study = FakeStudyingRepository()
         var sessionExpiredEvents = 0
-        var cancelFirstCall = true
-        val users = FakeUserRepository(
-            user,
-            deleteUserDataResult = Result.Success(Unit),
-            deleteNicknameResult = Result.Success(Unit),
-            onDeleteUserData = {
-                if (cancelFirstCall) {
-                    cancelFirstCall = false
-                    throw CancellationException("test cancellation")
-                }
-            }
+        val useCase = createUseCase(users, auth, study) { sessionExpiredEvents++ }
+
+        val failed = useCase()
+
+        assertEquals(Result.Failure(AppError.Network()), failed)
+        assertEquals(
+            listOf("refreshIdToken", "endUserSession", "deleteAccount", "startUserSession"),
+            clock.calls
         )
-        val useCase = createUseCase(users, FakeAuthRepository("uid-1", Result.Success(Unit))) {
-            sessionExpiredEvents++
-        }
+        assertEquals(listOf(user), users.startedSessions)
+        assertEquals(user, users.currentUser.value)
+        assertEquals(0, auth.signOutCalls)
+        assertTrue(users.darkModeUpdates.isEmpty())
+        assertEquals(0, study.clearLocalSessionCalls)
+        assertEquals(0, sessionExpiredEvents)
+
+        // 재시도: 서버가 남은 단계부터 이어서 처리해 성공
+        auth.deleteAccountResult = Result.Success(Unit)
+        assertTrue(useCase() is Result.Success)
+        assertEquals(2, auth.deleteAccountCalls)
+        assertEquals(1, auth.signOutCalls)
+        assertTrue(users.currentUser.value == null)
+    }
+
+    @Test
+    fun `stale reauthentication message from server is passed through`() = runBlocking {
+        val clock = CallClock()
+        val message = "보안을 위해 Google 계정을 다시 확인한 뒤 시도해주세요."
+        val users = FakeUserRepository(testUser(), clock)
+        val auth = FakeAuthRepository(clock, deleteAccountResult = Result.Failure(AppError.Custom(message)))
+        val useCase = createUseCase(users, auth)
+
+        val result = useCase()
+
+        assertEquals(Result.Failure(AppError.Custom(message)), result)
+        assertEquals(1, users.startedSessions.size)
+        assertEquals(0, auth.signOutCalls)
+    }
+
+    @Test
+    fun `token refresh failure does not end session or call function`() = runBlocking {
+        val clock = CallClock()
+        val user = testUser()
+        val users = FakeUserRepository(user, clock)
+        val auth = FakeAuthRepository(clock, refreshResult = Result.Failure(AppError.Network()))
+        val useCase = createUseCase(users, auth)
+
+        assertEquals(Result.Failure(AppError.Network()), useCase())
+
+        assertEquals(listOf("refreshIdToken"), clock.calls)
+        assertEquals(user, users.currentUser.value)
+    }
+
+    @Test
+    fun `already deleted auth account is treated as completed deletion`() = runBlocking {
+        val clock = CallClock()
+        val users = FakeUserRepository(testUser(), clock)
+        val auth = FakeAuthRepository(clock, refreshResult = Result.Failure(AppError.AccountNotFound()))
+        val study = FakeStudyingRepository()
+        var sessionExpiredEvents = 0
+        val useCase = createUseCase(users, auth, study) { sessionExpiredEvents++ }
+
+        assertTrue(useCase() is Result.Success)
+
+        assertEquals(listOf("refreshIdToken", "endUserSession", "signOut"), clock.calls)
+        assertTrue(users.currentUser.value == null)
+        assertEquals(listOf(false), users.darkModeUpdates)
+        assertEquals(1, study.clearLocalSessionCalls)
+        assertEquals(0, sessionExpiredEvents)
+    }
+
+    @Test
+    fun `cancellation during function call restores session`() = runBlocking {
+        val clock = CallClock()
+        val user = testUser()
+        val users = FakeUserRepository(user, clock)
+        val auth = FakeAuthRepository(clock, onDeleteAccount = { throw CancellationException("test cancellation") })
+        val useCase = createUseCase(users, auth)
 
         val cancelled = try {
             useCase()
@@ -137,44 +143,24 @@ class DeleteAccountUseCaseTest {
         }
 
         assertTrue(cancelled)
-        assertEquals(0, sessionExpiredEvents)
-        assertEquals(1, users.endDeletionCalls)
-        assertTrue(users.startedSessions.isEmpty())
-        assertEquals(0, users.endUserSessionCalls)
+        assertEquals(listOf(user), users.startedSessions)
         assertEquals(user, users.currentUser.value)
-
-        assertTrue(useCase() is Result.Success)
-        assertEquals(0, sessionExpiredEvents)
-        assertEquals(2, users.endDeletionCalls)
-        assertTrue(users.startedSessions.isEmpty())
-        assertEquals(1, users.endUserSessionCalls)
-        assertTrue(users.currentUser.value == null)
+        assertEquals(0, auth.signOutCalls)
     }
 
     @Test
-    fun `successful deletion ends session and clears local settings`() = runBlocking {
-        val users = FakeUserRepository(
-            testUser("session-1"),
-            deleteUserDataResult = Result.Success(Unit),
-            deleteNicknameResult = Result.Success(Unit)
-        )
-        val study = FakeStudyingRepository()
+    fun `missing current user notifies session expired without calling function`() = runBlocking {
+        val clock = CallClock()
+        val users = FakeUserRepository(null, clock)
+        val auth = FakeAuthRepository(clock)
         var sessionExpiredEvents = 0
-        val useCase = createUseCase(
-            users,
-            FakeAuthRepository("uid-1", Result.Success(Unit)),
-            study
-        ) {
-            sessionExpiredEvents++
-        }
+        val useCase = createUseCase(users, auth) { sessionExpiredEvents++ }
 
-        assertTrue(useCase() is Result.Success)
+        val result = useCase()
 
-        assertEquals(0, sessionExpiredEvents)
-        assertEquals(1, users.endUserSessionCalls)
-        assertEquals(listOf(false), users.darkModeUpdates)
-        assertEquals(1, study.clearLocalSessionCalls)
-        assertTrue(users.currentUser.value == null)
+        assertEquals(Result.Failure(AppError.UnknownUser()), result)
+        assertEquals(1, sessionExpiredEvents)
+        assertTrue(clock.calls.isEmpty())
     }
 
     private fun createUseCase(
@@ -194,40 +180,34 @@ class DeleteAccountUseCaseTest {
         )
     )
 
-    private fun testUser(token: String) = User.create().copy(
+    private fun testUser() = User.create().copy(
         uid = "uid-1",
         nickname = "test-user",
-        activeSessionToken = token
+        activeSessionToken = "session-1"
     )
+
+    /** 두 저장소의 호출을 일어난 순서대로 기록한다. */
+    private class CallClock {
+        val calls = mutableListOf<String>()
+    }
 
     private class FakeUserRepository(
         initialUser: User?,
-        var deleteUserDataResult: Result<Unit> = Result.Failure(AppError.Network()),
-        var deleteNicknameResult: Result<Unit> = Result.Failure(AppError.Network()),
-        private val onDeleteUserData: suspend FakeUserRepository.() -> Unit = {}
+        private val clock: CallClock
     ) : UserRepository {
         override val currentUser = MutableStateFlow(initialUser)
-        val callOrder = mutableListOf<String>()
         val startedSessions = mutableListOf<User>()
         val darkModeUpdates = mutableListOf<Boolean>()
-        var endDeletionCalls = 0
-        var endUserSessionCalls = 0
 
         override fun observeDarkMode(): Flow<Boolean> = emptyFlow()
         override fun startUserSession(user: User) {
-            callOrder += "startUserSession"
+            clock.calls += "startUserSession"
             startedSessions += user
             currentUser.value = user
         }
         override fun endUserSession() {
-            callOrder += "endUserSession"
-            endUserSessionCalls++
+            clock.calls += "endUserSession"
             currentUser.value = null
-        }
-        override fun beginAccountDeletion(uid: String) { callOrder += "begin" }
-        override fun endAccountDeletion() {
-            callOrder += "end"
-            endDeletionCalls++
         }
         override suspend fun updateLastSelectedPot(uid: String, potId: String) = Unit
         override suspend fun getUser(uid: String): Result<User?> = TODO()
@@ -241,36 +221,40 @@ class DeleteAccountUseCaseTest {
         override suspend fun updateProfile(user: User): Result<Unit> = TODO()
         override suspend fun isNicknameTaken(nickname: String): Result<Boolean> = TODO()
         override suspend fun registerNickname(uid: String, nickname: String): Result<Unit> = TODO()
-        override suspend fun deleteNickname(nickname: String): Result<Unit> {
-            callOrder += "deleteNickname"
-            return deleteNicknameResult
-        }
+        override suspend fun deleteNickname(nickname: String): Result<Unit> = TODO()
         override suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success> = TODO()
         override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> = TODO()
-        override suspend fun deleteUserData(uid: String): Result<Unit> {
-            callOrder += "deleteUserData"
-            onDeleteUserData()
-            return deleteUserDataResult
-        }
     }
 
     private class FakeAuthRepository(
-        private val uid: String?,
-        private val deleteAuthResult: Result<Unit> = Result.Success(Unit)
+        private val clock: CallClock,
+        private val refreshResult: Result<Unit> = Result.Success(Unit),
+        var deleteAccountResult: Result<Unit> = Result.Success(Unit),
+        private val onDeleteAccount: suspend () -> Unit = {}
     ) : AuthRepository {
-        var deleteAuthAccountCalls = 0
+        var deleteAccountCalls = 0
+        var signOutCalls = 0
 
-        override fun currentUid(): String? = uid
+        override fun currentUid(): String? = "uid-1"
         override fun currentEmail(): String? = null
-        override fun hasSession(): Boolean = uid != null
+        override fun hasSession(): Boolean = true
         override fun getSignInProvider(): String? = "google.com"
         override suspend fun signInWithGoogle(idToken: String): Result<String> = TODO()
         override suspend fun reauthenticateWithGoogle(idToken: String): Result<Unit> = TODO()
-        override suspend fun deleteAuthAccount(): Result<Unit> {
-            deleteAuthAccountCalls++
-            return deleteAuthResult
+        override suspend fun refreshIdToken(): Result<Unit> {
+            clock.calls += "refreshIdToken"
+            return refreshResult
         }
-        override fun signOut() = Unit
+        override suspend fun deleteAccount(): Result<Unit> {
+            clock.calls += "deleteAccount"
+            deleteAccountCalls++
+            onDeleteAccount()
+            return deleteAccountResult
+        }
+        override fun signOut() {
+            clock.calls += "signOut"
+            signOutCalls++
+        }
     }
 
     private class FakeStudyingRepository : StudyingRepository {
