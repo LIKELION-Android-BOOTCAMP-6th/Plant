@@ -82,7 +82,7 @@ class UserRepositoryImpl @Inject constructor(
         // 곧바로 읽어도 null로 오인해 로그인 에러 처리하지 않도록 한다.
         _currentUser.value = user
         localSessionToken = user.activeSessionToken
-        // 저장 중이던 토큰은 위에서 이 세션의 토큰(저장 실패 시 null)으로 넘어갔으므로 비운다.
+        // 새 세션이 시작되면 저장 중이던 토큰 표시는 필요 없으므로 비운다 (자동 로그인·로그인에서는 위에서 이 세션의 토큰으로 넘어감)
         pendingSessionToken = null
 
         sessionJob?.cancel()
