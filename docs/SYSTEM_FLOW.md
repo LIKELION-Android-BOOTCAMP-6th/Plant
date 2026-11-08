@@ -155,6 +155,8 @@ SplashViewModel.checkAuthLogin()
                        (서버: 데이터 → 닉네임 → users → Auth 삭제, #457)
                      → 성공: signOut() → SignInScreen
                        실패: startUserSession() 복구 → 재시도 안내
+                         (서버가 users까지 지운 뒤 실패·응답 유실 시
+                          → 구독이 문서 없음을 감지 → 세션 만료 흐름 → SignInScreen)
 ```
 
 #### EnsureCurrentUser 가드
