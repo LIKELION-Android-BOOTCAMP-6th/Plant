@@ -227,8 +227,7 @@ class UpdateProfileUseCaseTest {
         override fun observeDarkMode(): Flow<Boolean> = emptyFlow()
         override fun startUserSession(user: User) = TODO()
         override fun endUserSession() = TODO()
-        override fun beginAccountDeletion(uid: String) = TODO()
-        override fun endAccountDeletion() = TODO()
+        override fun takeExpiredSessionReason(): SessionExpiredReason? = TODO()
         override suspend fun updateLastSelectedPot(uid: String, potId: String) = TODO()
         override suspend fun getUser(uid: String): Result<User?> = TODO()
         override suspend fun getUserPreferringServer(uid: String): Result<UserSnapshot> = TODO()
@@ -242,6 +241,5 @@ class UpdateProfileUseCaseTest {
         override suspend fun deleteNickname(nickname: String): Result<Unit> = TODO()
         override suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success> = TODO()
         override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> = TODO()
-        override suspend fun deleteUserData(uid: String): Result<Unit> = TODO()
     }
 }

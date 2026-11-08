@@ -45,10 +45,53 @@ firebase emulators:start
 ## 스크립트 실행 후 자동 종료 (테스트용)
 
 ```bash
-firebase emulators:exec --only auth,firestore,functions "npm --prefix functions test"
+firebase emulators:exec --only firestore,functions --project demo-plant "node 실행할스크립트.js"
 ```
 
-에뮬레이터를 켜고 → 명령을 실행하고 → 끝나면 에뮬레이터를 끈다. 규칙 테스트·CI에서 사용.
+에뮬레이터를 켜고 → 따옴표 안의 명령을 실행하고 → 끝나면 에뮬레이터를 끈다. 명령이 0이 아닌 코드로 끝나면 `emulators:exec`도 실패로 끝난다.
+
+- `--project demo-plant`를 꼭 붙인다. 빼면 `.firebaserc`의 운영 프로젝트 ID로 실행되어, 에뮬레이터로 켜지 않은 서비스 호출이 실서버로 갈 수 있다
+- `--only`에는 스크립트가 쓰는 에뮬레이터만 넣는다 (예: 함수 트리거 확인은 `firestore,functions`)
+- 규칙 테스트(`npm --prefix rules-test test`)도 내부적으로 이 명령을 쓴다 (`rules-test/package.json`의 `test` 스크립트)
+- `functions/`에는 테스트 스크립트·테스트 도구가 없다. `firebase-functions-test`가 `firebase-admin` 14를 지원하지 않아 제거함 (#554). 함수 동작은 이 명령으로 에뮬레이터를 켜고 Admin SDK로 문서를 쓰고 읽는 스크립트로 확인한다
+
+### 함수 확인 스크립트 작성 시 주의
+
+- ⚠️ 스크립트는 **`functions/` 밖**(개인 임시 폴더 등)에 둔다
+  - `functions/` 안에 두면 배포 전 lint(`eslint .`)가 그 파일도 검사해, 오류가 있으면 배포가 멈춘다
+  - `firebase.json`의 배포 제외 목록에 없으므로 함수와 함께 서버에 올라간다
+- `functions/` 밖에서는 `require("firebase-admin/app")`가 바로 되지 않는다 (가까운 `node_modules`가 없음). 경로를 직접 적어 `require(".../node_modules/firebase-admin/app")`로 불러와도 패키지의 `exports` 규칙 때문에 실패한다
+  → 아래처럼 `createRequire`로 `functions/`에서 불러온다. 인자는 폴더가 아니라 **`functions/` 안의 파일 경로**(`functions/index.js`)를 준다
+- 프로젝트 루트에서 실행한다 (스크립트 안의 `functions/index.js` 경로가 현재 폴더 기준)
+
+```js
+// 예: 댓글 1개를 만들고 트리거가 commentCount를 1로 맞추는지 확인
+const path = require("path");
+const {createRequire} = require("module");
+
+const requireFromFunctions = createRequire(path.resolve("functions/index.js"));
+const {initializeApp} = requireFromFunctions("firebase-admin/app");
+const {getFirestore} = requireFromFunctions("firebase-admin/firestore");
+
+initializeApp({projectId: "demo-plant"});
+const db = getFirestore();
+
+(async () => {
+  const post = db.collection("posts").doc("check-post");
+  await post.set({title: "확인용", commentCount: 0});
+  await post.collection("comments").doc("c1").set({content: "a"});
+
+  // 트리거는 바로 반영되지 않으므로 최대 20초 동안 1초마다 확인
+  let count;
+  for (let i = 0; i < 20; i++) {
+    count = (await post.get()).get("commentCount");
+    if (count === 1) break;
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  console.log("commentCount:", count);
+  process.exit(count === 1 ? 0 : 1); // 0이 아니면 emulators:exec도 실패
+})();
+```
 
 ## 보안 규칙 테스트 (`rules-test/`)
 

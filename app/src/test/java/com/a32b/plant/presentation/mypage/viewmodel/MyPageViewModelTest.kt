@@ -20,6 +20,7 @@ import com.a32b.plant.domain.usecase.mypage.ObserveDarkModeUseCase
 import com.a32b.plant.domain.usecase.mypage.UpdateProfileUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import com.a32b.plant.domain.util.NicknameRule
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
@@ -38,6 +39,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Date
 
@@ -155,6 +157,37 @@ class MyPageViewModelTest {
         }
     }
 
+    @Test
+    fun `reset nickname error clears late input error left after dialog was closed`() = runTest {
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        try {
+            Dispatchers.setMain(dispatcher)
+            val gate = CompletableDeferred<Unit>()
+            val users = FakeUserRepository(
+                testUser(),
+                updateProfileResult = Result.Failure(AppError.NicknameTaken()),
+                updateProfileGate = gate
+            )
+            val viewModel = createViewModel(users)
+
+            viewModel.updateProfile("new-nick", "1")
+            runCurrent()
+            assertTrue(viewModel.uiState.value.isLoading)
+
+            viewModel.clearProfileState()
+
+            gate.complete(Unit)
+            runCurrent()
+            assertEquals(AppError.NicknameTaken().message, viewModel.uiState.value.nicknameError)
+            assertFalse(viewModel.uiState.value.isLoading)
+
+            viewModel.resetNicknameError()
+            assertNull(viewModel.uiState.value.nicknameError)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     private fun createViewModel(users: FakeUserRepository): MyPageViewModel {
         val notifier = NoopSessionExpiredNotifier
         return MyPageViewModel(
@@ -189,7 +222,8 @@ class MyPageViewModelTest {
 
     private class FakeUserRepository(
         initialUser: User?,
-        private val updateProfileResult: Result<Unit> = Result.Success(Unit)
+        private val updateProfileResult: Result<Unit> = Result.Success(Unit),
+        private val updateProfileGate: CompletableDeferred<Unit>? = null
     ) : UserRepository {
         override val currentUser = MutableStateFlow(initialUser)
 
@@ -197,19 +231,20 @@ class MyPageViewModelTest {
         override fun observeDarkMode(): Flow<Boolean> = flow { awaitCancellation() }
         override fun startUserSession(user: User): Unit = error("Unused")
         override fun endUserSession(): Unit = error("Unused")
-        override fun beginAccountDeletion(uid: String): Unit = error("Unused")
-        override fun endAccountDeletion(): Unit = error("Unused")
+        override fun takeExpiredSessionReason(): SessionExpiredReason? = error("Unused")
         override suspend fun updateLastSelectedPot(uid: String, potId: String): Unit = error("Unused")
         override suspend fun getUser(uid: String): Result<User?> = error("Unused")
         override suspend fun getUserPreferringServer(uid: String): Result<UserSnapshot> = error("Unused")
         override suspend fun createUser(uid: String): Result<User> = error("Unused")
         override suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit> = error("Unused")
         override suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit> = error("Unused")
-        override suspend fun updateProfile(user: User): Result<Unit> = updateProfileResult
+        override suspend fun updateProfile(user: User): Result<Unit> {
+            updateProfileGate?.await()
+            return updateProfileResult
+        }
         override suspend fun deleteNickname(nickname: String): Result<Unit> = error("Unused")
         override suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success> = error("Unused")
         override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> = error("Unused")
-        override suspend fun deleteUserData(uid: String): Result<Unit> = error("Unused")
     }
 
     private class FakeAuthRepository : AuthRepository {
@@ -219,7 +254,8 @@ class MyPageViewModelTest {
         override fun getSignInProvider(): String? = error("Unused")
         override suspend fun signInWithGoogle(idToken: String): Result<String> = error("Unused")
         override suspend fun reauthenticateWithGoogle(idToken: String): Result<Unit> = error("Unused")
-        override suspend fun deleteAuthAccount(): Result<Unit> = error("Unused")
+        override suspend fun refreshIdToken(): Result<Unit> = error("Unused")
+        override suspend fun deleteAccount(): Result<Unit> = error("Unused")
         override fun signOut(): Unit = error("Unused")
     }
 

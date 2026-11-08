@@ -135,13 +135,23 @@ describe("users", () => {
       await assertSucceeds(setDoc(doc(asBob(), "users", BOB), {nickname: "밥"}));
     });
 
-    it("문서를 지운 뒤 다른 사람 닉네임으로 다시 만들 수 없다", async () => {
+    it("문서가 없을 때 다른 사람 닉네임으로 만들 수 없다", async () => {
       await seed(testEnv, async (db) => {
         await setDoc(doc(db, "nicknames", "밥"), {nickname: "밥", uid: BOB});
+        await deleteDoc(doc(db, "users", ALICE));
       });
-      await assertSucceeds(deleteDoc(doc(asAlice(), "users", ALICE)));
       await assertFails(setDoc(doc(asAlice(), "users", ALICE), {nickname: "밥"}));
     });
+  });
+
+  // 회원탈퇴는 deleteAccount 함수(Admin SDK)가 처리하므로 앱에서 users 문서를 지울 수 없다 (#457)
+  it("본인 문서도 삭제할 수 없다", async () => {
+    await assertFails(deleteDoc(doc(asAlice(), "users", ALICE)));
+  });
+
+  it("본인 화분·기록은 삭제할 수 있다 (화분 삭제·기록 삭제는 앱에서 처리)", async () => {
+    await assertSucceeds(deleteDoc(doc(asAlice(), "users", ALICE, "pots", "pot1", "logs", "log1")));
+    await assertSucceeds(deleteDoc(doc(asAlice(), "users", ALICE, "pots", "pot1")));
   });
 
   it("다른 사람 문서는 읽을 수도 쓸 수도 없다", async () => {

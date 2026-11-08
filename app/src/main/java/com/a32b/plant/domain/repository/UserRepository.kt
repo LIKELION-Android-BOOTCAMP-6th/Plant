@@ -4,6 +4,7 @@ import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.User
 import com.a32b.plant.domain.model.UserSnapshot
 import com.a32b.plant.domain.result.Result
+import com.a32b.plant.domain.session.SessionExpiredReason
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -20,11 +21,12 @@ interface UserRepository {
     /** 로그인 세션을 종료한다. 구독을 해제하고 currentUser를 비운다. */
     fun endUserSession()
 
-    /** 회원탈퇴 중에는 users/{uid} 삭제를 세션 만료로 처리하지 않도록 표시한다. */
-    fun beginAccountDeletion(uid: String)
-
-    /** 회원탈퇴 중 표시를 해제한다. */
-    fun endAccountDeletion()
+    /**
+     * 세션 구독이 만료(중복 로그인, 유저 문서 삭제)를 감지했지만 아직 endUserSession으로 처리되지 않았다면
+     * 그 사유를 돌려주고 비운다. 없으면 null. startUserSession으로 새 세션이 시작돼도 비워진다.
+     * Activity만 종료되고 프로세스가 살아 있는 동안 감지된 만료를 다음 자동 로그인이 이어받는 데 쓴다 (#509).
+     */
+    fun takeExpiredSessionReason(): SessionExpiredReason?
 
     suspend fun updateLastSelectedPot(uid: String, potId: String)
 
@@ -59,6 +61,5 @@ interface UserRepository {
      * 서버 응답을 확인한 뒤에 호출할 것.
      */
     suspend fun updateSessionToken(uid: String, token: String?): Result<Unit>
-    suspend fun deleteUserData(uid: String): Result<Unit>
 
 }

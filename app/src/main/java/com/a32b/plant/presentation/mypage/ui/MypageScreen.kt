@@ -147,6 +147,7 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                 modifier = Modifier.padding(top = innerPadding.calculateTopPadding()),
                 uiState = uiState,
                 onProfileClick = {
+                    viewModel.resetNicknameError()
                     viewModel.getImageLevelList()
                     showProfileDialog = true
                 },
