@@ -26,6 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -48,6 +49,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -180,6 +182,7 @@ fun HomeScreen(
                 HomeTopBar(
                     userName = userName,
                     isAttendanceCompleted = attendanceUiState.isAttendanceCompleted,
+                    onBugReportClick = { navController.navigate(Routes.BugReport) },
                     onShopClick = viewModel::onShopClick,
                     onAttendanceClick = viewModel::openAttendanceDialog
                 )
@@ -491,6 +494,7 @@ private fun NewPotSlot(onClick: () -> Unit) {
 fun HomeTopBar(
     userName: String,
     isAttendanceCompleted: Boolean,
+    onBugReportClick: () -> Unit,
     onShopClick: () -> Unit,
     onAttendanceClick: () -> Unit
 ) {
@@ -543,6 +547,28 @@ fun HomeTopBar(
                     color = MaterialTheme.colorScheme.primary,
                     maxLines = 1,
                     softWrap = false
+                )
+            }
+            // 비공개 테스트 기간 버그 제보 바로가기 (#349) — 마이페이지 '버그 제보'와 같은 화면으로 이동
+            // 상점 아이콘은 35dp 칸 중 실제 그림이 위아래 약 23dp라, 두 줄 글자 높이(약 22~23dp)를 그 그림에 맞춤
+            // 터치 영역은 IconButton과 같은 48dp를 보장
+            Box(
+                modifier = Modifier
+                    .minimumInteractiveComponentSize()
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(role = Role.Button, onClick = onBugReportClick)
+                    .padding(horizontal = 4.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "버그\n제보",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 11.sp,
+                        lineHeight = 13.sp
+                    ),
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2
                 )
             }
             IconButton(onClick = onShopClick) {
