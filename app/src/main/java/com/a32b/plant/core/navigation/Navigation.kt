@@ -36,10 +36,12 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
     destination?.let { startRoute ->
         NavHost(navController = navController,
             startDestination = startRoute,
-            // 뒤로가기 제스처(Predictive Back)는 손가락 위치만큼 전환을 진행시키므로,
-            // 제스처 방향(왼쪽 → 오른쪽)과 같은 가로 slide로 통일해 버튼·하단바·제스처 복귀가 같은 전환으로 보이게 한다 (#389)
+            // 뒤로가기 제스처(Predictive Back)는 끈 거리만큼 pop 전환을 진행시키므로,
+            // 왼쪽 가장자리 제스처 방향(왼쪽 → 오른쪽)과 같은 가로 slide로 통일해 버튼·하단바·제스처 복귀가 같은 전환으로 보이게 한다 (#389)
             // - 이동: 새 화면이 오른쪽에서 들어오고 이전 화면은 왼쪽으로 나감
-            // - 복귀(popBackStack, 제스처, 하단바 홈 탭처럼 popUpTo로 위 화면을 지우는 이동): 반대 방향
+            // - 복귀: 반대 방향. popBackStack, 뒤로가기 제스처, 하단바 홈 탭처럼 popUpTo + launchSingleTop으로 이미 있는 화면으로 돌아가는 이동
+            //   (popUpTo 뒤에 다른 화면으로 navigate하면 이동 전환이 된다. 예: 공부 화면의 popUpTo(0) 후 홈 이동)
+            // - 한계: NavHost는 제스처를 시작한 가장자리를 전환에 넘기지 않아, 오른쪽 가장자리 제스처에서도 화면이 오른쪽으로 밀린다 (손가락과 반대 방향)
             enterTransition = { slideIntoContainer(SlideDirection.Start, tween(NAV_TRANSITION_DURATION_MS)) },
             exitTransition = { slideOutOfContainer(SlideDirection.Start, tween(NAV_TRANSITION_DURATION_MS)) },
             popEnterTransition = { slideIntoContainer(SlideDirection.End, tween(NAV_TRANSITION_DURATION_MS)) },
