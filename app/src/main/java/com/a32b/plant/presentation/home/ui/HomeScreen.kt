@@ -182,7 +182,8 @@ fun HomeScreen(
                 HomeTopBar(
                     userName = userName,
                     isAttendanceCompleted = attendanceUiState.isAttendanceCompleted,
-                    // 화면 전환(페이드) 중 빠른 두 번 탭으로 버그 제보 화면이 두 번 쌓이지 않도록 launchSingleTop 사용
+                    // 중복 이동 방지용 안전장치: 맨 위가 이미 버그 제보 화면이면 새로 쌓지 않음
+                    // (실기기 연타로는 두 번 쌓이는 현상이 재현되지 않았음)
                     onBugReportClick = {
                         navController.navigate(Routes.BugReport) { launchSingleTop = true }
                     },
