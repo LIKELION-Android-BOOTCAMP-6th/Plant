@@ -7,17 +7,31 @@ import com.a32b.plant.domain.model.AutoLoginResult
 import com.a32b.plant.domain.repository.AuthRepository
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
+import com.a32b.plant.domain.session.SessionExpiredReason
 import javax.inject.Inject
 
 class CheckAutoLoginUseCase @Inject constructor(
     private val authRepository: AuthRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val signOutUseCase: SignOutUseCase
 ) {
     suspend operator fun invoke(): Result<AutoLoginResult> {
+        // 앱 화면이 없는 동안(Activity만 종료되고 프로세스는 살아 있음) 이전 세션이 만료를 감지했다면
+        // 먼저 감지한 쪽을 우선해 로그아웃한다. 새 토큰을 쓰면 그사이 로그인한 다른 기기가 로그아웃되기 때문 (#509)
+        takeExpiredSession()?.let { return Result.Success(it) }
+
         val uid = authRepository.currentUid()
             ?: return Result.Success(AutoLoginResult.NotLoggedIn)
 
         val getUserResult = userRepository.getUserPreferringServer(uid)
+
+        // 유저 조회(서버 대기 제한 2초) 동안에도 이전 리스너는 살아 있으므로, 그사이 감지된 만료가 있는지 한 번 더 확인한다.
+        // 조회 실패 반환, 유저 문서 없음 처리, 토큰 저장보다 먼저 확인해야 다른 기기를 로그아웃시키거나 안내를 빠뜨리지 않는다.
+        // 이 확인 뒤 토큰 저장이 끝날 때까지(대기 제한 1.5초) 감지되는 경우는 막지 못한다.
+        // 토큰을 쓰는 분기라면 홈으로 들어간 뒤 남아 있던 이벤트로 로그아웃된다.
+        // 유저 문서가 없는 분기는 그대로 로그인 화면으로 가고, 안내는 다음 자동 로그인 때 뜬다.
+        takeExpiredSession()?.let { return Result.Success(it) }
+
         if (getUserResult is Result.Failure) return getUserResult
         val snapshot = (getUserResult as Result.Success).data
         val user = snapshot.user
@@ -47,5 +61,12 @@ class CheckAutoLoginUseCase @Inject constructor(
         CurrentUser.set(UserModel(uid, user.nickname, user.profileImg))
 
         return Result.Success(AutoLoginResult.LoggedIn(uid, user))
+    }
+
+    /** 남아 있는 세션 만료 사유가 있으면 로그아웃하고 결과를 돌려준다. 없으면 null */
+    private fun takeExpiredSession(): AutoLoginResult.SessionExpired? {
+        val reason: SessionExpiredReason = userRepository.takeExpiredSessionReason() ?: return null
+        signOutUseCase()
+        return AutoLoginResult.SessionExpired(reason)
     }
 }

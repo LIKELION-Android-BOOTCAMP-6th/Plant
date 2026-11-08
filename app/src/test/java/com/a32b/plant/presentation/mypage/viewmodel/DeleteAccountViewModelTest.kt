@@ -141,6 +141,7 @@ class DeleteAccountViewModelTest {
         override fun endUserSession() {
             currentUser.value = null
         }
+        override fun takeExpiredSessionReason(): SessionExpiredReason? = error("Not used")
         override suspend fun updateLastSelectedPot(uid: String, potId: String) = error("Not used")
         override suspend fun getUser(uid: String): Result<User?> = error("Not used")
         override suspend fun getUserPreferringServer(uid: String): Result<UserSnapshot> = error("Not used")
