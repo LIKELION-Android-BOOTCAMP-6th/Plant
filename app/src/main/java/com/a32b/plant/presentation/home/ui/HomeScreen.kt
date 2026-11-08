@@ -189,7 +189,7 @@ fun HomeScreen(
             // 홈 본문 배치 (#376) — 자세한 규칙은 HomeBodyLayout 참고
             // 화면 높이(maxHeight)를 본문 최소 높이로 넘겨, 남는 공간 계산의 기준으로 쓴다
             // 단, 최소 높이는 720dp까지만: 폰은 화면 전체를 쓰고, 태블릿은 720dp 영역을 화면 가운데에 둬서 위쪽이 과하게 비지 않게 한다
-            // verticalScroll은 안전장치: 이미지를 최소로 줄여도 안 들어가는 극단적인 경우(큰 글꼴, 분할 화면)에만 실제로 스크롤된다
+            // verticalScroll은 안전장치: 이미지를 최소로 줄여도 안 들어가는 극단적인 경우(큰 글꼴, 분할 화면 등 세로가 매우 짧을 때)에만 실제로 스크롤된다
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
@@ -197,7 +197,7 @@ fun HomeScreen(
                     .background(MaterialTheme.colorScheme.background),
                 contentAlignment = Alignment.Center
             ) {
-                // 본문 높이가 560dp 미만이면(세로가 짧은 소형 폰) 간격 모드로 여백을 줄여 한 화면에 담는다
+                // 본문 높이가 560dp 미만이면(세로가 짧은 소형 폰, 또는 큰 글꼴로 상단바·하단 탭바가 커져 본문이 줄어든 경우) 간격 모드로 여백을 줄여 한 화면에 담는다
                 // 360x760dp급은 간격 모드 없이도 다 들어가는 것을 확인함
                 val compact = maxHeight < 560.dp
                 HomeBodyLayout(
