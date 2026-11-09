@@ -93,30 +93,21 @@ class SignInViewModel @Inject constructor(
     fun confirmNickname() {
         if (_uiState.value.isNicknameLoading) return
 
-        val nickname = NicknameRule.normalize(_uiState.value.nicknameInput)
+        val nickname = _uiState.value.nicknameInput
 
-        if (!NicknameRule.isValidLength(nickname)) {
-            _uiState.update { it.copy(nicknameError = NicknameRule.LENGTH_MESSAGE) }
-            return
-        }
-
-        if (!NicknameRule.isUsable(nickname)) {
-            _uiState.update { it.copy(nicknameError = NicknameRule.UNUSABLE_MESSAGE) }
-            return
-        }
-
+        // 형식 검사는 UseCase가 하므로, 연타 가드는 코루틴 시작 전에 동기적으로 건다
         _uiState.update { it.copy(isNicknameLoading = true, nicknameError = null) }
 
         viewModelScope.launch {
             setNicknameUseCase(loggedInUid, nickname)
-                .onSuccess {
+                .onSuccess { savedNickname ->
                     _uiState.update { it.copy(showNicknameDialog = false, isNicknameLoading = false) }
-                    sendToast("${nickname}님 환영합니다.")
+                    sendToast("${savedNickname}님 환영합니다.")
                     _eventChannel.send(SignInEvent.NavigateToHome)
                 }
                 .onFailure { error ->
-                    // 닉네임 값 자체의 문제(중복)만 입력칸 인라인 에러, 네트워크·저장 실패 등 상황 에러는 토스트
-                    val isInputError = error is AppError.NicknameTaken
+                    // 닉네임 값 자체의 문제(형식 오류·중복)만 입력칸 인라인 에러, 네트워크·저장 실패 등 상황 에러는 토스트
+                    val isInputError = error is AppError.NicknameInvalid || error is AppError.NicknameTaken
                     _uiState.update {
                         it.copy(
                             nicknameError = if (isInputError) error.message else null,

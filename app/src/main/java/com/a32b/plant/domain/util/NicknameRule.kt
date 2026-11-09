@@ -45,6 +45,18 @@ object NicknameRule {
     fun normalize(input: String): String = Normalizer.normalize(input.trim(), Normalizer.Form.NFC)
 
     /**
+     * 닉네임 형식을 검사하고, 통과하지 못하면 입력칸에 보여줄 메시지를, 통과하면 null을 돌려준다.
+     * 로그인(닉네임 설정)과 마이페이지(프로필 편집) UseCase가 함께 쓴다.
+     * - [normalize]한 값을 넘긴다 (정규화하지 않은 값은 [isUsable]에서 걸려 [UNUSABLE_MESSAGE]가 된다)
+     * - 길이를 먼저 검사한다. 길이와 사용 가능 여부가 함께 걸리면 [LENGTH_MESSAGE]
+     */
+    fun validate(nickname: String): String? = when {
+        !isValidLength(nickname) -> LENGTH_MESSAGE
+        !isUsable(nickname) -> UNUSABLE_MESSAGE
+        else -> null
+    }
+
+    /**
      * 사용할 수 있는 닉네임인지 확인한다.
      * - [normalize]를 거치지 않은 값 (호출하는 쪽에서 정규화를 빠뜨려도 걸러지도록 여기서도 확인)
      * - Firestore 문서 ID로 쓸 수 없는 값

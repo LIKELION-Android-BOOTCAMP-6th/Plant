@@ -2,6 +2,7 @@ package com.a32b.plant.domain.util
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -104,6 +105,36 @@ class NicknameRuleTest {
     @Test
     fun `normalized decomposed hangul becomes usable`() {
         assertTrue(NicknameRule.isUsable(NicknameRule.normalize("새싹")))
+    }
+
+    @Test
+    fun `validate returns length message for too short or too long nickname`() {
+        listOf("a", "가나다라마바사아자차카", "").forEach { nickname ->
+            assertEquals(NicknameRule.LENGTH_MESSAGE, NicknameRule.validate(nickname))
+        }
+    }
+
+    @Test
+    fun `validate returns unusable message for unusable nickname`() {
+        // 길이는 맞지만 문서 ID로 쓸 수 없거나(`/`, `__xx__`), 보이지 않는 문자(U+200B)가 섞인 값
+        listOf("새/싹", "__ab__", "새​싹").forEach { nickname ->
+            assertEquals(NicknameRule.UNUSABLE_MESSAGE, NicknameRule.validate(nickname))
+        }
+    }
+
+    @Test
+    fun `validate returns null for valid nickname`() {
+        allowed.forEach { nickname ->
+            assertNull("통과해야 함: ${nickname.codePointsHex()}", NicknameRule.validate(nickname))
+        }
+    }
+
+    @Test
+    fun `validate checks length before usability`() {
+        // "/"는 사용할 수 없는 값이면서 1글자라 길이에도 걸린다 → 길이 메시지가 먼저
+        assertEquals(NicknameRule.LENGTH_MESSAGE, NicknameRule.validate("/"))
+        // "."도 마찬가지
+        assertEquals(NicknameRule.LENGTH_MESSAGE, NicknameRule.validate("."))
     }
 
     private fun String.codePointsHex(): String =
