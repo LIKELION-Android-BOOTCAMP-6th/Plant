@@ -6,6 +6,7 @@ import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.mapper.toDto
 import com.a32b.plant.data.source.local.SettingsLocalDataSource
 import com.a32b.plant.data.source.remote.user.CompleteFirstLoginResult
+import com.a32b.plant.data.source.remote.user.UpdateProfileResult
 import com.a32b.plant.data.source.remote.user.UserRemoteDataSource
 import com.a32b.plant.di.qualifier.ApplicationScope
 import com.a32b.plant.domain.error.AppError
@@ -37,6 +38,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val COMPLETE_FIRST_LOGIN_TIMEOUT_MS = 10_000L
+private const val UPDATE_PROFILE_TIMEOUT_MS = 10_000L
 private const val GET_USER_SERVER_TIMEOUT_MS = 2_000L
 private const val SESSION_TOKEN_WRITE_TIMEOUT_MS = 1_500L
 
@@ -260,39 +262,30 @@ class UserRepositoryImpl @Inject constructor(
     )
 
     override suspend fun updateProfile(user: User): Result<Unit> = safeRunCatching {
-        userRemoteDataSource.updateProfile(
-            uid = user.uid,
-            nickname = user.nickname,
-            profileImg = user.profileImg
-        )
-    }.fold(
-        onSuccess = { Result.Success(Unit) },
-        onFailure = { e ->
-            Result.Failure(
-                handleError(e, "프로필 수정에 실패했습니다.")
+        // 연결이 불안정하면 트랜잭션이 재시도하며 길어질 수 있어 상한을 둔다.
+        // 시간 초과(null)는 네트워크 에러로 취급한다. 서버에는 뒤늦게 반영될 수 있다.
+        withTimeoutOrNull(UPDATE_PROFILE_TIMEOUT_MS) {
+            userRemoteDataSource.updateProfile(
+                uid = user.uid,
+                nickname = user.nickname,
+                profileImg = user.profileImg
             )
         }
-    )
-
-    override suspend fun isNicknameTaken(nickname: String): Result<Boolean> = safeRunCatching {
-        userRemoteDataSource.isNicknameTaken(nickname)
     }.fold(
-        onSuccess = { Result.Success(it) },
-        onFailure = { e -> Result.Failure(handleNicknameCheckError(e)) }
-    )
+        onSuccess = { outcome ->
+            when (outcome) {
+                UpdateProfileResult.Updated,
+                UpdateProfileResult.NoChange -> Result.Success(Unit)
 
-    override suspend fun registerNickname(uid: String, nickname: String): Result<Unit> = safeRunCatching {
-        userRemoteDataSource.registerNickname(uid, nickname)
-    }.fold(
-        onSuccess = { Result.Success(Unit) },
-        onFailure = { e -> Result.Failure(handleRegisterNicknameError(e)) }
-    )
+                UpdateProfileResult.NicknameTaken -> Result.Failure(AppError.NicknameTaken())
 
-    override suspend fun deleteNickname(nickname: String): Result<Unit> = safeRunCatching {
-        userRemoteDataSource.deleteNickname(nickname)
-    }.fold(
-        onSuccess = { Result.Success(Unit) },
-        onFailure = { e -> Result.Failure(handleError(e, "닉네임 삭제 실패")) }
+                null -> {
+                    Log.w("UserRepository", "프로필 수정 시간 초과 (${UPDATE_PROFILE_TIMEOUT_MS}ms)")
+                    Result.Failure(AppError.Network())
+                }
+            }
+        },
+        onFailure = { e -> Result.Failure(handleUpdateProfileError(e)) }
     )
 
     override suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success> = safeRunCatching {
@@ -360,37 +353,9 @@ class UserRepositoryImpl @Inject constructor(
         }
     }
 
-    private fun handleRegisterNicknameError(e: Throwable): AppError {
-        Log.e("UserRepository", "닉네임 등록 실패: ${e.message}", e)
+    private fun handleUpdateProfileError(e: Throwable): AppError {
+        Log.e("UserRepository", "프로필 수정 실패: ${e.message}", e)
 
-        return when (e) {
-            is FirebaseFirestoreException -> when (e.code) {
-                FirebaseFirestoreException.Code.UNAVAILABLE,
-                FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
-                // 보안 규칙이 거부하는 경우는 두 가지다.
-                // - 중복 검사 직후 다른 사용자가 먼저 등록함 (이미 있는 문서 덮어쓰기)
-                // - 닉네임 형식 위반 (#535, firestore.rules의 isValidNickname)
-                // 형식은 앱(NicknameRule)이 먼저 걸러 내므로 실제로는 대부분 중복이라 사용 중으로 안내한다.
-                // (형식 위반만 따로 구분하려면 거부 후 문서를 다시 읽어야 하므로 두지 않는다)
-                FirebaseFirestoreException.Code.PERMISSION_DENIED -> AppError.NicknameTaken()
-                else -> AppError.Custom("닉네임 등록 실패")
-            }
-            is FirebaseNetworkException -> AppError.Network()
-            else -> AppError.Custom("닉네임 등록 실패")
-        }
-    }
-
-    private fun handleNicknameCheckError(e: Throwable): AppError {
-        Log.e("UserRepository", "닉네임 중복 검사 실패: ${e.message}", e)
-
-        return when (e) {
-            is FirebaseFirestoreException -> when (e.code) {
-                FirebaseFirestoreException.Code.UNAVAILABLE,
-                FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
-                else -> AppError.Custom("닉네임 중복 검사 실패")
-            }
-            is FirebaseNetworkException -> AppError.Network()
-            else -> AppError.Custom("닉네임 중복 검사 실패")
-        }
+        return if (isNetworkError(e)) AppError.Network() else AppError.Custom("프로필 저장에 실패했습니다. 잠시 후 다시 시도해주세요.")
     }
 }

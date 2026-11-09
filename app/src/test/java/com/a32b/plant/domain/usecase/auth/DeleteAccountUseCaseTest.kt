@@ -220,9 +220,6 @@ class DeleteAccountUseCaseTest {
             return Result.Success(Unit)
         }
         override suspend fun updateProfile(user: User): Result<Unit> = TODO()
-        override suspend fun isNicknameTaken(nickname: String): Result<Boolean> = TODO()
-        override suspend fun registerNickname(uid: String, nickname: String): Result<Unit> = TODO()
-        override suspend fun deleteNickname(nickname: String): Result<Unit> = TODO()
         override suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success> = TODO()
         override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> = TODO()
     }

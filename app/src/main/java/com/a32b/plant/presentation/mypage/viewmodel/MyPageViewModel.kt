@@ -16,6 +16,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -73,9 +74,21 @@ class MyPageViewModel @Inject constructor(
                     totalStudyTime = formatToDigitalClock(user.totalStudyTime)
                 )
             }
+            observeCurrentUserProfile()
             // 사용자가 확인된 경우에만 설정을 읽고, 읽은 뒤 화면을 표시한다.
             observeDarkMode()
         } ?: loaded()
+    }
+
+    // 프로필 저장이 시간 초과 뒤 서버에 늦게 반영되면 실시간 구독이 currentUser만 바꾸므로,
+    // 화면의 닉네임·이미지도 따라가게 해서 옛 값으로 다시 저장하지 않게 한다.
+    // 로그아웃·세션 만료 때 오는 null은 무시한다. 세션 만료 처리는 UserRepository가 따로 한다.
+    private fun observeCurrentUserProfile() {
+        viewModelScope.launch {
+            userRepository.currentUser.filterNotNull().collect { user ->
+                _uiState.update { it.copy(nickname = user.nickname, profileImg = user.profileImg) }
+            }
+        }
     }
 
     private fun observeDarkMode() {

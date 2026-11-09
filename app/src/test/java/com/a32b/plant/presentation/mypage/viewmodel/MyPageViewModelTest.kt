@@ -70,7 +70,7 @@ class MyPageViewModelTest {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
         try {
             Dispatchers.setMain(dispatcher)
-            val users = FakeUserRepository(testUser(), isNicknameTakenResult = Result.Success(true))
+            val users = FakeUserRepository(testUser(), updateProfileResult = Result.Failure(AppError.NicknameTaken()))
             val viewModel = createViewModel(users)
             val events = collectEvents(viewModel, dispatcher)
 
@@ -86,13 +86,13 @@ class MyPageViewModelTest {
     }
 
     @Test
-    fun `network failure while checking nickname shows long toast without input error`() = runTest {
+    fun `network failure while saving nickname shows long toast without input error`() = runTest {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
         try {
             Dispatchers.setMain(dispatcher)
             val users = FakeUserRepository(
                 testUser(),
-                isNicknameTakenResult = Result.Failure(AppError.Network())
+                updateProfileResult = Result.Failure(AppError.Network())
             )
             val viewModel = createViewModel(users)
             val events = collectEvents(viewModel, dispatcher)
@@ -118,7 +118,7 @@ class MyPageViewModelTest {
             Dispatchers.setMain(dispatcher)
             val users = FakeUserRepository(
                 testUser(),
-                updateProfileResult = Result.Failure(AppError.Custom("프로필 수정에 실패했습니다."))
+                updateProfileResult = Result.Failure(AppError.Custom("프로필 저장에 실패했습니다. 잠시 후 다시 시도해주세요."))
             )
             val viewModel = createViewModel(users)
             val events = collectEvents(viewModel, dispatcher)
@@ -128,7 +128,7 @@ class MyPageViewModelTest {
 
             assertNull(viewModel.uiState.value.nicknameError)
             assertEquals(
-                listOf(MyPageEvent.ShowToast("프로필 수정에 실패했습니다.", false)),
+                listOf(MyPageEvent.ShowToast("프로필 저장에 실패했습니다. 잠시 후 다시 시도해주세요.", false)),
                 events
             )
             assertFalse(viewModel.uiState.value.isLoading)
@@ -165,8 +165,8 @@ class MyPageViewModelTest {
             val gate = CompletableDeferred<Unit>()
             val users = FakeUserRepository(
                 testUser(),
-                isNicknameTakenResult = Result.Success(true),
-                isNicknameTakenGate = gate
+                updateProfileResult = Result.Failure(AppError.NicknameTaken()),
+                updateProfileGate = gate
             )
             val viewModel = createViewModel(users)
 
@@ -183,6 +183,45 @@ class MyPageViewModelTest {
 
             viewModel.resetNicknameError()
             assertNull(viewModel.uiState.value.nicknameError)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun `current user change after screen entry updates nickname and profile image`() = runTest {
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        try {
+            Dispatchers.setMain(dispatcher)
+            val users = FakeUserRepository(testUser())
+            val viewModel = createViewModel(users)
+            assertEquals("test-user", viewModel.uiState.value.nickname)
+
+            // 시간 초과 뒤 늦게 반영된 저장을 실시간 구독이 currentUser에 전달한 상황
+            users.currentUser.value = testUser().copy(nickname = "late-nick", profileImg = "3")
+            runCurrent()
+
+            assertEquals("late-nick", viewModel.uiState.value.nickname)
+            assertEquals("3", viewModel.uiState.value.profileImg)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun `null current user keeps existing nickname and profile image`() = runTest {
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        try {
+            Dispatchers.setMain(dispatcher)
+            val users = FakeUserRepository(testUser())
+            val viewModel = createViewModel(users)
+
+            // 로그아웃·세션 만료 때는 currentUser가 null이 된다
+            users.currentUser.value = null
+            runCurrent()
+
+            assertEquals("test-user", viewModel.uiState.value.nickname)
+            assertEquals("1", viewModel.uiState.value.profileImg)
         } finally {
             Dispatchers.resetMain()
         }
@@ -222,9 +261,8 @@ class MyPageViewModelTest {
 
     private class FakeUserRepository(
         initialUser: User?,
-        private val isNicknameTakenResult: Result<Boolean> = Result.Success(false),
         private val updateProfileResult: Result<Unit> = Result.Success(Unit),
-        private val isNicknameTakenGate: CompletableDeferred<Unit>? = null
+        private val updateProfileGate: CompletableDeferred<Unit>? = null
     ) : UserRepository {
         override val currentUser = MutableStateFlow(initialUser)
 
@@ -239,13 +277,10 @@ class MyPageViewModelTest {
         override suspend fun createUser(uid: String): Result<User> = error("Unused")
         override suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit> = error("Unused")
         override suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit> = error("Unused")
-        override suspend fun updateProfile(user: User): Result<Unit> = updateProfileResult
-        override suspend fun isNicknameTaken(nickname: String): Result<Boolean> {
-            isNicknameTakenGate?.await()
-            return isNicknameTakenResult
+        override suspend fun updateProfile(user: User): Result<Unit> {
+            updateProfileGate?.await()
+            return updateProfileResult
         }
-        override suspend fun registerNickname(uid: String, nickname: String): Result<Unit> = error("Unused")
-        override suspend fun deleteNickname(nickname: String): Result<Unit> = error("Unused")
         override suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success> = error("Unused")
         override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> = error("Unused")
     }

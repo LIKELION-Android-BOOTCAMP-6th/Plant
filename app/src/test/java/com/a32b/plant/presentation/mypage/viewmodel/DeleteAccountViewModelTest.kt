@@ -149,9 +149,6 @@ class DeleteAccountViewModelTest {
         override suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit> = error("Not used")
         override suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit> = Result.Success(Unit)
         override suspend fun updateProfile(user: User): Result<Unit> = error("Not used")
-        override suspend fun isNicknameTaken(nickname: String): Result<Boolean> = error("Not used")
-        override suspend fun registerNickname(uid: String, nickname: String): Result<Unit> = error("Not used")
-        override suspend fun deleteNickname(nickname: String): Result<Unit> = error("Not used")
         override suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success> = error("Not used")
         override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> = error("Not used")
     }
