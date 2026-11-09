@@ -390,6 +390,9 @@ class StudyingViewModel @Inject constructor(
      * "공부 중" 표시 등록·갱신 — 공부 중일 때만 (일시정지·종료 후 늦게 실행돼 지운 문서를 되살리지 않게)
      * Dispatchers.IO로 옮기지 않는다: 메인 스레드에서 상태 확인과 쓰기 요청이 끊김 없이 이어져야
      * 일시정지 삭제(deleteStudyingUserInfo)와 순서가 뒤바뀌지 않는다 (쓰기 요청 자체는 메인을 막지 않음)
+     * 이 보장은 set() 호출 전에 코루틴이 멈추는 지점이 없다는 전제 위에 있다 — SaveStudyingUserUseCase의
+     * ensureCurrentUserUseCase()는 suspend가 아니고 Repository의 safeRunCatching은 inline이다.
+     * 이 경로(UseCase·Repository·RemoteDataSource)에 withContext·delay 등을 넣으면 순서가 깨질 수 있다
      * 실패해도 다음 주기에 다시 쓰므로 별도 처리 없음 (유저 정보가 없으면 유즈케이스가 세션 만료 처리)
      */
     private fun updateUser(){
