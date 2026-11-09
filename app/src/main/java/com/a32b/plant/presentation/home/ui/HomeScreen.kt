@@ -62,6 +62,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -989,25 +990,40 @@ private fun HomeItemTile(
         }
         // 이름 자리는 모든 칸을 2줄 높이로 맞추고 글자를 세로 가운데에 둔다
         // → 1줄 이름(정성·햇빛…)이 "보너스" / "박스" 두 줄 사이 가운데 선에 맞춰 일자로 놓인다
-        // (sp를 dp로 바꾸므로 시스템 글꼴 크기가 커지면 자리도 같이 커진다)
+        // 높이는 한 줄 높이를 dp로 바꾼 뒤 줄 수를 곱한다.
+        // Android 14+는 글꼴을 키울 때 큰 sp일수록 덜 커져서(비선형), 28sp를 한 번에 바꾸면 실제 두 줄 높이보다 작아져
+        // 글꼴 2배에서 1줄 이름이 약 5dp 위로 어긋났다 (#573 리뷰)
         Box(
             modifier = Modifier.heightIn(
-                min = with(LocalDensity.current) { (ITEM_LABEL_LINE_HEIGHT * ITEM_LABEL_MAX_LINES).toDp() }
+                min = with(LocalDensity.current) { ITEM_LABEL_LINE_HEIGHT.toDp() * ITEM_LABEL_LINE_SLOTS }
             ),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = homeItemLabel(type),
-                // 칸 전체 설명(accessibilityLabel)과 겹치지 않게 이름은 따로 읽지 않는다
-                modifier = Modifier.clearAndSetSemantics { },
-                style = MaterialTheme.typography.titleSmall.copy(
-                    fontSize = 10.sp,
-                    lineHeight = ITEM_LABEL_LINE_HEIGHT
-                ),
-                textAlign = TextAlign.Center,
-                maxLines = ITEM_LABEL_MAX_LINES,
-                overflow = TextOverflow.Ellipsis
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // 줄마다 따로 그리고 각 줄은 1줄 + 말줄임으로 둔다
+                // 한 Text에 maxLines = 2를 주면, 좁은 화면 + 큰 글꼴에서 "보너 / 스…"처럼 글자 중간에서 줄이 넘어가
+                // "박스"가 사라졌다 (#573 리뷰)
+                homeItemLabelLines(type).forEach { line ->
+                    Text(
+                        text = line,
+                        // 칸 전체 설명(accessibilityLabel)과 겹치지 않게 이름은 따로 읽지 않는다
+                        modifier = Modifier.clearAndSetSemantics { },
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontSize = 10.sp,
+                            lineHeight = ITEM_LABEL_LINE_HEIGHT,
+                            // 1줄짜리 Text는 기본으로 줄 높이의 위아래 여백을 잘라내서 "보너스" / "박스" 사이가 좁아진다.
+                            // 잘라내지 않아 줄마다 ITEM_LABEL_LINE_HEIGHT 높이를 그대로 쓴다
+                            lineHeightStyle = LineHeightStyle(
+                                alignment = LineHeightStyle.Alignment.Center,
+                                trim = LineHeightStyle.Trim.None
+                            )
+                        ),
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
         }
     }
 }
@@ -1015,16 +1031,16 @@ private fun HomeItemTile(
 /** 아이템 이름 한 줄 높이 (#387) */
 private val ITEM_LABEL_LINE_HEIGHT = 14.sp
 
-/** 아이템 이름 최대 줄 수. "보너스\n박스"가 2줄이라 모든 칸의 이름 자리를 이 줄 수 높이로 맞춘다 (#387) */
-private const val ITEM_LABEL_MAX_LINES = 2
+/** 아이템 이름 자리 높이에 쓰는 줄 수. "보너스" / "박스"가 2줄이라 모든 칸의 이름 자리를 2줄 높이로 맞춘다 (#387) */
+private const val ITEM_LABEL_LINE_SLOTS = 2
 
 /**
- * 홈 타일에 쓰는 이름 (#387)
+ * 홈 타일에 쓰는 이름을 줄 단위로 나눈 목록 (#387)
  * "보너스 박스"(10sp 기준 약 52dp)는 한 칸(최소 42dp)에 한 줄로 들어가지 않아 띄어쓰기 자리에서 2줄로 나눈다.
- * 줄바꿈을 글자 단위 자동 줄바꿈에 맡기면 "보너스 박/스"처럼 끊길 수 있어 직접 나눈다.
+ * 줄마다 1줄 + 말줄임으로 그리므로, 한 줄이 넘치면 그 줄만 "보…"처럼 줄어들고 다음 줄("박스")은 남는다.
  */
-private fun homeItemLabel(type: ItemType): String =
-    if (type == ItemType.BOX) "보너스\n박스" else type.kor
+private fun homeItemLabelLines(type: ItemType): List<String> =
+    if (type == ItemType.BOX) listOf("보너스", "박스") else listOf(type.kor)
 
 /** "열기" 문구가 위아래로 움직이는 횟수 (#573 리뷰: 홈에 있는 내내 움직이지 않게 제한) */
 private const val BOX_CTA_BOUNCE_COUNT = 3
