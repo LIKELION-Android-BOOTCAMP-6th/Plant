@@ -104,6 +104,8 @@ exports.syncCommentCountOnDelete = onDocumentDeleted(
 //   두 경우 모두 오류로 끝내지 않으므로 재시도하지 않는다
 // - retry: 일시 오류(네트워크, 트랜잭션 경합 등)로 실패하면 다시 실행한다
 //   (2세대 함수는 실패한 이벤트를 최대 24시간 재시도. 위 pending 확인으로 중복 지급 없음)
+//   배포 때 CLI 경고는 "최대 7일"이라고 나오지만 1세대 함수 기준이다.
+//   2세대는 24시간: https://firebase.google.com/docs/functions/retries
 const STUDY_LOG_DOCUMENT = "users/{uid}/pots/{potId}/logs/{logId}";
 const STUDY_REWARD_TRIGGER_OPTIONS = {
   document: STUDY_LOG_DOCUMENT,
