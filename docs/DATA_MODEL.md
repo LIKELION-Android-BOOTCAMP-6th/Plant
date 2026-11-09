@@ -114,8 +114,11 @@ studying
     ├── nickname: String
     ├── tag: String
     ├── studyingTime: Long
-    └── profileImg: String
+    ├── profileImg: String
+    └── updatedAt: Timestamp       # 마지막 갱신 서버 시각 (#525)
 ```
+- 앱이 공부 시작·재개 시와 공부 중 1분마다 문서 전체를 다시 쓰고, 일시정지·종료하면 지운다
+- 예약 함수 `cleanUpStaleStudying`이 10분마다 `updatedAt`이 10분보다 오래된 문서(없는 문서 포함)를 지운다 (강제 종료 등으로 남은 문서 정리)
  
 ### Tags
 ```

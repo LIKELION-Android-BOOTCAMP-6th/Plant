@@ -46,33 +46,17 @@ class StudyingRepositoryImpl @Inject constructor(
             .catch { e -> Log.e("StudyingRepository", "학습중 유저 구독 실패: ${e.message}", e) }
     }
 
-    override suspend fun initStudyingUser(user: StudyingUser): Result<Unit> = safeRunCatching {
-        studyingRemoteDataSource.initStudyingUser(user.toDto())
+    override suspend fun saveStudyingUser(user: StudyingUser): Result<Unit> = safeRunCatching {
+        studyingRemoteDataSource.saveStudyingUser(user.toDto())
     }.fold(
         onSuccess = { Result.Success(Unit)},
         onFailure = { e ->
-            Log.e("Studying", "스터딩 유저 초기 저장 실패", e)
+            Log.e("Studying", "공부 중 표시 저장 실패", e)
 
             val error = when(e){
                 is AppError.UnknownUser -> AppError.UnknownUser()
                 else -> AppError.Upload()
             }
-            Result.Failure(error)
-        }
-    )
-
-    override suspend fun updateStudyingTime(tag: String, time: Long): Result<Unit> = safeRunCatching {
-        studyingRemoteDataSource.updateStudyingTime(tag, time)
-    }.fold(
-        onSuccess = { Result.Success(Unit)},
-        onFailure = { e ->
-            Log.e("Studying", "학습 시간 업데이트", e)
-
-            val error = when(e){
-                is AppError.UnknownUser -> AppError.UnknownUser()
-                else -> AppError.Upload()
-            }
-
             Result.Failure(error)
         }
     )

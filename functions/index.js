@@ -13,10 +13,15 @@ const {
   onDocumentDeleted,
 } = require("firebase-functions/firestore");
 const {onCall, HttpsError} = require("firebase-functions/https");
+const {onSchedule} = require("firebase-functions/scheduler");
 const logger = require("firebase-functions/logger");
 const {initializeApp} = require("firebase-admin/app");
 const {getAuth} = require("firebase-admin/auth");
-const {FieldValue, getFirestore} = require("firebase-admin/firestore");
+const {
+  FieldValue,
+  Timestamp,
+  getFirestore,
+} = require("firebase-admin/firestore");
 
 // For cost control, you can set the maximum number of containers that can be
 // running at the same time. This helps mitigate the impact of unexpected
@@ -393,3 +398,86 @@ exports.deleteAccount = onCall(DELETE_ACCOUNT_OPTIONS, async (request) => {
   logger.info("회원탈퇴 완료", {uid});
   return {deleted: true};
 });
+
+// ---------------------------------------------------------------------------
+// 오래된 "공부 중" 표시(studying) 정리 (#525)
+// ---------------------------------------------------------------------------
+// 앱은 공부 중 1분마다 studying/{uid}를 다시 쓰며 updatedAt = 서버 시각을 넣고,
+// 일시정지·종료하면 문서를 지운다. 공부 중 앱이 강제 종료되거나 기기가 꺼지면 문서가 남으므로
+// 이 예약 함수가 updatedAt이 오래된 문서를 지운다 → 학습 화면 상위 3명에 끝난 사람이 남지 않는다
+// - 실행 주기와 기준 시간이 같아 강제 종료 후 최대 약 20분(기준 10분 + 주기 10분)까지 남을 수 있다
+// - 기준 시간은 앱 갱신 주기(1분, StudyingViewModel.observeTimer)보다 충분히 길어야 한다
+//   (짧으면 네트워크가 잠깐 끊긴 공부 중인 사람도 지워짐 → 다음 갱신 때 다시 생기긴 함)
+// - updatedAt 조건 쿼리(<)는 updatedAt이 없는 예전 문서를 찾지 못한다 → 컬렉션 전체(공부 중인
+//   사람 수만큼, updatedAt 필드만)를 읽어 코드에서 거른다
+// - 읽은 뒤 그 사이 앱이 다시 쓴 문서는 지우지 않는다 (lastUpdateTime 조건부 삭제)
+// - 여러 번 실행돼도 결과가 같다(멱등). 실패해도 다음 실행에서 다시 처리하므로 재시도는 두지 않는다
+const STUDYING_STALE_MS = 10 * 60 * 1000;
+const STUDYING_CLEANUP_SCHEDULE = "every 10 minutes";
+// 조건부 삭제에서 "그 사이 다시 쓰였거나 이미 지워짐" — 실패가 아니라 건너뛸 대상
+const GRPC_FAILED_PRECONDITION = 9;
+const GRPC_NOT_FOUND = 5;
+
+/**
+ * studying 문서가 오래됐는지 (updatedAt이 없거나 Timestamp가 아니어도 오래된 것으로 본다).
+ * @param {*} updatedAt 문서의 updatedAt 값
+ * @param {number} cutoffMs 이 시각(ms)보다 이전이면 오래된 것
+ * @return {boolean}
+ */
+function isStaleStudying(updatedAt, cutoffMs) {
+  if (!(updatedAt instanceof Timestamp)) return true;
+  return updatedAt.toMillis() < cutoffMs;
+}
+
+/**
+ * updatedAt이 기준 시간보다 오래된 studying 문서를 지운다.
+ * @param {number} nowMs 현재 시각(ms)
+ * @return {Promise<{deleted: number, skipped: number}>}
+ */
+async function cleanUpStaleStudying(nowMs) {
+  const cutoffMs = nowMs - STUDYING_STALE_MS;
+  const snapshot = await db.collection("studying").select("updatedAt").get();
+  const staleDocs = snapshot.docs.filter(
+      (doc) => isStaleStudying(doc.get("updatedAt"), cutoffMs),
+  );
+  if (staleDocs.length === 0) return {deleted: 0, skipped: 0};
+
+  const writer = db.bulkWriter();
+  let deleted = 0;
+  let skipped = 0;
+  const results = Promise.allSettled(staleDocs.map((doc) =>
+    writer.delete(doc.ref, {lastUpdateTime: doc.updateTime}).then(
+        () => {
+          deleted++;
+        },
+        (error) => {
+          if (error.code === GRPC_FAILED_PRECONDITION ||
+              error.code === GRPC_NOT_FOUND) {
+            skipped++;
+            return;
+          }
+          throw error;
+        },
+    ),
+  ));
+  await writer.close();
+  const failures = (await results).filter((r) => r.status === "rejected");
+  if (failures.length > 0) {
+    logger.error("오래된 studying 문서 일부 삭제 실패 (다음 실행에서 다시 처리)", {
+      deleted, skipped, failed: failures.length,
+      error: failures[0].reason,
+    });
+    throw failures[0].reason;
+  }
+  return {deleted, skipped};
+}
+
+exports.cleanUpStaleStudying = onSchedule(
+    STUDYING_CLEANUP_SCHEDULE,
+    async () => {
+      const result = await cleanUpStaleStudying(Date.now());
+      if (result.deleted > 0 || result.skipped > 0) {
+        logger.info("오래된 studying 문서 정리", result);
+      }
+    },
+);

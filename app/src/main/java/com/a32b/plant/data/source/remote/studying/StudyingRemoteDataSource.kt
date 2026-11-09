@@ -12,11 +12,11 @@ interface StudyingRemoteDataSource {
     /** 태그 기반 학습 중인 유저 구독*/
     fun observeStudyingUser(tag: String) : Flow<List<StudyingUserDto>>
 
-    /** 유저 최초 학습 상태 */
-    suspend fun initStudyingUser(user: StudyingUserDto)
-
-    /** 학습 시간 업데이트 */
-    suspend fun updateStudyingTime(tag: String, time: Long)
+    /**
+     * "공부 중" 표시 등록·갱신 — 문서 전체를 덮어쓰고 updatedAt = 서버 시각
+     * 예약 함수가 오래된 문서를 지운 뒤에도 다시 만들 수 있도록 update가 아닌 set을 쓴다 (#525)
+     */
+    suspend fun saveStudyingUser(user: StudyingUserDto)
 
     /**
      * 학습 기록 저장 batch 시작 — 기다리지 않고 Task를 그대로 돌려준다 (기다리는 시간은 Repository가 정함)

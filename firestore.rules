@@ -381,10 +381,25 @@ service cloud.firestore {
       allow read: if request.auth != null;
     }
 
+    // "공부 중" 표시 (#525) — 앱은 문서 전체를 set으로 쓰고(StudyingRemoteDataSourceImpl.saveStudyingUser)
+    // updatedAt = serverTimestamp()를 함께 보낸다. 예약 함수(cleanUpStaleStudying)가 updatedAt이 오래된 문서를 지운다
+    function validStudyingUser() {
+      let data = request.resource.data;
+      let fields = ['nickname', 'profileImg', 'tag', 'studyingTime', 'updatedAt'];
+      return data.keys().hasAll(fields) &&
+        data.keys().hasOnly(fields) &&
+        data.nickname is string &&
+        data.profileImg is string &&
+        data.tag is string &&
+        data.studyingTime is int &&
+        data.studyingTime >= 0 &&
+        data.updatedAt == request.time;
+    }
+
     match /studying/{studyingId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null && request.auth.uid == studyingId;
-      allow update, delete: if request.auth != null && request.auth.uid == studyingId;
+      allow read: if signedIn();
+      allow create, update: if isUid(studyingId) && validStudyingUser();
+      allow delete: if isUid(studyingId);
     }
 
     // 문서 ID는 {신고자uid}_{대상id}로 고정 → 같은 대상 중복 신고는 같은 문서라 생성 불가

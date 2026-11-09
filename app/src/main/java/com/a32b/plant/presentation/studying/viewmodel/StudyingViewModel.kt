@@ -24,6 +24,7 @@ import com.a32b.plant.domain.usecase.studying.FinishStudyingUseCase
 import com.a32b.plant.domain.usecase.studying.GetRecoverySessionUseCase
 import com.a32b.plant.domain.usecase.studying.GetStudyingGoalDraftUseCase
 import com.a32b.plant.domain.usecase.studying.SaveStudyingGoalDraftUseCase
+import com.a32b.plant.domain.usecase.studying.SaveStudyingUserUseCase
 import com.a32b.plant.domain.usecase.studying.StartStudyingSessionUseCase
 import com.a32b.plant.domain.usecase.studying.UpdateLocalStudyingSessionUseCase
 import com.a32b.plant.presentation.core.type.StudyingGoalCheckMode
@@ -99,6 +100,7 @@ class StudyingViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val repository: StudyingRepository,
     private val startStudyingSessionUseCase: StartStudyingSessionUseCase,
+    private val saveStudyingUserUseCase: SaveStudyingUserUseCase,
     private val updateLocalStudyingSessionUseCase: UpdateLocalStudyingSessionUseCase,
     private val finishStudyingUseCase: FinishStudyingUseCase,
     private val getRecoverySessionUseCase: GetRecoverySessionUseCase,
@@ -145,9 +147,8 @@ class StudyingViewModel @Inject constructor(
             }
             restoreFromLocalBackup(backup)
             // 로컬 복구 결과(타이머·목표 다이얼로그 표시 여부)가 확정된 뒤 화면 노출
-            // 원격 등록(initStudyingUser)은 화면 표시와 무관하므로 기다리지 않음
             loaded()
-            initStudyingUser()
+            saveInitialSession()
         }
         onStudyingUsersChange()
         observeTimer()
@@ -155,7 +156,7 @@ class StudyingViewModel @Inject constructor(
 
     /**
      * 홈 복구 창이 처리할 종료 세션인지 — 복구 대상 기준은 홈 복구 창과 같은 StudyingSession.isRecoverableBy 사용
-     * 유저 정보가 없으면 막지 않고 진행 (기존과 동일). 세션 만료 알림은 이어지는 initStudyingUser가 보내므로
+     * 유저 정보가 없으면 막지 않고 진행 (기존과 동일). 세션 만료 알림은 이어지는 saveInitialSession이 보내므로
      * 알림이 두 번 가지 않도록 여기서는 ensureCurrentUserUseCase 대신 현재 값을 직접 읽음
      *
      * 종료 세션이면 홈 복구 창과 같은 판단(GetRecoverySessionUseCase)으로 한 번 더 확인한다 (#453)
@@ -298,10 +299,10 @@ class StudyingViewModel @Inject constructor(
     }
 
     /**
-     * 최초 시작 시 로컬 + 원격 db에 현재 사용자 정보 저장
-     * 실패해도 공부는 계속하므로 별도 처리 없음 (UnknownUser는 유즈케이스에서 처리, 에러 로그는 레포지토리에서 찍고 있음)
+     * 최초 진입 시 로컬 백업 저장 — "공부 중" 표시는 타이머가 시작될 때 등록한다 (startStopwatch, #525)
+     * 실패해도 공부는 계속하므로 별도 처리 없음 (UnknownUser는 유즈케이스에서 처리)
      */
-    suspend fun initStudyingUser(){
+    private suspend fun saveInitialSession(){
         withContext(Dispatchers.IO){
             val state = _uiState.value
             startStudyingSessionUseCase(
@@ -348,6 +349,9 @@ class StudyingViewModel @Inject constructor(
     private fun startStopwatch() {
         // 재개 직후 앱이 종료돼도 일시정지 상태로 복원되지 않도록 바로 저장한다
         viewModelScope.launch { saveSession() }
+        // "공부 중" 표시를 바로 등록하고(일시정지로 지웠거나 처음 시작) 1분 주기도 지금부터 센다 (#525)
+        lastUpdateMs = _uiState.value.timer
+        updateUser()
         sendServiceIntent(StudyingTimerService.ACTION_START) {
             putExtra(StudyingTimerService.EXTRA_ACCUMULATED, _uiState.value.timer)
         }
@@ -372,19 +376,28 @@ class StudyingViewModel @Inject constructor(
 
     /** 공부중 상태 변경 t: studying f:!studying */
     fun onStudyingStatusChange(studying: Boolean = !_uiState.value.isStudying) {
+        val wasStudying = _uiState.value.isStudying
          _uiState.update { it.copy(isStudying = studying) }
 
         if(studying) startStopwatch()
         else stopStopwatch()
+        // 일시정지 중에는 "공부 중" 상위 3명에 표시하지 않는다 → 공부 중이다가 멈출 때만 삭제 (#525)
+        // (이미 멈춘 상태에서 다이얼로그를 열고 닫을 때도 false로 호출되므로 상태가 바뀔 때만)
+        if (wasStudying && !studying) deleteStudyingUserInfo()
     }
 
-    /** 유저 정보 업데이트 */
+    /**
+     * "공부 중" 표시 등록·갱신 — 공부 중일 때만 (일시정지·종료 후 늦게 실행돼 지운 문서를 되살리지 않게)
+     * Dispatchers.IO로 옮기지 않는다: 메인 스레드에서 상태 확인과 쓰기 요청이 끊김 없이 이어져야
+     * 일시정지 삭제(deleteStudyingUserInfo)와 순서가 뒤바뀌지 않는다 (쓰기 요청 자체는 메인을 막지 않음)
+     * 실패해도 다음 주기에 다시 쓰므로 별도 처리 없음 (유저 정보가 없으면 유즈케이스가 세션 만료 처리)
+     */
     private fun updateUser(){
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.updateStudyingTime(_uiState.value.tag, _uiState.value.timer)
-                .onFailure { if (it is AppError.UnknownUser) ensureCurrentUserUseCase() } //유저 정보 없을 시 로그아웃 처리
+        viewModelScope.launch {
+            val state = _uiState.value
+            if (!state.isStudying || state.isFinished) return@launch
+            saveStudyingUserUseCase(state.tag, state.timer)
         }
-
     }
 
     /**  학습 목표 설정 */

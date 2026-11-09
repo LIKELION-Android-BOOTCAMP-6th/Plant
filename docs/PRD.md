@@ -186,7 +186,7 @@
 | **스톱워치** | 기능 | 진입 즉시 타이머 시작, 일시정지/재개/종료 지원 | — | — |
 | **학습 목표** | 기능 | 학습 시작 시 목표 입력 다이얼로그 (선택), 진행 중 체크/관리 | 시작 → 목표 입력(선택, 최대 10개×100자) → 진행 중 체크 → 종료 시 확인 | StudyingGoalCheckMode: CHECK/INTERRUPTED/FINISH |
 | **로컬 백업** | 기능 | 비정상 종료 대비 세션 저장 | 5초마다 `StudyingLocalDataSource`(DataStore)에 저장 | 학습 목표도 로컬 백업에 포함 |
-| **서버 동기화** | 기능 | Firestore `studying` 컬렉션에 학습 시간 업데이트 | 1분마다 동기화 | — |
+| **서버 동기화** | 기능 | Firestore `studying` 컬렉션에 학습 시간 업데이트 | 1분마다 동기화 (일시정지 시 삭제) | 10분 넘게 갱신 없는 문서는 예약 함수가 삭제 |
 | **함께 공부하는 사용자** | 기능 | 같은 태그로 학습 중인 유저를 실시간 구독 | `observeStudyingUser`로 Firestore 구독 | 현재 세션 공부 시간 기준 상위 3명 표시 |
 | **학습 종료** | 기능 | 학습 목표 확인 후 DB 저장 | 종료 → 목표 확인 다이얼로그 → DB 저장(화분·유저 시간 반영) → 커뮤니티 공유 토글 → 결과 화면 | — |
 | **결과 화면** | 기능 | 공부 시간, 학습 내용, 화분 성장 결과 확인 | — | 갤러리 이미지 저장 가능 |
@@ -408,7 +408,7 @@ com.a32b.plant
 | `posts/{postId}` | author{id,nickname,profileImg}, title, content, tag{id,name,parentId,no}, commentCount, likeCount, likedBy[], bookmarkCount, bookmarkedBy[], createdAt, activityId, isShared, studyLogs[] | 게시글 |
 | `posts/{postId}/comments/{commentId}` | user{uid,nickname,profileImg}, content, activityId, createdAt | 댓글 |
 | `activities/{activityId}` | uid, type(게시물/댓글/좋아요/북마크), title, comment, commentId, targetId, createAt | 커뮤니티 활동 |
-| `studying/{uid}` | nickname, tag, studyingTime, profileImg | 실시간 학습 현황 |
+| `studying/{uid}` | nickname, tag, studyingTime, profileImg, updatedAt | 실시간 학습 현황 |
 | `Tags/{tagId}` | id, name, parentId, no | 화분·커뮤니티 태그 |
 | `nicknames/{nickname}` | nickname | 닉네임 중복 방지 |
 

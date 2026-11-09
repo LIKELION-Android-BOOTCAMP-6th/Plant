@@ -49,20 +49,17 @@ class StudyingRemoteDataSourceImpl @Inject constructor(
         awaitClose { listener.remove()}
     }
 
-    override suspend fun initStudyingUser(user: StudyingUserDto){
+    override suspend fun saveStudyingUser(user: StudyingUserDto){
+        // 규칙(validStudyingUser)이 허용하는 필드만 보내고, updatedAt은 서버 시각이어야 한다
         db.collection("studying")
             .document(user.uid)
-            .set(user)
-            .await()
-    }
-
-    override suspend fun updateStudyingTime(tag: String, time: Long){
-        db.collection("studying")
-            .document(uid)
-            .update(
+            .set(
                 mapOf(
-                    "studyingTime" to time,
-                    "tag" to tag
+                    "nickname" to user.nickname,
+                    "profileImg" to user.profileImg,
+                    "tag" to user.tag,
+                    "studyingTime" to user.studyingTime,
+                    "updatedAt" to FieldValue.serverTimestamp()
                 )
             )
             .await()
