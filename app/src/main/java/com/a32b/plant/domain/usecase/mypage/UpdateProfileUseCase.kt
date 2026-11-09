@@ -39,7 +39,7 @@ class UpdateProfileUseCase @Inject constructor(
         }
 
         if (isNicknameChanged) {
-            val nicknameError = validateNickname(normalizedNickname)
+            val nicknameError = NicknameRule.validate(normalizedNickname)
             if (nicknameError != null) {
                 return Result.Failure(AppError.NicknameInvalid(nicknameError))
             }
@@ -66,13 +66,5 @@ class UpdateProfileUseCase @Inject constructor(
         }
 
         return updateResult.map { savedNickname }
-    }
-
-    private fun validateNickname(nickname: String): String? {
-        return when {
-            !NicknameRule.isValidLength(nickname) -> NicknameRule.LENGTH_MESSAGE
-            !NicknameRule.isUsable(nickname) -> NicknameRule.UNUSABLE_MESSAGE
-            else -> null
-        }
     }
 }

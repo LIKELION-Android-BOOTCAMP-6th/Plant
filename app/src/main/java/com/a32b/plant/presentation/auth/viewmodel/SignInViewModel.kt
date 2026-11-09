@@ -93,30 +93,23 @@ class SignInViewModel @Inject constructor(
     fun confirmNickname() {
         if (_uiState.value.isNicknameLoading) return
 
-        val nickname = NicknameRule.normalize(_uiState.value.nicknameInput)
+        val nickname = _uiState.value.nicknameInput
 
-        if (!NicknameRule.isValidLength(nickname)) {
-            _uiState.update { it.copy(nicknameError = NicknameRule.LENGTH_MESSAGE) }
-            return
-        }
-
-        if (!NicknameRule.isUsable(nickname)) {
-            _uiState.update { it.copy(nicknameError = NicknameRule.UNUSABLE_MESSAGE) }
-            return
-        }
-
+        // 형식 오류도 UseCase 결과로 받으므로 가드를 통과한 확인 요청은 로딩 상태를 거친다.
+        // 형식 오류는 UseCase가 중간에 멈추지 않고 바로 실패를 돌려줘, 이 클릭 처리 안에서 false로 돌아오므로
+        // (viewModelScope는 Dispatchers.Main.immediate) 로딩 표시는 그려지지 않는다. 중복·네트워크 실패는 서버를 기다리는 동안 표시된다.
         _uiState.update { it.copy(isNicknameLoading = true, nicknameError = null) }
 
         viewModelScope.launch {
             setNicknameUseCase(loggedInUid, nickname)
-                .onSuccess {
+                .onSuccess { savedNickname ->
                     _uiState.update { it.copy(showNicknameDialog = false, isNicknameLoading = false) }
-                    sendToast("${nickname}님 환영합니다.")
+                    sendToast("${savedNickname}님 환영합니다.")
                     _eventChannel.send(SignInEvent.NavigateToHome)
                 }
                 .onFailure { error ->
-                    // 닉네임 값 자체의 문제(중복)만 입력칸 인라인 에러, 네트워크·저장 실패 등 상황 에러는 토스트
-                    val isInputError = error is AppError.NicknameTaken
+                    // 닉네임 값 자체의 문제(형식 오류·중복)만 입력칸 인라인 에러, 네트워크·저장 실패 등 상황 에러는 토스트
+                    val isInputError = error is AppError.NicknameInvalid || error is AppError.NicknameTaken
                     _uiState.update {
                         it.copy(
                             nicknameError = if (isInputError) error.message else null,
