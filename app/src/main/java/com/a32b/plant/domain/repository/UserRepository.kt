@@ -45,7 +45,7 @@ interface UserRepository {
 
     suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit>
     /**
-     * 닉네임·프로필 이미지를 한 트랜잭션으로 변경한다. 오프라인이면 아무것도 반영하지 않고 실패한다.
+     * 닉네임·프로필 이미지를 한 트랜잭션으로 변경한다. 오프라인이면 기기 대기열에 남기지 않고 실패하며, 일부만 반영되는 상태는 만들지 않는다.
      *
      * 실패 시 [AppError.NicknameTaken] (다른 사용자가 사용 중), [AppError.Network] (오프라인·시간 초과),
      * [AppError.Custom] (그 외 저장 실패)를 반환한다.

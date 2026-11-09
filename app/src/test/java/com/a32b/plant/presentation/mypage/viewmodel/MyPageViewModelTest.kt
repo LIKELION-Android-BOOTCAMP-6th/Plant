@@ -188,6 +188,45 @@ class MyPageViewModelTest {
         }
     }
 
+    @Test
+    fun `current user change after screen entry updates nickname and profile image`() = runTest {
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        try {
+            Dispatchers.setMain(dispatcher)
+            val users = FakeUserRepository(testUser())
+            val viewModel = createViewModel(users)
+            assertEquals("test-user", viewModel.uiState.value.nickname)
+
+            // 시간 초과 뒤 늦게 반영된 저장을 실시간 구독이 currentUser에 전달한 상황
+            users.currentUser.value = testUser().copy(nickname = "late-nick", profileImg = "3")
+            runCurrent()
+
+            assertEquals("late-nick", viewModel.uiState.value.nickname)
+            assertEquals("3", viewModel.uiState.value.profileImg)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun `null current user keeps existing nickname and profile image`() = runTest {
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        try {
+            Dispatchers.setMain(dispatcher)
+            val users = FakeUserRepository(testUser())
+            val viewModel = createViewModel(users)
+
+            // 로그아웃·세션 만료 때는 currentUser가 null이 된다
+            users.currentUser.value = null
+            runCurrent()
+
+            assertEquals("test-user", viewModel.uiState.value.nickname)
+            assertEquals("1", viewModel.uiState.value.profileImg)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     private fun createViewModel(users: FakeUserRepository): MyPageViewModel {
         val notifier = NoopSessionExpiredNotifier
         return MyPageViewModel(

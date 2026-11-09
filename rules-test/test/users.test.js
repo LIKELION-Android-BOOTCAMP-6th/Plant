@@ -1,5 +1,6 @@
 // users/{uid}, 하위 pots/logs 규칙 테스트
 const {describe, it, before, after, beforeEach} = require("node:test");
+const assert = require("node:assert");
 const {assertFails, assertSucceeds} = require("@firebase/rules-unit-testing");
 const {deleteDoc, deleteField, doc, getDoc, increment, runTransaction, setDoc, updateDoc} = require("firebase/firestore");
 const {ALICE, BOB, createTestEnv, seed} = require("../helpers");
@@ -115,6 +116,34 @@ describe("users", () => {
         txn.delete(oldNicknameRef);
         txn.update(userRef, {nickname: "새이름", profileImg: "2"});
       }));
+    });
+
+    it("프로필 변경: 같은 닉네임을 다른 사용자가 먼저 등록하면 재시도에서 중복으로 판정", async () => {
+      await seed(testEnv, async (db) => {
+        await setDoc(doc(db, "users", ALICE), {nickname: "앨리스", profileImg: "1"});
+        await setDoc(doc(db, "nicknames", "앨리스"), {nickname: "앨리스", uid: ALICE});
+      });
+      const db = asAlice();
+      let attempts = 0;
+      const result = await runTransaction(db, async (txn) => {
+        attempts++;
+        const userRef = doc(db, "users", ALICE);
+        const newRef = doc(db, "nicknames", "새이름");
+        await txn.get(userRef);
+        if ((await txn.get(newRef)).exists()) return "taken";
+        if (attempts === 1) {
+          // 첫 시도 도중 BOB이 먼저 등록한 상황
+          await seed(testEnv, async (admin) => {
+            await setDoc(doc(admin, "nicknames", "새이름"), {nickname: "새이름", uid: BOB});
+          });
+        }
+        txn.set(newRef, {nickname: "새이름", uid: ALICE});
+        txn.delete(doc(db, "nicknames", "앨리스"));
+        txn.update(userRef, {nickname: "새이름", profileImg: "2"});
+        return "updated";
+      });
+      assert.strictEqual(result, "taken");
+      assert.strictEqual(attempts, 2);
     });
 
     it("첫 로그인: 같은 쓰기에 nicknames 생성이 없으면 거부", async () => {

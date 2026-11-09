@@ -263,7 +263,8 @@ class UserRepositoryImpl @Inject constructor(
 
     override suspend fun updateProfile(user: User): Result<Unit> = safeRunCatching {
         // 연결이 불안정하면 트랜잭션이 재시도하며 길어질 수 있어 상한을 둔다.
-        // 시간 초과(null)는 네트워크 에러로 취급한다. 서버에는 뒤늦게 반영될 수 있으며, 같은 값으로 다시 시도하면 Repository에서는 NoChange로 성공 처리된다.
+        // 시간 초과(null)는 네트워크 에러로 취급한다. 서버에는 뒤늦게 반영될 수 있다.
+        // 이때 마이페이지 화면은 currentUser 구독으로 닉네임·이미지를 따라간다.
         withTimeoutOrNull(UPDATE_PROFILE_TIMEOUT_MS) {
             userRemoteDataSource.updateProfile(
                 uid = user.uid,
