@@ -132,11 +132,11 @@ class StudyResultViewModel @Inject constructor(
                     // 지급은 서버가 하므로 표시만 못 한 것 — 홈의 쌓인 보상 창에서 보여준다
                     _uiState.update { it.copy(reward = StudyRewardUi.Hidden) }
                 }
-                .collect { status -> onRewardStatus(uid, status, delayNoticeJob) }
+                .collect { status -> onRewardStatus(status, delayNoticeJob) }
         }
     }
 
-    private fun onRewardStatus(uid: String, status: StudyRewardStatus?, delayNoticeJob: Job) {
+    private fun onRewardStatus(status: StudyRewardStatus?, delayNoticeJob: Job) {
         when (status) {
             // 대기 중이면 현재 안내(받는 중 / 늦어짐 / 연결되면 지급) 유지
             StudyRewardStatus.Pending -> Unit
@@ -148,17 +148,22 @@ class StudyResultViewModel @Inject constructor(
             is StudyRewardStatus.Granted -> {
                 delayNoticeJob.cancel()
                 _uiState.update { it.copy(reward = StudyRewardUi.Granted(status.reward)) }
-                if (!status.isSeen) markRewardSeen(uid)
+                if (!status.isSeen) markRewardSeen()
             }
         }
     }
 
-    /** 결과 화면에서 보여준 보상은 홈의 쌓인 보상 창에 다시 나오지 않도록 확인 표시 (실패하면 홈에서 한 번 더 보여줌) */
-    private fun markRewardSeen(uid: String) {
+    /**
+     * 결과 화면에서 보여준 보상은 홈의 쌓인 보상 창에 다시 나오지 않도록 확인 표시 (실패하면 홈에서 한 번 더 보여줌)
+     * 쓰는 시점의 유저로 표시하도록 구독 시작 때 받은 uid를 다시 쓰지 않고 새로 조회한다
+     */
+    private fun markRewardSeen() {
         if (isRewardSeenMarked) return
         isRewardSeenMarked = true
         viewModelScope.launch {
-            studyingRepository.markStudyRewardsSeen(uid, listOf(StudyLogRef(route.potId, route.sessionId)))
+            ensureCurrentUserUseCase { user ->
+                studyingRepository.markStudyRewardsSeen(user.uid, listOf(StudyLogRef(route.potId, route.sessionId)))
+            }
         }
     }
 

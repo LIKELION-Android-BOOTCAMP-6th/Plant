@@ -26,6 +26,7 @@ interface StudyingRepository {
      * 학습 기록 저장 — 기록(logs/{sessionId}) 생성과 화분·유저 학습 시간 누적을 batch 하나로 쓴다 (#453)
      * 오프라인이면 기기 캐시에 바로 반영되고 [StudySaveResult.Pending]을 반환한다 (연결되면 전송됨, 재전송 금지)
      * 보안 규칙이 거부하면 서버 상태를 조회해 [StudySaveResult.AlreadySaved] / [StudySaveResult.Rejected]로 구분한다
+     * 사유를 찾지 못한 거부는 시간이 지나면 통과할 수 있어(기기 시계가 빠름 등) [Result.Failure]로 돌려준다 → 호출부는 백업 유지
      */
     suspend fun saveStudySession(uid: String, potId: String, sessionId: String, log: StudyLog): Result<StudySaveResult>
 

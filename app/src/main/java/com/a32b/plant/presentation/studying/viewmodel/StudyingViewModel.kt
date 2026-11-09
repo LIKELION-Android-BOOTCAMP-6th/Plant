@@ -269,8 +269,12 @@ class StudyingViewModel @Inject constructor(
         }
     }
 
-    /** 현재 시간 기록 */
-    fun onStartedAtChange(value : Long) = _uiState.update { it.copy(startedAt = value) }
+    /**
+     * 학습 시작 시각 기록 — 아직 값이 없을 때만 넣는다
+     * 화면이 다시 그려질 때마다 호출되므로, 이어서 공부하는 세션이 백업에서 복원한 시작 시각을
+     * 화면을 연 시각으로 덮어쓰지 않게 한다 (덮어쓰면 startedAt + 학습 시간이 미래가 되어 보안 규칙이 저장을 거부, #453)
+     */
+    fun onStartedAtChange(value : Long) = _uiState.update { if (it.startedAt == 0L) it.copy(startedAt = value) else it }
 
     /** 비정상 종료 대비 로컬 디비에 데이터 저장   */
     private suspend fun saveSession(status: StudyingSessionStatus = StudyingSessionStatus.STUDYING){

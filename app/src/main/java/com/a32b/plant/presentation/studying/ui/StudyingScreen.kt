@@ -63,6 +63,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
     val context = LocalContext.current
 
     val startTime = rememberSaveable { System.currentTimeMillis() }
+    // ViewModel은 시작 시각이 비어 있을 때만 반영 — 백업에서 복원한 시작 시각은 덮어쓰지 않음
     viewModel.onStartedAtChange(startTime)
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(

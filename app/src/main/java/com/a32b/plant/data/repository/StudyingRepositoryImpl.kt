@@ -104,8 +104,9 @@ class StudyingRepositoryImpl @Inject constructor(
 
     /**
      * 서버가 학습 기록 저장을 거부했을 때 — 규칙은 사유를 알려주지 않으므로 서버 상태를 읽어 판단한다
-     * - 규칙 거부가 아닌 오류(로그아웃으로 취소 등)는 다시 보내면 될 수 있으므로 실패로 돌려 백업을 남긴다
+     * - 규칙 거부가 아닌 오류는 다시 보내면 될 수 있으므로 실패로 돌려 백업을 남긴다
      * - 서버 상태를 읽지 못하면(연결 끊김) 판단할 수 없으므로 실패로 돌려 백업을 남긴다 (다음 복구에서 다시 판단)
+     * - 사유를 찾지 못한 거부도 실패로 돌려 백업을 남긴다 ([toSaveResult] 참고)
      */
     private suspend fun resolveRejectedSave(
         uid: String,
@@ -120,7 +121,7 @@ class StudyingRepositoryImpl @Inject constructor(
         return safeRunCatching {
             studyingRemoteDataSource.getStudySaveState(uid, potId, sessionId)
         }.fold(
-            onSuccess = { state -> Result.Success(state.toSaveResult(log)) },
+            onSuccess = { state -> state.toSaveResult(log) },
             onFailure = { e ->
                 Log.e("Studying", "학습 기록 저장 거부 사유 확인 실패", e)
                 Result.Failure(handleSaveError(e))
@@ -135,20 +136,24 @@ class StudyingRepositoryImpl @Inject constructor(
                 e.code == FirebaseFirestoreException.Code.NOT_FOUND
             )
 
-    /** 거부된 뒤 서버 상태로 사유 판단 — 순서는 firestore.rules 학습 기록 저장 검증의 확인 항목 기준 */
-    private fun StudySaveStateDto.toSaveResult(log: StudyLog): StudySaveResult {
+    /**
+     * 거부된 뒤 서버 상태로 사유 판단 — 순서는 firestore.rules 학습 기록 저장 검증의 확인 항목 기준
+     * 다시 보내도 안 되는 거부로 확인된 경우만 [StudySaveResult.Rejected] (호출부가 백업 삭제)
+     * 사유를 찾지 못하면 실패로 돌려 백업을 남긴다. 대표적인 경우는 기기 시계가 허용 오차(5분)보다 빨라
+     * 종료 시각이 서버 시각보다 늦은 것인데, 이 거부는 시간이 지나면 같은 기록이 통과하므로 지우면 안 된다
+     */
+    private fun StudySaveStateDto.toSaveResult(log: StudyLog): Result<StudySaveResult> {
         val reason = when {
             // 같은 세션이 먼저 저장됨 (대기열의 저장 + 재전송, 응답 유실 후 복구)
-            logExists -> return StudySaveResult.AlreadySaved
+            logExists -> return Result.Success(StudySaveResult.AlreadySaved)
             !potExists -> StudySaveRejection.POT_NOT_FOUND
             potCompleted -> StudySaveRejection.POT_COMPLETED
             log.studyingTime <= 0L || log.studyingTime > StudyLog.MAX_STUDYING_TIME_MS ->
                 StudySaveRejection.INVALID_TIME
             (lastStudyEndedAt?.toDate()?.time ?: 0L) > log.startedAt -> StudySaveRejection.OVERLAPPED
-            // 종료 시각이 서버 시각보다 많이 늦음(기기 시계) 등
-            else -> StudySaveRejection.UNKNOWN
+            else -> return Result.Failure(AppError.Custom(UNRESOLVED_REJECTION_MESSAGE))
         }
-        return StudySaveResult.Rejected(reason)
+        return Result.Success(StudySaveResult.Rejected(reason))
     }
 
     private fun handleSaveError(e: Throwable): AppError = when (e) {
@@ -299,5 +304,9 @@ class StudyingRepositoryImpl @Inject constructor(
 
         /** 홈 복구 창 판단 전 대기열이 비기를 기다리는 시간 — 홈이 보일 때마다 실행되므로 짧게 둠 */
         val PENDING_WRITES_TIMEOUT = 3.seconds
+
+        /** 사유를 찾지 못한 저장 거부 안내 — 백업은 남아 홈 복구 창에서 다시 저장할 수 있다 */
+        private const val UNRESOLVED_REJECTION_MESSAGE =
+            "학습 기록을 저장하지 못했습니다. 기기 시간이 실제보다 빠르면 잠시 후 다시 저장해 주세요."
     }
 }
