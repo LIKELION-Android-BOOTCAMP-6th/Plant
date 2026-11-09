@@ -9,5 +9,6 @@ data class DailyReport(
     // 기록이 1개면 최고 기록만 보여주므로 null
     val lowest: ReportRecord?,
     val records: List<ReportRecord>,
-    val streakDays: Int
+    val streakDays: Int,
+    val isFromCache: Boolean
 )

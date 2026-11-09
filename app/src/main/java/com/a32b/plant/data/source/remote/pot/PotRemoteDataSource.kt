@@ -10,7 +10,7 @@ import java.util.Date
 interface PotRemoteDataSource {
     fun getPots(uid: String): Flow<List<PotDto>>
     suspend fun addPot(uid: String, tag: Tag, name: String): Result<Unit>
-    suspend fun getPotsOnce(uid: String): List<PotDto>
+    suspend fun getPotsOnce(uid: String): GetPotsOnceResult
     suspend fun getTodayStudyLogs(uid: String, potId: String, startOfToday: Date): List<StudyLogDto>
     suspend fun levelUpWithItemConsumption(uid: String, potId: String, newLevel: Int, items: Map<ItemType, Int>)
 }

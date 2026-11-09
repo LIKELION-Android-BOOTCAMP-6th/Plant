@@ -14,7 +14,8 @@ data class MonthlyReport(
     val highestDay: ReportDailyTotal?,
     val lowestDay: ReportDailyTotal?,
     // 시작한 기록이 하나라도 있는 날짜(공부 시간이 0이어도 포함). 달력 점과 하루 평균의 일수에 쓴다.
-    val recordDates: Set<LocalDate>
+    val recordDates: Set<LocalDate>,
+    val isFromCache: Boolean
 )
 
 data class ReportDailyTotal(

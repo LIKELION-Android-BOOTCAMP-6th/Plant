@@ -3,6 +3,8 @@ package com.a32b.plant.presentation.report.viewmodel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.KST_ZONE_ID
+import com.a32b.plant.core.util.NETWORK_SLOW_MESSAGE
+import com.a32b.plant.core.util.withSlowNotice
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.DailyReport
 import com.a32b.plant.domain.model.MonthlyReport
@@ -37,7 +39,13 @@ data class ReportUiState(
     val loadError: Boolean = false,
     val dailyReport: DailyReport? = null,
     val monthlyReport: MonthlyReport? = null
-)
+) {
+    val isFromCache: Boolean
+        get() = when (tab) {
+            ReportTab.DAILY -> dailyReport?.isFromCache == true
+            ReportTab.MONTHLY -> monthlyReport?.isFromCache == true
+        }
+}
 
 sealed class ReportEvent {
     data class ShowToast(val message: String) : ReportEvent()
@@ -57,6 +65,7 @@ class ReportViewModel @Inject constructor(
 
     private var monthJob: Job? = null
     private var dailyJob: Job? = null
+    private var hasShownSlowNotice = false
 
     init {
         loadMonth(_uiState.value.month, _uiState.value.selectedDate)
@@ -71,6 +80,7 @@ class ReportViewModel @Inject constructor(
             return
         }
         dailyJob?.cancel()
+        hasShownSlowNotice = false
         _uiState.update { it.copy(selectedDate = date, tab = ReportTab.DAILY, isLoading = true, dailyReport = null) }
         ensureCurrentUserUseCase.invoke()
             .onSuccess { user -> dailyJob = viewModelScope.launch { fetchDailyReport(user.uid, date) } }
@@ -111,6 +121,7 @@ class ReportViewModel @Inject constructor(
     private fun loadMonth(month: YearMonth, selectedDate: LocalDate) {
         monthJob?.cancel()
         dailyJob?.cancel()
+        hasShownSlowNotice = false
         val today = LocalDate.now(KST_ZONE_ID)
         _uiState.update {
             it.copy(
@@ -137,7 +148,7 @@ class ReportViewModel @Inject constructor(
     }
 
     private suspend fun fetchMonthlyReport(uid: String, month: YearMonth) {
-        val result = getMonthlyReportUseCase(uid, month)
+        val result = withReportSlowNotice { getMonthlyReportUseCase(uid, month) }
         currentCoroutineContext().ensureActive()
         result
             .onSuccess { report ->
@@ -152,7 +163,7 @@ class ReportViewModel @Inject constructor(
     }
 
     private suspend fun fetchDailyReport(uid: String, date: LocalDate) {
-        val result = getDailyReportUseCase(uid, date)
+        val result = withReportSlowNotice { getDailyReportUseCase(uid, date) }
         currentCoroutineContext().ensureActive()
         result
             .onSuccess { report ->
@@ -170,6 +181,17 @@ class ReportViewModel @Inject constructor(
         sendToast(error.message)
         finishWithLoadError()
     }
+
+    private suspend fun <T> withReportSlowNotice(block: suspend () -> T): T =
+        withSlowNotice(
+            onSlow = {
+                if (!hasShownSlowNotice) {
+                    hasShownSlowNotice = true
+                    sendToast(NETWORK_SLOW_MESSAGE)
+                }
+            },
+            block = block
+        )
 
     private fun sendToast(message: String) {
         viewModelScope.launch { _eventChannel.send(ReportEvent.ShowToast(message)) }
