@@ -53,7 +53,8 @@ import androidx.compose.ui.layout.LayoutModifier
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
-import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.Placeable
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.platform.LocalContext
@@ -219,11 +220,8 @@ fun HomeScreen(
                     .background(MaterialTheme.colorScheme.background),
                 contentAlignment = Alignment.TopCenter
             ) {
-                // 본문 높이가 560dp 미만이면(세로가 짧은 소형 폰, 또는 큰 글꼴로 상단바·하단 탭바가 커져 본문이 줄어든 경우) 간격 모드로 여백을 줄여 한 화면에 담는다
-                // 360x760dp급은 간격 모드 없이도 다 들어가는 것을 확인함
-                val compact = maxHeight < 560.dp
+                // 간격 모드(compact)는 HomeBodyLayout이 "일반 모드로 화분이 다 들어가는지" 재 보고 정해서 넘겨준다 (#579)
                 HomeBodyLayout(
-                    compact = compact,
                     modifier = Modifier
                         // 태블릿처럼 넓은 화면에서 카드·아이템 박스가 과하게 늘어나지 않게 최대 너비 제한
                         .widthIn(max = 480.dp)
@@ -232,7 +230,7 @@ fun HomeScreen(
                         .heightIn(min = maxHeight.coerceAtMost(720.dp))
                         // 좌우 여백 16dp: 앱바 타이틀·다른 탭 본문(내 화분, 마이페이지)과 왼쪽 끝을 맞춤
                         .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
+                ) { compact ->
                     MainPlantCard(
                         compact = compact,
                         displayPot = displayPot,
@@ -695,7 +693,8 @@ fun MainPlantCard(
 
             Spacer(modifier = Modifier.height(8.dp.compactIf(compact)))
 
-            // 화면 높이가 모자라면 이미지가 먼저 줄어든다 (최대 크기 → 최소 크기, #376)
+            // 이미지 칸은 간격 모드에서만 줄어든다 (최대 크기 → 최소 크기, #376)
+            // 일반 모드는 최소 = 최대라 항상 최대 크기: HomeBodyLayout이 최대 크기로 다 들어갈 때만 일반 모드를 고르기 때문 (#579)
             // weight(fill = false): 카드 안 다른 요소를 다 놓고 남은 높이까지만 차지
             if(hasNoPot){
                 Box(
@@ -703,7 +702,7 @@ fun MainPlantCard(
                     // 원형 배경이라 높이에 맞춰 정사각형 유지
                     modifier = Modifier
                         .weight(1f, fill = false)
-                        .shrinkableImageHeight(min = if (compact) 40.dp else 48.dp, max = 100.dp)
+                        .shrinkableImageHeight(min = if (compact) 40.dp else 100.dp, max = 100.dp)
                         .aspectRatio(1f, matchHeightConstraintsFirst = true),
                     contentAlignment = Alignment.Center
                 ){
@@ -714,16 +713,13 @@ fun MainPlantCard(
                 // 그래서 칸을 170dp로 키워 화분 폭이 약 69dp로 보이게 한다 (#476, 420dpi 실기기 캡처에서 182px ÷ 2.625)
                 // 간격 모드 최소 높이: 40dp면 화분 폭이 약 16dp밖에 안 돼 70dp(화분 폭 약 29dp)로 키운다 (#476)
                 // → 예전 Lv0 이미지(화분 폭 = 이미지의 약 72%)를 40dp 칸에 그렸을 때와 같은 폭을 기준으로 삼음
-                // → 대신 세로가 아주 짧은 화면에서는 그만큼(최대 30dp) 바깥 스크롤이 더 생긴다 (HomeBodyLayout 3번 참고)
-                // 일반 모드 최소 높이는 48dp 그대로 둔다: 간격 모드 기준(본문 560dp)은 내용과 상관없이 고정이라,
-                // 키우면 560dp 바로 위 화면에서 바깥 스크롤이 생긴다 (84dp면 15자 이름에서 최대 27dp, 에뮬레이터 측정)
-                // 글꼴 1.0배·이름 한 줄이면 일반 모드 칸은 79dp 이상이라 48dp까지 줄지 않는다 (기준 개선은 #579)
+                // → 대신 세로가 아주 짧은 화면에서는 그만큼(최대 30dp) 바깥 스크롤이 더 생긴다 (HomeBodyLayout 4번 참고)
                 ProfileImage(
                     level = "Lv.${displayPot.potLevel}",
                     size = 170,
                     modifier = Modifier
                         .weight(1f, fill = false)
-                        .shrinkableImageHeight(min = if (compact) 70.dp else 48.dp, max = 170.dp)
+                        .shrinkableImageHeight(min = if (compact) 70.dp else 170.dp, max = 170.dp)
                 )
             }
             Spacer(modifier = Modifier.height(8.dp.compactIf(compact)))
@@ -1419,16 +1415,33 @@ fun BonusBoxOpenDialog(
 
 /**
  * 홈 본문(메인카드 + 아이템박스) 배치 (#376)
- * content에는 [메인카드, 아이템박스] 순서로 정확히 두 개를 넣는다.
+ * content(compact)에는 [메인카드, 아이템박스] 순서로 정확히 두 개를 넣고, 받은 compact를 두 컴포넌트에 그대로 넘긴다.
+ * 기준 높이 = 화면 높이(최대 720dp)에서 위아래 여백(8dp씩)을 뺀 값 (constraints.minHeight)
  *
- * 1. 아이템박스는 원래 크기 그대로 둔다
- * 2. 카드는 "본문 최소 높이 - 아이템박스 - 간격(18dp, 간격 모드 9dp)"만큼 높이를 받는다
- *    → 모자라면 카드 안 화분 이미지가 줄어들어(shrinkableImageHeight) 한 화면에 다 담긴다
- * 3. 이미지를 최소로 줄여도 안 들어가면 카드 최소 높이(minIntrinsicHeight)를 그대로 주고,
+ * 1. 간격 모드 판단 (#579): 먼저 일반 모드로 그려서 재 본다
+ *    → 일반 모드 카드는 이미지 칸이 최대 크기로 고정이라(화분 170dp, 로고 100dp), 카드 최소 높이(minIntrinsicHeight)가
+ *      "기준 높이 - 아이템박스 - 간격(18dp)" 이하면 이미지가 최대 크기로 다 들어가므로 일반 모드로 배치한다
+ *    → 모자라면 간격 모드(여백·간격 절반, 아이템 타일 36dp)로 다시 그려서 배치한다
+ *    → 화분 이름 길이·태그 유무·글꼴 크기로 내용이 길어지면 그만큼 더 높은 화면에서 간격 모드가 된다
+ *    → 일반 모드는 이미지가 다 들어갈 때만 쓰므로 일반 모드에서는 바깥 스크롤이 생기지 않고,
+ *      이미지 칸이 줄어드는 건 간격 모드뿐이라 본문이 낮아진다고 화분이 커지는 구간이 없다
+ *    → SubcomposeLayout이라 간격 모드일 때 일반 모드 내용은 재기만 하고 배치하지 않는다 (화면·접근성 트리에 안 나옴)
+ *      단 Compose 테스트 API(onAllNodes…)에는 배치되지 않은 내용도 잡히므로 홈 UI 테스트는 layoutInfo.isPlaced로 거를 것
+ *    → 모드가 바뀌면 다른 slot이라 내용이 새로 만들어진다 ("열기" 문구 애니메이션·아이템 줄 가로 스크롤 위치가 처음부터 다시 시작)
+ *      기준 높이·카드·아이템박스 높이가 바뀔 때만 생겨 허용한다 (#579)
+ *      - 대표 화분이나 그 정보가 바뀌어 화분 유무·태그 유무·이름 줄 수가 달라질 때
+ *      - 레벨업 등으로 진행률 문구(예: "40% (120분/300분)")의 줄 수가 달라질 때 (maxLines가 없어 좁은 화면·큰 글꼴에서 줄이 바뀔 수 있음)
+ *      - 글꼴·화면 크기가 바뀔 때
+ *      막으려고 두 상태를 slot 밖으로 올리면 간격 모드에서 두 slot이 같은 상태를 함께 쓰게 되므로 올리지 않는다
+ *      (같은 Animatable을 두 LaunchedEffect가 animateTo하면 나중 호출이 앞의 애니메이션을 취소하고, ScrollState 하나가 두 horizontalScroll에 붙는다)
+ * 2. 아이템박스는 원래 크기 그대로 둔다
+ * 3. 카드는 "기준 높이 - 아이템박스 - 간격(18dp, 간격 모드 9dp)"만큼 높이를 받는다
+ *    → 간격 모드에서 모자라면 카드 안 이미지가 줄어들어(shrinkableImageHeight) 한 화면에 다 담긴다
+ * 4. 간격 모드에서 이미지를 최소로 줄여도 안 들어가면 카드 최소 높이(minIntrinsicHeight)를 그대로 주고,
  *    본문이 화면보다 길어져 바깥 verticalScroll로 내려 볼 수 있게 한다 (버튼이 잘리지 않게)
  *    → intrinsic 계산을 쓰므로 카드 안에 SubcomposeLayout 기반 컴포넌트(Lazy 목록, BoxWithConstraints 등)를
- *      넣으면 런타임 크래시가 난다 (MainPlantCard 주석 참고)
- * 4. 카드는 맨 위(날짜 바로 아래)에 붙이고, 남는 세로 공간만큼 카드 자체를 늘린다 (#566)
+ *      넣으면 런타임 크래시가 난다 (MainPlantCard 주석 참고). 이 레이아웃 자체는 카드 바깥이라 괜찮다
+ * 5. 카드는 맨 위(날짜 바로 아래)에 붙이고, 남는 세로 공간만큼 카드 자체를 늘린다 (#566)
  *    → 카드는 날짜 바로 아래, 아이템박스는 본문 아래쪽에 와서 두 박스가 본문을 고르게 채운다
  *    → 화분 유무로 카드 내용 높이가 달라도 빈 띠가 생기지 않고, 늘어난 공간은 카드 안 위아래 여백이 된다
  *    → 간격(18dp)은 그대로라 두 박스 사이가 벌어지지 않는다 (#376)
@@ -1437,38 +1450,62 @@ fun BonusBoxOpenDialog(
 @Composable
 private fun HomeBodyLayout(
     modifier: Modifier = Modifier,
-    compact: Boolean = false,
-    content: @Composable () -> Unit
+    content: @Composable (compact: Boolean) -> Unit
 ) {
-    Layout(content = content, modifier = modifier) { measurables, constraints ->
-        require(measurables.size == 2) { "HomeBodyLayout에는 메인카드와 아이템박스 두 개만 넣어야 합니다" }
-        val (cardMeasurable, itemBoxMeasurable) = measurables
-        val gap = 18.dp.compactIf(compact).roundToPx()
+    SubcomposeLayout(modifier = modifier) { constraints ->
         // 세로는 제한 없이 재고, 가로는 본문 너비에 맞춘다
         val childConstraints = constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity)
-
-        val itemBox = itemBoxMeasurable.measure(childConstraints)
-
-        // 화면 높이(최대 720dp)에서 위아래 여백(8dp씩)을 뺀 값이 기준 (스크롤 안이라 maxHeight는 무한대)
+        // 스크롤 안이라 maxHeight는 무한대이고, 기준 높이는 minHeight로 받는다
         val targetHeight = constraints.minHeight
-        val cardAvailable = targetHeight - itemBox.height - gap
-        val cardMinHeight = cardMeasurable.minIntrinsicHeight(constraints.maxWidth)
-        // 카드 높이를 고정해서 준다: 공간이 남으면 카드가 늘어나고, 조금 모자라면 그 높이 안에서 이미지가 줄어들고,
+
+        // compact 값을 slot id로 써서 일반 모드·간격 모드 내용을 따로 만든다
+        fun measureBody(compact: Boolean): HomeBodyMeasure {
+            val measurables = subcompose(compact) { content(compact) }
+            require(measurables.size == 2) { "HomeBodyLayout에는 메인카드와 아이템박스 두 개만 넣어야 합니다" }
+            val (cardMeasurable, itemBoxMeasurable) = measurables
+            val gap = 18.dp.compactIf(compact).roundToPx()
+            val itemBox = itemBoxMeasurable.measure(childConstraints)
+            return HomeBodyMeasure(
+                cardMeasurable = cardMeasurable,
+                itemBox = itemBox,
+                gap = gap,
+                cardAvailable = targetHeight - itemBox.height - gap,
+                cardMinHeight = cardMeasurable.minIntrinsicHeight(constraints.maxWidth)
+            )
+        }
+
+        // 1. 일반 모드로 이미지가 최대 크기로 다 들어가면 일반 모드, 아니면 간격 모드
+        val normal = measureBody(compact = false)
+        val body = if (normal.cardMinHeight <= normal.cardAvailable) normal else measureBody(compact = true)
+
+        // 3·4. 카드 높이를 고정해서 준다: 공간이 남으면 카드가 늘어나고, 조금 모자라면(간격 모드) 그 높이 안에서 이미지가 줄어들고,
         // 최소 높이보다도 모자라면 최소 높이 그대로 둔다(바깥 스크롤)
-        val cardHeight = maxOf(cardAvailable, cardMinHeight)
-        val card = cardMeasurable.measure(
+        val cardHeight = maxOf(body.cardAvailable, body.cardMinHeight)
+        val card = body.cardMeasurable.measure(
             childConstraints.copy(minHeight = cardHeight, maxHeight = cardHeight)
         )
+        val itemBox = body.itemBox
 
-        val contentHeight = card.height + gap + itemBox.height
+        val contentHeight = card.height + body.gap + itemBox.height
         val layoutHeight = maxOf(targetHeight, contentHeight)
 
         layout(constraints.maxWidth, layoutHeight) {
             card.place((constraints.maxWidth - card.width) / 2, 0)
-            itemBox.place((constraints.maxWidth - itemBox.width) / 2, card.height + gap)
+            itemBox.place((constraints.maxWidth - itemBox.width) / 2, card.height + body.gap)
         }
     }
 }
+
+/** HomeBodyLayout에서 한 모드로 잰 결과 (#579) */
+private class HomeBodyMeasure(
+    val cardMeasurable: Measurable,
+    val itemBox: Placeable,
+    val gap: Int,
+    // 카드가 받을 수 있는 높이 = 기준 높이 - 아이템박스 - 간격
+    val cardAvailable: Int,
+    // 카드 최소 높이 (이미지 칸을 그 모드의 최소로 줄였을 때. 일반 모드는 최소 = 최대라 이미지 최대 크기 기준)
+    val cardMinHeight: Int
+)
 
 /**
  * 받은 높이 안에서 [min]~[max] 사이로 높이를 정한다 (#376)
