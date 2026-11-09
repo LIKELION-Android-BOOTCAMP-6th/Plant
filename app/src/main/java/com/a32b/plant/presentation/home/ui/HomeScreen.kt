@@ -1,6 +1,20 @@
 package com.a32b.plant.presentation.home.ui
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -9,7 +23,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -53,6 +66,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -75,6 +89,7 @@ import com.a32b.plant.presentation.core.extension.resId
 import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.home.viewmodel.HomeEvent
 import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
+import com.a32b.plant.presentation.theme.PlantTheme
 
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyingSession
@@ -211,7 +226,7 @@ fun HomeScreen(
                 HomeBodyLayout(
                     compact = compact,
                     modifier = Modifier
-                        // 태블릿처럼 넓은 화면에서 카드가 과하게 늘어나지 않게 최대 너비 제한 (아이템 6개가 한 줄에 보이는 너비)
+                        // 태블릿처럼 넓은 화면에서 카드·아이템 박스가 과하게 늘어나지 않게 최대 너비 제한
                         .widthIn(max = 480.dp)
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
@@ -839,48 +854,294 @@ fun HomeItemBoxSection(
             color = MaterialTheme.colorScheme.secondary,
             tonalElevation = 2.dp
         ) {
-            LazyRow(
+            // 6개를 한 줄에 놓는다 (#387)
+            // 칸 폭은 화면 폭을 6등분하되, ITEM_MIN_WIDTH보다 좁아지는 화면에서는 최소 폭을 지키고 가로 스크롤로 넘긴다
+            // (BoxWithConstraints는 SubcomposeLayout이지만, HomeBodyLayout은 아이템박스를 intrinsic 없이 바로 measure하므로 괜찮다)
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 12.dp.compactIf(compact)),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    .padding(horizontal = 12.dp, vertical = 10.dp.compactIf(compact))
             ) {
-                items(displayItems) { (type, count) ->
-                    val isBox = type == ItemType.BOX
+                val density = LocalDensity.current
+                val gapPx = with(density) { ITEM_GAP.roundToPx() }
+                // px 단위로 내림해서 6칸 + 간격 합이 폭을 넘지 않게 한다 (반올림 오차로 1px짜리 스크롤이 생기는 것 방지)
+                val fitWidthPx = (constraints.maxWidth - gapPx * (displayItems.size - 1)) / displayItems.size
+                val itemWidth = maxOf(with(density) { fitWidthPx.toDp() }, ITEM_MIN_WIDTH)
+                val scrollState = rememberScrollState()
 
-                    Column(
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp.compactIf(compact))) {
+                    Row(
                         modifier = Modifier
-                            .width(60.dp)
-                            .let { baseModifier ->
-                                if (isBox) {
-                                    baseModifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable { onItemClick(type) }
-                                } else {
-                                    baseModifier
-                                }
-                            }
-                            .padding(vertical = 4.dp.compactIf(compact)),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp.compactIf(compact))
+                            .fillMaxWidth()
+                            .horizontalScroll(scrollState),
+                        horizontalArrangement = Arrangement.spacedBy(ITEM_GAP)
                     ) {
-                        Image(
-                            painter = painterResource(id = type.resId),
-                            contentDescription = type.kor,
-                            modifier = Modifier.size(if (compact) 32.dp else 40.dp)
-                        )
-                        Text(
-                            text = type.kor,
-                            style = MaterialTheme.typography.titleSmall,
-                        )
-                        Text(
-                            text = "${count}개",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-
+                        displayItems.forEach { (type, count) ->
+                            HomeItemTile(
+                                type = type,
+                                count = count,
+                                compact = compact,
+                                // 박스만 클릭해서 개봉, 나머지 아이템은 클릭 동작 없음
+                                onClick = if (type == ItemType.BOX) {
+                                    { onItemClick(type) }
+                                } else {
+                                    null
+                                },
+                                modifier = Modifier.width(itemWidth)
+                            )
+                        }
+                    }
+                    // 좁은 화면에서 스크롤이 생길 때만, 옆으로 더 있다는 걸 알려주는 스크롤바를 보여준다
+                    if (scrollState.maxValue > 0) {
+                        HorizontalScrollIndicator(scrollState = scrollState)
                     }
                 }
             }
+        }
+    }
+}
+
+/** 아이템 칸 사이 간격 (#387) */
+private val ITEM_GAP = 4.dp
+
+/**
+ * 아이템 한 칸의 최소 폭 (#387)
+ * 타일(최대 40dp) + 배지가 오른쪽으로 삐져나오는 2dp. 10sp 이름("영양제")도 이 폭 안에 들어간다.
+ * 6칸이 이보다 좁아지는 화면(기기 폭 약 328dp 미만 = 6×42 + 간격 20 + 좌우 여백 56)에서는 가로 스크롤로 바뀐다.
+ */
+private val ITEM_MIN_WIDTH = 42.dp
+
+/** 박스 타일 위 "열기" 문구가 들어갈 자리. 모든 칸에 똑같이 둬서 아이콘 줄을 맞춘다 (#387) */
+private val BOX_CTA_SPACE = 8.dp
+
+/**
+ * 아이템 타일 한 칸: 정사각형 배경 + 아이콘 + 우측 하단 개수 배지, 아래에 이름 (#387)
+ * 박스(클릭 가능)는 테두리와 상단 "열기" 문구로 다른 아이템과 구분한다
+ */
+@Composable
+private fun HomeItemTile(
+    type: ItemType,
+    count: Int,
+    compact: Boolean,
+    onClick: (() -> Unit)?,
+    modifier: Modifier = Modifier
+) {
+    val tileMaxSize = if (compact) 36.dp else 40.dp
+    val showOpenCta = onClick != null && count > 0
+
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .let { baseModifier ->
+                if (onClick != null) {
+                    baseModifier.clickable(
+                        onClickLabel = "${type.kor} 열기",
+                        role = Role.Button,
+                        onClick = onClick
+                    )
+                } else {
+                    baseModifier
+                }
+            }
+            .padding(top = BOX_CTA_SPACE, bottom = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp.compactIf(compact))
+    ) {
+        Box(
+            // widthIn을 fillMaxWidth보다 먼저 둬야 최대 크기가 적용된다
+            // (반대 순서면 fillMaxWidth가 최소 폭을 칸 폭으로 고정해 widthIn(max)가 무시됨)
+            modifier = Modifier
+                .widthIn(max = tileMaxSize)
+                .fillMaxWidth()
+                .aspectRatio(1f)
+        ) {
+            // 배경만 둥글게 자른다: 배지·"열기" 문구는 이 Box 밖(형제)에 두어 clip에 잘리지 않게 한다
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer)
+                    .let { baseModifier ->
+                        if (showOpenCta) {
+                            baseModifier.border(
+                                width = 1.5.dp,
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                        } else {
+                            baseModifier
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = type.resId),
+                    contentDescription = type.kor,
+                    modifier = Modifier.fillMaxSize(0.7f)
+                )
+            }
+            if (showOpenCta) {
+                BoxOpenCta(modifier = Modifier.align(Alignment.TopCenter))
+            }
+            ItemCountBadge(
+                count = count,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    // 타일 오른쪽 모서리에 살짝 걸치게 바깥으로 뺀다 (ITEM_MIN_WIDTH가 타일보다 2dp 넓어 칸 안에 들어감)
+                    // 아래로는 빼지 않는다: 아래로 빼면 배지가 이름을 가림
+                    .offset(x = 2.dp)
+            )
+        }
+        Text(
+            text = homeItemLabel(type),
+            style = MaterialTheme.typography.titleSmall.copy(fontSize = 10.sp, lineHeight = 14.sp),
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/** 홈 타일에 쓰는 짧은 이름. "보너스 박스"는 칸이 좁아 "박스"로 줄인다 (접근성 설명은 원래 이름 유지) */
+private fun homeItemLabel(type: ItemType): String =
+    if (type == ItemType.BOX) "박스" else type.kor
+
+/** 보너스 박스 타일 위 "열기" 문구: 위아래로 살짝 움직여 눌러서 열 수 있다는 걸 알려준다 (#387) */
+@Composable
+private fun BoxOpenCta(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "boxOpenCta")
+    val bounce by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = -2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 600),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "boxOpenCtaBounce"
+    )
+    Box(
+        modifier = modifier
+            // 타일 위쪽 테두리에 걸치게 6dp 올린다
+            // 위아래로 움직이는 2dp까지 더해도 BOX_CTA_SPACE(8dp) 안이라 칸의 clip에 잘리지 않는다
+            .offset(y = -6.dp)
+            // 위치는 그대로 두고 그리기만 움직여 레이아웃을 다시 계산하지 않게 한다
+            .graphicsLayer { translationY = bounce.dp.toPx() }
+            .clip(RoundedCornerShape(percent = 50))
+            .background(MaterialTheme.colorScheme.primary)
+            .padding(horizontal = 5.dp)
+    ) {
+        Text(
+            text = "열기",
+            style = fixedSizeTileTextStyle(),
+            color = MaterialTheme.colorScheme.onPrimary,
+            maxLines = 1
+        )
+    }
+}
+
+/**
+ * 가로 스크롤 위치를 보여주는 얇은 스크롤바 (#387)
+ * 막대 길이 = 보이는 폭 / 전체 폭, 위치 = 현재 스크롤 비율. 스크롤 값은 그리기 단계에서만 읽어 스크롤 중 재구성을 피한다
+ */
+@Composable
+private fun HorizontalScrollIndicator(
+    scrollState: ScrollState,
+    modifier: Modifier = Modifier
+) {
+    val trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+    val thumbColor = MaterialTheme.colorScheme.primary
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(4.dp)
+            .drawBehind {
+                val total = scrollState.maxValue + scrollState.viewportSize
+                if (total <= 0 || scrollState.maxValue <= 0) return@drawBehind
+                val radius = CornerRadius(size.height / 2)
+                drawRoundRect(color = trackColor, cornerRadius = radius)
+                val thumbWidth = size.width * scrollState.viewportSize / total
+                val thumbX = (size.width - thumbWidth) * scrollState.value / scrollState.maxValue
+                drawRoundRect(
+                    color = thumbColor,
+                    topLeft = Offset(thumbX, 0f),
+                    size = Size(thumbWidth, size.height),
+                    cornerRadius = radius
+                )
+            }
+    )
+}
+
+/** 아이템 개수 배지: 0개도 표시하고, 99개를 넘으면 "99+"로 줄인다 (#387) */
+@Composable
+private fun ItemCountBadge(
+    count: Int,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            // 한 자리일 때는 원, 두 자리 이상이면 가로로 늘어나는 알약 모양
+            .defaultMinSize(minWidth = 18.dp, minHeight = 18.dp)
+            .clip(RoundedCornerShape(percent = 50))
+            .background(MaterialTheme.colorScheme.primary)
+            .padding(horizontal = 4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = formatItemBadgeCount(count),
+            style = fixedSizeTileTextStyle(),
+            color = MaterialTheme.colorScheme.onPrimary,
+            maxLines = 1
+        )
+    }
+}
+
+/**
+ * 타일 위에 겹쳐 그리는 배지·"열기" 문구용 글자 스타일 (#387)
+ * 크기를 dp로 고정해 시스템 글꼴 크기를 키워도 커지지 않게 한다.
+ * 타일(최대 40dp)이 고정 크기라 글꼴 2배에서는 "99+"·"열기"가 칸 밖으로 넘쳐 잘렸기 때문 (아이템 이름은 글꼴 크기를 따른다)
+ */
+@Composable
+// 이 파일은 java.time의 TextStyle도 import하고 있어 Compose TextStyle은 전체 경로로 쓴다
+private fun fixedSizeTileTextStyle(): androidx.compose.ui.text.TextStyle = with(LocalDensity.current) {
+    MaterialTheme.typography.titleSmall.copy(fontSize = 10.dp.toSp(), lineHeight = 12.dp.toSp())
+}
+
+/** 배지에 표시할 개수 문자열. 음수(비정상 데이터)는 0으로 표시 */
+private fun formatItemBadgeCount(count: Int): String = when {
+    count > 99 -> "99+"
+    count < 0 -> "0"
+    else -> count.toString()
+}
+
+@Preview(showBackground = true, name = "아이템 박스 - 일반 360dp", widthDp = 360)
+@Preview(showBackground = true, name = "아이템 박스 - 작은 기기 320dp (가로 스크롤)", widthDp = 320)
+@Preview(showBackground = true, name = "아이템 박스 - 태블릿 800dp", widthDp = 800)
+@Composable
+private fun HomeItemBoxSectionPreview() {
+    PlantTheme {
+        // 홈 본문과 같은 좌우 여백 16dp
+        // 태블릿 미리보기는 홈 본문의 최대 너비(480dp) 제한 없이 그려, 타일 최대 크기 제한만 확인한다
+        Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            HomeItemBoxSection(
+                // 0개, 한 자리, 두 자리, 99, 100 이상(99+) 배지를 한 번에 확인
+                item = Item(heart = 0, sun = 3, water = 12, fertilizer = 99, nutrient = 100, box = 1500),
+                onItemClick = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "아이템 박스 - 간격 모드 360dp, 박스 0개", widthDp = 360)
+@Composable
+private fun HomeItemBoxSectionCompactPreview() {
+    PlantTheme {
+        Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            HomeItemBoxSection(
+                // 박스 0개: "열기" 문구·테두리가 없어야 한다
+                item = Item(heart = 1, sun = 0, water = 5, fertilizer = 0, nutrient = 2, box = 0),
+                onItemClick = {},
+                compact = true
+            )
         }
     }
 }
