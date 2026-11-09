@@ -153,7 +153,9 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
                 }
 
                 Spacer(modifier = Modifier.height(30.dp))
-                Text("${TimeFormatter.formatToTimeOnly(startTime)} ~", style = MaterialTheme.typography.bodyMedium, fontSize = 13.sp,)
+                // 저장되는 시작 시각(uiState.startedAt)을 표시 — 백업에서 복원한 세션·디버그 +1h도 기록과 같은 시각으로 보임
+                // 첫 화면에서는 아직 0일 수 있어(그대로 그리면 1970-01-01 0시, 한국 시간 "09:00"이 깜빡임) 그때만 화면을 연 시각으로 표시
+                Text("${TimeFormatter.formatToTimeOnly(uiState.startedAt.takeIf { it != 0L } ?: startTime)} ~", style = MaterialTheme.typography.bodyMedium, fontSize = 13.sp,)
                 SetTimer(
                     time = uiState.timer,
                     color = if (uiState.goalCheckMode == StudyingGoalCheckMode.FINISH) MaterialTheme.colorScheme.error else Color.Unspecified
