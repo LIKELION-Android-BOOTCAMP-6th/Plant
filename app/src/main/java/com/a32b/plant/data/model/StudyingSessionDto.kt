@@ -9,5 +9,7 @@ data class StudyingSessionDto(
     var log: List<String>? = null,
     var startedAt: Long = 0L,
     var isPaused: Boolean = false,
-    var status: String? = null // 이전 버전 백업에는 값이 없음
+    var status: String? = null, // 이전 버전 백업에는 값이 없음
+    var sessionId: String? = null, // 이전 버전 백업에는 값이 없음 (#453)
+    var completed: List<Boolean>? = null // 이전 버전 백업에는 값이 없음 (#453)
 )

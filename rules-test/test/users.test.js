@@ -33,13 +33,13 @@ describe("users", () => {
 
   // 닉네임 변경은 nicknames 문서 소유 확인 (#535)
   describe("nickname", () => {
+    // totalStudyTime 증가는 학습 기록 저장 batch에서만 허용된다 (#453, studyLogs.test.js)
     it("닉네임 외 필드 쓰기는 검사하지 않는다 (출석, 아이템, 세션 토큰, 화분 선택 등)", async () => {
       await assertSucceeds(updateDoc(doc(asAlice(), "users", ALICE), {
         "activeSessionToken": "token",
         "lastSelectedPotId": "pot1",
         "item.water": increment(1),
         "dailyCheckThisMonth.count": increment(1),
-        "totalStudyTime": increment(60),
       }));
     });
 
@@ -192,12 +192,16 @@ describe("users", () => {
     await assertFails(getDoc(doc(asGuest(), "users", ALICE)));
   });
 
+  // 기록 생성·화분 학습 시간 검증은 studyLogs.test.js (#453)
   it("pots·logs는 본인만 읽고 쓸 수 있다", async () => {
     await assertSucceeds(getDoc(doc(asAlice(), "users", ALICE, "pots", "pot1")));
-    await assertSucceeds(setDoc(doc(asAlice(), "users", ALICE, "pots", "pot1", "logs", "log2"), {studyingTime: 30}));
+    await assertSucceeds(getDoc(doc(asAlice(), "users", ALICE, "pots", "pot1", "logs", "log1")));
+    await assertSucceeds(setDoc(doc(asAlice(), "users", ALICE, "pots", "pot2"), {name: "새 화분", potTotalStudyingTime: 0}));
+    await assertSucceeds(updateDoc(doc(asAlice(), "users", ALICE, "pots", "pot1"), {name: "이름 변경"}));
     await assertFails(getDoc(doc(asBob(), "users", ALICE, "pots", "pot1")));
     await assertFails(getDoc(doc(asBob(), "users", ALICE, "pots", "pot1", "logs", "log1")));
-    await assertFails(setDoc(doc(asBob(), "users", ALICE, "pots", "pot1", "logs", "log2"), {studyingTime: 30}));
+    await assertFails(setDoc(doc(asBob(), "users", ALICE, "pots", "pot3"), {name: "남의 화분", potTotalStudyingTime: 0}));
+    await assertFails(updateDoc(doc(asBob(), "users", ALICE, "pots", "pot1"), {name: "해킹"}));
   });
 
   // 알려진 구멍: 본인 문서는 모든 필드를 자유롭게 쓸 수 있다 (#453~#456에서 검증 규칙 추가, #532에서 잠금)

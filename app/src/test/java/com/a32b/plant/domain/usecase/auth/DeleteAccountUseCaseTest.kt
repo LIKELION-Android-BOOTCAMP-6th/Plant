@@ -3,10 +3,14 @@ package com.a32b.plant.domain.usecase.auth
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.StudyLog
+import com.a32b.plant.domain.model.StudyLogRef
+import com.a32b.plant.domain.model.StudyRewardStatus
+import com.a32b.plant.domain.model.StudySaveResult
 import com.a32b.plant.domain.model.StudyingGoalDraft
 import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.domain.model.User
+import com.a32b.plant.domain.model.UnseenStudyReward
 import com.a32b.plant.domain.model.UserSnapshot
 import com.a32b.plant.domain.repository.AuthRepository
 import com.a32b.plant.domain.repository.StudyingRepository
@@ -260,9 +264,12 @@ class DeleteAccountUseCaseTest {
         override fun observeStudyingUser(tag: String): Flow<List<StudyingUser>> = TODO()
         override suspend fun initStudyingUser(user: StudyingUser): Result<Unit> = TODO()
         override suspend fun updateStudyingTime(tag: String, time: Long): Result<Unit> = TODO()
-        override suspend fun updateTotalStudyTime(potId: String, studyTime: Long): Result<Unit> = TODO()
-        override suspend fun updateUserTotalStudyTime(time: Long): Result<Unit> = TODO()
-        override suspend fun saveStudyLog(potId: String, log: StudyLog): Result<Unit> = TODO()
+        override suspend fun saveStudySession(uid: String, potId: String, sessionId: String, log: StudyLog): Result<StudySaveResult> = TODO()
+        override suspend fun awaitPendingWrites(): Boolean = TODO()
+        override suspend fun isStudySessionSaved(uid: String, potId: String, sessionId: String): Result<Boolean> = TODO()
+        override fun observeStudyReward(uid: String, potId: String, sessionId: String): Flow<StudyRewardStatus?> = TODO()
+        override fun observeUnseenStudyRewards(uid: String): Flow<List<UnseenStudyReward>> = TODO()
+        override suspend fun markStudyRewardsSeen(uid: String, refs: List<StudyLogRef>): Result<Unit> = TODO()
         override suspend fun deleteStudyingUserInfo(): Result<Unit> = TODO()
         override suspend fun saveLocalSession(studying: StudyingSession): Result<Unit> = TODO()
         override suspend fun readLocalSession(): Result<StudyingSession?> = TODO()

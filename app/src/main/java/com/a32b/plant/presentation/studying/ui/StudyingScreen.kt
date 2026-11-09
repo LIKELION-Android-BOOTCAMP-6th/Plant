@@ -63,6 +63,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
     val context = LocalContext.current
 
     val startTime = rememberSaveable { System.currentTimeMillis() }
+    // ViewModel은 시작 시각이 비어 있을 때만 반영 — 백업에서 복원한 시작 시각은 덮어쓰지 않음
     viewModel.onStartedAtChange(startTime)
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
@@ -79,7 +80,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
     val timerButtonBack = if (uiState.isStudying) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary
 
     // 종료 저장 중에도 비활성화하지 않음 — 비활성화하면 기본 뒤로 가기로 화면을 떠나 백업 삭제·결과 화면 이동이 취소됨
-    // (서버 쓰기는 이미 반영돼, 남은 백업으로 홈 복구 창에서 다시 저장하면 중복 저장됨)
+    // (서버 쓰기는 이미 반영됐는데 백업이 남아 홈 복구 창이 뜸. 다시 저장해도 같은 세션 ID라 중복 저장되지는 않음, #453)
     // 저장 중 호출은 ViewModel에서 무시
     // 홈이 보이면 타이머 서비스를 중지하므로(#514), 타이머를 유지한 채 홈으로 보내는 경로를 만들면 HomeViewModel.onHomeResumed를 함께 확인할 것
     BackHandler {
@@ -99,7 +100,9 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
                         completed = event.completed,
                         time = event.time,
                         potId = event.potId,
-                        level = uiState.level
+                        level = uiState.level,
+                        sessionId = event.sessionId,
+                        isSavePending = event.isSavePending
                     )){
                         popUpTo(Routes.HomeMain) { inclusive = false }
                     }

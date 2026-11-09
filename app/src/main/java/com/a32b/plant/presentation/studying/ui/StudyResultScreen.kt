@@ -48,6 +48,7 @@ import com.a32b.plant.R
 import com.a32b.plant.core.extension.isCompletedAt
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyReward
+import com.a32b.plant.presentation.studying.viewmodel.StudyRewardUi
 import com.a32b.plant.domain.type.ItemType
 import com.a32b.plant.presentation.core.component.ConfettiOverlay
 import com.a32b.plant.presentation.core.component.ConfirmDialog
@@ -137,7 +138,7 @@ fun StudyResultContent(
     completed: List<Boolean>,
     level: String,
     time: Long,
-    reward: StudyReward?,
+    reward: StudyRewardUi?,
     scrollable: Boolean = true
 ) {
     val screenModifier = if (scrollable) Modifier.fillMaxSize() else Modifier.fillMaxWidth()
@@ -189,9 +190,15 @@ fun StudyResultContent(
 
                     Text(TimeFormatter.formatToDigitalClock(time), style = MaterialTheme.typography.titleLarge, fontSize = 50.sp,)
 
-                    if (reward != null) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        StudyRewardSection(reward)
+                    when (reward) {
+                        is StudyRewardUi.Granted -> {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            StudyRewardSection(reward.reward)
+                        }
+                        StudyRewardUi.Loading -> RewardNotice("보상 받는 중…")
+                        StudyRewardUi.Delayed -> RewardNotice("보상 지급이 늦어지고 있어요.\n지급되면 홈에서 알려드릴게요.")
+                        StudyRewardUi.WaitingForNetwork -> RewardNotice("온라인에 연결되면 보상이 지급돼요.")
+                        StudyRewardUi.Hidden, null -> Unit
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -206,6 +213,19 @@ fun StudyResultContent(
 
     }
 
+}
+
+/** 보상이 아직 표시되지 않을 때의 안내 (보상은 서버가 지급, #453) */
+@Composable
+private fun RewardNotice(text: String) {
+    Spacer(modifier = Modifier.height(16.dp))
+    Text(
+        text = text,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center
+    )
 }
 
 @Composable

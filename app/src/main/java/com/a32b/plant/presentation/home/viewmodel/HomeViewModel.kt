@@ -1,5 +1,6 @@
 package com.a32b.plant.presentation.home.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.KST_ZONE_ID
@@ -13,6 +14,9 @@ import com.a32b.plant.domain.model.DailyCheckThisMonth
 import com.a32b.plant.domain.model.Item
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.model.PotLevelConditions
+import com.a32b.plant.domain.model.StudyReward
+import com.a32b.plant.domain.model.StudySaveResult
+import com.a32b.plant.domain.model.UnseenStudyReward
 import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.onFailure
@@ -32,9 +36,14 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -178,9 +187,45 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState = _uiState.asStateFlow()
 
+    // 지급됐지만 아직 보여주지 않은 학습 보상 (오프라인에서 저장한 세션, 결과 화면을 못 본 세션) — #453
+    private val _unseenStudyRewards = MutableStateFlow<List<UnseenStudyReward>>(emptyList())
+    // 쌓인 보상 창에 표시할 합계 — 없으면 null (창을 띄우지 않음)
+    val unseenStudyReward: StateFlow<StudyReward?> = _unseenStudyRewards
+        .map { rewards -> rewards.takeIf { it.isNotEmpty() }?.let { StudyReward.sum(it.map { unseen -> unseen.reward }) } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
     init {
         checkUserAndLoadData()
         observeUserItem()
+        observeUnseenStudyRewards()
+    }
+
+    /**
+     * 서버 트리거가 지급한 학습 보상 중 아직 확인하지 않은 것을 구독 — 쌓인 보상은 HomeScreen이 합쳐서 한 번에 보여준다
+     * 결과 화면이 보여준 보상은 그 화면에서 확인 표시하므로 여기에는 남지 않는다
+     * 구독 실패(로그아웃 후 권한 거부, 색인 미배포 등)는 보상 지급과 무관하므로 로그만 남김
+     * 유저가 없을 때의 세션 만료 알림은 init의 checkUserAndLoadData가 보내므로, 두 번 가지 않도록 현재 값을 직접 읽음
+     */
+    private fun observeUnseenStudyRewards() {
+        val uid = userRepository.currentUser.value?.uid ?: return
+        viewModelScope.launch {
+            studyingRepository.observeUnseenStudyRewards(uid)
+                .catch { e -> Log.e("HomeViewModel", "쌓인 학습 보상 구독 실패", e) }
+                .collect { rewards -> _unseenStudyRewards.value = rewards }
+        }
+    }
+
+    /** 쌓인 보상 창 확인 — 표시한 기록들의 rewardSeen = true (기기 캐시에 바로 반영되어 창이 닫힘) */
+    fun confirmUnseenStudyRewards() {
+        val shown = _unseenStudyRewards.value
+        if (shown.isEmpty()) return
+        // 쓰기 결과를 기다리는 동안 창이 다시 그려지지 않도록 먼저 비운다 (구독이 곧 같은 결과를 보냄)
+        _unseenStudyRewards.value = emptyList()
+        viewModelScope.launch {
+            ensureCurrentUserUseCase { user ->
+                studyingRepository.markStudyRewardsSeen(user.uid, shown.map { it.ref })
+            }
+        }
     }
     private fun checkUserAndLoadData() {
         viewModelScope.launch {
@@ -273,7 +318,13 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /** 저장에 실패하거나 제한 시간이 지나면(AppError.Network) 창을 유지해 다시 선택할 수 있게 함 */
+    /**
+     * 복구 저장 (#453)
+     * - 저장됨 / 이미 저장됨: 창 닫기 (같은 세션 ID라 중복 저장 없음)
+     * - 대기 중(오프라인): 창 닫기, 백업은 유지 — 연결되면 자동 전송되고 다음 홈 복귀에서 서버 반영을 확인해 정리
+     * - 다시 보내도 안 되는 거부: 사유 안내 후 창 닫기 (백업은 유즈케이스가 지움)
+     * - 저장 실패(서버 상태 확인 불가 등): 창을 유지해 다시 선택할 수 있게 함
+     */
     fun recoverSession() {
         val session = _recoverySession.value ?: return
         if (_isRecovering.value) return
@@ -281,10 +332,16 @@ class HomeViewModel @Inject constructor(
         _isRecovering.value = true
         viewModelScope.launch {
             recoverStudySessionUseCase(session)
-                .onSuccess {
+                .onSuccess { result ->
                     _recoverySession.value = null
                     maybeShowAutomaticAttendanceDialog()
-                    sendToast("학습 기록이 저장되었습니다.")
+                    sendToast(
+                        when (result) {
+                            StudySaveResult.Saved, StudySaveResult.AlreadySaved -> "학습 기록이 저장되었습니다."
+                            StudySaveResult.Pending -> "네트워크에 연결되면 학습 기록이 자동으로 저장돼요."
+                            is StudySaveResult.Rejected -> result.reason.message
+                        }
+                    )
                     deleteStudyingUserInfo()
                 }
                 .onFailure { error ->
