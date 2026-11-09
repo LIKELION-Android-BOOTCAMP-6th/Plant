@@ -7,6 +7,7 @@ import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.PotRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
+import com.a32b.plant.domain.util.PotNameRule
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -54,7 +55,8 @@ class NewBornTreeViewModel @Inject constructor(private val potRepository: PotRep
         }
         viewModelScope.launch {
             _isUploading.value = true
-            val result = potRepository.addPot(currentUid, tag, name)
+            // 이름 변경과 같은 규칙으로 앞뒤 공백을 지운 뒤 저장 (#563)
+            val result = potRepository.addPot(currentUid, tag, PotNameRule.normalize(name))
             _isUploading.value = false
 
             result.onSuccess { onSuccess() }
