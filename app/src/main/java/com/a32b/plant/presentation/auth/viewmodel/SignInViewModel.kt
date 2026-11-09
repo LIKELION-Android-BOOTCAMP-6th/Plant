@@ -95,7 +95,9 @@ class SignInViewModel @Inject constructor(
 
         val nickname = _uiState.value.nicknameInput
 
-        // 형식 검사는 UseCase가 하므로, 연타 가드는 코루틴 시작 전에 동기적으로 건다
+        // 형식 오류도 UseCase 결과로 받으므로 모든 확인 요청이 로딩 상태를 거친다.
+        // 형식 오류는 UseCase가 중간에 멈추지 않고 바로 실패를 돌려줘, 이 클릭 처리 안에서 false로 돌아오므로
+        // (viewModelScope는 Dispatchers.Main.immediate) 로딩 표시는 그려지지 않는다. 중복·네트워크 실패는 서버를 기다리는 동안 표시된다.
         _uiState.update { it.copy(isNicknameLoading = true, nicknameError = null) }
 
         viewModelScope.launch {
