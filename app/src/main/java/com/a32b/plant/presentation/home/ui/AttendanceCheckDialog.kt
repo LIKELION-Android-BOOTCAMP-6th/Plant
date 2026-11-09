@@ -7,12 +7,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -73,21 +77,30 @@ private fun AttendanceDialogContent(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = "출석체크",
-                    style = MaterialTheme.typography.titleSmall
-                )
-                Text(
-                    text = "출석할수록 보상이 자라나요",
-                    modifier = Modifier.padding(top = 8.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSecondary
-                )
+                // weight(fill = false): 화면이 충분하면 내용 높이만큼만, 짧으면 버튼 두 개를 놓고 남은 높이까지만 차지해서
+                // 제목·출석판만 스크롤되고 출석하기·나가기 버튼은 항상 보이게 한다
+                Column(
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "출석체크",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    Text(
+                        text = "출석할수록 보상이 자라나요",
+                        modifier = Modifier.padding(top = 8.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondary
+                    )
 
-                AttendanceBoard(
-                    checkedCount = uiState.count,
-                    rewards = attendanceRewards
-                )
+                    AttendanceBoard(
+                        checkedCount = uiState.count,
+                        rewards = attendanceRewards
+                    )
+                }
 
                 Button(
                     onClick = onCheckClick,
@@ -186,7 +199,10 @@ private fun AttendanceBoard(
                         AttendanceRewardItem(
                             reward = reward,
                             isChecked = reward.day <= checkedCount,
-                            isNext = reward.day == checkedCount + 1
+                            isNext = reward.day == checkedCount + 1,
+                            // weight(fill = false): 폭이 넉넉하면 지금처럼 SpaceBetween으로 벌어지고,
+                            // 좁으면(360dp 등) 7칸이 같은 폭으로 줄어 마지막 칸이 잘리지 않게 한다
+                            modifier = Modifier.weight(1f, fill = false)
                         )
                     }
                 }
@@ -207,7 +223,8 @@ private fun AttendanceBoard(
 private fun AttendanceRewardItem(
     reward: AttendanceRewardUi,
     isChecked: Boolean,
-    isNext: Boolean
+    isNext: Boolean,
+    modifier: Modifier = Modifier
 ) {
     val backgroundColor = when {
         isChecked -> MaterialTheme.colorScheme.primary
@@ -228,12 +245,16 @@ private fun AttendanceRewardItem(
     }
 
     Column(
+        modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Box(
+            // 칸이 38dp보다 좁아지면 같이 줄고, 가로·세로가 같아 원 모양은 유지한다
             modifier = Modifier
-                .size(38.dp)
+                .widthIn(max = 38.dp)
+                .fillMaxWidth()
+                .aspectRatio(1f)
                 .clip(CircleShape)
                 .background(backgroundColor)
                 .border(if (isNext) 2.dp else 1.dp, borderColor, CircleShape),
