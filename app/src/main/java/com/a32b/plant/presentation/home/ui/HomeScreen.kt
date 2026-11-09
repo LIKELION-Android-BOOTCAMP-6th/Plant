@@ -987,18 +987,36 @@ private fun HomeItemTile(
                 modifier = Modifier.align(Alignment.BottomEnd)
             )
         }
-        Text(
-            text = homeItemLabel(type),
-            // 칸 전체 설명(accessibilityLabel)과 겹치지 않게 이름은 따로 읽지 않는다
-            modifier = Modifier.clearAndSetSemantics { },
-            style = MaterialTheme.typography.titleSmall.copy(fontSize = 10.sp, lineHeight = 14.sp),
-            textAlign = TextAlign.Center,
-            // "보너스\n박스"만 2줄. 다른 칸은 1줄이고, Row가 위쪽 정렬이라 이름 첫 줄 높이는 모든 칸이 같다
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
+        // 이름 자리는 모든 칸을 2줄 높이로 맞추고 글자를 세로 가운데에 둔다
+        // → 1줄 이름(정성·햇빛…)이 "보너스" / "박스" 두 줄 사이 가운데 선에 맞춰 일자로 놓인다
+        // (sp를 dp로 바꾸므로 시스템 글꼴 크기가 커지면 자리도 같이 커진다)
+        Box(
+            modifier = Modifier.heightIn(
+                min = with(LocalDensity.current) { (ITEM_LABEL_LINE_HEIGHT * ITEM_LABEL_MAX_LINES).toDp() }
+            ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = homeItemLabel(type),
+                // 칸 전체 설명(accessibilityLabel)과 겹치지 않게 이름은 따로 읽지 않는다
+                modifier = Modifier.clearAndSetSemantics { },
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontSize = 10.sp,
+                    lineHeight = ITEM_LABEL_LINE_HEIGHT
+                ),
+                textAlign = TextAlign.Center,
+                maxLines = ITEM_LABEL_MAX_LINES,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
+
+/** 아이템 이름 한 줄 높이 (#387) */
+private val ITEM_LABEL_LINE_HEIGHT = 14.sp
+
+/** 아이템 이름 최대 줄 수. "보너스\n박스"가 2줄이라 모든 칸의 이름 자리를 이 줄 수 높이로 맞춘다 (#387) */
+private const val ITEM_LABEL_MAX_LINES = 2
 
 /**
  * 홈 타일에 쓰는 이름 (#387)
