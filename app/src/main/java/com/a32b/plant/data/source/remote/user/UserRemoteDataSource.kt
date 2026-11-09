@@ -13,10 +13,8 @@ interface UserRemoteDataSource {
     suspend fun createUser(uid: String, user: UserDto)
     /** 닉네임 등록 + 첫 로그인 완료를 한 트랜잭션으로 처리하고, 확인한 서버 상태를 반환 */
     suspend fun completeFirstLogin(uid: String, nickname: String): CompleteFirstLoginResult
-    suspend fun updateProfile(uid: String, nickname: String, profileImg: String)
-    suspend fun isNicknameTaken(nickname: String): Boolean
-    suspend fun registerNickname(uid: String, nickname: String)
-    suspend fun deleteNickname(nickname: String)
+    /** 닉네임 중복 확인·새 닉네임 문서 생성·이전 닉네임 문서 삭제와 users 수정을 한 트랜잭션으로 처리하고, 확인한 서버 상태를 반환 */
+    suspend fun updateProfile(uid: String, nickname: String, profileImg: String): UpdateProfileResult
     suspend fun checkAttendance(uid: String): AttendanceDecision
     suspend fun updateSessionToken(uid: String, token: String?)
 }
