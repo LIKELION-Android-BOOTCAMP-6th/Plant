@@ -250,8 +250,9 @@ private fun AttendanceRewardItem(
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Box(
-            // 칸이 38dp보다 좁아지면 같이 줄고, 가로·세로가 같아 원 모양은 유지한다
+            // 칸이 42dp보다 좁으면 양옆 2dp 여백을 남기고 줄어들며, 원 모양은 유지한다
             modifier = Modifier
+                .padding(horizontal = 2.dp)
                 .widthIn(max = 38.dp)
                 .fillMaxWidth()
                 .aspectRatio(1f)
