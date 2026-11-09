@@ -116,8 +116,8 @@ class NicknameRuleTest {
 
     @Test
     fun `validate returns unusable message for unusable nickname`() {
-        // 길이는 맞지만 문서 ID로 쓸 수 없거나(`/`, `__xx__`), 보이지 않는 문자(U+200B)가 섞인 값
-        listOf("새/싹", "__ab__", "새​싹").forEach { nickname ->
+        // 길이는 맞지만 문서 ID로 쓸 수 없거나(`/`, `..`, `__xx__`), 보이지 않는 문자(U+200B)가 섞인 값
+        listOf("새/싹", "..", "__ab__", "새​싹").forEach { nickname ->
             assertEquals(NicknameRule.UNUSABLE_MESSAGE, NicknameRule.validate(nickname))
         }
     }
