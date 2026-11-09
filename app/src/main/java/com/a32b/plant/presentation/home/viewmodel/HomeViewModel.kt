@@ -114,7 +114,7 @@ private fun DailyCheckThisMonth.toAttendanceUiStateKeeping(
 
 /**
  * 홈 "오늘 학습 시간"의 0 표시 — 화분 있음(기록 0)·화분 없음·조회 실패를 같은 형식으로 맞춘다 (#584)
- * formatToDigitalClock은 다른 화면 10곳에서도 쓰므로 반환 형식을 바꾸지 않고, 0을 이 함수 결과에 맞춘다
+ * formatToDigitalClock은 학습 타이머·알림·결과 화면 등 여러 곳에서 쓰므로 반환 형식을 바꾸지 않고, 0을 이 함수 결과에 맞춘다
  */
 internal val ZERO_STUDY_TIME: String = TimeFormatter.formatToDigitalClock(0L)
 
@@ -409,7 +409,7 @@ class HomeViewModel @Inject constructor(
                         _displayPot.value = pot
                         updateProgressAndCondition(pot)
                         if (pot.id.isNotEmpty() && pot != Pot.EMPTY) {
-                            // 같은 화분이 다시 방출되면(화분 문서 변경) 조회하는 동안 지금 값을 그대로 둔다
+                            // 화분 목록이 다시 방출됐는데(어느 화분 문서든 바뀌면) 대표 화분이 그대로면 조회하는 동안 지금 값을 그대로 둔다
                             // 다른 화분으로 바뀌었으면 이전 화분의 시간이 보이지 않게 조회 중으로 돌린다 (#584)
                             fetchTodayStudyTime(uid, pot.id, keepCurrent = pot.id == previousPotId)
                         } else {
@@ -460,12 +460,18 @@ class HomeViewModel @Inject constructor(
 
     fun confirmPotChange() {
         _tempSelectedPot.value?.let { selected ->
+            // 다이얼로그는 지금 화분이 선택된 채 열리므로, 바로 선택 완료를 누르면 같은 화분이다
+            // _displayPot을 바꾸기 전에 비교해야 한다 (바꾼 뒤에는 항상 같음)
+            val isSamePot = selected.id == _displayPot.value.id
             // 화분 목록이 다시 방출될 때도 이 화분을 고르도록 먼저 바꾼다 (#582)
             selectedPotId.value = selected.id
             _displayPot.value = selected
-            // 새 화분의 조회가 끝나기 전에 이전 화분의 시간이 보이지 않도록 바로 조회 중으로 돌린다 (#584)
-            todayStudyTimeJob?.cancel()
-            _todayStudyTime.value = null
+            // 다른 화분이면 새 화분의 조회가 끝나기 전에 이전 화분의 시간이 보이지 않도록 바로 조회 중으로 돌린다 (#584)
+            // 같은 화분이면 지금 값이 그 화분의 값이므로 그대로 두고 다시 조회만 한다 (숨겼다 보이는 깜빡임 방지)
+            if (!isSamePot) {
+                todayStudyTimeJob?.cancel()
+                _todayStudyTime.value = null
+            }
 
             updateProgressAndCondition(selected)
 
@@ -473,7 +479,8 @@ class HomeViewModel @Inject constructor(
                 safeRunCatching {
                     ensureCurrentUserUseCase { user ->
                         // 저장은 서버 응답까지 기다리므로(오프라인이면 연결될 때까지) 오늘 학습 시간을 먼저 조회한다
-                        fetchTodayStudyTime(user.uid, selected.id)
+                        // 같은 화분이어도 저장은 다시 한다 (이전 저장이 거부됐다면 다시 저장하는 경로가 됨)
+                        fetchTodayStudyTime(user.uid, selected.id, keepCurrent = isSamePot)
                         userRepository.updateLastSelectedPot(user.uid, selected.id)
                     }
                 }.onFailure { e ->
