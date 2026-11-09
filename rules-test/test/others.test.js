@@ -115,7 +115,7 @@ describe("기타 컬렉션", () => {
       await assertSucceeds(register("새️싹"));
     });
 
-    it("규칙 이전에 만들어진 형식 위반 닉네임 문서도 소유자는 삭제할 수 있다", async () => {
+    it("규칙 이전에 만들어진 형식 위반 닉네임 문서도 소유자는 삭제할 수 있다 (users 문서 없음)", async () => {
       await seed(testEnv, async (db) => {
         await setDoc(doc(db, "nicknames", "앨리스 "), {nickname: "앨리스 ", uid: ALICE});
       });

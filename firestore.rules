@@ -254,11 +254,11 @@ service cloud.firestore {
     }
 
     // 닉네임 선점 문서: 소유자 uid를 함께 저장하고, 소유자만 삭제 가능
-    // 삭제는 쓰기 후 내 users.nickname이 그 닉네임이 아닐 때만 허용 (nicknameReleasedAfterWrite, #549)
+    // 삭제는 소유자이면서, 쓰기 후 내 users 문서가 없거나 users.nickname이 그 닉네임이 아닐 때만 허용 (nicknameReleasedAfterWrite, #549)
     // 이미 있는 문서에 set()하면 update로 평가되어 거부됨 (덮어쓰기 방지)
     // 없는 문서 삭제는 허용 (users와 nicknames가 어긋나도 닉네임 변경이 막히지 않게)
     // 회원탈퇴 시 닉네임 문서 삭제는 deleteAccount 함수가 처리한다 (#457)
-    // 형식 검사(isValidNickname)는 생성에만 적용 — 이미 있는 문서는 그대로 두고 삭제도 기존대로 허용
+    // 형식 검사(isValidNickname)는 생성에만 적용 — 규칙 이전에 만들어진 형식 위반 문서도 삭제는 같은 조건으로 허용
     match /nicknames/{nickname} {
       allow read: if signedIn();
       allow create: if signedIn() &&
