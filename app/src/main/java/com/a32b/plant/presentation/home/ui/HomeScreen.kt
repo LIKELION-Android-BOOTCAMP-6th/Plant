@@ -1428,6 +1428,9 @@ fun BonusBoxOpenDialog(
  *    → SubcomposeLayout이라 간격 모드일 때 일반 모드 내용은 재기만 하고 배치하지 않는다 (화면·접근성 트리에 안 나옴)
  *      단 Compose 테스트 API(onAllNodes…)에는 배치되지 않은 내용도 잡히므로 홈 UI 테스트는 layoutInfo.isPlaced로 거를 것
  *    → 모드가 바뀌면 다른 slot이라 내용이 새로 만들어진다 ("열기" 문구 애니메이션·아이템 줄 가로 스크롤 위치가 처음부터 다시 시작)
+ *      카드·아이템박스 높이가 바뀔 때(대표 화분이나 그 정보가 바뀌어 화분 유무·태그 유무·이름 줄 수가 달라질 때, 글꼴·화면 크기가 바뀔 때)만 생겨 허용한다 (#579)
+ *      막으려고 두 상태를 slot 밖으로 올리면 간격 모드에서 두 slot이 같은 상태를 함께 쓰게 되므로 올리지 않는다
+ *      (같은 Animatable을 두 LaunchedEffect가 animateTo하면 나중 호출이 앞의 애니메이션을 취소하고, ScrollState 하나가 두 horizontalScroll에 붙는다)
  * 2. 아이템박스는 원래 크기 그대로 둔다
  * 3. 카드는 "기준 높이 - 아이템박스 - 간격(18dp, 간격 모드 9dp)"만큼 높이를 받는다
  *    → 간격 모드에서 모자라면 카드 안 이미지가 줄어들어(shrinkableImageHeight) 한 화면에 다 담긴다
@@ -1497,7 +1500,7 @@ private class HomeBodyMeasure(
     val gap: Int,
     // 카드가 받을 수 있는 높이 = 기준 높이 - 아이템박스 - 간격
     val cardAvailable: Int,
-    // 카드 최소 높이 (이미지 칸을 최소로 줄였을 때)
+    // 카드 최소 높이 (이미지 칸을 그 모드의 최소로 줄였을 때. 일반 모드는 최소 = 최대라 이미지 최대 크기 기준)
     val cardMinHeight: Int
 )
 
