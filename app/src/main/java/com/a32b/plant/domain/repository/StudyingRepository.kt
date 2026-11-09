@@ -16,11 +16,11 @@ interface StudyingRepository {
     /** 같은 태그로 학습 중인 사용자 구독*/
     fun observeStudyingUser(tag: String): Flow<List<StudyingUser>>
 
-    /** 공부 시작 시 유저 정보 저장 */
-    suspend fun initStudyingUser(user: StudyingUser): Result<Unit>
-
-    /** 학습 시간 업데이트 */
-    suspend fun updateStudyingTime(tag: String, time: Long): Result<Unit>
+    /**
+     * "공부 중" 표시(studying/{uid}) 등록·갱신 — 공부 시작·재개 시와 공부 중 1분마다 호출
+     * 문서가 없어도(일시정지로 삭제, 예약 함수가 정리) 다시 만든다 (#525)
+     */
+    suspend fun saveStudyingUser(user: StudyingUser): Result<Unit>
 
     /**
      * 학습 기록 저장 — 기록(logs/{sessionId}) 생성과 화분·유저 학습 시간 누적을 batch 하나로 쓴다 (#453)

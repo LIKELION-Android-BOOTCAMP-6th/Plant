@@ -262,8 +262,7 @@ class DeleteAccountUseCaseTest {
     private class FakeStudyingRepository : StudyingRepository {
         var clearLocalSessionCalls = 0
         override fun observeStudyingUser(tag: String): Flow<List<StudyingUser>> = TODO()
-        override suspend fun initStudyingUser(user: StudyingUser): Result<Unit> = TODO()
-        override suspend fun updateStudyingTime(tag: String, time: Long): Result<Unit> = TODO()
+        override suspend fun saveStudyingUser(user: StudyingUser): Result<Unit> = TODO()
         override suspend fun saveStudySession(uid: String, potId: String, sessionId: String, log: StudyLog): Result<StudySaveResult> = TODO()
         override suspend fun awaitPendingWrites(): Boolean = TODO()
         override suspend fun isStudySessionSaved(uid: String, potId: String, sessionId: String): Result<Boolean> = TODO()

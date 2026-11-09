@@ -1,7 +1,7 @@
 // nicknames, feedbacks, studying, Tags 규칙 테스트
 const {describe, it, before, after, beforeEach} = require("node:test");
 const {assertFails, assertSucceeds} = require("@firebase/rules-unit-testing");
-const {deleteDoc, doc, getDoc, runTransaction, serverTimestamp, setDoc, writeBatch} = require("firebase/firestore");
+const {deleteDoc, doc, getDoc, runTransaction, serverTimestamp, setDoc, updateDoc, writeBatch} = require("firebase/firestore");
 const {ALICE, BOB, createTestEnv, seed} = require("../helpers");
 
 describe("기타 컬렉션", () => {
@@ -219,10 +219,58 @@ describe("기타 컬렉션", () => {
   });
 
   describe("studying", () => {
+    // 앱(StudyingRemoteDataSourceImpl.saveStudyingUser)이 보내는 필드와 같게 둔다 (#525)
+    const studyingUser = (overrides = {}) => ({
+      nickname: "앨리스", profileImg: "", tag: "공부", studyingTime: 60000,
+      updatedAt: serverTimestamp(), ...overrides,
+    });
+    const aliceStudying = () => doc(asAlice(), "studying", ALICE);
+
     it("본인 문서만 쓸 수 있고, 로그인하면 누구나 읽을 수 있다", async () => {
-      await assertSucceeds(setDoc(doc(asAlice(), "studying", ALICE), {studyingTime: 0}));
-      await assertFails(setDoc(doc(asBob(), "studying", ALICE), {studyingTime: 0}));
+      await assertSucceeds(setDoc(aliceStudying(), studyingUser()));
+      await assertFails(setDoc(doc(asBob(), "studying", ALICE), studyingUser()));
       await assertSucceeds(getDoc(doc(asBob(), "studying", ALICE)));
+      await assertFails(getDoc(doc(asGuest(), "studying", ALICE)));
+    });
+
+    it("이미 있는 문서도 set으로 다시 쓸 수 있다 (1분마다 갱신, updatedAt 없는 예전 문서 덮어쓰기)", async () => {
+      await seed(testEnv, async (db) => {
+        await setDoc(doc(db, "studying", ALICE), {nickname: "앨리스", profileImg: "", tag: "공부", studyingTime: 0});
+      });
+      await assertSucceeds(setDoc(aliceStudying(), studyingUser({studyingTime: 120000})));
+    });
+
+    it("updatedAt이 없거나 서버 시각이 아니면 거부", async () => {
+      const {updatedAt, ...withoutUpdatedAt} = studyingUser();
+      await assertFails(setDoc(aliceStudying(), withoutUpdatedAt));
+      await assertFails(setDoc(aliceStudying(), studyingUser({updatedAt: new Date()})));
+    });
+
+    it("예전 앱의 update(studyingTime, tag만)는 updatedAt이 없어 거부", async () => {
+      await seed(testEnv, async (db) => {
+        await setDoc(doc(db, "studying", ALICE), {nickname: "앨리스", profileImg: "", tag: "공부", studyingTime: 0});
+      });
+      await assertFails(updateDoc(aliceStudying(), {studyingTime: 60000, tag: "공부"}));
+    });
+
+    it("허용하지 않은 필드가 있거나 필드가 빠지면 거부", async () => {
+      await assertFails(setDoc(aliceStudying(), studyingUser({extra: true})));
+      const {nickname, ...withoutNickname} = studyingUser();
+      await assertFails(setDoc(aliceStudying(), withoutNickname));
+    });
+
+    it("필드 타입이 맞지 않거나 학습 시간이 음수면 거부", async () => {
+      await assertFails(setDoc(aliceStudying(), studyingUser({studyingTime: -1})));
+      await assertFails(setDoc(aliceStudying(), studyingUser({studyingTime: "60000"})));
+      await assertFails(setDoc(aliceStudying(), studyingUser({tag: 1})));
+    });
+
+    it("본인 문서만 지울 수 있다", async () => {
+      await seed(testEnv, async (db) => {
+        await setDoc(doc(db, "studying", ALICE), {...studyingUser(), updatedAt: new Date()});
+      });
+      await assertFails(deleteDoc(doc(asBob(), "studying", ALICE)));
+      await assertSucceeds(deleteDoc(aliceStudying()));
     });
   });
 

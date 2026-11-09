@@ -159,8 +159,7 @@ class DeleteAccountViewModelTest {
 
     private class FakeStudyingRepository : StudyingRepository {
         override fun observeStudyingUser(tag: String): Flow<List<StudyingUser>> = error("Not used")
-        override suspend fun initStudyingUser(user: StudyingUser): Result<Unit> = error("Not used")
-        override suspend fun updateStudyingTime(tag: String, time: Long): Result<Unit> = error("Not used")
+        override suspend fun saveStudyingUser(user: StudyingUser): Result<Unit> = error("Not used")
         override suspend fun saveStudySession(uid: String, potId: String, sessionId: String, log: StudyLog): Result<StudySaveResult> = error("Not used")
         override suspend fun awaitPendingWrites(): Boolean = error("Not used")
         override suspend fun isStudySessionSaved(uid: String, potId: String, sessionId: String): Result<Boolean> = error("Not used")
