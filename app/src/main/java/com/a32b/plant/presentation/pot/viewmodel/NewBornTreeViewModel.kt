@@ -1,7 +1,7 @@
 package com.a32b.plant.presentation.pot.viewmodel
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.PotRepository
@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class NewBornTreeViewModel @Inject constructor(private val potRepository: PotRepository) : ViewModel() {
+class NewBornTreeViewModel @Inject constructor(private val potRepository: PotRepository) : BaseViewModel() {
 
     private val currentUid: String get() = CurrentUser.uid
 
@@ -39,7 +39,10 @@ class NewBornTreeViewModel @Inject constructor(private val potRepository: PotRep
         viewModelScope.launch {
             potRepository.getAvailableTags().collectLatest { tags ->
                 _dbTags.value = tags
+                loaded() // BaseViewModel: 최초 방출 시 LoadableScreen 해제 (#384)
             }
+            // 구독 실패로 방출 없이 Flow가 끝난 경우에도 로딩 해제 → 빈 태그 목록 표시
+            loaded()
         }
     }
 

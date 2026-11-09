@@ -1,7 +1,7 @@
 package com.a32b.plant.presentation.pot.viewmodel
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.usecase.pot.GetPotListUseCase
@@ -20,7 +20,7 @@ import javax.inject.Inject
 class PotListViewModel @Inject constructor(
     private val getPotListUseCase: GetPotListUseCase,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase
-) : ViewModel() {
+) : BaseViewModel() {
 
 
     // 전체 화분 리스트
@@ -59,11 +59,12 @@ class PotListViewModel @Inject constructor(
 
                     getPotListUseCase(uid).collect { allPots ->
                         _pots.value = allPots
+                        loaded() // BaseViewModel: 최초 방출 시 LoadableScreen 해제 (#384)
                     }
                 }
-            }.onFailure {
-                //에러 처리
             }
+            // 세션 만료(유저 없음)나 구독 실패로 방출 없이 끝난 경우에도 로딩 해제 → 빈 목록 표시
+            loaded()
         }
     }
 }
