@@ -217,7 +217,7 @@ describe("기타 컬렉션", () => {
         const db = asAlice();
         await assertSucceeds(setDoc(doc(db, "nicknames", "새싹"), {nickname: "새싹", uid: ALICE}));
         await assertFails(deleteDoc(doc(db, "nicknames", "앨리스")));
-        // rollbackNicknameChange·rollbackRegisteredNickname: 아직 users.nickname이 아닌 새 닉네임 문서는 지울 수 있다
+        // 이전 빌드(#571 이전)의 롤백(rollbackNicknameChange·rollbackRegisteredNickname): 아직 users.nickname이 아닌 새 닉네임 문서는 지울 수 있다
         await assertSucceeds(deleteDoc(doc(db, "nicknames", "새싹")));
       });
 
