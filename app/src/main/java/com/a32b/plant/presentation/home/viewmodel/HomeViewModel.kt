@@ -130,6 +130,10 @@ class HomeViewModel @Inject constructor(
 
     private val _displayPot = MutableStateFlow(Pot.EMPTY)
     val displayPot = _displayPot.asStateFlow()
+
+    // 마지막으로 선택한 대표 화분 ID — 처음엔 저장된 lastSelectedPotId, 화분 변경 시 갱신 (#582)
+    // 화분 목록이 다시 방출될 때 이 값으로 대표 화분을 고르므로, 저장이 늦거나 실패해도 화면은 선택한 화분을 유지
+    private val selectedPotId = MutableStateFlow("")
     //팝업 제어용
     private val _showPotChangeDialog = MutableStateFlow(false)
     val showPotChangeDialog = _showPotChangeDialog.asStateFlow()
@@ -234,8 +238,9 @@ class HomeViewModel @Inject constructor(
                 _attendanceUiState.value = user.monthCheck.toAttendanceUiState()
                 _userItem.value = user.item
 
+                selectedPotId.value = user.lastSelectedPotId
                 // 로딩 해제는 첫 화분을 받은 뒤 loadActivePot 안에서 한다 (#487)
-                loadActivePot(uid = user.uid, lastSelectedPotId = user.lastSelectedPotId)
+                loadActivePot(uid = user.uid)
             } ?: loaded() // 현재 유저 없음: 세션 만료 처리는 ensureCurrentUserUseCase가 하고, 로딩만 해제
         }
     }
@@ -385,10 +390,10 @@ class HomeViewModel @Inject constructor(
      * 조회 실패는 PotRepositoryImpl.getPots의 catch가 처리해 아무 값도 방출되지 않고 Flow가 끝날 수 있어,
      * collect가 끝난 뒤에도 해제해 로딩에 갇히지 않게 한다.
      */
-    private fun loadActivePot(uid: String, lastSelectedPotId: String){
+    private fun loadActivePot(uid: String){
         viewModelScope.launch {
             safeRunCatching {
-                getActivePotUseCase(uid = uid, lastSelectedPotId = lastSelectedPotId)
+                getActivePotUseCase(uid = uid, selectedPotId = selectedPotId)
                     .collect { pot ->
                         _displayPot.value = pot
                         updateProgressAndCondition(pot)
@@ -434,6 +439,8 @@ class HomeViewModel @Inject constructor(
 
     fun confirmPotChange() {
         _tempSelectedPot.value?.let { selected ->
+            // 화분 목록이 다시 방출될 때도 이 화분을 고르도록 먼저 바꾼다 (#582)
+            selectedPotId.value = selected.id
             _displayPot.value = selected
 
             updateProgressAndCondition(selected)
@@ -441,11 +448,13 @@ class HomeViewModel @Inject constructor(
             viewModelScope.launch {
                 safeRunCatching {
                     ensureCurrentUserUseCase { user ->
-                        userRepository.updateLastSelectedPot(user.uid, selected.id)
+                        // 저장은 서버 응답까지 기다리므로(오프라인이면 연결될 때까지) 오늘 학습 시간을 먼저 조회한다
                         fetchTodayStudyTime(user.uid, selected.id)
+                        userRepository.updateLastSelectedPot(user.uid, selected.id)
                     }
-                }.onFailure {
-                    // 예외 처리
+                }.onFailure { e ->
+                    // 화면은 selectedPotId로 선택한 화분을 유지한다. 저장이 거부되면 홈을 새로 만들 때(앱 재시작 등) 이전 화분으로 보일 수 있음
+                    Log.e("HomeViewModel", "대표 화분 저장 실패", e)
                 }
             }
         }
