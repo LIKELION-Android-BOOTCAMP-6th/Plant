@@ -189,9 +189,9 @@ class HomeViewModel @Inject constructor(
                 _attendanceUiState.value = user.monthCheck.toAttendanceUiState()
                 _userItem.value = user.item
 
+                // 로딩 해제는 첫 화분을 받은 뒤 loadActivePot 안에서 한다 (#487)
                 loadActivePot(uid = user.uid, lastSelectedPotId = user.lastSelectedPotId)
-            } ?: Unit
-            loaded()
+            } ?: loaded() // 현재 유저 없음: 세션 만료 처리는 ensureCurrentUserUseCase가 하고, 로딩만 해제
         }
     }
 
@@ -241,7 +241,7 @@ class HomeViewModel @Inject constructor(
                 .onSuccess { session -> _recoverySession.value = session }
             // 조회가 실패해도 판단을 진행한다. 실패 종류는 UnknownUser(아래 decideAutomaticAttendance가 currentUser null로 조용히 반환)
             // 와 로컬 읽기 실패(이번 복귀에는 복구 창을 못 띄우며, 이후 백업이 발견되면 HomeScreen의 recoverySession == null 조건이 출석 창을 숨김)
-            // 현재 init은 동기 완료라 이 대기는 즉시 통과하며, init이 비동기가 될 때를 대비한 대기다
+            // 초기 로딩이 끝난 뒤(첫 화분 반영 후) 출석을 판단해, 로딩 화면 위에 출석 창이 먼저 뜨지 않게 한다 (#487)
             isLoading.first { !it }
             decideAutomaticAttendance()
         }
@@ -322,6 +322,12 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch { studyingRepository.deleteStudyingUserInfo() }
     }
 
+    /**
+     * 대표 화분을 실시간으로 구독하고, 첫 화분(화분이 없으면 Pot.EMPTY)을 반영한 뒤 초기 로딩을 해제한다 (#487)
+     * 실시간 구독이라 collect가 끝나지 않으므로 해제는 collect 안에서 한다.
+     * 조회 실패는 PotRepositoryImpl.getPots의 catch가 처리해 아무 값도 방출되지 않고 Flow가 끝날 수 있어,
+     * collect가 끝난 뒤에도 해제해 로딩에 갇히지 않게 한다.
+     */
     private fun loadActivePot(uid: String, lastSelectedPotId: String){
         viewModelScope.launch {
             safeRunCatching {
@@ -334,10 +340,15 @@ class HomeViewModel @Inject constructor(
                         } else {
                             _todayStudyTime.value = "00:00:00"
                         }
+                        // 화분을 반영한 뒤 해제해야 첫 화면에 기본 화면(Pot.EMPTY)이 그려지지 않는다
+                        // 두 번째 방출부터는 이미 해제된 상태라 변화 없음
+                        loaded()
                     }
             }.onFailure { throwable ->
                 // 필요시 에러 핸들링
             }
+            // 방출 없이 끝났거나(조회 실패, uid 없음) 예외로 끝난 경우의 해제
+            loaded()
         }
     }
 
