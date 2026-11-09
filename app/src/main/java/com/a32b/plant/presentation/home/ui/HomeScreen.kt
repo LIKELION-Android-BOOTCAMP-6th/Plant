@@ -1,9 +1,6 @@
 package com.a32b.plant.presentation.home.ui
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ScrollState
@@ -63,6 +60,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -906,7 +905,8 @@ private val ITEM_GAP = 4.dp
 
 /**
  * 아이템 한 칸의 최소 폭 (#387)
- * 타일(최대 40dp) + 배지가 오른쪽으로 삐져나오는 2dp. 10sp 이름("영양제")도 이 폭 안에 들어간다.
+ * 타일(최대 40dp) + 좌우 여유 1dp씩. 10sp 이름("영양제")도 이 폭 안에 들어간다.
+ * (배지는 타일 안 오른쪽 아래에 두므로 이 여유를 쓰지 않는다)
  * 6칸이 이보다 좁아지는 화면(기기 폭 약 328dp 미만 = 6×42 + 간격 20 + 좌우 여백 56)에서는 가로 스크롤로 바뀐다.
  */
 private val ITEM_MIN_WIDTH = 42.dp
@@ -928,10 +928,16 @@ private fun HomeItemTile(
 ) {
     val tileMaxSize = if (compact) 36.dp else 40.dp
     val showOpenCta = onClick != null && count > 0
+    // 화면 읽기용 설명: 칸 하나를 "정성 3개"처럼 한 번에 읽게 한다
+    // 배지는 99개를 넘으면 "99+"로 보이지만, 읽을 때는 실제 개수를 읽어준다
+    val accessibilityLabel = "${type.kor} ${count.coerceAtLeast(0)}개"
 
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
+            // 칸 안의 아이콘·배지·이름·"열기"를 하나로 묶고 위 설명만 읽게 한다 (안쪽 요소는 clearAndSetSemantics로 비움)
+            // 박스 칸은 아래 clickable의 클릭 동작·onClickLabel이 같은 노드에 함께 남는다
+            .semantics(mergeDescendants = true) { contentDescription = accessibilityLabel }
             .let { baseModifier ->
                 if (onClick != null) {
                     baseModifier.clickable(
@@ -954,6 +960,8 @@ private fun HomeItemTile(
                 .widthIn(max = tileMaxSize)
                 .fillMaxWidth()
                 .aspectRatio(1f)
+                // 칸 전체 설명(accessibilityLabel)과 겹치지 않게 타일 안 글자·아이콘은 따로 읽지 않는다
+                .clearAndSetSemantics { }
         ) {
             // 배경만 둥글게 자른다: 배지·"열기" 문구는 이 Box 밖(형제)에 두어 clip에 잘리지 않게 한다
             Box(
@@ -965,7 +973,8 @@ private fun HomeItemTile(
                         if (showOpenCta) {
                             baseModifier.border(
                                 width = 1.5.dp,
-                                color = MaterialTheme.colorScheme.primary,
+                                // primary는 다크 모드에서 타일(#414141)과 대비가 약 2:1이라 잘 안 보여 tertiary 사용
+                                color = MaterialTheme.colorScheme.tertiary,
                                 shape = RoundedCornerShape(10.dp)
                             )
                         } else {
@@ -976,24 +985,25 @@ private fun HomeItemTile(
             ) {
                 Image(
                     painter = painterResource(id = type.resId),
-                    contentDescription = type.kor,
+                    // 칸 전체 설명(accessibilityLabel)에 이름이 들어가므로 아이콘은 따로 설명하지 않는다
+                    contentDescription = null,
                     modifier = Modifier.fillMaxSize(0.7f)
                 )
             }
             if (showOpenCta) {
                 BoxOpenCta(modifier = Modifier.align(Alignment.TopCenter))
             }
+            // 배지는 타일 안 오른쪽 아래에 둔다
+            // 바깥으로 빼면 칸이 최소 폭(42dp)일 때 칸의 clip(가운데 정렬이라 오른쪽 여유 1dp)에 잘린다 (#573 리뷰)
             ItemCountBadge(
                 count = count,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    // 타일 오른쪽 모서리에 살짝 걸치게 바깥으로 뺀다 (ITEM_MIN_WIDTH가 타일보다 2dp 넓어 칸 안에 들어감)
-                    // 아래로는 빼지 않는다: 아래로 빼면 배지가 이름을 가림
-                    .offset(x = 2.dp)
+                modifier = Modifier.align(Alignment.BottomEnd)
             )
         }
         Text(
             text = homeItemLabel(type),
+            // 칸 전체 설명(accessibilityLabel)과 겹치지 않게 이름은 따로 읽지 않는다
+            modifier = Modifier.clearAndSetSemantics { },
             style = MaterialTheme.typography.titleSmall.copy(fontSize = 10.sp, lineHeight = 14.sp),
             textAlign = TextAlign.Center,
             maxLines = 1,
@@ -1002,38 +1012,43 @@ private fun HomeItemTile(
     }
 }
 
-/** 홈 타일에 쓰는 짧은 이름. "보너스 박스"는 칸이 좁아 "박스"로 줄인다 (접근성 설명은 원래 이름 유지) */
+/** 홈 타일에 쓰는 짧은 이름. "보너스 박스"는 칸이 좁아 "박스"로 줄인다 (화면 읽기는 원래 이름으로 읽음) */
 private fun homeItemLabel(type: ItemType): String =
     if (type == ItemType.BOX) "박스" else type.kor
 
-/** 보너스 박스 타일 위 "열기" 문구: 위아래로 살짝 움직여 눌러서 열 수 있다는 걸 알려준다 (#387) */
+/** "열기" 문구가 위아래로 움직이는 횟수 (#573 리뷰: 홈에 있는 내내 움직이지 않게 제한) */
+private const val BOX_CTA_BOUNCE_COUNT = 3
+
+/**
+ * 보너스 박스 타일 위 "열기" 문구 (#387)
+ * 처음 나타날 때 위로 2dp 올라갔다 내려오기를 BOX_CTA_BOUNCE_COUNT번 반복해 눌러서 열 수 있다는 걸 알려주고 멈춘다.
+ * 홈에 다시 들어오거나 박스가 0개 → 1개 이상이 되어 다시 나타나면 처음부터 다시 움직인다.
+ */
 @Composable
 private fun BoxOpenCta(modifier: Modifier = Modifier) {
-    val transition = rememberInfiniteTransition(label = "boxOpenCta")
-    val bounce by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = -2f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 600),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "boxOpenCtaBounce"
-    )
+    val bounce = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        repeat(BOX_CTA_BOUNCE_COUNT) {
+            bounce.animateTo(-2f, animationSpec = tween(durationMillis = 600))
+            bounce.animateTo(0f, animationSpec = tween(durationMillis = 600))
+        }
+    }
     Box(
         modifier = modifier
             // 타일 위쪽 테두리에 걸치게 6dp 올린다
             // 위아래로 움직이는 2dp까지 더해도 BOX_CTA_SPACE(8dp) 안이라 칸의 clip에 잘리지 않는다
             .offset(y = -6.dp)
             // 위치는 그대로 두고 그리기만 움직여 레이아웃을 다시 계산하지 않게 한다
-            .graphicsLayer { translationY = bounce.dp.toPx() }
+            .graphicsLayer { translationY = bounce.value.dp.toPx() }
             .clip(RoundedCornerShape(percent = 50))
-            .background(MaterialTheme.colorScheme.primary)
+            // 색은 배지와 같은 이유로 tertiary 바탕 + primaryContainer 글자 (ItemCountBadge 주석 참고)
+            .background(MaterialTheme.colorScheme.tertiary)
             .padding(horizontal = 5.dp)
     ) {
         Text(
             text = "열기",
             style = fixedSizeTileTextStyle(),
-            color = MaterialTheme.colorScheme.onPrimary,
+            color = MaterialTheme.colorScheme.primaryContainer,
             maxLines = 1
         )
     }
@@ -1048,12 +1063,14 @@ private fun HorizontalScrollIndicator(
     scrollState: ScrollState,
     modifier: Modifier = Modifier
 ) {
-    val trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-    val thumbColor = MaterialTheme.colorScheme.primary
+    // primary는 다크 모드에서 아이템 박스 배경(secondary)과 대비가 약 1.1:1이라 막대가 거의 안 보여 tertiary 사용
+    // (대비 계산값: 라이트 약 3.3:1, 다크 약 4.1:1)
+    val trackColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
+    val thumbColor = MaterialTheme.colorScheme.tertiary
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(4.dp)
+            .height(3.dp)
             .drawBehind {
                 val total = scrollState.maxValue + scrollState.viewportSize
                 if (total <= 0 || scrollState.maxValue <= 0) return@drawBehind
@@ -1082,14 +1099,17 @@ private fun ItemCountBadge(
             // 한 자리일 때는 원, 두 자리 이상이면 가로로 늘어나는 알약 모양
             .defaultMinSize(minWidth = 18.dp, minHeight = 18.dp)
             .clip(RoundedCornerShape(percent = 50))
-            .background(MaterialTheme.colorScheme.primary)
+            // primary + onPrimary는 글자 대비가 라이트 약 2.2:1, 다크 약 4.1:1로 10dp 글자에는 낮다 (#573 리뷰)
+            // tertiary 바탕 + primaryContainer(타일 배경색) 글자로 바꿔 라이트 약 3.7:1, 다크 약 9.2:1 (대비 계산값)
+            // primaryContainer는 원래 배경용 색이지만, 배지 글자가 타일 배경과 같은 색으로 뚫려 보이게 하려고 글자색으로 쓴다
+            .background(MaterialTheme.colorScheme.tertiary)
             .padding(horizontal = 4.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = formatItemBadgeCount(count),
             style = fixedSizeTileTextStyle(),
-            color = MaterialTheme.colorScheme.onPrimary,
+            color = MaterialTheme.colorScheme.primaryContainer,
             maxLines = 1
         )
     }
