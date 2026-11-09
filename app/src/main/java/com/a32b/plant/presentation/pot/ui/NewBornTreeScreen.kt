@@ -79,7 +79,7 @@ fun NewBornTreeScreen(navController: NavController,
                 Button(
                     onClick = {
                         selectedTag?.let { tag ->
-                            viewModel.createPot(tag, potName.trim()) {
+                            viewModel.createPot(tag, potName) {
                                 navController.popBackStack()
                             }
                         }

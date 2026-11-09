@@ -7,8 +7,11 @@ import com.a32b.plant.core.base.BaseViewModel
 import androidx.navigation.NavController
 import androidx.navigation.toRoute
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.core.util.NETWORK_SLOW_MESSAGE
 import com.a32b.plant.core.util.safeRunCatching
+import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.Pot
+import com.a32b.plant.domain.model.SaveResult
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
@@ -20,10 +23,16 @@ import com.google.firebase.auth.auth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+sealed class StudyPlanDetailEvent {
+    data class ShowToast(val message: String) : StudyPlanDetailEvent()
+}
 
 @HiltViewModel
 class StudyPlanDetailViewModel @Inject constructor(
@@ -52,6 +61,13 @@ class StudyPlanDetailViewModel @Inject constructor(
     // 이름 수정 다이얼로그 출력 여부
     private val _isEditDialogShown = MutableStateFlow(false)
     val isEditDialogShown = _isEditDialogShown.asStateFlow()
+
+    // 이름 저장 중 여부 — 저장 중에는 다시 보내지 않고 다이얼로그에 로딩 표시 (#563)
+    private val _isRenaming = MutableStateFlow(false)
+    val isRenaming = _isRenaming.asStateFlow()
+
+    private val _event = Channel<StudyPlanDetailEvent>(Channel.BUFFERED)
+    val event = _event.receiveAsFlow()
 
     private val _isDeleteDialogShown = MutableStateFlow(false)
     val isDeleteDialogShown = _isDeleteDialogShown.asStateFlow()
@@ -133,17 +149,36 @@ class StudyPlanDetailViewModel @Inject constructor(
     }
 
     fun setEditDialogShown(show: Boolean){
+        // 저장 중에는 닫지 않는다 (결과에 따라 닫거나 유지)
+        if (!show && _isRenaming.value) return
         _isEditDialogShown.value = show
     }
 
     fun updatePotName(newName: String){
-        if ( userId.isEmpty() || potId.isEmpty()) return
+        val pot = _potDetail.value ?: return
+        if (potId.isEmpty() || _isRenaming.value) return
+        _isRenaming.value = true
+
         viewModelScope.launch {
-            safeRunCatching {
-                updatePotNameUseCase(userId, potId, newName)
-            }.onSuccess {
-                loadPotDetail()
-                setEditDialogShown(false)
+            try {
+                updatePotNameUseCase(potId, pot.name, newName)
+                    .onSuccess { result ->
+                        // 오프라인(Pending)이어도 기기 캐시에는 이미 반영됐으므로 다시 불러오면 새 이름이 보인다
+                        loadPotDetail()
+                        _isRenaming.value = false
+                        setEditDialogShown(false)
+                        if (result == SaveResult.Pending) {
+                            _event.send(StudyPlanDetailEvent.ShowToast(NETWORK_SLOW_MESSAGE))
+                        }
+                    }
+                    .onFailure { error ->
+                        // 세션 만료는 UseCase에서 처리(세션 만료 안내)하므로 토스트를 띄우지 않는다
+                        if (error !is AppError.UnknownUser) {
+                            _event.send(StudyPlanDetailEvent.ShowToast(error.message))
+                        }
+                    }
+            } finally {
+                _isRenaming.value = false
             }
         }
     }

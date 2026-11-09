@@ -3,6 +3,7 @@ package com.a32b.plant.presentation.mypage.viewmodel
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.Pot
+import com.a32b.plant.domain.model.SaveResult
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.model.User
@@ -304,7 +305,8 @@ class MyPageViewModelTest {
         override suspend fun getUserPotById(uid: String, potId: String): Pot? = error("Unused")
         override suspend fun getDuplicationLevelList(uid: String): List<Int> = error("Unused")
         override suspend fun getUserPotsByStatus(uid: String, isCompleted: Boolean): List<Pot> = error("Unused")
-        override suspend fun updatePotName(uid: String, potId: String, newName: String): Unit = error("Unused")
+        override suspend fun updatePotName(uid: String, potId: String, newName: String): Result<SaveResult> =
+            error("Unused")
         override suspend fun deleteEntirePot(uid: String, potId: String, totalStudyingTime: Long): Unit = error("Unused")
         override suspend fun completeStudyPlan(uid: String, potId: String): Unit = error("Unused")
         override suspend fun getTodayStudyLogs(uid: String, potId: String, startOfToday: Date): Result<List<StudyLog>> =
