@@ -99,6 +99,16 @@ service cloud.firestore {
         getAfter(/databases/$(database)/documents/nicknames/$(nickname)).data.get('uid', '') == request.auth.uid;
     }
 
+    // 닉네임 문서를 지운 뒤에도 내 users.nickname이 그 닉네임이면 다른 사람이 같은 닉네임을 등록할 수 있다 (#549)
+    // 그래서 쓰기 후 내 users 문서가 없거나, users.nickname이 그 닉네임이 아닐 때만 지울 수 있다
+    // getAfter: 닉네임 변경(updateProfile)은 이전 닉네임 삭제와 users.nickname 변경을 한 트랜잭션에서 하므로
+    //           쓰기 전 상태(get)로는 아직 이전 닉네임이라 거부된다
+    // existsAfter와 getAfter는 같은 문서라 읽기 비용은 1회
+    function nicknameReleasedAfterWrite(nickname) {
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return !existsAfter(userPath) || getAfter(userPath).data.get('nickname', '') != nickname;
+    }
+
     match /users/{userId} {
       allow read: if isUid(userId);
       // 삭제 규칙 없음 = 거부: 회원탈퇴는 deleteAccount 함수(Admin SDK, 규칙 무관)가 처리한다 (#457)
@@ -244,6 +254,7 @@ service cloud.firestore {
     }
 
     // 닉네임 선점 문서: 소유자 uid를 함께 저장하고, 소유자만 삭제 가능
+    // 삭제는 쓰기 후 내 users.nickname이 그 닉네임이 아닐 때만 허용 (nicknameReleasedAfterWrite, #549)
     // 이미 있는 문서에 set()하면 update로 평가되어 거부됨 (덮어쓰기 방지)
     // 없는 문서 삭제는 허용 (users와 nicknames가 어긋나도 닉네임 변경이 막히지 않게)
     // 회원탈퇴 시 닉네임 문서 삭제는 deleteAccount 함수가 처리한다 (#457)
@@ -255,7 +266,10 @@ service cloud.firestore {
         request.resource.data.nickname == nickname &&
         isValidNickname(nickname) &&
         request.resource.data.uid == request.auth.uid;
-      allow delete: if signedIn() && (resource == null || resource.data.get('uid', '') == request.auth.uid);
+      allow delete: if signedIn() && (
+        resource == null ||
+        (resource.data.get('uid', '') == request.auth.uid && nicknameReleasedAfterWrite(nickname))
+      );
     }
   }
 }
