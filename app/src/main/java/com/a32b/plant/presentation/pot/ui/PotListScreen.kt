@@ -18,6 +18,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.component.TabTopBar
 import com.a32b.plant.presentation.pot.viewmodel.PotListViewModel
@@ -36,71 +37,74 @@ fun PotListScreen(
 
     val currentPots = if (selectedTab == 0) studyingPots else completedPots
 
-    Scaffold(
-        topBar = {
-            TabTopBar(title = "내 화분") {
-                // 공부 중 탭(selectedTab == 0)일 때만 플러스 버튼 노출
-                if (selectedTab == 0) {
-                    IconButton(
-                        onClick = { navController.navigate(Routes.NewBornTree) }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "화분 추가"
-                        )
-                    }
-                }
-            }
-        }
-    ) { innerPadding ->
-        // 하단바·내비바 여백은 MainActivity의 바깥 Scaffold가 이미 처리하므로 상단(topBar) 여백만 적용 (#355)
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = innerPadding.calculateTopPadding())
-                .padding(horizontal = 16.dp)
-        ) {
-            // 탭 레이아웃 ("공부 중 | 기른 화분")
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                tabs.forEachIndexed { index, title ->
-                    TextButton(onClick = { selectedTab = index }) {
-                        Text(
-                            text = title,
-                            color = if (selectedTab == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                            style = MaterialTheme.typography.titleSmall
-                        )
-                    }
-                    if (index < tabs.size - 1) {
-                        Text(text = " | ", color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 3열 그리드 (LazyVerticalGrid) 적용
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(currentPots) { pot ->
-                    PotGridItem(
-                        potName = pot.name,
-                        potLevel = pot.potLevel,
-                        totalStudyingTime = pot.potTotalStudyingTime,
-                        isCompleted = pot.isCompleted,
-                        onClick = {
-                            navController.navigate(Routes.StudyPlanDetail(potId = pot.id))
+    // 화분 목록 첫 방출 전에는 로딩 표시 — 전환 중 빈 그리드 노출 방지 (#384)
+    LoadableScreen(viewModel) {
+        Scaffold(
+            topBar = {
+                TabTopBar(title = "내 화분") {
+                    // 공부 중 탭(selectedTab == 0)일 때만 플러스 버튼 노출
+                    if (selectedTab == 0) {
+                        IconButton(
+                            onClick = { navController.navigate(Routes.NewBornTree) }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "화분 추가"
+                            )
                         }
-                    )
+                    }
+                }
+            }
+        ) { innerPadding ->
+            // 하단바·내비바 여백은 MainActivity의 바깥 Scaffold가 이미 처리하므로 상단(topBar) 여백만 적용 (#355)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = innerPadding.calculateTopPadding())
+                    .padding(horizontal = 16.dp)
+            ) {
+                // 탭 레이아웃 ("공부 중 | 기른 화분")
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    tabs.forEachIndexed { index, title ->
+                        TextButton(onClick = { selectedTab = index }) {
+                            Text(
+                                text = title,
+                                color = if (selectedTab == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                        }
+                        if (index < tabs.size - 1) {
+                            Text(text = " | ", color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 3열 그리드 (LazyVerticalGrid) 적용
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(currentPots) { pot ->
+                        PotGridItem(
+                            potName = pot.name,
+                            potLevel = pot.potLevel,
+                            totalStudyingTime = pot.potTotalStudyingTime,
+                            isCompleted = pot.isCompleted,
+                            onClick = {
+                                navController.navigate(Routes.StudyPlanDetail(potId = pot.id))
+                            }
+                        )
+                    }
                 }
             }
         }
