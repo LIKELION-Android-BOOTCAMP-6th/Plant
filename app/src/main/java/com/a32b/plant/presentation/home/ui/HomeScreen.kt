@@ -695,16 +695,15 @@ fun MainPlantCard(
 
             Spacer(modifier = Modifier.height(8.dp.compactIf(compact)))
 
-            // 화면 높이가 모자라면 이미지가 먼저 줄어든다 (최대 크기 → 최소 48dp, 간격 모드면 40dp, #376)
+            // 화면 높이가 모자라면 이미지가 먼저 줄어든다 (최대 크기 → 최소 크기, #376)
             // weight(fill = false): 카드 안 다른 요소를 다 놓고 남은 높이까지만 차지
-            val imageMinHeight = if (compact) 40.dp else 48.dp
             if(hasNoPot){
                 Box(
                     // 로고는 원형 배경이 칸을 꽉 채우므로 100dp 유지 (화분 칸 170dp와 보이는 크기가 비슷함, #476)
                     // 로고는 원형 배경이라 높이에 맞춰 정사각형 유지
                     modifier = Modifier
                         .weight(1f, fill = false)
-                        .shrinkableImageHeight(min = imageMinHeight, max = 100.dp)
+                        .shrinkableImageHeight(min = if (compact) 40.dp else 48.dp, max = 100.dp)
                         .aspectRatio(1f, matchHeightConstraintsFirst = true),
                     contentAlignment = Alignment.Center
                 ){
@@ -713,12 +712,15 @@ fun MainPlantCard(
             } else {
                 // 화분 이미지는 Lv6까지 같은 배율로 넣으려고 480x480 캔버스 가운데에 작게 그려져 있다 (화분 테두리 폭 196px = 캔버스의 약 41%, #474)
                 // 그래서 칸을 170dp로 키워 화분 폭이 약 69dp로 보이게 한다 (#476, 420dpi 실기기 캡처에서 182px ÷ 2.625)
+                // 최소 높이도 같은 이유로 키운다: 예전 이미지는 화분 폭이 이미지의 약 72%(512px 중 366px)라 약 1.75배
+                // → 예전 최소(48dp, 간격 모드 40dp)일 때와 같은 화분 크기가 되도록 84dp, 간격 모드 70dp (#476)
+                // 대신 세로가 아주 짧은 화면에서는 그만큼 바깥 스크롤이 더 생긴다 (HomeBodyLayout 3번 참고)
                 ProfileImage(
                     level = "Lv.${displayPot.potLevel}",
                     size = 170,
                     modifier = Modifier
                         .weight(1f, fill = false)
-                        .shrinkableImageHeight(min = imageMinHeight, max = 170.dp)
+                        .shrinkableImageHeight(min = if (compact) 70.dp else 84.dp, max = 170.dp)
                 )
             }
             Spacer(modifier = Modifier.height(8.dp.compactIf(compact)))
