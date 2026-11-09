@@ -112,6 +112,12 @@ private fun DailyCheckThisMonth.toAttendanceUiStateKeeping(
     isChecking = current.isChecking
 )
 
+/**
+ * 홈 "오늘 학습 시간"의 0 표시 — 화분 있음(기록 0)·화분 없음·조회 실패를 같은 형식으로 맞춘다 (#584)
+ * formatToDigitalClock은 다른 화면 10곳에서도 쓰므로 반환 형식을 바꾸지 않고, 0을 이 함수 결과에 맞춘다
+ */
+internal val ZERO_STUDY_TIME: String = TimeFormatter.formatToDigitalClock(0L)
+
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val getActivePotUseCase: GetActivePotUseCase,
@@ -162,9 +168,13 @@ class HomeViewModel @Inject constructor(
     private val _eventChannel = Channel<HomeEvent>(Channel.BUFFERED)
     val events = _eventChannel.receiveAsFlow()
 
-    //오늘 학습 시간 상태
-    private val _todayStudyTime = MutableStateFlow("00:00:00")
+    // 오늘 학습 시간 상태 — null은 조회 중 (화면은 자리만 차지하고 글자를 숨김, #584)
+    // 0은 화분 있음·없음·조회 실패 모두 formatToDigitalClock(0) 형식으로 맞춘다
+    private val _todayStudyTime = MutableStateFlow<String?>(null)
     val todayStudyTime = _todayStudyTime.asStateFlow()
+
+    // 진행 중인 오늘 학습 시간 조회 — 새 조회를 시작하면 취소해, 늦게 끝난 이전 화분의 결과가 덮어쓰지 않게 함 (#584)
+    private var todayStudyTimeJob: Job? = null
 
 
     //아이템 상태
@@ -395,12 +405,16 @@ class HomeViewModel @Inject constructor(
             safeRunCatching {
                 getActivePotUseCase(uid = uid, selectedPotId = selectedPotId)
                     .collect { pot ->
+                        val previousPotId = _displayPot.value.id
                         _displayPot.value = pot
                         updateProgressAndCondition(pot)
                         if (pot.id.isNotEmpty() && pot != Pot.EMPTY) {
-                            fetchTodayStudyTime(uid, pot.id)
+                            // 같은 화분이 다시 방출되면(화분 문서 변경) 조회하는 동안 지금 값을 그대로 둔다
+                            // 다른 화분으로 바뀌었으면 이전 화분의 시간이 보이지 않게 조회 중으로 돌린다 (#584)
+                            fetchTodayStudyTime(uid, pot.id, keepCurrent = pot.id == previousPotId)
                         } else {
-                            _todayStudyTime.value = "00:00:00"
+                            todayStudyTimeJob?.cancel()
+                            _todayStudyTime.value = ZERO_STUDY_TIME
                         }
                         // 화분을 반영한 뒤 해제해야 첫 화면에 기본 화면(Pot.EMPTY)이 그려지지 않는다
                         // 두 번째 방출부터는 이미 해제된 상태라 변화 없음
@@ -420,14 +434,21 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun fetchTodayStudyTime(uid: String, potId: String) {
-        viewModelScope.launch {
+    /**
+     * 화분 하나의 오늘 학습 시간 조회
+     * keepCurrent = false면 조회 중(null)으로 돌려 이전 값이 보이지 않게 한다 (첫 진입·화분 변경)
+     * 실패하면 다른 상태와 같은 형식의 0을 보여주고 토스트로 안내한다
+     */
+    private fun fetchTodayStudyTime(uid: String, potId: String, keepCurrent: Boolean = false) {
+        todayStudyTimeJob?.cancel()
+        if (!keepCurrent) _todayStudyTime.value = null
+        todayStudyTimeJob = viewModelScope.launch {
             getTodayTotalStudyTimeUseCase(uid, potId)
                 .onSuccess { totalMillis ->
                     _todayStudyTime.value = TimeFormatter.formatToDigitalClock(totalMillis)
                 }
                 .onFailure { error ->
-                    _todayStudyTime.value = "00:00:00"
+                    _todayStudyTime.value = ZERO_STUDY_TIME
                     sendToast(error.message)
                 }
         }
@@ -442,6 +463,9 @@ class HomeViewModel @Inject constructor(
             // 화분 목록이 다시 방출될 때도 이 화분을 고르도록 먼저 바꾼다 (#582)
             selectedPotId.value = selected.id
             _displayPot.value = selected
+            // 새 화분의 조회가 끝나기 전에 이전 화분의 시간이 보이지 않도록 바로 조회 중으로 돌린다 (#584)
+            todayStudyTimeJob?.cancel()
+            _todayStudyTime.value = null
 
             updateProgressAndCondition(selected)
 
