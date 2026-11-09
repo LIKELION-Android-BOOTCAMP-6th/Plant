@@ -216,7 +216,8 @@ fun HomeScreen(
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
+                    // 상단(topBar) 여백만 적용: 하단바·내비바 여백은 MainActivity의 바깥 Scaffold가 처리한다 (#356)
+                    .padding(top = paddingValues.calculateTopPadding())
                     .background(MaterialTheme.colorScheme.background),
                 contentAlignment = Alignment.TopCenter
             ) {
