@@ -163,13 +163,16 @@ class PotRepositoryImpl @Inject constructor(
 
         is InsufficientItemsException -> AppError.InsufficientItems()
         is PotLevelMismatchException -> AppError.Custom("이미 레벨업이 완료된 화분입니다.")
-        is PotNotFoundException -> AppError.Custom("존재하지 않거나 삭제된 화분입니다.")
+        is PotNotFoundException -> AppError.Custom(POT_NOT_FOUND_MESSAGE)
 
         is FirebaseFirestoreException -> when (e.code) {
             FirebaseFirestoreException.Code.UNAVAILABLE,
             FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
 
             FirebaseFirestoreException.Code.PERMISSION_DENIED -> AppError.Permission()
+
+            // 없는 문서를 update하면 NOT_FOUND (예: 다른 기기에서 화분을 삭제한 뒤 이름 변경) (#563)
+            FirebaseFirestoreException.Code.NOT_FOUND -> AppError.Custom(POT_NOT_FOUND_MESSAGE)
 
             else -> if (isWrite) AppError.Upload() else AppError.Custom(defaultMessage)
         }
@@ -199,5 +202,6 @@ class PotRepositoryImpl @Inject constructor(
         /** 화분 이름 변경 제한 시간 — 학습 기록 저장(FinishStudyingUseCase.SAVE_TIMEOUT)과 같은 5초 */
         private val RENAME_TIMEOUT = 5.seconds
         private const val RENAME_ERROR_MESSAGE = "화분 이름 변경에 실패했습니다."
+        private const val POT_NOT_FOUND_MESSAGE = "존재하지 않거나 삭제된 화분입니다."
     }
 }
