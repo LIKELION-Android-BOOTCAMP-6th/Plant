@@ -128,6 +128,7 @@ fun HomeScreen(
 
     val uiState by viewModel.uiState.collectAsState()
     val todayStudyTime by viewModel.todayStudyTime.collectAsState()
+    val unseenStudyReward by viewModel.unseenStudyReward.collectAsState()
 
     val hasNoPot = displayPot.id.isEmpty() || displayPot == Pot.EMPTY
 
@@ -334,6 +335,17 @@ fun HomeScreen(
             BonusBoxResultDialog(
                 items = items,
                 onDismiss = { bonusBoxResult = null }
+            )
+        }
+        // 쌓인 학습 보상 (오프라인에서 저장한 세션, 결과 화면을 못 본 세션) — 서버가 지급한 뒤 합쳐서 한 번에 표시 (#453)
+        // 복구·출석·박스 결과 창과 겹치지 않도록 다른 창이 없을 때만 띄운다
+        val canShowStudyReward = isSplashFinished && recoverySession == null && !showAttendanceDialog &&
+            attendanceUiState.reward == null && bonusBoxResult == null
+        unseenStudyReward?.takeIf { canShowStudyReward }?.let { reward ->
+            BonusBoxResultDialog(
+                items = reward.toItemList(),
+                title = "학습 보상이 도착했어요!",
+                onDismiss = viewModel::confirmUnseenStudyRewards
             )
         }
         if (showLevelUpConfetti) {
@@ -1203,7 +1215,8 @@ private fun HomeItemBoxSectionCompactPreview() {
 @Composable
 fun BonusBoxResultDialog(
     items: List<ItemType>,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    title: String = "보너스 박스 개봉 결과!"
 ) {
     var showConfetti by remember { mutableStateOf(true) }
 
@@ -1215,7 +1228,7 @@ fun BonusBoxResultDialog(
             onDismissRequest = onDismiss,
             title = {
                 Text(
-                    text = "보너스 박스 개봉 결과!",
+                    text = title,
                     modifier = Modifier.fillMaxWidth(),
                     style = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center

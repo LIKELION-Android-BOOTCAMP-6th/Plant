@@ -91,6 +91,107 @@ exports.syncCommentCountOnDelete = onDocumentDeleted(
 );
 
 // ---------------------------------------------------------------------------
+// 학습 보상 지급 (#453)
+// ---------------------------------------------------------------------------
+// 앱은 학습 기록(logs/{sessionId})을 rewardStatus: "pending"으로 저장만 하고(보안 규칙이 검증),
+// 보상은 기록이 서버에 생기면 이 트리거가 지급한다.
+// - 오프라인에서 저장한 기록은 서버에 도착하는 순간 실행된다 → 쌓인 보상은 온라인 복귀 후 지급
+// - 트랜잭션에서 rewardStatus가 "pending"일 때만 지급하고 "granted"/"none"으로 바꾼다
+//   → 같은 이벤트로 두 번 실행되거나 재시도돼도 보상은 1번만 지급된다
+// - 기록이 없으면(동기화 전에 삭제) 지급하지 않고 끝낸다
+// - users/{uid}가 없으면(회원탈퇴로 삭제, #457) 지급하지 않고 끝낸다
+//   set(..., {merge: true})는 지워진 users 문서를 다시 만들기 때문에 쓰지 않는다.
+//   두 경우 모두 오류로 끝내지 않으므로 재시도하지 않는다
+// - retry: 일시 오류(네트워크, 트랜잭션 경합 등)로 실패하면 다시 실행한다
+//   (2세대 함수는 실패한 이벤트를 최대 24시간 재시도. 위 pending 확인으로 중복 지급 없음)
+const STUDY_LOG_DOCUMENT = "users/{uid}/pots/{potId}/logs/{logId}";
+const STUDY_REWARD_TRIGGER_OPTIONS = {
+  document: STUDY_LOG_DOCUMENT,
+  retry: true,
+};
+
+const HOUR_MS = 60 * 60 * 1000;
+
+// 보상 티어 표 (원본은 서버. 앱은 "1시간 이상이면 보상" 같은 표시용 기준만 가진다)
+// items: users.item의 필드 키, box: 보너스 박스 개수. 시간이 긴 티어부터 확인한다
+const STUDY_REWARD_TIERS = [
+  {
+    hours: 9,
+    items: ["heart", "sun", "water", "fertilizer", "nutrient"],
+    box: 5,
+  },
+  {hours: 7, items: ["heart", "sun", "water", "fertilizer"], box: 4},
+  {hours: 5, items: ["heart", "sun", "water"], box: 3},
+  {hours: 3, items: ["heart", "sun"], box: 2},
+  {hours: 1, items: ["heart"], box: 1},
+];
+
+/**
+ * 학습 시간(ms)에 맞는 보상을 찾는다. 1시간 미만이면 null.
+ * @param {*} studyingTime 기록의 studyingTime
+ * @return {{items: string[], box: number} | null}
+ */
+function computeStudyReward(studyingTime) {
+  if (typeof studyingTime !== "number" || !Number.isFinite(studyingTime)) {
+    return null;
+  }
+  const hours = Math.floor(studyingTime / HOUR_MS);
+  const tier = STUDY_REWARD_TIERS.find((t) => hours >= t.hours);
+  return tier ? {items: tier.items, box: tier.box} : null;
+}
+
+/**
+ * 학습 기록 하나의 보상을 지급한다. 여러 번 실행해도 1번만 지급된다.
+ * @param {string} uid
+ * @param {string} potId
+ * @param {string} logId
+ * @return {Promise<void>}
+ */
+async function grantStudyReward(uid, potId, logId) {
+  const userRef = db.collection("users").doc(uid);
+  const logRef = userRef.collection("pots").doc(potId)
+      .collection("logs").doc(logId);
+
+  await db.runTransaction(async (transaction) => {
+    // 트랜잭션은 읽기를 모두 마친 뒤 쓴다
+    const [logSnapshot, userSnapshot] = await Promise.all([
+      transaction.get(logRef),
+      transaction.get(userRef),
+    ]);
+    if (!logSnapshot.exists) {
+      logger.info("학습 기록이 없어 보상 지급을 건너뜀", {uid, potId, logId});
+      return;
+    }
+    // 이미 처리됐거나(granted/none) 이 기능 이전에 만들어진 기록(값 없음)은 지급하지 않는다
+    if (logSnapshot.get("rewardStatus") !== "pending") return;
+    if (!userSnapshot.exists) {
+      logger.info("유저 문서가 없어 보상 지급을 건너뜀", {uid, potId, logId});
+      return;
+    }
+
+    const reward = computeStudyReward(logSnapshot.get("studyingTime"));
+    if (!reward) {
+      transaction.update(logRef, {rewardStatus: "none"});
+      return;
+    }
+
+    const itemUpdates = {"item.box": FieldValue.increment(reward.box)};
+    reward.items.forEach((item) => {
+      itemUpdates[`item.${item}`] = FieldValue.increment(1);
+    });
+    transaction.update(userRef, itemUpdates);
+    transaction.update(logRef, {rewardStatus: "granted", reward});
+  });
+}
+
+exports.grantStudyReward = onDocumentCreated(
+    STUDY_REWARD_TRIGGER_OPTIONS,
+    (event) => grantStudyReward(
+        event.params.uid, event.params.potId, event.params.logId,
+    ),
+);
+
+// ---------------------------------------------------------------------------
 // 회원탈퇴 (#457)
 // ---------------------------------------------------------------------------
 // 앱이 문서를 하나씩 지우던 탈퇴를 이 함수 하나로 처리한다.

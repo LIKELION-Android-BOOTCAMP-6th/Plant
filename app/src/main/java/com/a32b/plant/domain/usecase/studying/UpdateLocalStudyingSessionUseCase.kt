@@ -13,11 +13,23 @@ class UpdateLocalStudyingSessionUseCase @Inject constructor(
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase
 ) {
 
-    suspend operator fun invoke(tag: String, title: String, potId: String, time: Long, log: List<String>?, startedAt: Long, isPaused: Boolean, status: StudyingSessionStatus = StudyingSessionStatus.STUDYING) : Result<Unit>{
+    suspend operator fun invoke(tag: String, title: String, potId: String, time: Long, log: List<String>?, completed: List<Boolean>, startedAt: Long, isPaused: Boolean, sessionId: String, status: StudyingSessionStatus = StudyingSessionStatus.STUDYING) : Result<Unit>{
 
         return ensureCurrentUserUseCase{
             repository.saveLocalSession(
-                StudyingSession(it.uid, tag, title, potId, time,log, startedAt, isPaused, status)
+                StudyingSession(
+                    userId = it.uid,
+                    tag = tag,
+                    title = title,
+                    potId = potId,
+                    time = time,
+                    log = log,
+                    startedAt = startedAt,
+                    isPaused = isPaused,
+                    status = status,
+                    sessionId = sessionId,
+                    completed = completed
+                )
             )
         } ?: Result.Failure(AppError.UnknownUser())
     }

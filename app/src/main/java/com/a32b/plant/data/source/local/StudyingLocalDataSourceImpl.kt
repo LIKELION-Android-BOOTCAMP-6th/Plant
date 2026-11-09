@@ -37,6 +37,8 @@ class StudyingLocalDataSourceImpl @Inject constructor(
     private val STARTEDAT = longPreferencesKey("startedAt")
     private val IS_PAUSED = booleanPreferencesKey("isPaused")
     private val STATUS = stringPreferencesKey("status")
+    private val SESSION_ID = stringPreferencesKey("sessionId")
+    private val COMPLETED = stringPreferencesKey("completed")
 
     // 목표 입력 창 임시 글 — 세션 백업과 따로 쓰고 읽음 (clear()에서는 함께 삭제)
     private val DRAFT_USER_ID = stringPreferencesKey("goalDraftUserId")
@@ -53,6 +55,8 @@ class StudyingLocalDataSourceImpl @Inject constructor(
             preferences[STARTEDAT] = studying.startedAt
             preferences[IS_PAUSED] = studying.isPaused
             studying.status?.let { preferences[STATUS] = it }
+            studying.sessionId?.let { preferences[SESSION_ID] = it }
+            studying.completed?.let { preferences[COMPLETED] = Json.encodeToString(it) }
             studying.log?.let {
                 preferences[LOG] = Json.encodeToString(it)
             }
@@ -83,7 +87,12 @@ class StudyingLocalDataSourceImpl @Inject constructor(
             log = log,
             startedAt = startedAt,
             isPaused = preferences[IS_PAUSED] ?: false, // 이전 버전 백업에는 값이 없으므로 공부 중으로 처리
-            status = preferences[STATUS]
+            status = preferences[STATUS],
+            sessionId = preferences[SESSION_ID], // 이전 버전 백업에는 값이 없음
+            // 이전 버전 백업에는 값이 없고, 읽지 못하면 없는 것과 같이 처리 (복구 시 미완료로 채움)
+            completed = preferences[COMPLETED]?.let {
+                safeRunCatching { Json.decodeFromString<List<Boolean>>(it) }.getOrNull()
+            }
         )
     }
 
