@@ -1036,11 +1036,12 @@ private const val ITEM_LABEL_LINE_SLOTS = 2
 
 /**
  * 홈 타일에 쓰는 이름을 줄 단위로 나눈 목록 (#387)
- * "보너스 박스"(10sp 기준 약 52dp)는 한 칸(최소 42dp)에 한 줄로 들어가지 않아 띄어쓰기 자리에서 2줄로 나눈다.
+ * 보너스 박스 이름(ItemType.kor, "보너스 박스" 10sp 기준 약 52dp)은 한 칸(최소 42dp)에 한 줄로 들어가지 않아
+ * 띄어쓰기 자리에서 나눠 2줄로 쓴다. 이름에 띄어쓰기가 없으면 1줄이 되고, 넘치면 말줄임된다.
  * 줄마다 1줄 + 말줄임으로 그리므로, 한 줄이 넘치면 그 줄만 "보…"처럼 줄어들고 다음 줄("박스")은 남는다.
  */
 private fun homeItemLabelLines(type: ItemType): List<String> =
-    if (type == ItemType.BOX) listOf("보너스", "박스") else listOf(type.kor)
+    if (type == ItemType.BOX) type.kor.split(" ") else listOf(type.kor)
 
 /** "열기" 문구가 위아래로 움직이는 횟수 (#573 리뷰: 홈에 있는 내내 움직이지 않게 제한) */
 private const val BOX_CTA_BOUNCE_COUNT = 3
