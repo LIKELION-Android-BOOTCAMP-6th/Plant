@@ -241,7 +241,7 @@ class HomeViewModel @Inject constructor(
                 .onSuccess { session -> _recoverySession.value = session }
             // 조회가 실패해도 판단을 진행한다. 실패 종류는 UnknownUser(아래 decideAutomaticAttendance가 currentUser null로 조용히 반환)
             // 와 로컬 읽기 실패(이번 복귀에는 복구 창을 못 띄우며, 이후 백업이 발견되면 HomeScreen의 recoverySession == null 조건이 출석 창을 숨김)
-            // 홈 콘텐츠가 그려진 뒤 출석 창을 띄우도록 첫 화분 반영(초기 로딩 해제)까지 기다린다 (#487)
+            // 초기 로딩이 끝난 뒤(첫 화분 반영 후) 출석을 판단해, 로딩 화면 위에 출석 창이 먼저 뜨지 않게 한다 (#487)
             isLoading.first { !it }
             decideAutomaticAttendance()
         }
