@@ -4,7 +4,6 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -916,7 +915,7 @@ private val BOX_CTA_SPACE = 8.dp
 
 /**
  * 아이템 타일 한 칸: 정사각형 배경 + 아이콘 + 우측 하단 개수 배지, 아래에 이름 (#387)
- * 박스(클릭 가능)는 테두리와 상단 "열기" 문구로 다른 아이템과 구분한다
+ * 박스(클릭 가능)는 상단 "열기" 문구로 다른 아이템과 구분한다
  */
 @Composable
 private fun HomeItemTile(
@@ -968,19 +967,7 @@ private fun HomeItemTile(
                 modifier = Modifier
                     .matchParentSize()
                     .clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer)
-                    .let { baseModifier ->
-                        if (showOpenCta) {
-                            baseModifier.border(
-                                width = 1.5.dp,
-                                // primary는 다크 모드에서 타일(#414141)과 대비가 약 2:1이라 잘 안 보여 tertiary 사용
-                                color = MaterialTheme.colorScheme.tertiary,
-                                shape = RoundedCornerShape(10.dp)
-                            )
-                        } else {
-                            baseModifier
-                        }
-                    },
+                    .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
@@ -1006,15 +993,20 @@ private fun HomeItemTile(
             modifier = Modifier.clearAndSetSemantics { },
             style = MaterialTheme.typography.titleSmall.copy(fontSize = 10.sp, lineHeight = 14.sp),
             textAlign = TextAlign.Center,
-            maxLines = 1,
+            // "보너스\n박스"만 2줄. 다른 칸은 1줄이고, Row가 위쪽 정렬이라 이름 첫 줄 높이는 모든 칸이 같다
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
     }
 }
 
-/** 홈 타일에 쓰는 짧은 이름. "보너스 박스"는 칸이 좁아 "박스"로 줄인다 (화면 읽기는 원래 이름으로 읽음) */
+/**
+ * 홈 타일에 쓰는 이름 (#387)
+ * "보너스 박스"(10sp 기준 약 52dp)는 한 칸(최소 42dp)에 한 줄로 들어가지 않아 띄어쓰기 자리에서 2줄로 나눈다.
+ * 줄바꿈을 글자 단위 자동 줄바꿈에 맡기면 "보너스 박/스"처럼 끊길 수 있어 직접 나눈다.
+ */
 private fun homeItemLabel(type: ItemType): String =
-    if (type == ItemType.BOX) "박스" else type.kor
+    if (type == ItemType.BOX) "보너스\n박스" else type.kor
 
 /** "열기" 문구가 위아래로 움직이는 횟수 (#573 리뷰: 홈에 있는 내내 움직이지 않게 제한) */
 private const val BOX_CTA_BOUNCE_COUNT = 3
@@ -1035,7 +1027,7 @@ private fun BoxOpenCta(modifier: Modifier = Modifier) {
     }
     Box(
         modifier = modifier
-            // 타일 위쪽 테두리에 걸치게 6dp 올린다
+            // 타일 위쪽 가장자리에 걸치게 6dp 올린다
             // 위아래로 움직이는 2dp까지 더해도 BOX_CTA_SPACE(8dp) 안이라 칸의 clip에 잘리지 않는다
             .offset(y = -6.dp)
             // 위치는 그대로 두고 그리기만 움직여 레이아웃을 다시 계산하지 않게 한다
@@ -1070,7 +1062,7 @@ private fun HorizontalScrollIndicator(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(3.dp)
+            .height(2.dp)
             .drawBehind {
                 val total = scrollState.maxValue + scrollState.viewportSize
                 if (total <= 0 || scrollState.maxValue <= 0) return@drawBehind
@@ -1157,7 +1149,7 @@ private fun HomeItemBoxSectionCompactPreview() {
     PlantTheme {
         Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
             HomeItemBoxSection(
-                // 박스 0개: "열기" 문구·테두리가 없어야 한다
+                // 박스 0개: "열기" 문구가 없어야 한다
                 item = Item(heart = 1, sun = 0, water = 5, fertilizer = 0, nutrient = 2, box = 0),
                 onItemClick = {},
                 compact = true
