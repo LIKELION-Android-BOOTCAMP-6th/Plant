@@ -695,24 +695,30 @@ fun MainPlantCard(
 
             Spacer(modifier = Modifier.height(8.dp.compactIf(compact)))
 
-            // 화면 높이가 모자라면 이미지가 먼저 줄어든다 (100dp → 최소 48dp, 간격 모드면 40dp, #376)
+            // 화면 높이가 모자라면 이미지가 먼저 줄어든다 (최대 크기 → 최소 48dp, 간격 모드면 40dp, #376)
             // weight(fill = false): 카드 안 다른 요소를 다 놓고 남은 높이까지만 차지
-            val imageSlotModifier = Modifier
-                .weight(1f, fill = false)
-                .shrinkableImageHeight(min = if (compact) 40.dp else 48.dp, max = 100.dp)
+            val imageMinHeight = if (compact) 40.dp else 48.dp
             if(hasNoPot){
                 Box(
+                    // 로고는 원형 배경이 칸을 꽉 채우므로 100dp 유지 (화분 칸 170dp와 보이는 크기가 비슷함, #476)
                     // 로고는 원형 배경이라 높이에 맞춰 정사각형 유지
-                    modifier = imageSlotModifier.aspectRatio(1f, matchHeightConstraintsFirst = true),
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .shrinkableImageHeight(min = imageMinHeight, max = 100.dp)
+                        .aspectRatio(1f, matchHeightConstraintsFirst = true),
                     contentAlignment = Alignment.Center
                 ){
                     getLogoImage()
                 }
             } else {
+                // 화분 이미지는 Lv6까지 같은 배율로 넣으려고 480x480 캔버스 가운데에 작게 그려져 있다 (화분 폭 = 캔버스의 약 43%, #474)
+                // 그래서 칸을 170dp로 키워 화분 폭이 약 73dp(예전 Lv0 100dp 칸과 비슷)로 보이게 한다 (#476)
                 ProfileImage(
                     level = "Lv.${displayPot.potLevel}",
-                    size = 100,
-                    modifier = imageSlotModifier
+                    size = 170,
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .shrinkableImageHeight(min = imageMinHeight, max = 170.dp)
                 )
             }
             Spacer(modifier = Modifier.height(8.dp.compactIf(compact)))
