@@ -699,8 +699,8 @@ fun MainPlantCard(
             // weight(fill = false): 카드 안 다른 요소를 다 놓고 남은 높이까지만 차지
             if(hasNoPot){
                 Box(
-                    // 로고는 원형 배경이 칸을 꽉 채우므로 100dp 유지 (화분 칸 170dp와 보이는 크기가 비슷함, #476)
-                    // 로고는 원형 배경이라 높이에 맞춰 정사각형 유지
+                    // 로고는 원형 배경이 칸을 꽉 채워 100dp로도 화분 칸 170dp와 보이는 크기가 비슷하므로 100dp 유지 (#476)
+                    // 원형 배경이라 높이에 맞춰 정사각형 유지
                     modifier = Modifier
                         .weight(1f, fill = false)
                         .shrinkableImageHeight(min = if (compact) 40.dp else 48.dp, max = 100.dp)
@@ -712,15 +712,18 @@ fun MainPlantCard(
             } else {
                 // 화분 이미지는 Lv6까지 같은 배율로 넣으려고 480x480 캔버스 가운데에 작게 그려져 있다 (화분 테두리 폭 196px = 캔버스의 약 41%, #474)
                 // 그래서 칸을 170dp로 키워 화분 폭이 약 69dp로 보이게 한다 (#476, 420dpi 실기기 캡처에서 182px ÷ 2.625)
-                // 최소 높이도 같은 이유로 키운다: 예전 이미지는 화분 폭이 이미지의 약 72%(512px 중 366px)라 약 1.75배
-                // → 예전 최소(48dp, 간격 모드 40dp)일 때와 같은 화분 크기가 되도록 84dp, 간격 모드 70dp (#476)
-                // 대신 세로가 아주 짧은 화면에서는 그만큼 바깥 스크롤이 더 생긴다 (HomeBodyLayout 3번 참고)
+                // 간격 모드 최소 높이: 40dp면 화분 폭이 약 16dp밖에 안 돼 70dp(화분 폭 약 29dp)로 키운다 (#476)
+                // → 예전 Lv0 이미지(화분 폭 = 이미지의 약 72%)를 40dp 칸에 그렸을 때와 같은 폭을 기준으로 삼음
+                // → 대신 세로가 아주 짧은 화면에서는 그만큼(최대 30dp) 바깥 스크롤이 더 생긴다 (HomeBodyLayout 3번 참고)
+                // 일반 모드 최소 높이는 48dp 그대로 둔다: 간격 모드 기준(본문 560dp)은 내용과 상관없이 고정이라,
+                // 키우면 560dp 바로 위 화면에서 바깥 스크롤이 생긴다 (84dp면 15자 이름에서 최대 27dp, 에뮬레이터 측정)
+                // 글꼴 1.0배·이름 한 줄이면 일반 모드 칸은 79dp 이상이라 48dp까지 줄지 않는다 (기준 개선은 #579)
                 ProfileImage(
                     level = "Lv.${displayPot.potLevel}",
                     size = 170,
                     modifier = Modifier
                         .weight(1f, fill = false)
-                        .shrinkableImageHeight(min = if (compact) 70.dp else 84.dp, max = 170.dp)
+                        .shrinkableImageHeight(min = if (compact) 70.dp else 48.dp, max = 170.dp)
                 )
             }
             Spacer(modifier = Modifier.height(8.dp.compactIf(compact)))
