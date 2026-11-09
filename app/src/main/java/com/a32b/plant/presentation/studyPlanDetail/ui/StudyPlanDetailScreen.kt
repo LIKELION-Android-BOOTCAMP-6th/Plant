@@ -408,7 +408,12 @@ fun StudyPlanDetailScreen(
                             text = "화분 삭제",
                             semiText = "이 화분과 모든 학습 기록이 영구 삭제됩니다.\n정말 삭제하시겠습니까?",
                             onDismiss = { viewModel.setPotDeleteDialogShown(false) },
-                            onConfirm = { viewModel.confirmDeleteEntirePot { navController.popBackStack() } }
+                            onConfirm = {
+                                viewModel.confirmDeleteEntirePot { notice ->
+                                    notice?.let { context.showToast(it) }
+                                    navController.popBackStack()
+                                }
+                            }
                         )
                     }
 
@@ -419,8 +424,9 @@ fun StudyPlanDetailScreen(
                             semiText = "이 화분의 학습을 최종 완료 하시겠습니까?\n완료 후에는 '기른 나무'에서 확인 가능합니다.",
                             onDismiss = { viewModel.setCompleteDialogShown(false) },
                             onConfirm = {
-                                viewModel.completeStudyPlan {
+                                viewModel.completeStudyPlan { notice ->
                                     context.showToast("\"${pot.name}\"화분의 학습을 완료했어요!")
+                                    notice?.let { context.showToast(it) }
                                     navController.popBackStack()
                                 }
                             }

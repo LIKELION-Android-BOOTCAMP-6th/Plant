@@ -307,8 +307,8 @@ class MyPageViewModelTest {
         override suspend fun getUserPotsByStatus(uid: String, isCompleted: Boolean): List<Pot> = error("Unused")
         override suspend fun updatePotName(uid: String, potId: String, newName: String): Result<SaveResult> =
             error("Unused")
-        override suspend fun deleteEntirePot(uid: String, potId: String, totalStudyingTime: Long): Unit = error("Unused")
-        override suspend fun completeStudyPlan(uid: String, potId: String): Unit = error("Unused")
+        override suspend fun deleteEntirePot(uid: String, potId: String): Result<SaveResult> = error("Unused")
+        override suspend fun completeStudyPlan(uid: String, potId: String): Result<SaveResult> = error("Unused")
         override suspend fun getTodayStudyLogs(uid: String, potId: String, startOfToday: Date): Result<List<StudyLog>> =
             error("Unused")
         override suspend fun levelUpWithItemConsumption(

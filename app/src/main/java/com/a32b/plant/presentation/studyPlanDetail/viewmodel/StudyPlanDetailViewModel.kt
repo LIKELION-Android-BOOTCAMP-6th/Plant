@@ -13,6 +13,7 @@ import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.model.SaveResult
 import com.a32b.plant.domain.model.StudyLog
+import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.pot.*
@@ -84,6 +85,9 @@ class StudyPlanDetailViewModel @Inject constructor(
 
     private val _isShareMode = MutableStateFlow(false)
     val isShareMode = _isShareMode.asStateFlow()
+
+    // 기록 삭제·화분 삭제·완료 중인 작업 — 진행 중에는 다시 보내지 않는다 (연타 방지, #455)
+    private var writeJob: Job? = null
 
     init {
         checkUseAndLoadData()
@@ -193,38 +197,43 @@ class StudyPlanDetailViewModel @Inject constructor(
         pendingDeleteLogID = ""
     }
 
+    // 차감할 학습 시간은 화면 값이 아니라 저장된 기록에서 읽는다 (Repository, #455)
     fun confirmDelete() {
-        if (pendingDeleteLogID.isNotEmpty()){
-            val logToDelete = _studyLogs.value.find { it.id == pendingDeleteLogID }
-            val studyingTime = logToDelete?.studyingTime ?: 0L
+        val logId = pendingDeleteLogID
+        if (logId.isEmpty() || potId.isEmpty()) return
 
-            viewModelScope.launch {
-                safeRunCatching {
-                    deleteStudyLogUseCase(userId, potId, pendingDeleteLogID, studyingTime)
-                }.onSuccess {
-                    dismissDeleteDialog()
-                    loadPotDetail()
+        runWrite(
+            write = { deleteStudyLogUseCase(potId, logId) },
+            onSaved = { result ->
+                // 오프라인(Pending)이어도 기기 캐시에는 이미 반영됐으므로 다시 불러오면 줄어든 시간이 보인다
+                dismissDeleteDialog()
+                loadPotDetail()
+                if (result == SaveResult.Pending) {
+                    _event.send(StudyPlanDetailEvent.ShowToast(NETWORK_SLOW_MESSAGE))
                 }
             }
-        }
+        )
     }
 
     fun setPotDeleteDialogShown(show: Boolean){
         _isPotDeleteDialogShown.value = show
     }
 
-    fun confirmDeleteEntirePot(onSuccess: () -> Unit){
-        if (userId.isEmpty() || potId.isEmpty()) return
-        val totalStudyingTime = _potDetail.value?.potTotalStudyingTime ?: 0L
+    /**
+     * 화분 삭제. 차감할 학습 시간은 화면 값이 아니라 저장된 화분에서 읽는다 (Repository, #455).
+     * [onDeleted]: 화면을 닫기 전에 보여줄 안내(오프라인이면 [NETWORK_SLOW_MESSAGE], 아니면 null).
+     * 화면을 닫으면 이벤트를 받을 수 없으므로 이벤트 대신 콜백으로 넘긴다
+     */
+    fun confirmDeleteEntirePot(onDeleted: (notice: String?) -> Unit){
+        if (potId.isEmpty()) return
 
-        viewModelScope.launch {
-            safeRunCatching {
-                deleteEntirePotUseCase(userId, potId, totalStudyingTime)
-            }.onSuccess {
+        runWrite(
+            write = { deleteEntirePotUseCase(potId) },
+            onSaved = { result ->
                 setPotDeleteDialogShown(false)
-                onSuccess()
+                onDeleted(result.noticeOrNull())
             }
-        }
+        )
     }
 
     fun onStudyLogClicked(log: StudyLog){
@@ -239,17 +248,47 @@ class StudyPlanDetailViewModel @Inject constructor(
         _isCompleteDialogShown.value = show
     }
 
-    fun completeStudyPlan(onSuccess: () -> Unit){
-        if (userId.isEmpty() || potId.isEmpty()) return
-        viewModelScope.launch {
-            safeRunCatching {
-                completeStudyPlanUseCase(userId, potId)
-            }.onSuccess {
+    /**
+     * 화분 완료 (#455). 이미 완료된 화분이면 다시 보내지 않고 성공 처리된다 (UseCase·Repository).
+     * [onCompleted]: [confirmDeleteEntirePot]과 같은 이유로 안내를 콜백으로 넘긴다
+     */
+    fun completeStudyPlan(onCompleted: (notice: String?) -> Unit){
+        if (potId.isEmpty()) return
+
+        runWrite(
+            write = { completeStudyPlanUseCase(potId) },
+            onSaved = { result ->
                 setCompleteDialogShown(false)
-                onSuccess()
+                onCompleted(result.noticeOrNull())
             }
+        )
+    }
+
+    /**
+     * 기록 삭제·화분 삭제·완료 공통 처리 (#455).
+     * - 진행 중이면 다시 보내지 않는다 (연타)
+     * - 성공(오프라인 Pending 포함)이면 [onSaved]
+     * - 실패면 안내 토스트만 띄우고 다이얼로그는 그대로 둔다 (다시 시도할 수 있게)
+     *   세션 만료는 UseCase에서 처리(세션 만료 안내)하므로 토스트를 띄우지 않는다
+     */
+    private fun runWrite(
+        write: suspend () -> Result<SaveResult>,
+        onSaved: suspend (SaveResult) -> Unit
+    ) {
+        if (writeJob?.isActive == true) return
+        writeJob = viewModelScope.launch {
+            write()
+                .onSuccess { result -> onSaved(result) }
+                .onFailure { error ->
+                    if (error !is AppError.UnknownUser) {
+                        _event.send(StudyPlanDetailEvent.ShowToast(error.message))
+                    }
+                }
         }
     }
+
+    private fun SaveResult.noticeOrNull(): String? =
+        if (this == SaveResult.Pending) NETWORK_SLOW_MESSAGE else null
 
     val isAllSelected: Boolean
         get() = _studyLogs.value.isEmpty() && _studyLogs.value.all { it.isSelected }

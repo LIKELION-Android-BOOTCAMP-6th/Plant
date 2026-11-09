@@ -121,7 +121,7 @@ service cloud.firestore {
     // - 같은 세션이 두 번 오면(대기열의 batch + 복구 재전송) 기록이 이미 있어 거부 → 학습 시간이 한 번만 늘어난다
     // - 보상(item.*, reward)은 쓰지 않는다. 기록이 서버에 생기면 grantStudyReward 트리거가 지급한다
     // - "시작 24시간 이내" 검증은 두지 않는다: 오프라인으로 며칠 지나 동기화한 정상 기록이 거부되기 때문
-    // 기록·시간을 줄이는 쓰기(기록 삭제, 화분 삭제)는 이 검증과 무관하게 허용한다
+    // 학습 시간을 줄이는 쓰기(기록 삭제, 화분 삭제)는 아래 #455 검증으로만 허용한다
 
     // 세션 하나의 최대 학습 시간 (24시간, ms)
     function maxStudyingTimeMs() {
@@ -218,12 +218,6 @@ service cloud.firestore {
         request.resource.data.lastStudiedAt == request.time;
     }
 
-    // pots/{potId} 수정 중 학습 저장이 아닌 쓰기(이름 변경, 레벨업, 완료, 기록 삭제로 시간 감소 등)
-    // 학습 저장 필드는 바꿀 수 없고 학습 시간은 늘릴 수 없다
-    function potStudyFieldsKept() {
-      return !changedKeys().hasAny(['lastStudiedAt', 'lastStudySessionId']) &&
-        newValue('potTotalStudyingTime', 0) <= oldValue('potTotalStudyingTime', 0);
-    }
 
     // users/{uid} 수정 중 학습 저장: 같은 쓰기에서 생긴 기록의 학습 시간만큼만 늘어나고, 이전 세션과 겹치지 않아야 한다
     // 겹침 판단은 startedAt + 학습 시간(일시정지 시간 제외) 기준이라 실제 종료보다 이르므로 다음 세션에 불리하지 않다
@@ -243,11 +237,142 @@ service cloud.firestore {
         data.lastStudyEndedAt == log.startedAt + duration.value(log.studyingTime, 'ms');
     }
 
-    // users/{uid} 수정 중 학습 저장이 아닌 쓰기: 학습 저장 필드는 바꿀 수 없고 학습 시간은 늘릴 수 없다
-    // (기록·화분 삭제는 totalStudyTime을 줄인다)
-    function userStudyFieldsKept() {
-      return !changedKeys().hasAny(['lastStudyEndedAt', 'lastStudyPotId', 'lastStudySessionId']) &&
-        newValue('totalStudyTime', 0) <= oldValue('totalStudyTime', 0);
+    // ---------------------------------------------------------------------
+    // 화분 완료, 학습 기록 삭제, 화분 삭제 검증 (#455)
+    // ---------------------------------------------------------------------
+    // 세 작업 모두 앱이 batch 하나로 쓰고, 오프라인이면 기기 캐시에 먼저 반영된 뒤 연결되면 전송된다.
+    // 바뀌는 값(완료 수 +1, 학습 시간 차감량)은 앱이 정한 값이 아니라 쓰기 전 저장된 값(get)과 같을 때만 허용한다.
+    // 규칙은 같은 batch의 다른 쓰기를 직접 볼 수 없으므로, 어떤 화분·기록을 처리했는지 표시 필드에 함께 적는다
+    // (#453의 lastStudySessionId와 같은 방식)
+    //   - 화분 완료:   pots.isCompleted = true, pots.completedAt = 서버 시각
+    //                  users.completedPotsCount += 1, users.lastCompletedPotId = potId
+    //   - 기록 삭제:   logs/{logId} 삭제
+    //                  pots.potTotalStudyingTime -= 기록의 studyingTime, pots.lastDeletedLogId = logId
+    //                  users.totalStudyTime -= 기록의 studyingTime, users.lastDeletedPotId = potId, users.lastDeletedLogId = logId
+    //   - 화분 삭제:   pots/{potId} 삭제
+    //                  users.totalStudyTime -= 화분의 potTotalStudyingTime, users.lastDeletedPotId = potId, users.lastDeletedLogId = ''
+    //                  (완료된 화분이면 users.completedPotsCount -= 1 도 함께)
+    //                  하위 logs는 onPotDeleted 트리거(functions/index.js)가 지운다
+    // 같은 작업이 두 번 도착하면(연타, 재전송) 두 번째는 이미 완료·삭제된 상태라 거부된다 → 카운트·시간은 1번만 바뀐다
+    // 차감 결과가 0 이상인지는 확인하지 않는다: 예전 데이터가 어긋나 음수가 되더라도 삭제는 되게 한다
+    // 이미 받은 보상은 회수하지 않는다 (item.* 는 건드리지 않음)
+
+    function userPath(userId) {
+      return /databases/$(database)/documents/users/$(userId);
+    }
+
+    function potPath(userId, potId) {
+      return /databases/$(database)/documents/users/$(userId)/pots/$(potId);
+    }
+
+    // 이 쓰기에서 지워지는 문서인지 (이미 없으면 같은 삭제의 재전송)
+    function deletedInThisWrite(path) {
+      return exists(path) && !existsAfter(path);
+    }
+
+    function isNonEmptyString(value) {
+      return value is string && value != '';
+    }
+
+    // pots/{potId} 수정 중 기록 삭제: 같은 쓰기에서 지워지는 기록의 저장된 학습 시간만큼만 줄어든다
+    function potStudyLogDeleted(userId, potId) {
+      let logId = newValue('lastDeletedLogId', '');
+      let path = studyLogPath(userId, potId, logId);
+      return changedKeys().hasOnly(['potTotalStudyingTime', 'lastDeletedLogId']) &&
+        isNonEmptyString(logId) &&
+        deletedInThisWrite(path) &&
+        newValue('potTotalStudyingTime', 0) == oldValue('potTotalStudyingTime', 0) - get(path).data.get('studyingTime', 0);
+    }
+
+    // pots/{potId} 수정 중 완료: 미완료 → 완료로만 바뀌고, 같은 쓰기에서 users의 완료 수가 이 화분으로 올라가야 한다
+    // (완료 수 +1 검증은 users 규칙(userPotCompleted)이 한다)
+    function potCompleted(userId, potId) {
+      return changedKeys().hasOnly(['isCompleted', 'completedAt']) &&
+        oldValue('isCompleted', false) == false &&
+        request.resource.data.isCompleted == true &&
+        request.resource.data.completedAt == request.time &&
+        get(userPath(userId)).data.get('lastCompletedPotId', '') != potId &&
+        getAfter(userPath(userId)).data.get('lastCompletedPotId', '') == potId;
+    }
+
+    // pots/{potId} 수정 중 위 검증이 없는 쓰기(이름 변경, 레벨업 등): 학습 시간·학습 저장·완료·삭제 표시 필드는 바꿀 수 없다
+    function potCountedFieldsKept() {
+      return !changedKeys().hasAny([
+        'potTotalStudyingTime', 'lastStudiedAt', 'lastStudySessionId',
+        'lastDeletedLogId', 'isCompleted', 'completedAt'
+      ]);
+    }
+
+    // users/{uid} 수정 중 기록 삭제: 같은 쓰기에서 지워지는 기록의 저장된 학습 시간만큼만 줄어든다
+    function userStudyLogDeleted(userId) {
+      let potId = newValue('lastDeletedPotId', '');
+      let logId = newValue('lastDeletedLogId', '');
+      let path = studyLogPath(userId, potId, logId);
+      return changedKeys().hasOnly(['totalStudyTime', 'lastDeletedPotId', 'lastDeletedLogId']) &&
+        isNonEmptyString(potId) &&
+        isNonEmptyString(logId) &&
+        deletedInThisWrite(path) &&
+        newValue('totalStudyTime', 0) == oldValue('totalStudyTime', 0) - get(path).data.get('studyingTime', 0);
+    }
+
+    // users/{uid} 수정 중 화분 삭제: 같은 쓰기에서 지워지는 화분의 저장된 학습 시간만큼 줄어들고,
+    // 완료된 화분이면 완료 수도 1 줄어든다 (미완료 화분이면 완료 수는 그대로)
+    function userPotDeleted(userId) {
+      let potId = newValue('lastDeletedPotId', '');
+      let path = potPath(userId, potId);
+      let pot = get(path).data;
+      let completedDelta = pot.get('isCompleted', false) == true ? 1 : 0;
+      return changedKeys().hasOnly(['totalStudyTime', 'lastDeletedPotId', 'lastDeletedLogId', 'completedPotsCount']) &&
+        isNonEmptyString(potId) &&
+        newValue('lastDeletedLogId', '') == '' &&
+        deletedInThisWrite(path) &&
+        newValue('totalStudyTime', 0) == oldValue('totalStudyTime', 0) - pot.get('potTotalStudyingTime', 0) &&
+        newValue('completedPotsCount', 0) == oldValue('completedPotsCount', 0) - completedDelta;
+    }
+
+    // users/{uid} 수정 중 화분 완료: 같은 쓰기에서 미완료 → 완료로 바뀌는 화분이 있을 때만 완료 수 +1 (정확히 1)
+    function userPotCompleted(userId) {
+      let potId = newValue('lastCompletedPotId', '');
+      let path = potPath(userId, potId);
+      return changedKeys().hasOnly(['completedPotsCount', 'lastCompletedPotId']) &&
+        isNonEmptyString(potId) &&
+        get(path).data.get('isCompleted', false) == false &&
+        getAfter(path).data.get('isCompleted', false) == true &&
+        newValue('completedPotsCount', 0) == oldValue('completedPotsCount', 0) + 1;
+    }
+
+    // users/{uid} 수정 중 위 검증이 없는 쓰기(닉네임, 이미지, 출석, 아이템 등):
+    // 학습 시간·학습 저장·완료 수·삭제/완료 표시 필드는 바꿀 수 없다
+    function userCountedFieldsKept() {
+      return !changedKeys().hasAny([
+        'totalStudyTime', 'lastStudyEndedAt', 'lastStudyPotId', 'lastStudySessionId',
+        'completedPotsCount', 'lastCompletedPotId', 'lastDeletedPotId', 'lastDeletedLogId'
+      ]);
+    }
+
+    // users의 삭제 표시가 이 쓰기에서 (potId, logId)로 바뀌는지 — 쓰기 전에도 같은 값이면 users를 쓰지 않은 것
+    // (화분 삭제는 logId = '')
+    function userDeletionMarkedInThisWrite(userId, potId, logId) {
+      let before = get(userPath(userId)).data;
+      let after = getAfter(userPath(userId)).data;
+      return !(before.get('lastDeletedPotId', '') == potId && before.get('lastDeletedLogId', '') == logId) &&
+        after.get('lastDeletedPotId', '') == potId &&
+        after.get('lastDeletedLogId', '') == logId;
+    }
+
+    // logs/{logId} 삭제: 같은 쓰기에서 화분·유저의 학습 시간이 이 기록으로 줄어들어야 한다
+    // (차감량 검증은 potStudyLogDeleted, userStudyLogDeleted가 한다)
+    // 화분이 없으면 get이 실패해 거부된다 → 화분 삭제 후 남은 기록은 트리거가 지운다
+    function studyLogDeletedWithTotals(userId, potId, logId) {
+      return get(potPath(userId, potId)).data.get('lastDeletedLogId', '') != logId &&
+        getAfter(potPath(userId, potId)).data.get('lastDeletedLogId', '') == logId &&
+        userDeletionMarkedInThisWrite(userId, potId, logId);
+    }
+
+    // pots/{potId} 삭제: 같은 쓰기에서 유저의 학습 시간이 이 화분으로 줄어들어야 한다 (차감량 검증은 userPotDeleted)
+    // 이 화분의 기록을 지운 직후라 users 표시가 (potId, logId)여도, 화분 삭제는 logId = ''로 바꾸므로 구분된다
+    function potDeletedWithTotals(userId, potId) {
+      return userDeletionMarkedInThisWrite(userId, potId, '');
     }
 
     match /users/{userId} {
@@ -255,33 +380,50 @@ service cloud.firestore {
       // 삭제 규칙 없음 = 거부: 회원탈퇴는 deleteAccount 함수(Admin SDK, 규칙 무관)가 처리한다 (#457)
 
       // 생성: 앱은 빈 닉네임으로 만든다 (createUser). 다른 사람 닉네임으로 만드는 것을 막는다
-      // 학습 시간은 0으로 시작하고, 학습 저장 필드는 학습 기록 저장(#453)으로만 생긴다
+      // 학습 시간·완료 수는 0으로 시작하고, 학습 저장(#453)·완료/삭제 표시(#455) 필드는 해당 batch로만 생긴다
       allow create: if isUid(userId) &&
         (newValue('nickname', '') == '' || ownsNicknameAfterWrite(request.resource.data.nickname)) &&
         newValue('totalStudyTime', 0) == 0 &&
-        !request.resource.data.keys().hasAny(['lastStudyEndedAt', 'lastStudyPotId', 'lastStudySessionId']);
+        newValue('completedPotsCount', 0) == 0 &&
+        !request.resource.data.keys().hasAny([
+          'lastStudyEndedAt', 'lastStudyPotId', 'lastStudySessionId',
+          'lastCompletedPotId', 'lastDeletedPotId', 'lastDeletedLogId'
+        ]);
 
       // 수정: nickname을 바꾸지 않는 쓰기(이미지, 다크모드, gold, 출석, 아이템, 세션 토큰 등)는 닉네임 검사를 하지 않는다
-      // 학습 시간·학습 저장 필드는 학습 기록 저장 batch에서만 늘리거나 바꿀 수 있다 (#453)
+      // 학습 시간·완료 수는 학습 기록 저장(#453), 화분 완료·기록 삭제·화분 삭제(#455) batch에서만 바꿀 수 있다
       allow update: if isUid(userId) &&
         (!changedKeys().hasAny(['nickname']) || ownsNicknameAfterWrite(request.resource.data.get('nickname', null))) &&
-        (userStudyFieldsKept() || userStudySaved(userId));
+        (userCountedFieldsKept() ||
+          userStudySaved(userId) ||
+          userPotCompleted(userId) ||
+          userStudyLogDeleted(userId) ||
+          userPotDeleted(userId));
 
       match /pots/{potsId} {
-        allow read, delete: if isUid(userId);
+        allow read: if isUid(userId);
 
-        // 새 화분은 학습 시간 0으로 시작한다 (앱의 PotDto는 lastStudiedAt을 null로 함께 보낸다)
+        // 삭제는 유저 학습 시간 차감과 같은 batch에서만 (#455). 하위 logs는 onPotDeleted 트리거가 지운다
+        allow delete: if isUid(userId) && potDeletedWithTotals(userId, potsId);
+
+        // 새 화분은 학습 시간 0, 미완료로 시작한다 (앱의 PotDto는 lastStudiedAt·completedAt을 null로 함께 보낸다)
         allow create: if isUid(userId) &&
           newValue('potTotalStudyingTime', 0) == 0 &&
           newValue('lastStudiedAt', null) == null &&
-          !request.resource.data.keys().hasAny(['lastStudySessionId']);
+          newValue('isCompleted', false) == false &&
+          newValue('completedAt', null) == null &&
+          !request.resource.data.keys().hasAny(['lastStudySessionId', 'lastDeletedLogId']);
 
         allow update: if isUid(userId) &&
-          (potStudyFieldsKept() || potStudySaved(userId, potsId));
+          (potCountedFieldsKept() ||
+            potStudySaved(userId, potsId) ||
+            potCompleted(userId, potsId) ||
+            potStudyLogDeleted(userId, potsId));
 
         match /logs/{logsId} {
-          // 기록 삭제는 앱에서 처리 (학습 시간 감소와 같은 batch). 보상 대기 중에 지워지면 트리거가 지급하지 않는다
-          allow read, delete: if isUid(userId);
+          allow read: if isUid(userId);
+          // 기록 삭제는 화분·유저 학습 시간 차감과 같은 batch에서만 (#455). 보상 대기 중에 지워지면 트리거가 지급하지 않는다
+          allow delete: if isUid(userId) && studyLogDeletedWithTotals(userId, potsId, logsId);
           allow create: if isUid(userId) && isValidNewStudyLog(userId, potsId, logsId);
           allow update: if isUid(userId) && onlyRewardSeenMarked();
         }

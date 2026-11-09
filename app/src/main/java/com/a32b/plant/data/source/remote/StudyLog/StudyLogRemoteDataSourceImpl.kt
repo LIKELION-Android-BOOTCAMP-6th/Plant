@@ -1,6 +1,8 @@
 package com.a32b.plant.data.datasource
 
+import com.a32b.plant.data.firestore.getPreferringCache
 import com.a32b.plant.data.model.StudyLogDto
+import com.google.android.gms.tasks.Task
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -69,15 +71,39 @@ class StudyLogRemoteDataSourceImpl @Inject constructor(
         return snapshot.documents.mapNotNull { it.toObject(StudyLogDto::class.java) }
     }
 
-    override suspend fun executeDeleteBatch(uid: String, potId: String, logId: String, decreaseAmount: Long) {
-        val userRef = db.collection("users").document(uid)
-        val potRef = userRef.collection("pots").document(potId)
-        val logRef = potRef.collection("logs").document(logId)
+    private fun userRef(uid: String) = db.collection("users").document(uid)
 
+    private fun potRef(uid: String, potId: String) = userRef(uid).collection("pots").document(potId)
+
+    private fun logRef(uid: String, potId: String, logId: String) =
+        potRef(uid, potId).collection("logs").document(logId)
+
+    override suspend fun getStudyLogPreferringCache(uid: String, potId: String, logId: String): StudyLogDto? =
+        logRef(uid, potId, logId).getPreferringCache()
+            .takeIf { it.exists() }
+            ?.toObject(StudyLogDto::class.java)
+
+    override suspend fun existsStudyLogOnServer(uid: String, potId: String, logId: String): Boolean =
+        logRef(uid, potId, logId).get(Source.SERVER).await().exists()
+
+    override fun deleteStudyLog(uid: String, potId: String, logId: String, studyingTime: Long): Task<Void> =
         db.runBatch { batch ->
-            batch.delete(logRef)
-            batch.update(userRef, "totalStudyTime", FieldValue.increment(decreaseAmount))
-            batch.update(potRef, "potTotalStudyingTime", FieldValue.increment(decreaseAmount))
-        }.await()
-    }
+            batch.delete(logRef(uid, potId, logId))
+            // 규칙이 차감이 어느 기록 때문인지 확인하도록 기록 ID를 함께 적는다
+            batch.update(
+                potRef(uid, potId),
+                mapOf(
+                    "potTotalStudyingTime" to FieldValue.increment(-studyingTime),
+                    "lastDeletedLogId" to logId
+                )
+            )
+            batch.update(
+                userRef(uid),
+                mapOf(
+                    "totalStudyTime" to FieldValue.increment(-studyingTime),
+                    "lastDeletedPotId" to potId,
+                    "lastDeletedLogId" to logId
+                )
+            )
+        }
 }
