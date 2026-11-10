@@ -2,19 +2,13 @@ package com.a32b.plant.presentation.mypage.viewmodel
 
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.AttendanceDecision
-import com.a32b.plant.domain.model.Pot
-import com.a32b.plant.domain.model.SaveResult
-import com.a32b.plant.domain.model.StudyLog
-import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.model.User
 import com.a32b.plant.domain.model.UserSnapshot
 import com.a32b.plant.domain.repository.AuthRepository
-import com.a32b.plant.domain.repository.PotRepository
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.session.SessionExpiredNotifier
 import com.a32b.plant.domain.session.SessionExpiredReason
-import com.a32b.plant.domain.type.ItemType
 import com.a32b.plant.domain.usecase.auth.SignOutUseCase
 import com.a32b.plant.domain.usecase.mypage.GetProfileImageLevelListUseCase
 import com.a32b.plant.domain.usecase.mypage.ObserveDarkModeUseCase
@@ -42,7 +36,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.Date
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MyPageViewModelTest {
@@ -228,11 +221,47 @@ class MyPageViewModelTest {
         }
     }
 
+    @Test
+    fun `loads profile levels through the saved unlocked level`() = runTest {
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        try {
+            Dispatchers.setMain(dispatcher)
+            val users = FakeUserRepository(testUser().copy(unlockedProfileLevel = 2))
+            val viewModel = createViewModel(users)
+
+            viewModel.getImageLevelList()
+
+            assertEquals(listOf(0, 1, 2), viewModel.uiState.value.levelList)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun `falls back to level zero when the current user disappears`() = runTest {
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        try {
+            Dispatchers.setMain(dispatcher)
+            val users = FakeUserRepository(testUser().copy(unlockedProfileLevel = 2))
+            val viewModel = createViewModel(users)
+
+            viewModel.getImageLevelList()
+            assertEquals(listOf(0, 1, 2), viewModel.uiState.value.levelList)
+
+            users.currentUser.value = null
+            viewModel.getImageLevelList()
+
+            assertEquals(listOf(0), viewModel.uiState.value.levelList)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     private fun createViewModel(users: FakeUserRepository): MyPageViewModel {
         val notifier = NoopSessionExpiredNotifier
         return MyPageViewModel(
             ensureCurrentUserUseCase = EnsureCurrentUserUseCase(users, notifier),
-            getProfileImageLevelListUseCase = GetProfileImageLevelListUseCase(FakePotRepository()),
+            getProfileImageLevelListUseCase = GetProfileImageLevelListUseCase(EnsureCurrentUserUseCase(users, notifier)),
             signOutUseCase = SignOutUseCase(FakeAuthRepository(), users),
             userRepository = users,
             updateProfileUseCase = UpdateProfileUseCase(users, EnsureCurrentUserUseCase(users, notifier)),
@@ -298,25 +327,4 @@ class MyPageViewModelTest {
         override fun signOut(): Unit = error("Unused")
     }
 
-    private class FakePotRepository : PotRepository {
-        override fun getPots(uid: String): Flow<List<Pot>> = error("Unused")
-        override fun getAvailableTags(): Flow<List<Tag>> = error("Unused")
-        override suspend fun addPot(uid: String, tag: Tag, name: String): Result<Unit> = error("Unused")
-        override suspend fun getUserPotById(uid: String, potId: String): Pot? = error("Unused")
-        override suspend fun getDuplicationLevelList(uid: String): List<Int> = error("Unused")
-        override suspend fun getUserPotsByStatus(uid: String, isCompleted: Boolean): List<Pot> = error("Unused")
-        override suspend fun updatePotName(uid: String, potId: String, newName: String): Result<SaveResult> =
-            error("Unused")
-        override suspend fun deleteEntirePot(uid: String, potId: String): Result<SaveResult> = error("Unused")
-        override suspend fun completeStudyPlan(uid: String, potId: String): Result<SaveResult> = error("Unused")
-        override suspend fun getTodayStudyLogs(uid: String, potId: String, startOfToday: Date): Result<List<StudyLog>> =
-            error("Unused")
-        override suspend fun getPotPreferringCache(uid: String, potId: String): Result<Pot?> = error("Unused")
-        override suspend fun levelUpPot(
-            uid: String,
-            potId: String,
-            currentLevel: Int,
-            items: Map<ItemType, Int>
-        ): Result<SaveResult> = error("Unused")
-    }
 }

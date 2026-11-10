@@ -100,12 +100,15 @@ class MyPageViewModel @Inject constructor(
         }
     }
 
-    // 보유한 레벨 중복 제거 레벨 리스트 가져오기
+    // 저장된 해금 레벨까지 프로필 이미지 후보를 가져온다.
     fun getImageLevelList() {
-        viewModelScope.launch {
-            val levelList = getProfileImageLevelListUseCase()
-            _uiState.update { it.copy(levelList = levelList) }
-        }
+        getProfileImageLevelListUseCase()
+            .onSuccess { levelList ->
+                _uiState.update { it.copy(levelList = levelList) }
+            }
+            .onFailure {
+                _uiState.update { it.copy(levelList = listOf(0)) }
+            }
     }
 
     fun updateProfile(nickname: String, imageLevel: String) {
