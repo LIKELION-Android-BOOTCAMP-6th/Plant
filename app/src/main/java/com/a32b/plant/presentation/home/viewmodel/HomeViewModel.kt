@@ -200,7 +200,7 @@ class HomeViewModel @Inject constructor(
 
     // 결과를 알 수 없는(응답을 받지 못한) 박스 열기 요청 (#454)
     // 같은 개수로 다시 열면 같은 requestId를 보낸다 → 서버가 이미 처리했으면 다시 추첨하지 않고 이전 결과를 받는다
-    // 개수를 바꿔 열면 새 요청으로 본다 (이전 요청이 처리됐다면 보유량은 observeBoxCount 구독으로 반영됨)
+    // 개수를 바꿔 열면 새 요청으로 본다 (이전 요청이 처리됐다면 보유량은 유저 문서 구독(observeUserItem)으로 반영됨)
     private var pendingBoxRequest: PendingBoxRequest? = null
 
     private data class PendingBoxRequest(val count: Int, val requestId: String)
@@ -577,9 +577,8 @@ class HomeViewModel @Inject constructor(
                 openBonusBoxUseCase(count, requestId)
                     .onSuccess { droppedItem ->
                         pendingBoxRequest = null
-                        if (droppedItem.isNotEmpty()) {
-                            _eventChannel.send(HomeEvent.BonusBoxResult(droppedItem))
-                        }
+                        // 비어 있어도 보낸다: 화면이 이 이벤트로 개봉 다이얼로그를 닫는다
+                        _eventChannel.send(HomeEvent.BonusBoxResult(droppedItem))
                     }
                     .onFailure { error ->
                         // 연결 끊김·서버 오류는 서버에서 처리됐을 수도 있으므로 다음 시도에 같은 requestId를 쓴다
@@ -588,7 +587,8 @@ class HomeViewModel @Inject constructor(
                             pendingBoxRequest = null
                         }
                         when (error) {
-                            is AppError.UnknownUser -> ensureCurrentUserUseCase()
+                            // OpenBonusBoxUseCase가 이미 ensureCurrentUserUseCase로 세션 만료를 알렸다
+                            is AppError.UnknownUser -> Unit
                             else -> sendToast(error.message)
                         }
                     }

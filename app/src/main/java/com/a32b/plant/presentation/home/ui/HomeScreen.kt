@@ -186,7 +186,11 @@ fun HomeScreen(
         viewModel.events.collect { event ->
             when (event) {
                 is HomeEvent.ShowToast -> context.showToast(event.message)
-                is HomeEvent.BonusBoxResult -> bonusBoxResult = event.items
+                is HomeEvent.BonusBoxResult -> {
+                    showOpenDialog = false
+                    // 앱이 모르는 보상만 나오면 비어 있다 (지급은 서버에서 끝남) → 결과 창 없이 닫기만 한다
+                    bonusBoxResult = event.items.takeIf { it.isNotEmpty() }
+                }
                 is HomeEvent.LevelUpSuccess -> {
                     showLevelUpConfetti = true
                     context.showToast("레벨업 성공!")
@@ -303,10 +307,9 @@ fun HomeScreen(
                         maxCount = userItem.box.coerceAtMost(OpenBonusBoxUseCase.MAX_OPEN_COUNT),
                         isOpening = isBoxOpening,
                         onDismiss = {if (!isBoxOpening) showOpenDialog = false },
-                        onConfirm = { count ->
-                            showOpenDialog = false
-                            viewModel.openBoxes(count)
-                        }
+                        // 서버 응답까지 다이얼로그를 열어 둔다 (isOpening으로 버튼·닫기를 막음, #454)
+                        // 성공하면 BonusBoxResult 이벤트에서 닫고, 실패하면 그대로 두어 다시 시도할 수 있게 한다
+                        onConfirm = { count -> viewModel.openBoxes(count) }
                     )
                 }
             }
@@ -1424,7 +1427,7 @@ fun BonusBoxOpenDialog(
 
                 TextButton(
                     onClick = { count = maxCount },
-                    enabled = count < maxCount
+                    enabled = count < maxCount && !isOpening
                 ) {
                     Text("전체 선택 (MAX)", color = MaterialTheme.colorScheme.primary)
                 }
@@ -1436,7 +1439,7 @@ fun BonusBoxOpenDialog(
                 enabled = !isOpening,
                 colors = ButtonDefaults.buttonColors(containerColor = primary)
             ) {
-                Text("${count}개 개봉하기")
+                Text(if (isOpening) "개봉 중..." else "${count}개 개봉하기")
             }
         },
         dismissButton = {
