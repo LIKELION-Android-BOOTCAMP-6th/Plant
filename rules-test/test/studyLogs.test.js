@@ -7,7 +7,7 @@ const {
   Timestamp, collectionGroup, deleteDoc, doc, getDoc, getDocs, increment, query,
   serverTimestamp, setDoc, updateDoc, where, writeBatch,
 } = require("firebase/firestore");
-const {ALICE, BOB, createTestEnv, seed} = require("../helpers");
+const {ALICE, BOB, createTestEnv, deleteStudyLogBatch, seed} = require("../helpers");
 
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
@@ -136,7 +136,7 @@ describe("studyLogs", () => {
     it("기록을 지운 뒤 같은 세션을 다시 보내도 이전 세션과 겹쳐 거부된다", async () => {
       const startedAt = Date.now() - 2 * HOUR;
       await assertSucceeds(studyBatch(asAlice(), {startedAt}));
-      await assertSucceeds(deleteDoc(doc(asAlice(), "users", ALICE, "pots", "pot1", "logs", "s1")));
+      await assertSucceeds(deleteStudyLogBatch(asAlice(), {logId: "s1", time: HOUR}));
       await assertFails(studyBatch(asAlice(), {startedAt}));
     });
   });
@@ -212,14 +212,11 @@ describe("studyLogs", () => {
   });
 
   describe("학습 저장이 아닌 쓰기", () => {
-    it("기록 삭제 batch(기록 삭제 + 화분·유저 학습 시간 감소)는 허용", async () => {
+    // 차감량 검증(저장된 값과 다르면 거부 등)은 potCompleteDelete.test.js (#455)
+    it("저장한 기록은 기록 삭제 batch(기록 삭제 + 화분·유저 학습 시간 감소)로 지울 수 있다", async () => {
       await assertSucceeds(studyBatch(asAlice(), {startedAt: Date.now() - 2 * HOUR}));
-      const db = asAlice();
-      const batch = writeBatch(db);
-      batch.delete(doc(db, "users", ALICE, "pots", "pot1", "logs", "s1"));
-      batch.update(doc(db, "users", ALICE), {totalStudyTime: increment(-HOUR)});
-      batch.update(doc(db, "users", ALICE, "pots", "pot1"), {potTotalStudyingTime: increment(-HOUR)});
-      await assertSucceeds(batch.commit());
+      await assertSucceeds(deleteStudyLogBatch(asAlice(), {logId: "s1", time: HOUR}));
+      assert.deepStrictEqual(await totals(), {user: 0, pot: 0});
     });
 
     it("학습 저장 필드(lastStudyEndedAt 등)는 따로 바꿀 수 없다", async () => {
@@ -230,10 +227,10 @@ describe("studyLogs", () => {
       await assertFails(updateDoc(doc(asAlice(), "users", ALICE, "pots", "pot1"), {lastStudiedAt: serverTimestamp()}));
     });
 
-    it("화분 이름 변경·레벨업·완료 처리는 학습 저장 검증과 무관하게 허용", async () => {
+    // 화분 완료는 완료 수와 함께 검증한다 (potCompleteDelete.test.js, #455)
+    it("화분 이름 변경·레벨업은 학습 저장 검증과 무관하게 허용", async () => {
       await assertSucceeds(updateDoc(doc(asAlice(), "users", ALICE, "pots", "pot1"), {name: "새 이름"}));
       await assertSucceeds(updateDoc(doc(asAlice(), "users", ALICE, "pots", "pot1"), {potLevel: 1}));
-      await assertSucceeds(updateDoc(doc(asAlice(), "users", ALICE, "pots", "pot1"), {isCompleted: true, completedAt: serverTimestamp()}));
     });
 
     it("화분과 유저는 학습 시간 0으로만 만들 수 있다", async () => {

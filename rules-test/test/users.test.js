@@ -3,7 +3,7 @@ const {describe, it, before, after, beforeEach} = require("node:test");
 const assert = require("node:assert");
 const {assertFails, assertSucceeds} = require("@firebase/rules-unit-testing");
 const {deleteDoc, deleteField, doc, getDoc, increment, runTransaction, setDoc, updateDoc} = require("firebase/firestore");
-const {ALICE, BOB, createTestEnv, seed} = require("../helpers");
+const {ALICE, BOB, createTestEnv, deletePotBatch, deleteStudyLogBatch, seed} = require("../helpers");
 
 describe("users", () => {
   let testEnv;
@@ -16,8 +16,8 @@ describe("users", () => {
   beforeEach(async () => {
     await testEnv.clearFirestore();
     await seed(testEnv, async (db) => {
-      await setDoc(doc(db, "users", ALICE), {nickname: "앨리스", gold: 100});
-      await setDoc(doc(db, "users", ALICE, "pots", "pot1"), {potName: "화분"});
+      await setDoc(doc(db, "users", ALICE), {nickname: "앨리스", gold: 100, totalStudyTime: 60});
+      await setDoc(doc(db, "users", ALICE, "pots", "pot1"), {potName: "화분", potTotalStudyingTime: 60});
       await setDoc(doc(db, "users", ALICE, "pots", "pot1", "logs", "log1"), {studyingTime: 60});
     });
   });
@@ -178,9 +178,12 @@ describe("users", () => {
     await assertFails(deleteDoc(doc(asAlice(), "users", ALICE)));
   });
 
-  it("본인 화분·기록은 삭제할 수 있다 (화분 삭제·기록 삭제는 앱에서 처리)", async () => {
-    await assertSucceeds(deleteDoc(doc(asAlice(), "users", ALICE, "pots", "pot1", "logs", "log1")));
-    await assertSucceeds(deleteDoc(doc(asAlice(), "users", ALICE, "pots", "pot1")));
+  // 화분·기록은 학습 시간 차감과 같은 batch로만 지울 수 있다 (차감량 검증은 potCompleteDelete.test.js, #455)
+  it("본인 화분·기록은 학습 시간 차감 batch로 삭제할 수 있다", async () => {
+    await assertFails(deleteDoc(doc(asAlice(), "users", ALICE, "pots", "pot1", "logs", "log1")));
+    await assertSucceeds(deleteStudyLogBatch(asAlice(), {logId: "log1", time: 60}));
+    await assertFails(deleteDoc(doc(asAlice(), "users", ALICE, "pots", "pot1")));
+    await assertSucceeds(deletePotBatch(asAlice(), {time: 0}));
   });
 
   it("다른 사람 문서는 읽을 수도 쓸 수도 없다", async () => {

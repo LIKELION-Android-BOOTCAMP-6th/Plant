@@ -61,6 +61,9 @@ fun StudyPlanDetailScreen(
 
     val isCompleteDialogShown by viewModel.isCompleteDialogShown.collectAsState()
 
+    // 기록 삭제·화분 삭제·완료 처리 중 — 다이얼로그에 로딩 표시 (#455)
+    val isWriting by viewModel.isWriting.collectAsState()
+
     //임시 텍스트
     var editNameText by remember(isEditDialogShown) {
         mutableStateOf(potInfo?.name?: "")
@@ -284,7 +287,8 @@ fun StudyPlanDetailScreen(
                             text = "기록 삭제",
                             semiText = "정말로 이 학습 기록을 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.",
                             onDismiss = { viewModel.dismissDeleteDialog() },
-                            onConfirm = { viewModel.confirmDelete() }
+                            onConfirm = { viewModel.confirmDelete() },
+                            isLoading = isWriting
                         )
                     }
                     // 제목 변경 다이얼로그
@@ -408,7 +412,13 @@ fun StudyPlanDetailScreen(
                             text = "화분 삭제",
                             semiText = "이 화분과 모든 학습 기록이 영구 삭제됩니다.\n정말 삭제하시겠습니까?",
                             onDismiss = { viewModel.setPotDeleteDialogShown(false) },
-                            onConfirm = { viewModel.confirmDeleteEntirePot { navController.popBackStack() } }
+                            onConfirm = {
+                                viewModel.confirmDeleteEntirePot { notice ->
+                                    notice?.let { context.showToast(it) }
+                                    navController.popBackStack()
+                                }
+                            },
+                            isLoading = isWriting
                         )
                     }
 
@@ -419,11 +429,13 @@ fun StudyPlanDetailScreen(
                             semiText = "이 화분의 학습을 최종 완료 하시겠습니까?\n완료 후에는 '기른 나무'에서 확인 가능합니다.",
                             onDismiss = { viewModel.setCompleteDialogShown(false) },
                             onConfirm = {
-                                viewModel.completeStudyPlan {
+                                viewModel.completeStudyPlan { notice ->
                                     context.showToast("\"${pot.name}\"화분의 학습을 완료했어요!")
+                                    notice?.let { context.showToast(it) }
                                     navController.popBackStack()
                                 }
-                            }
+                            },
+                            isLoading = isWriting
                         )
                     }
                 }

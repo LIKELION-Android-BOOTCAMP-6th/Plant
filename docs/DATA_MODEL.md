@@ -11,12 +11,15 @@ users
     ├── profileImg: String
     ├── lastSelectedPotId: String
     ├── isFirstLogin: Boolean?
-    ├── totalStudyTime: Long             ← 학습 기록 저장 batch에서만 증가 (#453)
+    ├── totalStudyTime: Long             ← 학습 기록 저장 batch에서만 증가 (#453), 기록 삭제·화분 삭제 batch에서만 감소 (#455)
     ├── lastStudyEndedAt: Timestamp?     ← 마지막 저장 세션의 startedAt + 학습 시간 (세션 겹침 검증, #453)
     ├── lastStudyPotId: String?          ← 마지막 저장 세션의 화분 ID (#453)
     ├── lastStudySessionId: String?      ← 마지막 저장 세션 ID (#453)
     ├── gold: Int
-    ├── completedPotsCount: Int          ← write-only (학습 완료 시 increment)
+    ├── completedPotsCount: Int          ← write-only. 화분 완료 batch에서 +1, 완료된 화분 삭제 batch에서 -1 (#455)
+    ├── lastCompletedPotId: String?      ← 마지막으로 완료한 화분 ID (완료 수 +1 검증, #455)
+    ├── lastDeletedPotId: String?        ← 마지막 기록 삭제·화분 삭제의 화분 ID (학습 시간 차감 검증, #455)
+    ├── lastDeletedLogId: String?        ← 마지막 기록 삭제의 기록 ID, 화분 삭제면 "" (#455)
     ├── dailyCheckThisMonth
     │   ├── count: Int
     │   └── lastCheckedAt: Timestamp?
@@ -35,14 +38,15 @@ users
             ├── tag_name: String
             ├── name: String
             ├── imageUrl: String
-            ├── potTotalStudyingTime: Long    ← 학습 기록 저장 batch에서만 증가 (#453)
+            ├── potTotalStudyingTime: Long    ← 학습 기록 저장 batch에서만 증가 (#453), 기록 삭제 batch에서만 감소 (#455)
             ├── createdAt: Timestamp?
-            ├── completedAt: Timestamp?
-            ├── isCompleted: Boolean
+            ├── completedAt: Timestamp?       ← 화분 완료 batch에서 서버 시각 (#455)
+            ├── isCompleted: Boolean          ← 화분 완료 batch에서만 false → true (되돌릴 수 없음, #455)
             ├── lastStudiedAt: Timestamp?     ← 학습 기록 저장 시 서버 시각 (최근 학습순 정렬용)
             ├── lastStudySessionId: String?   ← 마지막 저장 세션 ID (#453)
+            ├── lastDeletedLogId: String?     ← 마지막으로 삭제한 기록 ID (학습 시간 차감 검증, #455)
             │
-            └── logs
+            └── logs                          ← 화분을 삭제하면 onPotDeleted 트리거가 함께 삭제 (#455)
                 └── {logId}                   ← 학습 세션 ID (같은 세션은 한 번만 저장, #453)
                     ├── uid: String           ← #453부터 (쌓인 보상 collectionGroup 조회용)
                     ├── title: String

@@ -4,6 +4,7 @@ import android.util.Log
 import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.data.firestore.WriteResult
 import com.a32b.plant.data.firestore.awaitServerWrite
+import com.a32b.plant.data.firestore.isRuleRejection
 import com.a32b.plant.data.source.remote.pot.PotRemoteDataSource
 import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.source.remote.pot.InsufficientItemsException
@@ -17,7 +18,6 @@ import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.PotRepository
 import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.type.ItemType
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.channels.awaitClose
@@ -102,7 +102,7 @@ class PotRepositoryImpl @Inject constructor(
             // 오프라인이면 응답이 오지 않으므로 시간 초과(Pending)는 실패가 아니라 "전송 대기"로 처리한다.
             // 기기 캐시에는 이미 반영됐고 연결되면 전송되므로, 같은 쓰기를 다시 보내지 않는다.
             potRemoteDataSource.updatePotName(uid, potId, newName)
-                .awaitServerWrite(RENAME_TIMEOUT)
+                .awaitServerWrite(WRITE_TIMEOUT)
         }.fold(
             onSuccess = { write ->
                 when (write) {
@@ -120,29 +120,78 @@ class PotRepositoryImpl @Inject constructor(
             }
         )
 
-    override suspend fun deleteEntirePot(uid: String, potId: String, totalStudyingTime: Long) {
-        val userRef = db.collection("users").document(uid)
-        val potRef = userRef.collection("pots").document(potId)
+    override suspend fun deleteEntirePot(uid: String, potId: String): Result<SaveResult> =
+        safeRunCatching {
+            // 차감량은 화면 값이 아니라 저장된 화분 값으로 정한다 (규칙이 저장된 값과 같은지 확인)
+            val pot = potRemoteDataSource.getPotPreferringCache(uid, potId)
+                // 이미 지워진 화분 (연타, 다른 기기에서 삭제) → 보낼 것이 없다
+                ?: return@safeRunCatching WriteResult.Confirmed
+            potRemoteDataSource.deletePot(uid, potId, pot.potTotalStudyingTime, pot.isCompleted)
+                .awaitServerWrite(WRITE_TIMEOUT)
+        }.fold(
+            onSuccess = { write ->
+                write.toSaveResult("화분 삭제", DELETE_POT_ERROR_MESSAGE) {
+                    // 거부됐지만 서버에 화분이 없으면 먼저 도착한 같은 삭제가 반영된 것
+                    potRemoteDataSource.getPotOnServer(uid, potId) == null
+                }
+            },
+            onFailure = { e ->
+                Log.e("PotRepository", "화분 삭제 실패", e)
+                Result.Failure(handleError(e, DELETE_POT_ERROR_MESSAGE, isWrite = true))
+            }
+        )
 
-        db.runBatch { batch ->
-            batch.update(userRef, "totalStudyTime", FieldValue.increment(totalStudyingTime * -1))
-            batch.delete(potRef)
-        }.await()
-    }
+    override suspend fun completeStudyPlan(uid: String, potId: String): Result<SaveResult> =
+        safeRunCatching {
+            val pot = potRemoteDataSource.getPotPreferringCache(uid, potId) ?: throw PotNotFoundException()
+            // 이미 완료된 화분은 보내지 않는다 (연타, 다른 기기에서 완료) — 보내더라도 규칙이 거부해 완료 수는 1번만 오른다
+            if (pot.isCompleted) return@safeRunCatching WriteResult.Confirmed
+            potRemoteDataSource.completePot(uid, potId).awaitServerWrite(WRITE_TIMEOUT)
+        }.fold(
+            onSuccess = { write ->
+                write.toSaveResult("화분 완료", COMPLETE_ERROR_MESSAGE) {
+                    // 거부됐지만 서버에서 이미 완료 상태면 먼저 도착한 같은 완료가 반영된 것
+                    val serverPot = potRemoteDataSource.getPotOnServer(uid, potId) ?: throw PotNotFoundException()
+                    serverPot.isCompleted
+                }
+            },
+            onFailure = { e ->
+                Log.e("PotRepository", "화분 완료 실패", e)
+                Result.Failure(handleError(e, COMPLETE_ERROR_MESSAGE, isWrite = true))
+            }
+        )
 
-    override suspend fun completeStudyPlan(uid: String, potId: String) {
-        val userRef = db.collection("users").document(uid)
-        val potRef = userRef.collection("pots").document(potId)
-
-        db.runBatch { batch ->
-            batch.update(userRef, "completedPotsCount", FieldValue.increment(1))
-            batch.update(
-                potRef, mapOf(
-                    "isCompleted" to true,
-                    "completedAt" to FieldValue.serverTimestamp()
+    /**
+     * 서버 반영 결과를 [SaveResult]로 바꾼다 (#455).
+     * - 제한 시간 안에 응답이 없으면 [SaveResult.Pending] (실패 아님, 다시 보내지 않음)
+     * - 규칙 거부면 규칙은 사유를 알려주지 않으므로 [isAlreadyApplied]로 서버 상태를 확인한다.
+     *   이미 반영된 상태면 연타·재전송으로 먼저 도착한 같은 쓰기가 있었던 것이므로 성공으로 본다
+     * - 서버 상태를 읽지 못하면(연결 끊김 등) 판단할 수 없으므로 실패
+     */
+    private suspend fun WriteResult.toSaveResult(
+        action: String,
+        errorMessage: String,
+        isAlreadyApplied: suspend () -> Boolean
+    ): Result<SaveResult> = when (this) {
+        WriteResult.Confirmed -> Result.Success(SaveResult.Saved)
+        WriteResult.Pending -> Result.Success(SaveResult.Pending)
+        is WriteResult.Rejected -> {
+            Log.e("PotRepository", "$action 거부", error)
+            if (!error.isRuleRejection()) {
+                Result.Failure(handleError(error, errorMessage, isWrite = true))
+            } else {
+                safeRunCatching { isAlreadyApplied() }.fold(
+                    onSuccess = { applied ->
+                        if (applied) Result.Success(SaveResult.Saved)
+                        else Result.Failure(AppError.Custom(errorMessage))
+                    },
+                    onFailure = { e ->
+                        Log.e("PotRepository", "$action 거부 후 서버 상태 확인 실패", e)
+                        Result.Failure(handleError(e, errorMessage, isWrite = true))
+                    }
                 )
-            )
-        }.await()
+            }
+        }
     }
 
     override suspend fun getTodayStudyLogs(uid: String, potId: String, startOfToday: Date): Result<List<StudyLog>> {
@@ -199,9 +248,11 @@ class PotRepositoryImpl @Inject constructor(
     }
 
     companion object {
-        /** 화분 이름 변경 제한 시간 — 학습 기록 저장(StudyingRepositoryImpl.SAVE_TIMEOUT)과 같은 5초 */
-        private val RENAME_TIMEOUT = 5.seconds
+        /** 화분 이름 변경·완료·삭제 제한 시간 — 학습 기록 저장(StudyingRepositoryImpl.SAVE_TIMEOUT)과 같은 5초 */
+        private val WRITE_TIMEOUT = 5.seconds
         private const val RENAME_ERROR_MESSAGE = "화분 이름 변경에 실패했습니다."
+        private const val COMPLETE_ERROR_MESSAGE = "학습 완료에 실패했습니다. 다시 시도해주세요."
+        private const val DELETE_POT_ERROR_MESSAGE = "화분 삭제에 실패했습니다. 다시 시도해주세요."
         private const val POT_NOT_FOUND_MESSAGE = "존재하지 않거나 삭제된 화분입니다."
     }
 }
