@@ -86,8 +86,9 @@ class StudyPlanDetailViewModel @Inject constructor(
     private val _isShareMode = MutableStateFlow(false)
     val isShareMode = _isShareMode.asStateFlow()
 
-    // 기록 삭제·화분 삭제·완료 중인 작업 — 진행 중에는 다시 보내지 않는다 (연타 방지, #455)
-    private var writeJob: Job? = null
+    // 기록 삭제·화분 삭제·완료 중 여부 — 진행 중에는 다시 보내지 않고, 다이얼로그를 닫지 않으며 로딩 표시 (#455)
+    private val _isWriting = MutableStateFlow(false)
+    val isWriting = _isWriting.asStateFlow()
 
     init {
         checkUseAndLoadData()
@@ -193,6 +194,8 @@ class StudyPlanDetailViewModel @Inject constructor(
     }
 
     fun dismissDeleteDialog() {
+        // 삭제 중에는 닫지 않는다 (결과에 따라 닫거나 유지)
+        if (_isWriting.value) return
         _isDeleteDialogShown.value = false
         pendingDeleteLogID = ""
     }
@@ -216,6 +219,8 @@ class StudyPlanDetailViewModel @Inject constructor(
     }
 
     fun setPotDeleteDialogShown(show: Boolean){
+        // 삭제 중에는 닫지 않는다 (결과에 따라 닫거나 유지)
+        if (!show && _isWriting.value) return
         _isPotDeleteDialogShown.value = show
     }
 
@@ -245,6 +250,8 @@ class StudyPlanDetailViewModel @Inject constructor(
     }
 
     fun setCompleteDialogShown(show: Boolean){
+        // 완료 처리 중에는 닫지 않는다 (결과에 따라 닫거나 유지)
+        if (!show && _isWriting.value) return
         _isCompleteDialogShown.value = show
     }
 
@@ -266,7 +273,8 @@ class StudyPlanDetailViewModel @Inject constructor(
 
     /**
      * 기록 삭제·화분 삭제·완료 공통 처리 (#455).
-     * - 진행 중이면 다시 보내지 않는다 (연타)
+     * - 진행 중이면 다시 보내지 않고, 다이얼로그를 닫지 않으며 다이얼로그에 로딩을 표시한다 ([isWriting])
+     *   (오프라인이면 서버 응답을 최대 5초 기다리므로 그동안 닫히면 다른 다이얼로그가 대신 닫히거나 화면이 갑자기 닫힘)
      * - 성공(오프라인 Pending 포함)이면 [onSaved]
      * - 실패면 안내 토스트만 띄우고 다이얼로그는 그대로 둔다 (다시 시도할 수 있게)
      *   세션 만료는 UseCase에서 처리(세션 만료 안내)하므로 토스트를 띄우지 않는다
@@ -275,15 +283,24 @@ class StudyPlanDetailViewModel @Inject constructor(
         write: suspend () -> Result<SaveResult>,
         onSaved: suspend (SaveResult) -> Unit
     ) {
-        if (writeJob?.isActive == true) return
-        writeJob = viewModelScope.launch {
-            write()
-                .onSuccess { result -> onSaved(result) }
-                .onFailure { error ->
-                    if (error !is AppError.UnknownUser) {
-                        _event.send(StudyPlanDetailEvent.ShowToast(error.message))
+        if (_isWriting.value) return
+        _isWriting.value = true
+        viewModelScope.launch {
+            try {
+                val result = write()
+                // onSaved의 다이얼로그 닫기가 진행 중이라는 이유로 무시되지 않도록 먼저 해제
+                _isWriting.value = false
+                result
+                    .onSuccess { saved -> onSaved(saved) }
+                    .onFailure { error ->
+                        if (error !is AppError.UnknownUser) {
+                            _event.send(StudyPlanDetailEvent.ShowToast(error.message))
+                        }
                     }
-                }
+            } finally {
+                // 화면을 나가 작업이 취소된 경우에도 해제
+                _isWriting.value = false
+            }
         }
     }
 
