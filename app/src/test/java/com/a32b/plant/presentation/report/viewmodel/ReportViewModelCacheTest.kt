@@ -31,6 +31,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -65,6 +66,64 @@ class ReportViewModelCacheTest {
     }
 
     @Test
+    fun `daily cache notice includes cached monthly calendar after date selection`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            lateinit var repository: FakeReportRepository
+            val viewModel = createViewModel(isFromCache = true) { repository = it }
+
+            repository.isFromCache = false
+            viewModel.selectDate(viewModel.uiState.value.today)
+
+            assertFalse(viewModel.uiState.value.isLoading)
+            assertNotNull(viewModel.uiState.value.dailyReport)
+            assertTrue(viewModel.uiState.value.isFromCache)
+            viewModel.selectTab(ReportTab.MONTHLY)
+            assertTrue(viewModel.uiState.value.isFromCache)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun `daily cache notice remains when only daily report is cached after date selection`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            lateinit var repository: FakeReportRepository
+            val viewModel = createViewModel(isFromCache = false) { repository = it }
+
+            repository.isFromCache = true
+            viewModel.selectDate(viewModel.uiState.value.today)
+
+            assertFalse(viewModel.uiState.value.isLoading)
+            assertNotNull(viewModel.uiState.value.dailyReport)
+            assertTrue(viewModel.uiState.value.isFromCache)
+            viewModel.selectTab(ReportTab.MONTHLY)
+            assertFalse(viewModel.uiState.value.isFromCache)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun `server reports remain without cache notice after date selection`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            val viewModel = createViewModel(isFromCache = false)
+
+            viewModel.selectDate(viewModel.uiState.value.today)
+
+            assertFalse(viewModel.uiState.value.isLoading)
+            assertNotNull(viewModel.uiState.value.dailyReport)
+            assertFalse(viewModel.uiState.value.isFromCache)
+            viewModel.selectTab(ReportTab.MONTHLY)
+            assertFalse(viewModel.uiState.value.isFromCache)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
     fun `parallel slow report reads show one notice`() = runTest {
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
         try {
@@ -84,7 +143,11 @@ class ReportViewModelCacheTest {
         }
     }
 
-    private fun createViewModel(isFromCache: Boolean, delayMillis: Long = 0L): ReportViewModel {
+    private fun createViewModel(
+        isFromCache: Boolean,
+        delayMillis: Long = 0L,
+        onRepositoryCreated: (FakeReportRepository) -> Unit = {}
+    ): ReportViewModel {
         val users = FakeUserRepository()
         val ensureCurrentUser = EnsureCurrentUserUseCase(
             userRepository = users,
@@ -93,6 +156,7 @@ class ReportViewModelCacheTest {
             }
         )
         val repository = FakeReportRepository(isFromCache, delayMillis)
+        onRepositoryCreated(repository)
         val records = GetReportRecordsUseCase(repository)
         return ReportViewModel(
             ensureCurrentUserUseCase = ensureCurrentUser,
@@ -101,7 +165,7 @@ class ReportViewModelCacheTest {
         )
     }
 
-    private class FakeReportRepository(private val isFromCache: Boolean, private val delayMillis: Long) : ReportRepository {
+    private class FakeReportRepository(var isFromCache: Boolean, private val delayMillis: Long) : ReportRepository {
         override suspend fun getPeriodData(
             uid: String,
             startInclusive: Long,

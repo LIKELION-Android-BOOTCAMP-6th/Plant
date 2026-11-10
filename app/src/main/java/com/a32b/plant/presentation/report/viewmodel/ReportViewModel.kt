@@ -42,7 +42,8 @@ data class ReportUiState(
 ) {
     val isFromCache: Boolean
         get() = when (tab) {
-            ReportTab.DAILY -> dailyReport?.isFromCache == true
+            // 일간 탭에도 월간 조회 결과를 쓰는 달력이 함께 표시된다.
+            ReportTab.DAILY -> dailyReport?.isFromCache == true || monthlyReport?.isFromCache == true
             ReportTab.MONTHLY -> monthlyReport?.isFromCache == true
         }
 }
