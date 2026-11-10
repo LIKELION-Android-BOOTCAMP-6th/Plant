@@ -9,6 +9,7 @@ import com.a32b.plant.data.source.remote.pot.PotRemoteDataSource
 import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.type.ItemType
 import com.a32b.plant.domain.model.Tag
+import com.google.android.gms.tasks.Task
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -63,6 +64,7 @@ class ReportRepositoryImplCacheTest {
         override fun getPots(uid: String): Flow<List<PotDto>> = emptyFlow()
         override suspend fun addPot(uid: String, tag: Tag, name: String): kotlin.Result<Unit> = error("Unused")
         override suspend fun getPotsOnce(uid: String): GetPotsOnceResult = result
+        override fun updatePotName(uid: String, potId: String, name: String): Task<Void> = error("Unused")
         override suspend fun getTodayStudyLogs(uid: String, potId: String, startOfToday: Date): List<StudyLogDto> =
             error("Unused")
         override suspend fun levelUpWithItemConsumption(
