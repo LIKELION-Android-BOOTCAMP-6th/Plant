@@ -3,10 +3,14 @@ package com.a32b.plant.presentation.mypage.viewmodel
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.StudyLog
+import com.a32b.plant.domain.model.StudyLogRef
+import com.a32b.plant.domain.model.StudyRewardStatus
+import com.a32b.plant.domain.model.StudySaveResult
 import com.a32b.plant.domain.model.StudyingGoalDraft
 import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.domain.model.User
+import com.a32b.plant.domain.model.UnseenStudyReward
 import com.a32b.plant.domain.model.UserSnapshot
 import com.a32b.plant.domain.repository.AuthRepository
 import com.a32b.plant.domain.repository.StudyingRepository
@@ -149,20 +153,19 @@ class DeleteAccountViewModelTest {
         override suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit> = error("Not used")
         override suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit> = Result.Success(Unit)
         override suspend fun updateProfile(user: User): Result<Unit> = error("Not used")
-        override suspend fun isNicknameTaken(nickname: String): Result<Boolean> = error("Not used")
-        override suspend fun registerNickname(uid: String, nickname: String): Result<Unit> = error("Not used")
-        override suspend fun deleteNickname(nickname: String): Result<Unit> = error("Not used")
         override suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success> = error("Not used")
         override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> = error("Not used")
     }
 
     private class FakeStudyingRepository : StudyingRepository {
         override fun observeStudyingUser(tag: String): Flow<List<StudyingUser>> = error("Not used")
-        override suspend fun initStudyingUser(user: StudyingUser): Result<Unit> = error("Not used")
-        override suspend fun updateStudyingTime(tag: String, time: Long): Result<Unit> = error("Not used")
-        override suspend fun updateTotalStudyTime(potId: String, studyTime: Long): Result<Unit> = error("Not used")
-        override suspend fun updateUserTotalStudyTime(time: Long): Result<Unit> = error("Not used")
-        override suspend fun saveStudyLog(potId: String, log: StudyLog): Result<Unit> = error("Not used")
+        override suspend fun saveStudyingUser(user: StudyingUser): Result<Unit> = error("Not used")
+        override suspend fun saveStudySession(uid: String, potId: String, sessionId: String, log: StudyLog): Result<StudySaveResult> = error("Not used")
+        override suspend fun awaitPendingWrites(): Boolean = error("Not used")
+        override suspend fun isStudySessionSaved(uid: String, potId: String, sessionId: String): Result<Boolean> = error("Not used")
+        override fun observeStudyReward(uid: String, potId: String, sessionId: String): Flow<StudyRewardStatus?> = error("Not used")
+        override fun observeUnseenStudyRewards(uid: String): Flow<List<UnseenStudyReward>> = error("Not used")
+        override suspend fun markStudyRewardsSeen(uid: String, refs: List<StudyLogRef>): Result<Unit> = error("Not used")
         override suspend fun deleteStudyingUserInfo(): Result<Unit> = error("Not used")
         override suspend fun saveLocalSession(studying: StudyingSession): Result<Unit> = error("Not used")
         override suspend fun readLocalSession(): Result<StudyingSession?> = error("Not used")

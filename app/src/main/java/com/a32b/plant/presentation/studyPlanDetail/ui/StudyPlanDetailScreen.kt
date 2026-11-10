@@ -10,10 +10,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.a32b.plant.presentation.studyPlanDetail.viewmodel.StudyPlanDetailEvent
 import com.a32b.plant.presentation.studyPlanDetail.viewmodel.StudyPlanDetailViewModel
 import com.a32b.plant.R
 import com.a32b.plant.domain.model.StudyLog
@@ -26,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
+import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.core.component.plantCheckboxColors
 import com.a32b.plant.presentation.core.component.StudyGoalItem
 import com.a32b.plant.core.extension.isCompletedAt
@@ -47,6 +50,8 @@ fun StudyPlanDetailScreen(
 
     // 제목 변경 다이얼로그 상태
     val isEditDialogShown by viewModel.isEditDialogShown.collectAsState()
+    // 이름 저장 중 여부 (다이얼로그 로딩 표시)
+    val isRenaming by viewModel.isRenaming.collectAsState()
 
     // 상세 기록 삭제 다이얼로그 상태
     val isDeleteDialogShown by viewModel.isDeleteDialogShown.collectAsState()
@@ -75,6 +80,14 @@ fun StudyPlanDetailScreen(
     val isShareMode by viewModel.isShareMode.collectAsState()
 
     val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        viewModel.event.collect { event ->
+            when (event) {
+                is StudyPlanDetailEvent.ShowToast -> context.showToast(event.message)
+            }
+        }
+    }
 
     LoadableScreen(viewModel) {
         // potInfo는 위임 프로퍼티라 null 체크 후에도 스마트 캐스트가 안 되므로 로컬 변수로 받음
@@ -277,103 +290,114 @@ fun StudyPlanDetailScreen(
                     // 제목 변경 다이얼로그
                     if (isEditDialogShown) {
                         Dialog(onDismissRequest = { viewModel.setEditDialogShown(false) }) {
-                            // 공용 다이얼로그와 동일한 모양의 Card 생성
-                            Card(
-                                shape = RoundedCornerShape(30.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer),
-                                elevation = CardDefaults.cardElevation(3.dp)
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.padding(22.dp)
+                            // 다이얼로그는 별도 창이라 화면의 LoadingBox가 위에 그려지지 않으므로 다이얼로그 안에 겹쳐 표시
+                            Box {
+                                // 공용 다이얼로그와 동일한 모양의 Card 생성
+                                Card(
+                                    shape = RoundedCornerShape(30.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer),
+                                    elevation = CardDefaults.cardElevation(3.dp)
                                 ) {
-                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier.padding(22.dp)
+                                    ) {
+                                        Spacer(modifier = Modifier.height(10.dp))
 
-                                    // 제목
-                                    Text("제목 변경", style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold)
+                                        // 제목
+                                        Text("제목 변경", style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold)
 
-                                    Spacer(modifier = Modifier.height(16.dp))
+                                        Spacer(modifier = Modifier.height(16.dp))
 
-                                    // 화분 생성(NewBornTreeScreen)과 동일한 글자 수 제한
-                                    val maxLength = PotNameRule.MAX_LENGTH
+                                        // 화분 생성(NewBornTreeScreen)과 동일한 글자 수 제한
+                                        val maxLength = PotNameRule.MAX_LENGTH
 
-                                    // 입력창
-                                    OutlinedTextField(
-                                        value = editNameText,
-                                        onValueChange = { input ->
-                                            when {
-                                                // 붙여넣기로 줄바꿈이 새로 들어오면 반영하지 않음 (생성 화면과 같은 방식)
-                                                // singleLine은 키보드 엔터만 막고 붙여넣은 줄바꿈은 막지 않음.
-                                                // 개수가 늘어날 때만 막아, 이미 줄바꿈이 들어간 채 저장된 이름도 수정·삭제할 수 있게 함
-                                                input.count { it == '\n' } > editNameText.count { it == '\n' } -> Unit
+                                        // 입력창
+                                        OutlinedTextField(
+                                            value = editNameText,
+                                            onValueChange = { input ->
+                                                when {
+                                                    // 붙여넣기로 줄바꿈이 새로 들어오면 반영하지 않음 (생성 화면과 같은 방식)
+                                                    // singleLine은 키보드 엔터만 막고 붙여넣은 줄바꿈은 막지 않음.
+                                                    // 개수가 늘어날 때만 막아, 이미 줄바꿈이 들어간 채 저장된 이름도 수정·삭제할 수 있게 함
+                                                    input.count { it == '\n' } > editNameText.count { it == '\n' } -> Unit
 
-                                                // 글자가 줄어드는 입력은 허용 (위의 줄바꿈 검사는 먼저 적용)
-                                                // (제한 도입 전에 15자를 넘겨 저장된 이름도 지워서 줄일 수 있도록)
-                                                input.length <= maxLength || input.length < editNameText.length ->
-                                                    editNameText = input
+                                                    // 글자가 줄어드는 입력은 허용 (위의 줄바꿈 검사는 먼저 적용)
+                                                    // (제한 도입 전에 15자를 넘겨 저장된 이름도 지워서 줄일 수 있도록)
+                                                    input.length <= maxLength || input.length < editNameText.length ->
+                                                        editNameText = input
 
-                                                else -> context.showToast("${maxLength}글자 이하로 입력해주세요.")
-                                            }
-                                        },
-                                        textStyle = MaterialTheme.typography.titleMedium,
-                                        placeholder = { Text("화분 이름을 입력하세요", style = MaterialTheme.typography.bodyMedium,) },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        singleLine = true,
-                                        // 우측 하단 실시간 글자 수 표시 (15자 도달 시 붉은색)
-                                        supportingText = {
-                                            Text(
-                                                text = "${editNameText.length} / $maxLength",
-                                                modifier = Modifier.fillMaxWidth(),
-                                                textAlign = TextAlign.End,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = if (editNameText.length >= maxLength) MaterialTheme.colorScheme.error
-                                                        else MaterialTheme.colorScheme.outline
-                                            )
-                                        },
-                                        shape = RoundedCornerShape(12.dp),
-                                        colors = OutlinedTextFieldDefaults.colors(
-    //                                        focusedBorderColor = Color(0xFFA5C16C), // 강조색 (primary)
-                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-    //                                        unfocusedBorderColor = Color.LightGray
-                                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                                        )
-                                    )
-
-                                    Spacer(modifier = Modifier.height(22.dp))
-
-                                    // 버튼 영역
-                                    Row(modifier = Modifier.fillMaxWidth()) {
-                                        Button(
-                                            onClick = { viewModel.setEditDialogShown(false) },
-                                            modifier = Modifier.height(36.dp).weight(1f),
-                                            shape = RoundedCornerShape(8.dp),
-    //                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F3EE)) // sub2 색상 느낌
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = MaterialTheme.colorScheme.outline,
-                                            )
-                                        ) {
-                                            Text("취소", style = MaterialTheme.typography.bodyMedium,
-    //                                            color = Color.Gray)
-                                                color = MaterialTheme.colorScheme.onSecondary)
-                                        }
-                                        Spacer(modifier = Modifier.width(10.dp))
-                                        Button(
-                                            onClick = {
-                                                if (editNameText.isNotBlank()) {
-                                                    viewModel.updatePotName(editNameText)
+                                                    else -> context.showToast("${maxLength}글자 이하로 입력해주세요.")
                                                 }
                                             },
-                                            modifier = Modifier.height(36.dp).weight(1f),
-                                            shape = RoundedCornerShape(8.dp),
-                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary
-    //                                            Color(0xFFA5C16C)) // primary 색상
+                                            textStyle = MaterialTheme.typography.titleMedium,
+                                            placeholder = { Text("화분 이름을 입력하세요", style = MaterialTheme.typography.bodyMedium,) },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            singleLine = true,
+                                            // 우측 하단 실시간 글자 수 표시 (15자 도달 시 붉은색)
+                                            supportingText = {
+                                                Text(
+                                                    text = "${editNameText.length} / $maxLength",
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    textAlign = TextAlign.End,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = if (editNameText.length >= maxLength) MaterialTheme.colorScheme.error
+                                                            else MaterialTheme.colorScheme.outline
+                                                )
+                                            },
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = OutlinedTextFieldDefaults.colors(
+        //                                        focusedBorderColor = Color(0xFFA5C16C), // 강조색 (primary)
+                                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+        //                                        unfocusedBorderColor = Color.LightGray
+                                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
                                             )
-                                        ) {
-                                            Text("확인", style = MaterialTheme.typography.bodyMedium)
+                                        )
+
+                                        Spacer(modifier = Modifier.height(22.dp))
+
+                                        // 버튼 영역
+                                        Row(modifier = Modifier.fillMaxWidth()) {
+                                            Button(
+                                                onClick = { viewModel.setEditDialogShown(false) },
+                                                modifier = Modifier.height(36.dp).weight(1f),
+                                                shape = RoundedCornerShape(8.dp),
+        //                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F3EE)) // sub2 색상 느낌
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = MaterialTheme.colorScheme.outline,
+                                                )
+                                            ) {
+                                                Text("취소", style = MaterialTheme.typography.bodyMedium,
+        //                                            color = Color.Gray)
+                                                    color = MaterialTheme.colorScheme.onSecondary)
+                                            }
+                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Button(
+                                                onClick = {
+                                                    if (editNameText.isNotBlank()) {
+                                                        viewModel.updatePotName(editNameText)
+                                                    }
+                                                },
+                                                modifier = Modifier.height(36.dp).weight(1f),
+                                                shape = RoundedCornerShape(8.dp),
+                                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary
+        //                                            Color(0xFFA5C16C)) // primary 색상
+                                                )
+                                            ) {
+                                                Text("확인", style = MaterialTheme.typography.bodyMedium)
+                                            }
                                         }
                                     }
+                                }
+                                // 저장 중: 입력·버튼 클릭을 막고 로딩 표시 (연타로 다시 보내지 않도록)
+                                if (isRenaming) {
+                                    LoadingBox(
+                                        modifier = Modifier
+                                            .matchParentSize()
+                                            .clip(RoundedCornerShape(30.dp))
+                                    )
                                 }
                             }
                         }

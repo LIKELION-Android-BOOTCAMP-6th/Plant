@@ -1,12 +1,13 @@
 package com.a32b.plant.presentation.pot.viewmodel
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.PotRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
+import com.a32b.plant.domain.util.PotNameRule
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,7 +16,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class NewBornTreeViewModel @Inject constructor(private val potRepository: PotRepository) : ViewModel() {
+class NewBornTreeViewModel @Inject constructor(private val potRepository: PotRepository) : BaseViewModel() {
 
     private val currentUid: String get() = CurrentUser.uid
 
@@ -39,7 +40,10 @@ class NewBornTreeViewModel @Inject constructor(private val potRepository: PotRep
         viewModelScope.launch {
             potRepository.getAvailableTags().collectLatest { tags ->
                 _dbTags.value = tags
+                loaded() // BaseViewModel: 최초 방출 시 LoadableScreen 해제 (#384)
             }
+            // 구독 실패로 방출 없이 Flow가 끝난 경우에도 로딩 해제 → 빈 태그 목록 표시
+            loaded()
         }
     }
 
@@ -51,7 +55,8 @@ class NewBornTreeViewModel @Inject constructor(private val potRepository: PotRep
         }
         viewModelScope.launch {
             _isUploading.value = true
-            val result = potRepository.addPot(currentUid, tag, name)
+            // 이름 변경과 같은 규칙으로 앞뒤 공백을 지운 뒤 저장 (#563)
+            val result = potRepository.addPot(currentUid, tag, PotNameRule.normalize(name))
             _isUploading.value = false
 
             result.onSuccess { onSuccess() }

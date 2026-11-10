@@ -1,5 +1,6 @@
 package com.a32b.plant.presentation.home.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.KST_ZONE_ID
@@ -13,6 +14,9 @@ import com.a32b.plant.domain.model.DailyCheckThisMonth
 import com.a32b.plant.domain.model.Item
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.model.PotLevelConditions
+import com.a32b.plant.domain.model.StudyReward
+import com.a32b.plant.domain.model.StudySaveResult
+import com.a32b.plant.domain.model.UnseenStudyReward
 import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.onFailure
@@ -32,9 +36,14 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -121,6 +130,10 @@ class HomeViewModel @Inject constructor(
 
     private val _displayPot = MutableStateFlow(Pot.EMPTY)
     val displayPot = _displayPot.asStateFlow()
+
+    // 마지막으로 선택한 대표 화분 ID — 처음엔 저장된 lastSelectedPotId, 화분 변경 시 갱신 (#582)
+    // 화분 목록이 다시 방출될 때 이 값으로 대표 화분을 고르므로, 저장이 늦거나 실패해도 화면은 선택한 화분을 유지
+    private val selectedPotId = MutableStateFlow("")
     //팝업 제어용
     private val _showPotChangeDialog = MutableStateFlow(false)
     val showPotChangeDialog = _showPotChangeDialog.asStateFlow()
@@ -178,9 +191,45 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState = _uiState.asStateFlow()
 
+    // 지급됐지만 아직 보여주지 않은 학습 보상 (오프라인에서 저장한 세션, 결과 화면을 못 본 세션) — #453
+    private val _unseenStudyRewards = MutableStateFlow<List<UnseenStudyReward>>(emptyList())
+    // 쌓인 보상 창에 표시할 합계 — 없으면 null (창을 띄우지 않음)
+    val unseenStudyReward: StateFlow<StudyReward?> = _unseenStudyRewards
+        .map { rewards -> rewards.takeIf { it.isNotEmpty() }?.let { StudyReward.sum(it.map { unseen -> unseen.reward }) } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
     init {
         checkUserAndLoadData()
         observeUserItem()
+        observeUnseenStudyRewards()
+    }
+
+    /**
+     * 서버 트리거가 지급한 학습 보상 중 아직 확인하지 않은 것을 구독 — 쌓인 보상은 HomeScreen이 합쳐서 한 번에 보여준다
+     * 결과 화면이 보여준 보상은 그 화면에서 확인 표시하므로 여기에는 남지 않는다
+     * 구독 실패(로그아웃 후 권한 거부, 색인 미배포 등)는 보상 지급과 무관하므로 로그만 남김
+     * 유저가 없을 때의 세션 만료 알림은 init의 checkUserAndLoadData가 보내므로, 두 번 가지 않도록 현재 값을 직접 읽음
+     */
+    private fun observeUnseenStudyRewards() {
+        val uid = userRepository.currentUser.value?.uid ?: return
+        viewModelScope.launch {
+            studyingRepository.observeUnseenStudyRewards(uid)
+                .catch { e -> Log.e("HomeViewModel", "쌓인 학습 보상 구독 실패", e) }
+                .collect { rewards -> _unseenStudyRewards.value = rewards }
+        }
+    }
+
+    /** 쌓인 보상 창 확인 — 표시한 기록들의 rewardSeen = true (기기 캐시에 바로 반영되어 창이 닫힘) */
+    fun confirmUnseenStudyRewards() {
+        val shown = _unseenStudyRewards.value
+        if (shown.isEmpty()) return
+        // 쓰기 결과를 기다리는 동안 창이 다시 그려지지 않도록 먼저 비운다 (구독이 곧 같은 결과를 보냄)
+        _unseenStudyRewards.value = emptyList()
+        viewModelScope.launch {
+            ensureCurrentUserUseCase { user ->
+                studyingRepository.markStudyRewardsSeen(user.uid, shown.map { it.ref })
+            }
+        }
     }
     private fun checkUserAndLoadData() {
         viewModelScope.launch {
@@ -189,9 +238,10 @@ class HomeViewModel @Inject constructor(
                 _attendanceUiState.value = user.monthCheck.toAttendanceUiState()
                 _userItem.value = user.item
 
-                loadActivePot(uid = user.uid, lastSelectedPotId = user.lastSelectedPotId)
-            } ?: Unit
-            loaded()
+                selectedPotId.value = user.lastSelectedPotId
+                // 로딩 해제는 첫 화분을 받은 뒤 loadActivePot 안에서 한다 (#487)
+                loadActivePot(uid = user.uid)
+            } ?: loaded() // 현재 유저 없음: 세션 만료 처리는 ensureCurrentUserUseCase가 하고, 로딩만 해제
         }
     }
 
@@ -241,7 +291,7 @@ class HomeViewModel @Inject constructor(
                 .onSuccess { session -> _recoverySession.value = session }
             // 조회가 실패해도 판단을 진행한다. 실패 종류는 UnknownUser(아래 decideAutomaticAttendance가 currentUser null로 조용히 반환)
             // 와 로컬 읽기 실패(이번 복귀에는 복구 창을 못 띄우며, 이후 백업이 발견되면 HomeScreen의 recoverySession == null 조건이 출석 창을 숨김)
-            // 현재 init은 동기 완료라 이 대기는 즉시 통과하며, init이 비동기가 될 때를 대비한 대기다
+            // 초기 로딩이 끝난 뒤(첫 화분 반영 후) 출석을 판단해, 로딩 화면 위에 출석 창이 먼저 뜨지 않게 한다 (#487)
             isLoading.first { !it }
             decideAutomaticAttendance()
         }
@@ -273,7 +323,13 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /** 저장에 실패하거나 제한 시간이 지나면(AppError.Network) 창을 유지해 다시 선택할 수 있게 함 */
+    /**
+     * 복구 저장 (#453)
+     * - 저장됨 / 이미 저장됨: 창 닫기 (같은 세션 ID라 중복 저장 없음)
+     * - 대기 중(오프라인): 창 닫기, 백업은 유지 — 연결되면 자동 전송되고 다음 홈 복귀에서 서버 반영을 확인해 정리
+     * - 다시 보내도 안 되는 거부: 사유 안내 후 창 닫기 (백업은 유즈케이스가 지움)
+     * - 저장 실패(서버 상태 확인 불가 등): 창을 유지해 다시 선택할 수 있게 함
+     */
     fun recoverSession() {
         val session = _recoverySession.value ?: return
         if (_isRecovering.value) return
@@ -281,10 +337,16 @@ class HomeViewModel @Inject constructor(
         _isRecovering.value = true
         viewModelScope.launch {
             recoverStudySessionUseCase(session)
-                .onSuccess {
+                .onSuccess { result ->
                     _recoverySession.value = null
                     maybeShowAutomaticAttendanceDialog()
-                    sendToast("학습 기록이 저장되었습니다.")
+                    sendToast(
+                        when (result) {
+                            StudySaveResult.Saved, StudySaveResult.AlreadySaved -> "학습 기록이 저장되었습니다."
+                            StudySaveResult.Pending -> "네트워크에 연결되면 학습 기록이 자동으로 저장돼요."
+                            is StudySaveResult.Rejected -> result.reason.message
+                        }
+                    )
                     deleteStudyingUserInfo()
                 }
                 .onFailure { error ->
@@ -322,10 +384,16 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch { studyingRepository.deleteStudyingUserInfo() }
     }
 
-    private fun loadActivePot(uid: String, lastSelectedPotId: String){
+    /**
+     * 대표 화분을 실시간으로 구독하고, 첫 화분(화분이 없으면 Pot.EMPTY)을 반영한 뒤 초기 로딩을 해제한다 (#487)
+     * 실시간 구독이라 collect가 끝나지 않으므로 해제는 collect 안에서 한다.
+     * 조회 실패는 PotRepositoryImpl.getPots의 catch가 처리해 아무 값도 방출되지 않고 Flow가 끝날 수 있어,
+     * collect가 끝난 뒤에도 해제해 로딩에 갇히지 않게 한다.
+     */
+    private fun loadActivePot(uid: String){
         viewModelScope.launch {
             safeRunCatching {
-                getActivePotUseCase(uid = uid, lastSelectedPotId = lastSelectedPotId)
+                getActivePotUseCase(uid = uid, selectedPotId = selectedPotId)
                     .collect { pot ->
                         _displayPot.value = pot
                         updateProgressAndCondition(pot)
@@ -334,10 +402,15 @@ class HomeViewModel @Inject constructor(
                         } else {
                             _todayStudyTime.value = "00:00:00"
                         }
+                        // 화분을 반영한 뒤 해제해야 첫 화면에 기본 화면(Pot.EMPTY)이 그려지지 않는다
+                        // 두 번째 방출부터는 이미 해제된 상태라 변화 없음
+                        loaded()
                     }
             }.onFailure { throwable ->
                 // 필요시 에러 핸들링
             }
+            // 방출 없이 끝났거나(조회 실패, uid 없음) 예외로 끝난 경우의 해제
+            loaded()
         }
     }
 
@@ -366,6 +439,8 @@ class HomeViewModel @Inject constructor(
 
     fun confirmPotChange() {
         _tempSelectedPot.value?.let { selected ->
+            // 화분 목록이 다시 방출될 때도 이 화분을 고르도록 먼저 바꾼다 (#582)
+            selectedPotId.value = selected.id
             _displayPot.value = selected
 
             updateProgressAndCondition(selected)
@@ -373,11 +448,13 @@ class HomeViewModel @Inject constructor(
             viewModelScope.launch {
                 safeRunCatching {
                     ensureCurrentUserUseCase { user ->
-                        userRepository.updateLastSelectedPot(user.uid, selected.id)
+                        // 저장은 서버 응답까지 기다리므로(오프라인이면 연결될 때까지) 오늘 학습 시간을 먼저 조회한다
                         fetchTodayStudyTime(user.uid, selected.id)
+                        userRepository.updateLastSelectedPot(user.uid, selected.id)
                     }
-                }.onFailure {
-                    // 예외 처리
+                }.onFailure { e ->
+                    // 화면은 selectedPotId로 선택한 화분을 유지한다. 저장이 거부되면 홈을 새로 만들 때(앱 재시작 등) 이전 화분으로 보일 수 있음
+                    Log.e("HomeViewModel", "대표 화분 저장 실패", e)
                 }
             }
         }

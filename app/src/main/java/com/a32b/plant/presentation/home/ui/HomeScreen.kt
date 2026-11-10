@@ -1,6 +1,16 @@
 package com.a32b.plant.presentation.home.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -9,7 +19,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -44,15 +53,20 @@ import androidx.compose.ui.layout.LayoutModifier
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
-import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.Placeable
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -75,6 +89,7 @@ import com.a32b.plant.presentation.core.extension.resId
 import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.home.viewmodel.HomeEvent
 import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
+import com.a32b.plant.presentation.theme.PlantTheme
 
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyingSession
@@ -113,6 +128,7 @@ fun HomeScreen(
 
     val uiState by viewModel.uiState.collectAsState()
     val todayStudyTime by viewModel.todayStudyTime.collectAsState()
+    val unseenStudyReward by viewModel.unseenStudyReward.collectAsState()
 
     val hasNoPot = displayPot.id.isEmpty() || displayPot == Pot.EMPTY
 
@@ -201,24 +217,22 @@ fun HomeScreen(
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
+                    // 상단(topBar) 여백만 적용: 하단바·내비바 여백은 MainActivity의 바깥 Scaffold가 처리한다 (#356)
+                    .padding(top = paddingValues.calculateTopPadding())
                     .background(MaterialTheme.colorScheme.background),
                 contentAlignment = Alignment.TopCenter
             ) {
-                // 본문 높이가 560dp 미만이면(세로가 짧은 소형 폰, 또는 큰 글꼴로 상단바·하단 탭바가 커져 본문이 줄어든 경우) 간격 모드로 여백을 줄여 한 화면에 담는다
-                // 360x760dp급은 간격 모드 없이도 다 들어가는 것을 확인함
-                val compact = maxHeight < 560.dp
+                // 간격 모드(compact)는 HomeBodyLayout이 "일반 모드로 화분이 다 들어가는지" 재 보고 정해서 넘겨준다 (#579)
                 HomeBodyLayout(
-                    compact = compact,
                     modifier = Modifier
-                        // 태블릿처럼 넓은 화면에서 카드가 과하게 늘어나지 않게 최대 너비 제한 (아이템 6개가 한 줄에 보이는 너비)
+                        // 태블릿처럼 넓은 화면에서 카드·아이템 박스가 과하게 늘어나지 않게 최대 너비 제한
                         .widthIn(max = 480.dp)
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
                         .heightIn(min = maxHeight.coerceAtMost(720.dp))
                         // 좌우 여백 16dp: 앱바 타이틀·다른 탭 본문(내 화분, 마이페이지)과 왼쪽 끝을 맞춤
                         .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
+                ) { compact ->
                     MainPlantCard(
                         compact = compact,
                         displayPot = displayPot,
@@ -322,6 +336,17 @@ fun HomeScreen(
             BonusBoxResultDialog(
                 items = items,
                 onDismiss = { bonusBoxResult = null }
+            )
+        }
+        // 쌓인 학습 보상 (오프라인에서 저장한 세션, 결과 화면을 못 본 세션) — 서버가 지급한 뒤 합쳐서 한 번에 표시 (#453)
+        // 복구·출석·박스 결과 창과 겹치지 않도록 다른 창이 없을 때만 띄운다
+        val canShowStudyReward = isSplashFinished && recoverySession == null && !showAttendanceDialog &&
+            attendanceUiState.reward == null && bonusBoxResult == null
+        unseenStudyReward?.takeIf { canShowStudyReward }?.let { reward ->
+            BonusBoxResultDialog(
+                items = reward.toItemList(),
+                title = "학습 보상이 도착했어요!",
+                onDismiss = viewModel::confirmUnseenStudyRewards
             )
         }
         if (showLevelUpConfetti) {
@@ -681,24 +706,33 @@ fun MainPlantCard(
 
             Spacer(modifier = Modifier.height(8.dp.compactIf(compact)))
 
-            // 화면 높이가 모자라면 이미지가 먼저 줄어든다 (100dp → 최소 48dp, 간격 모드면 40dp, #376)
+            // 이미지 칸은 간격 모드에서만 줄어든다 (최대 크기 → 최소 크기, #376)
+            // 일반 모드는 최소 = 최대라 항상 최대 크기: HomeBodyLayout이 최대 크기로 다 들어갈 때만 일반 모드를 고르기 때문 (#579)
             // weight(fill = false): 카드 안 다른 요소를 다 놓고 남은 높이까지만 차지
-            val imageSlotModifier = Modifier
-                .weight(1f, fill = false)
-                .shrinkableImageHeight(min = if (compact) 40.dp else 48.dp, max = 100.dp)
             if(hasNoPot){
                 Box(
-                    // 로고는 원형 배경이라 높이에 맞춰 정사각형 유지
-                    modifier = imageSlotModifier.aspectRatio(1f, matchHeightConstraintsFirst = true),
+                    // 로고는 원형 배경이 칸을 꽉 채워 100dp로도 화분 칸 170dp와 보이는 크기가 비슷하므로 100dp 유지 (#476)
+                    // 원형 배경이라 높이에 맞춰 정사각형 유지
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .shrinkableImageHeight(min = if (compact) 40.dp else 100.dp, max = 100.dp)
+                        .aspectRatio(1f, matchHeightConstraintsFirst = true),
                     contentAlignment = Alignment.Center
                 ){
                     getLogoImage()
                 }
             } else {
+                // 화분 이미지는 Lv6까지 같은 배율로 넣으려고 480x480 캔버스 가운데에 작게 그려져 있다 (화분 테두리 폭 196px = 캔버스의 약 41%, #474)
+                // 그래서 칸을 170dp로 키워 화분 폭이 약 69dp로 보이게 한다 (#476, 420dpi 실기기 캡처에서 182px ÷ 2.625)
+                // 간격 모드 최소 높이: 40dp면 화분 폭이 약 16dp밖에 안 돼 70dp(화분 폭 약 29dp)로 키운다 (#476)
+                // → 예전 Lv0 이미지(화분 폭 = 이미지의 약 72%)를 40dp 칸에 그렸을 때와 같은 폭을 기준으로 삼음
+                // → 대신 세로가 아주 짧은 화면에서는 그만큼(최대 30dp) 바깥 스크롤이 더 생긴다 (HomeBodyLayout 4번 참고)
                 ProfileImage(
                     level = "Lv.${displayPot.potLevel}",
-                    size = 100,
-                    modifier = imageSlotModifier
+                    size = 170,
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .shrinkableImageHeight(min = if (compact) 70.dp else 170.dp, max = 170.dp)
                 )
             }
             Spacer(modifier = Modifier.height(8.dp.compactIf(compact)))
@@ -839,45 +873,46 @@ fun HomeItemBoxSection(
             color = MaterialTheme.colorScheme.secondary,
             tonalElevation = 2.dp
         ) {
-            LazyRow(
+            // 6개를 한 줄에 놓는다 (#387)
+            // 칸 폭은 화면 폭을 6등분하되, ITEM_MIN_WIDTH보다 좁아지는 화면에서는 최소 폭을 지키고 가로 스크롤로 넘긴다
+            // (BoxWithConstraints는 SubcomposeLayout이지만, HomeBodyLayout은 아이템박스를 intrinsic 없이 바로 measure하므로 괜찮다)
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 12.dp.compactIf(compact)),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    .padding(horizontal = 12.dp, vertical = 10.dp.compactIf(compact))
             ) {
-                items(displayItems) { (type, count) ->
-                    val isBox = type == ItemType.BOX
+                val density = LocalDensity.current
+                val gapPx = with(density) { ITEM_GAP.roundToPx() }
+                // px 단위로 내림해서 6칸 + 간격 합이 폭을 넘지 않게 한다 (반올림 오차로 1px짜리 스크롤이 생기는 것 방지)
+                val fitWidthPx = (constraints.maxWidth - gapPx * (displayItems.size - 1)) / displayItems.size
+                val itemWidth = maxOf(with(density) { fitWidthPx.toDp() }, ITEM_MIN_WIDTH)
+                val scrollState = rememberScrollState()
 
-                    Column(
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp.compactIf(compact))) {
+                    Row(
                         modifier = Modifier
-                            .width(60.dp)
-                            .let { baseModifier ->
-                                if (isBox) {
-                                    baseModifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable { onItemClick(type) }
-                                } else {
-                                    baseModifier
-                                }
-                            }
-                            .padding(vertical = 4.dp.compactIf(compact)),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp.compactIf(compact))
+                            .fillMaxWidth()
+                            .horizontalScroll(scrollState),
+                        horizontalArrangement = Arrangement.spacedBy(ITEM_GAP)
                     ) {
-                        Image(
-                            painter = painterResource(id = type.resId),
-                            contentDescription = type.kor,
-                            modifier = Modifier.size(if (compact) 32.dp else 40.dp)
-                        )
-                        Text(
-                            text = type.kor,
-                            style = MaterialTheme.typography.titleSmall,
-                        )
-                        Text(
-                            text = "${count}개",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-
+                        displayItems.forEach { (type, count) ->
+                            HomeItemTile(
+                                type = type,
+                                count = count,
+                                compact = compact,
+                                // 박스만 클릭해서 개봉, 나머지 아이템은 클릭 동작 없음
+                                onClick = if (type == ItemType.BOX) {
+                                    { onItemClick(type) }
+                                } else {
+                                    null
+                                },
+                                modifier = Modifier.width(itemWidth)
+                            )
+                        }
+                    }
+                    // 좁은 화면에서 스크롤이 생길 때만, 옆으로 더 있다는 걸 알려주는 스크롤바를 보여준다
+                    if (scrollState.maxValue > 0) {
+                        HorizontalScrollIndicator(scrollState = scrollState)
                     }
                 }
             }
@@ -885,10 +920,304 @@ fun HomeItemBoxSection(
     }
 }
 
+/** 아이템 칸 사이 간격 (#387) */
+private val ITEM_GAP = 4.dp
+
+/**
+ * 아이템 한 칸의 최소 폭 (#387)
+ * 타일(최대 40dp) + 좌우 여유 1dp씩. 10sp 이름("영양제")도 이 폭 안에 들어간다.
+ * (배지는 타일 안 오른쪽 아래에 두므로 이 여유를 쓰지 않는다)
+ * 6칸이 이보다 좁아지는 화면(기기 폭 약 328dp 미만 = 6×42 + 간격 20 + 좌우 여백 56)에서는 가로 스크롤로 바뀐다.
+ */
+private val ITEM_MIN_WIDTH = 42.dp
+
+/** 박스 타일 위 "열기" 문구가 들어갈 자리. 모든 칸에 똑같이 둬서 아이콘 줄을 맞춘다 (#387) */
+private val BOX_CTA_SPACE = 8.dp
+
+/**
+ * 아이템 타일 한 칸: 정사각형 배경 + 아이콘 + 우측 하단 개수 배지, 아래에 이름 (#387)
+ * 박스(클릭 가능)는 상단 "열기" 문구로 다른 아이템과 구분한다
+ */
+@Composable
+private fun HomeItemTile(
+    type: ItemType,
+    count: Int,
+    compact: Boolean,
+    onClick: (() -> Unit)?,
+    modifier: Modifier = Modifier
+) {
+    val tileMaxSize = if (compact) 36.dp else 40.dp
+    val showOpenCta = onClick != null && count > 0
+    // 화면 읽기용 설명: 칸 하나를 "정성 3개"처럼 한 번에 읽게 한다
+    // 배지는 99개를 넘으면 "99+"로 보이지만, 읽을 때는 실제 개수를 읽어준다
+    val accessibilityLabel = "${type.kor} ${count.coerceAtLeast(0)}개"
+
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            // 칸 안의 아이콘·배지·이름·"열기"를 하나로 묶고 위 설명만 읽게 한다 (안쪽 요소는 clearAndSetSemantics로 비움)
+            // 박스 칸은 아래 clickable의 클릭 동작·onClickLabel이 같은 노드에 함께 남는다
+            .semantics(mergeDescendants = true) { contentDescription = accessibilityLabel }
+            .let { baseModifier ->
+                if (onClick != null) {
+                    baseModifier.clickable(
+                        onClickLabel = "${type.kor} 열기",
+                        role = Role.Button,
+                        onClick = onClick
+                    )
+                } else {
+                    baseModifier
+                }
+            }
+            .padding(top = BOX_CTA_SPACE, bottom = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp.compactIf(compact))
+    ) {
+        Box(
+            // widthIn을 fillMaxWidth보다 먼저 둬야 최대 크기가 적용된다
+            // (반대 순서면 fillMaxWidth가 최소 폭을 칸 폭으로 고정해 widthIn(max)가 무시됨)
+            modifier = Modifier
+                .widthIn(max = tileMaxSize)
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                // 칸 전체 설명(accessibilityLabel)과 겹치지 않게 타일 안 글자·아이콘은 따로 읽지 않는다
+                .clearAndSetSemantics { }
+        ) {
+            // 배경만 둥글게 자른다: 배지·"열기" 문구는 이 Box 밖(형제)에 두어 clip에 잘리지 않게 한다
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = type.resId),
+                    // 칸 전체 설명(accessibilityLabel)에 이름이 들어가므로 아이콘은 따로 설명하지 않는다
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(0.7f)
+                )
+            }
+            if (showOpenCta) {
+                BoxOpenCta(modifier = Modifier.align(Alignment.TopCenter))
+            }
+            // 배지는 타일 안 오른쪽 아래에 둔다
+            // 바깥으로 빼면 칸이 최소 폭(42dp)일 때 칸의 clip(가운데 정렬이라 오른쪽 여유 1dp)에 잘린다 (#573 리뷰)
+            ItemCountBadge(
+                count = count,
+                modifier = Modifier.align(Alignment.BottomEnd)
+            )
+        }
+        // 이름 자리는 모든 칸을 2줄 높이로 맞추고 글자를 세로 가운데에 둔다
+        // → 1줄 이름(정성·햇빛…)이 "보너스" / "박스" 두 줄 사이 가운데 선에 맞춰 일자로 놓인다
+        // 높이는 한 줄 높이를 dp로 바꾼 뒤 줄 수를 곱한다.
+        // Android 14+는 글꼴을 키울 때 큰 sp일수록 덜 커져서(비선형), 28sp를 한 번에 바꾸면 실제 두 줄 높이보다 작아져
+        // 글꼴 2배에서 1줄 이름이 약 5dp 위로 어긋났다 (#573 리뷰)
+        Box(
+            modifier = Modifier.heightIn(
+                min = with(LocalDensity.current) { ITEM_LABEL_LINE_HEIGHT.toDp() * ITEM_LABEL_LINE_SLOTS }
+            ),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // 줄마다 따로 그리고 각 줄은 1줄 + 말줄임으로 둔다
+                // 한 Text에 maxLines = 2를 주면, 좁은 화면 + 큰 글꼴에서 "보너 / 스…"처럼 글자 중간에서 줄이 넘어가
+                // "박스"가 사라졌다 (#573 리뷰)
+                homeItemLabelLines(type).forEach { line ->
+                    Text(
+                        text = line,
+                        // 칸 전체 설명(accessibilityLabel)과 겹치지 않게 이름은 따로 읽지 않는다
+                        modifier = Modifier.clearAndSetSemantics { },
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontSize = 10.sp,
+                            lineHeight = ITEM_LABEL_LINE_HEIGHT,
+                            // 1줄짜리 Text는 기본으로 줄 높이의 위아래 여백을 잘라내서 "보너스" / "박스" 사이가 좁아진다.
+                            // 잘라내지 않아 줄마다 ITEM_LABEL_LINE_HEIGHT 높이를 그대로 쓴다
+                            lineHeightStyle = LineHeightStyle(
+                                alignment = LineHeightStyle.Alignment.Center,
+                                trim = LineHeightStyle.Trim.None
+                            )
+                        ),
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** 아이템 이름 한 줄 높이 (#387) */
+private val ITEM_LABEL_LINE_HEIGHT = 14.sp
+
+/** 아이템 이름 자리 높이에 쓰는 줄 수. "보너스" / "박스"가 2줄이라 모든 칸의 이름 자리를 2줄 높이로 맞춘다 (#387) */
+private const val ITEM_LABEL_LINE_SLOTS = 2
+
+/**
+ * 홈 타일에 쓰는 이름을 줄 단위로 나눈 목록 (#387)
+ * 보너스 박스 이름(ItemType.kor, "보너스 박스" 10sp 기준 약 52dp)은 한 칸(최소 42dp)에 한 줄로 들어가지 않아
+ * 띄어쓰기 자리에서 나눠 2줄로 쓴다. 이름에 띄어쓰기가 없으면 1줄이 되고, 넘치면 말줄임된다.
+ * 줄마다 1줄 + 말줄임으로 그리므로, 한 줄이 넘치면 그 줄만 "보…"처럼 줄어들고 다음 줄("박스")은 남는다.
+ */
+private fun homeItemLabelLines(type: ItemType): List<String> =
+    if (type == ItemType.BOX) type.kor.split(" ") else listOf(type.kor)
+
+/** "열기" 문구가 위아래로 움직이는 횟수 (#573 리뷰: 홈에 있는 내내 움직이지 않게 제한) */
+private const val BOX_CTA_BOUNCE_COUNT = 3
+
+/**
+ * 보너스 박스 타일 위 "열기" 문구 (#387)
+ * 처음 나타날 때 위로 2dp 올라갔다 내려오기를 BOX_CTA_BOUNCE_COUNT번 반복해 눌러서 열 수 있다는 걸 알려주고 멈춘다.
+ * 홈에 다시 들어오거나 박스가 0개 → 1개 이상이 되어 다시 나타나면 처음부터 다시 움직인다.
+ */
+@Composable
+private fun BoxOpenCta(modifier: Modifier = Modifier) {
+    val bounce = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        repeat(BOX_CTA_BOUNCE_COUNT) {
+            bounce.animateTo(-2f, animationSpec = tween(durationMillis = 600))
+            bounce.animateTo(0f, animationSpec = tween(durationMillis = 600))
+        }
+    }
+    Box(
+        modifier = modifier
+            // 타일 위쪽 가장자리에 걸치게 6dp 올린다
+            // 위아래로 움직이는 2dp까지 더해도 BOX_CTA_SPACE(8dp) 안이라 칸의 clip에 잘리지 않는다
+            .offset(y = -6.dp)
+            // 위치는 그대로 두고 그리기만 움직여 레이아웃을 다시 계산하지 않게 한다
+            .graphicsLayer { translationY = bounce.value.dp.toPx() }
+            .clip(RoundedCornerShape(percent = 50))
+            // 색은 배지와 같은 이유로 tertiary 바탕 + primaryContainer 글자 (ItemCountBadge 주석 참고)
+            .background(MaterialTheme.colorScheme.tertiary)
+            .padding(horizontal = 5.dp)
+    ) {
+        Text(
+            text = "열기",
+            style = fixedSizeTileTextStyle(),
+            color = MaterialTheme.colorScheme.primaryContainer,
+            maxLines = 1
+        )
+    }
+}
+
+/**
+ * 가로 스크롤 위치를 보여주는 얇은 스크롤바 (#387)
+ * 막대 길이 = 보이는 폭 / 전체 폭, 위치 = 현재 스크롤 비율. 스크롤 값은 그리기 단계에서만 읽어 스크롤 중 재구성을 피한다
+ */
+@Composable
+private fun HorizontalScrollIndicator(
+    scrollState: ScrollState,
+    modifier: Modifier = Modifier
+) {
+    // primary는 다크 모드에서 아이템 박스 배경(secondary)과 대비가 약 1.1:1이라 막대가 거의 안 보여 tertiary 사용
+    // (대비 계산값: 라이트 약 3.3:1, 다크 약 4.1:1)
+    val trackColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
+    val thumbColor = MaterialTheme.colorScheme.tertiary
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(2.dp)
+            .drawBehind {
+                val total = scrollState.maxValue + scrollState.viewportSize
+                if (total <= 0 || scrollState.maxValue <= 0) return@drawBehind
+                val radius = CornerRadius(size.height / 2)
+                drawRoundRect(color = trackColor, cornerRadius = radius)
+                val thumbWidth = size.width * scrollState.viewportSize / total
+                val thumbX = (size.width - thumbWidth) * scrollState.value / scrollState.maxValue
+                drawRoundRect(
+                    color = thumbColor,
+                    topLeft = Offset(thumbX, 0f),
+                    size = Size(thumbWidth, size.height),
+                    cornerRadius = radius
+                )
+            }
+    )
+}
+
+/** 아이템 개수 배지: 0개도 표시하고, 99개를 넘으면 "99+"로 줄인다 (#387) */
+@Composable
+private fun ItemCountBadge(
+    count: Int,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            // 한 자리일 때는 원, 두 자리 이상이면 가로로 늘어나는 알약 모양
+            .defaultMinSize(minWidth = 18.dp, minHeight = 18.dp)
+            .clip(RoundedCornerShape(percent = 50))
+            // primary + onPrimary는 글자 대비가 라이트 약 2.2:1, 다크 약 4.1:1로 10dp 글자에는 낮다 (#573 리뷰)
+            // tertiary 바탕 + primaryContainer(타일 배경색) 글자로 바꿔 라이트 약 3.7:1, 다크 약 9.2:1 (대비 계산값)
+            // primaryContainer는 원래 배경용 색이지만, 배지 글자가 타일 배경과 같은 색으로 뚫려 보이게 하려고 글자색으로 쓴다
+            .background(MaterialTheme.colorScheme.tertiary)
+            .padding(horizontal = 4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = formatItemBadgeCount(count),
+            style = fixedSizeTileTextStyle(),
+            color = MaterialTheme.colorScheme.primaryContainer,
+            maxLines = 1
+        )
+    }
+}
+
+/**
+ * 타일 위에 겹쳐 그리는 배지·"열기" 문구용 글자 스타일 (#387)
+ * 크기를 dp로 고정해 시스템 글꼴 크기를 키워도 커지지 않게 한다.
+ * 타일(최대 40dp)이 고정 크기라 글꼴 2배에서는 "99+"·"열기"가 칸 밖으로 넘쳐 잘렸기 때문 (아이템 이름은 글꼴 크기를 따른다)
+ */
+@Composable
+// 이 파일은 java.time의 TextStyle도 import하고 있어 Compose TextStyle은 전체 경로로 쓴다
+private fun fixedSizeTileTextStyle(): androidx.compose.ui.text.TextStyle = with(LocalDensity.current) {
+    MaterialTheme.typography.titleSmall.copy(fontSize = 10.dp.toSp(), lineHeight = 12.dp.toSp())
+}
+
+/** 배지에 표시할 개수 문자열. 음수(비정상 데이터)는 0으로 표시 */
+private fun formatItemBadgeCount(count: Int): String = when {
+    count > 99 -> "99+"
+    count < 0 -> "0"
+    else -> count.toString()
+}
+
+@Preview(showBackground = true, name = "아이템 박스 - 일반 360dp", widthDp = 360)
+@Preview(showBackground = true, name = "아이템 박스 - 작은 기기 320dp (가로 스크롤)", widthDp = 320)
+@Preview(showBackground = true, name = "아이템 박스 - 태블릿 800dp", widthDp = 800)
+@Composable
+private fun HomeItemBoxSectionPreview() {
+    PlantTheme {
+        // 홈 본문과 같은 좌우 여백 16dp
+        // 태블릿 미리보기는 홈 본문의 최대 너비(480dp) 제한 없이 그려, 타일 최대 크기 제한만 확인한다
+        Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            HomeItemBoxSection(
+                // 0개, 한 자리, 두 자리, 99, 100 이상(99+) 배지를 한 번에 확인
+                item = Item(heart = 0, sun = 3, water = 12, fertilizer = 99, nutrient = 100, box = 1500),
+                onItemClick = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "아이템 박스 - 간격 모드 360dp, 박스 0개", widthDp = 360)
+@Composable
+private fun HomeItemBoxSectionCompactPreview() {
+    PlantTheme {
+        Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            HomeItemBoxSection(
+                // 박스 0개: "열기" 문구가 없어야 한다
+                item = Item(heart = 1, sun = 0, water = 5, fertilizer = 0, nutrient = 2, box = 0),
+                onItemClick = {},
+                compact = true
+            )
+        }
+    }
+}
+
 @Composable
 fun BonusBoxResultDialog(
     items: List<ItemType>,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    title: String = "보너스 박스 개봉 결과!"
 ) {
     var showConfetti by remember { mutableStateOf(true) }
 
@@ -900,7 +1229,7 @@ fun BonusBoxResultDialog(
             onDismissRequest = onDismiss,
             title = {
                 Text(
-                    text = "보너스 박스 개봉 결과!",
+                    text = title,
                     modifier = Modifier.fillMaxWidth(),
                     style = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center
@@ -1100,16 +1429,33 @@ fun BonusBoxOpenDialog(
 
 /**
  * 홈 본문(메인카드 + 아이템박스) 배치 (#376)
- * content에는 [메인카드, 아이템박스] 순서로 정확히 두 개를 넣는다.
+ * content(compact)에는 [메인카드, 아이템박스] 순서로 정확히 두 개를 넣고, 받은 compact를 두 컴포넌트에 그대로 넘긴다.
+ * 기준 높이 = 화면 높이(최대 720dp)에서 위아래 여백(8dp씩)을 뺀 값 (constraints.minHeight)
  *
- * 1. 아이템박스는 원래 크기 그대로 둔다
- * 2. 카드는 "본문 최소 높이 - 아이템박스 - 간격(18dp, 간격 모드 9dp)"만큼 높이를 받는다
- *    → 모자라면 카드 안 화분 이미지가 줄어들어(shrinkableImageHeight) 한 화면에 다 담긴다
- * 3. 이미지를 최소로 줄여도 안 들어가면 카드 최소 높이(minIntrinsicHeight)를 그대로 주고,
+ * 1. 간격 모드 판단 (#579): 먼저 일반 모드로 그려서 재 본다
+ *    → 일반 모드 카드는 이미지 칸이 최대 크기로 고정이라(화분 170dp, 로고 100dp), 카드 최소 높이(minIntrinsicHeight)가
+ *      "기준 높이 - 아이템박스 - 간격(18dp)" 이하면 이미지가 최대 크기로 다 들어가므로 일반 모드로 배치한다
+ *    → 모자라면 간격 모드(여백·간격 절반, 아이템 타일 36dp)로 다시 그려서 배치한다
+ *    → 화분 이름 길이·태그 유무·글꼴 크기로 내용이 길어지면 그만큼 더 높은 화면에서 간격 모드가 된다
+ *    → 일반 모드는 이미지가 다 들어갈 때만 쓰므로 일반 모드에서는 바깥 스크롤이 생기지 않고,
+ *      이미지 칸이 줄어드는 건 간격 모드뿐이라 본문이 낮아진다고 화분이 커지는 구간이 없다
+ *    → SubcomposeLayout이라 간격 모드일 때 일반 모드 내용은 재기만 하고 배치하지 않는다 (화면·접근성 트리에 안 나옴)
+ *      단 Compose 테스트 API(onAllNodes…)에는 배치되지 않은 내용도 잡히므로 홈 UI 테스트는 layoutInfo.isPlaced로 거를 것
+ *    → 모드가 바뀌면 다른 slot이라 내용이 새로 만들어진다 ("열기" 문구 애니메이션·아이템 줄 가로 스크롤 위치가 처음부터 다시 시작)
+ *      기준 높이·카드·아이템박스 높이가 바뀔 때만 생겨 허용한다 (#579)
+ *      - 대표 화분이나 그 정보가 바뀌어 화분 유무·태그 유무·이름 줄 수가 달라질 때
+ *      - 레벨업 등으로 진행률 문구(예: "40% (120분/300분)")의 줄 수가 달라질 때 (maxLines가 없어 좁은 화면·큰 글꼴에서 줄이 바뀔 수 있음)
+ *      - 글꼴·화면 크기가 바뀔 때
+ *      막으려고 두 상태를 slot 밖으로 올리면 간격 모드에서 두 slot이 같은 상태를 함께 쓰게 되므로 올리지 않는다
+ *      (같은 Animatable을 두 LaunchedEffect가 animateTo하면 나중 호출이 앞의 애니메이션을 취소하고, ScrollState 하나가 두 horizontalScroll에 붙는다)
+ * 2. 아이템박스는 원래 크기 그대로 둔다
+ * 3. 카드는 "기준 높이 - 아이템박스 - 간격(18dp, 간격 모드 9dp)"만큼 높이를 받는다
+ *    → 간격 모드에서 모자라면 카드 안 이미지가 줄어들어(shrinkableImageHeight) 한 화면에 다 담긴다
+ * 4. 간격 모드에서 이미지를 최소로 줄여도 안 들어가면 카드 최소 높이(minIntrinsicHeight)를 그대로 주고,
  *    본문이 화면보다 길어져 바깥 verticalScroll로 내려 볼 수 있게 한다 (버튼이 잘리지 않게)
  *    → intrinsic 계산을 쓰므로 카드 안에 SubcomposeLayout 기반 컴포넌트(Lazy 목록, BoxWithConstraints 등)를
- *      넣으면 런타임 크래시가 난다 (MainPlantCard 주석 참고)
- * 4. 카드는 맨 위(날짜 바로 아래)에 붙이고, 남는 세로 공간만큼 카드 자체를 늘린다 (#566)
+ *      넣으면 런타임 크래시가 난다 (MainPlantCard 주석 참고). 이 레이아웃 자체는 카드 바깥이라 괜찮다
+ * 5. 카드는 맨 위(날짜 바로 아래)에 붙이고, 남는 세로 공간만큼 카드 자체를 늘린다 (#566)
  *    → 카드는 날짜 바로 아래, 아이템박스는 본문 아래쪽에 와서 두 박스가 본문을 고르게 채운다
  *    → 화분 유무로 카드 내용 높이가 달라도 빈 띠가 생기지 않고, 늘어난 공간은 카드 안 위아래 여백이 된다
  *    → 간격(18dp)은 그대로라 두 박스 사이가 벌어지지 않는다 (#376)
@@ -1118,38 +1464,62 @@ fun BonusBoxOpenDialog(
 @Composable
 private fun HomeBodyLayout(
     modifier: Modifier = Modifier,
-    compact: Boolean = false,
-    content: @Composable () -> Unit
+    content: @Composable (compact: Boolean) -> Unit
 ) {
-    Layout(content = content, modifier = modifier) { measurables, constraints ->
-        require(measurables.size == 2) { "HomeBodyLayout에는 메인카드와 아이템박스 두 개만 넣어야 합니다" }
-        val (cardMeasurable, itemBoxMeasurable) = measurables
-        val gap = 18.dp.compactIf(compact).roundToPx()
+    SubcomposeLayout(modifier = modifier) { constraints ->
         // 세로는 제한 없이 재고, 가로는 본문 너비에 맞춘다
         val childConstraints = constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity)
-
-        val itemBox = itemBoxMeasurable.measure(childConstraints)
-
-        // 화면 높이(최대 720dp)에서 위아래 여백(8dp씩)을 뺀 값이 기준 (스크롤 안이라 maxHeight는 무한대)
+        // 스크롤 안이라 maxHeight는 무한대이고, 기준 높이는 minHeight로 받는다
         val targetHeight = constraints.minHeight
-        val cardAvailable = targetHeight - itemBox.height - gap
-        val cardMinHeight = cardMeasurable.minIntrinsicHeight(constraints.maxWidth)
-        // 카드 높이를 고정해서 준다: 공간이 남으면 카드가 늘어나고, 조금 모자라면 그 높이 안에서 이미지가 줄어들고,
+
+        // compact 값을 slot id로 써서 일반 모드·간격 모드 내용을 따로 만든다
+        fun measureBody(compact: Boolean): HomeBodyMeasure {
+            val measurables = subcompose(compact) { content(compact) }
+            require(measurables.size == 2) { "HomeBodyLayout에는 메인카드와 아이템박스 두 개만 넣어야 합니다" }
+            val (cardMeasurable, itemBoxMeasurable) = measurables
+            val gap = 18.dp.compactIf(compact).roundToPx()
+            val itemBox = itemBoxMeasurable.measure(childConstraints)
+            return HomeBodyMeasure(
+                cardMeasurable = cardMeasurable,
+                itemBox = itemBox,
+                gap = gap,
+                cardAvailable = targetHeight - itemBox.height - gap,
+                cardMinHeight = cardMeasurable.minIntrinsicHeight(constraints.maxWidth)
+            )
+        }
+
+        // 1. 일반 모드로 이미지가 최대 크기로 다 들어가면 일반 모드, 아니면 간격 모드
+        val normal = measureBody(compact = false)
+        val body = if (normal.cardMinHeight <= normal.cardAvailable) normal else measureBody(compact = true)
+
+        // 3·4. 카드 높이를 고정해서 준다: 공간이 남으면 카드가 늘어나고, 조금 모자라면(간격 모드) 그 높이 안에서 이미지가 줄어들고,
         // 최소 높이보다도 모자라면 최소 높이 그대로 둔다(바깥 스크롤)
-        val cardHeight = maxOf(cardAvailable, cardMinHeight)
-        val card = cardMeasurable.measure(
+        val cardHeight = maxOf(body.cardAvailable, body.cardMinHeight)
+        val card = body.cardMeasurable.measure(
             childConstraints.copy(minHeight = cardHeight, maxHeight = cardHeight)
         )
+        val itemBox = body.itemBox
 
-        val contentHeight = card.height + gap + itemBox.height
+        val contentHeight = card.height + body.gap + itemBox.height
         val layoutHeight = maxOf(targetHeight, contentHeight)
 
         layout(constraints.maxWidth, layoutHeight) {
             card.place((constraints.maxWidth - card.width) / 2, 0)
-            itemBox.place((constraints.maxWidth - itemBox.width) / 2, card.height + gap)
+            itemBox.place((constraints.maxWidth - itemBox.width) / 2, card.height + body.gap)
         }
     }
 }
+
+/** HomeBodyLayout에서 한 모드로 잰 결과 (#579) */
+private class HomeBodyMeasure(
+    val cardMeasurable: Measurable,
+    val itemBox: Placeable,
+    val gap: Int,
+    // 카드가 받을 수 있는 높이 = 기준 높이 - 아이템박스 - 간격
+    val cardAvailable: Int,
+    // 카드 최소 높이 (이미지 칸을 그 모드의 최소로 줄였을 때. 일반 모드는 최소 = 최대라 이미지 최대 크기 기준)
+    val cardMinHeight: Int
+)
 
 /**
  * 받은 높이 안에서 [min]~[max] 사이로 높이를 정한다 (#376)

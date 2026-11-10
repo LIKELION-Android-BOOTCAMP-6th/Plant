@@ -13,10 +13,15 @@ const {
   onDocumentDeleted,
 } = require("firebase-functions/firestore");
 const {onCall, HttpsError} = require("firebase-functions/https");
+const {onSchedule} = require("firebase-functions/scheduler");
 const logger = require("firebase-functions/logger");
 const {initializeApp} = require("firebase-admin/app");
 const {getAuth} = require("firebase-admin/auth");
-const {FieldValue, getFirestore} = require("firebase-admin/firestore");
+const {
+  FieldValue,
+  Timestamp,
+  getFirestore,
+} = require("firebase-admin/firestore");
 
 // For cost control, you can set the maximum number of containers that can be
 // running at the same time. This helps mitigate the impact of unexpected
@@ -88,6 +93,109 @@ exports.syncCommentCountOnCreate = onDocumentCreated(
 exports.syncCommentCountOnDelete = onDocumentDeleted(
     COMMENT_TRIGGER_OPTIONS,
     (event) => syncCommentCount(event.params.postId),
+);
+
+// ---------------------------------------------------------------------------
+// 학습 보상 지급 (#453)
+// ---------------------------------------------------------------------------
+// 앱은 학습 기록(logs/{sessionId})을 rewardStatus: "pending"으로 저장만 하고(보안 규칙이 검증),
+// 보상은 기록이 서버에 생기면 이 트리거가 지급한다.
+// - 오프라인에서 저장한 기록은 서버에 도착하는 순간 실행된다 → 쌓인 보상은 온라인 복귀 후 지급
+// - 트랜잭션에서 rewardStatus가 "pending"일 때만 지급하고 "granted"/"none"으로 바꾼다
+//   → 같은 이벤트로 두 번 실행되거나 재시도돼도 보상은 1번만 지급된다
+// - 기록이 없으면(동기화 전에 삭제) 지급하지 않고 끝낸다
+// - users/{uid}가 없으면(회원탈퇴로 삭제, #457) 지급하지 않고 끝낸다
+//   set(..., {merge: true})는 지워진 users 문서를 다시 만들기 때문에 쓰지 않는다.
+//   두 경우 모두 오류로 끝내지 않으므로 재시도하지 않는다
+// - retry: 일시 오류(네트워크, 트랜잭션 경합 등)로 실패하면 다시 실행한다
+//   (2세대 함수는 실패한 이벤트를 최대 24시간 재시도. 위 pending 확인으로 중복 지급 없음)
+//   배포 때 CLI 경고는 "최대 7일"이라고 나오지만 1세대 함수 기준이다.
+//   2세대는 24시간: https://firebase.google.com/docs/functions/retries
+const STUDY_LOG_DOCUMENT = "users/{uid}/pots/{potId}/logs/{logId}";
+const STUDY_REWARD_TRIGGER_OPTIONS = {
+  document: STUDY_LOG_DOCUMENT,
+  retry: true,
+};
+
+const HOUR_MS = 60 * 60 * 1000;
+
+// 보상 티어 표 (원본은 서버. 앱은 "1시간 이상이면 보상" 같은 표시용 기준만 가진다)
+// items: users.item의 필드 키, box: 보너스 박스 개수. 시간이 긴 티어부터 확인한다
+const STUDY_REWARD_TIERS = [
+  {
+    hours: 9,
+    items: ["heart", "sun", "water", "fertilizer", "nutrient"],
+    box: 5,
+  },
+  {hours: 7, items: ["heart", "sun", "water", "fertilizer"], box: 4},
+  {hours: 5, items: ["heart", "sun", "water"], box: 3},
+  {hours: 3, items: ["heart", "sun"], box: 2},
+  {hours: 1, items: ["heart"], box: 1},
+];
+
+/**
+ * 학습 시간(ms)에 맞는 보상을 찾는다. 1시간 미만이면 null.
+ * @param {*} studyingTime 기록의 studyingTime
+ * @return {{items: string[], box: number} | null}
+ */
+function computeStudyReward(studyingTime) {
+  if (typeof studyingTime !== "number" || !Number.isFinite(studyingTime)) {
+    return null;
+  }
+  const hours = Math.floor(studyingTime / HOUR_MS);
+  const tier = STUDY_REWARD_TIERS.find((t) => hours >= t.hours);
+  return tier ? {items: tier.items, box: tier.box} : null;
+}
+
+/**
+ * 학습 기록 하나의 보상을 지급한다. 여러 번 실행해도 1번만 지급된다.
+ * @param {string} uid
+ * @param {string} potId
+ * @param {string} logId
+ * @return {Promise<void>}
+ */
+async function grantStudyReward(uid, potId, logId) {
+  const userRef = db.collection("users").doc(uid);
+  const logRef = userRef.collection("pots").doc(potId)
+      .collection("logs").doc(logId);
+
+  await db.runTransaction(async (transaction) => {
+    // 트랜잭션은 읽기를 모두 마친 뒤 쓴다
+    const [logSnapshot, userSnapshot] = await Promise.all([
+      transaction.get(logRef),
+      transaction.get(userRef),
+    ]);
+    if (!logSnapshot.exists) {
+      logger.info("학습 기록이 없어 보상 지급을 건너뜀", {uid, potId, logId});
+      return;
+    }
+    // 이미 처리됐거나(granted/none) 이 기능 이전에 만들어진 기록(값 없음)은 지급하지 않는다
+    if (logSnapshot.get("rewardStatus") !== "pending") return;
+    if (!userSnapshot.exists) {
+      logger.info("유저 문서가 없어 보상 지급을 건너뜀", {uid, potId, logId});
+      return;
+    }
+
+    const reward = computeStudyReward(logSnapshot.get("studyingTime"));
+    if (!reward) {
+      transaction.update(logRef, {rewardStatus: "none"});
+      return;
+    }
+
+    const itemUpdates = {"item.box": FieldValue.increment(reward.box)};
+    reward.items.forEach((item) => {
+      itemUpdates[`item.${item}`] = FieldValue.increment(1);
+    });
+    transaction.update(userRef, itemUpdates);
+    transaction.update(logRef, {rewardStatus: "granted", reward});
+  });
+}
+
+exports.grantStudyReward = onDocumentCreated(
+    STUDY_REWARD_TRIGGER_OPTIONS,
+    (event) => grantStudyReward(
+        event.params.uid, event.params.potId, event.params.logId,
+    ),
 );
 
 // ---------------------------------------------------------------------------
@@ -290,3 +398,87 @@ exports.deleteAccount = onCall(DELETE_ACCOUNT_OPTIONS, async (request) => {
   logger.info("회원탈퇴 완료", {uid});
   return {deleted: true};
 });
+
+// ---------------------------------------------------------------------------
+// 오래된 "공부 중" 표시(studying) 정리 (#525)
+// ---------------------------------------------------------------------------
+// 앱은 공부 중 1분마다 studying/{uid}를 다시 쓰며 updatedAt = 서버 시각을 넣고,
+// 일시정지·종료하면 문서를 지운다. 공부 중 앱이 강제 종료되거나 기기가 꺼지면 문서가 남으므로
+// 이 예약 함수가 updatedAt이 오래된 문서를 지운다 → 학습 화면 상위 3명에 끝난 사람이 남지 않는다
+// - 마지막 갱신 후 최대 약 20분(기준 10분 + 실행 간격 10분)까지 남을 수 있다
+//   → 강제 종료 시점부터 세면 마지막 갱신이 최대 1분 전이라 약 21분
+// - 기준 시간은 앱 갱신 주기(1분, StudyingViewModel.observeTimer)보다 충분히 길어야 한다
+//   (짧으면 네트워크가 잠깐 끊긴 공부 중인 사람도 지워짐 → 다음 갱신 때 다시 생기긴 함)
+// - updatedAt 조건 쿼리(<)는 updatedAt이 없는 예전 문서를 찾지 못한다 → 컬렉션 전체(공부 중인
+//   사람 수만큼, updatedAt 필드만)를 읽어 코드에서 거른다
+// - 읽은 뒤 그 사이 앱이 다시 쓴 문서는 지우지 않는다 (lastUpdateTime 조건부 삭제)
+// - 여러 번 실행돼도 결과가 같다(멱등). 실패해도 다음 실행에서 다시 처리하므로 재시도는 두지 않는다
+const STUDYING_STALE_MS = 10 * 60 * 1000;
+const STUDYING_CLEANUP_SCHEDULE = "every 10 minutes";
+// 조건부 삭제에서 "그 사이 다시 쓰였거나 이미 지워짐" — 실패가 아니라 건너뛸 대상
+const GRPC_FAILED_PRECONDITION = 9;
+const GRPC_NOT_FOUND = 5;
+
+/**
+ * studying 문서가 오래됐는지 (updatedAt이 없거나 Timestamp가 아니어도 오래된 것으로 본다).
+ * @param {*} updatedAt 문서의 updatedAt 값
+ * @param {number} cutoffMs 이 시각(ms)보다 이전이면 오래된 것
+ * @return {boolean}
+ */
+function isStaleStudying(updatedAt, cutoffMs) {
+  if (!(updatedAt instanceof Timestamp)) return true;
+  return updatedAt.toMillis() < cutoffMs;
+}
+
+/**
+ * updatedAt이 기준 시간보다 오래된 studying 문서를 지운다.
+ * @param {number} nowMs 현재 시각(ms)
+ * @return {Promise<{deleted: number, skipped: number}>}
+ */
+async function cleanUpStaleStudying(nowMs) {
+  const cutoffMs = nowMs - STUDYING_STALE_MS;
+  const snapshot = await db.collection("studying").select("updatedAt").get();
+  const staleDocs = snapshot.docs.filter(
+      (doc) => isStaleStudying(doc.get("updatedAt"), cutoffMs),
+  );
+  if (staleDocs.length === 0) return {deleted: 0, skipped: 0};
+
+  const writer = db.bulkWriter();
+  let deleted = 0;
+  let skipped = 0;
+  const results = Promise.allSettled(staleDocs.map((doc) =>
+    writer.delete(doc.ref, {lastUpdateTime: doc.updateTime}).then(
+        () => {
+          deleted++;
+        },
+        (error) => {
+          if (error.code === GRPC_FAILED_PRECONDITION ||
+              error.code === GRPC_NOT_FOUND) {
+            skipped++;
+            return;
+          }
+          throw error;
+        },
+    ),
+  ));
+  await writer.close();
+  const failures = (await results).filter((r) => r.status === "rejected");
+  if (failures.length > 0) {
+    logger.error("오래된 studying 문서 일부 삭제 실패 (다음 실행에서 다시 처리)", {
+      deleted, skipped, failed: failures.length,
+      error: failures[0].reason,
+    });
+    throw failures[0].reason;
+  }
+  return {deleted, skipped};
+}
+
+exports.cleanUpStaleStudying = onSchedule(
+    STUDYING_CLEANUP_SCHEDULE,
+    async () => {
+      const result = await cleanUpStaleStudying(Date.now());
+      if (result.deleted > 0 || result.skipped > 0) {
+        logger.info("오래된 studying 문서 정리", result);
+      }
+    },
+);

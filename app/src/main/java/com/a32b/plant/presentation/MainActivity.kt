@@ -36,7 +36,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.a32b.plant.core.navigation.PlantAppNavigation
 import com.a32b.plant.core.navigation.Routes
-import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.domain.session.SessionExpiredObserver
 import com.a32b.plant.domain.usecase.auth.SignOutUseCase
@@ -212,10 +211,10 @@ class MainActivity : ComponentActivity() {
                             ?: remember { mutableStateOf(null) }
                     )
 
-                    // 홈 화분이 화면에 반영된 뒤 스플래시를 끝내 기본 화면이 보이지 않게 한다.
-                    // 화분이 없는 경우 등은 SplashViewModel이 처리한다.
+                    // 홈 초기 로딩이 끝나 첫 화분이 화면에 반영된 뒤 스플래시를 끝내 기본 화면이 보이지 않게 한다.
+                    // 홈은 화분 있음·화분 없음·조회 실패·유저 없음 모두에서 초기 로딩을 해제한다 (#487)
                     LaunchedEffect(homeViewModel) {
-                        homeViewModel?.displayPot?.first { it != Pot.EMPTY } ?: return@LaunchedEffect
+                        homeViewModel?.isLoading?.first { !it } ?: return@LaunchedEffect
                         withFrameNanos { }
                         viewModel.onFirstScreenReady()
                     }

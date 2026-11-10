@@ -5,6 +5,7 @@ import com.a32b.plant.data.model.PotDto
 import com.a32b.plant.data.model.StudyLogDto
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.type.ItemType
+import com.google.android.gms.tasks.Task
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
@@ -61,6 +62,12 @@ class PotRemoteDataSourceImpl @Inject constructor(
         )
         newDocRef.set(newPotDto).await()
     }
+
+    // 화분 이름 변경 — 기다리지 않고 Task를 그대로 돌려준다 (기다리는 시간은 Repository가 정함)
+    override fun updatePotName(uid: String, potId: String, name: String): Task<Void> =
+        db.collection("users").document(uid)
+            .collection("pots").document(potId)
+            .update("name", name)
 
     // 화분 목록 일회 조회 (리포트용) - 완료 화분 포함
     override suspend fun getPotsOnce(uid: String): GetPotsOnceResult {

@@ -90,36 +90,52 @@ class UserRemoteDataSourceImpl @Inject constructor(
         }.await()
     }
 
+    // 닉네임 변경(중복 확인·새 닉네임 문서 생성·이전 닉네임 문서 삭제)과 users 수정을 한 트랜잭션으로 처리한다.
+    // 일반 write는 오프라인에서 서버 응답이 올 때까지 await()가 끝나지 않고 로컬 큐에 남지만,
+    // 트랜잭션은 오프라인이면 서버에 쓰지 못하고 기기 캐시에도 반영되지 않으며, 일부만 반영되는 상태도 만들지 않는다.
+    // 다만 SDK가 UNAVAILABLE을 최대 5회까지 재시도한 뒤 실패하므로 즉시 실패하지는 않고, Repository의 10초 제한에서 끊긴다.
+    // 이전 닉네임은 앱이 들고 있는 값이 아니라 서버의 users 문서 값을 기준으로 지운다.
+    // 확인한 서버 상태만 반환하고, 성공/실패로 해석하는 일은 Repository가 한다.
+    // (중복을 예외로 던지면 Firestore가 일부 코드를 자동 재시도해 응답이 늦어지므로 값으로 반환한다)
     override suspend fun updateProfile(
         uid: String,
         nickname: String,
         profileImg: String
-    ) {
-        db.collection("users")
-            .document(uid)
-            .update(
+    ): UpdateProfileResult {
+        val userRef = db.collection("users").document(uid)
+
+        return db.runTransaction { txn ->
+            val userSnapshot = txn.get(userRef)
+            val currentNickname = userSnapshot.getString("nickname").orEmpty()
+            val currentProfileImg = userSnapshot.getString("profileImg")
+
+            if (currentNickname == nickname && currentProfileImg == profileImg) {
+                return@runTransaction UpdateProfileResult.NoChange
+            }
+
+            // 닉네임은 그대로, 이미지만 바꾸는 경우
+            if (currentNickname == nickname) {
+                txn.update(userRef, "profileImg", profileImg)
+                return@runTransaction UpdateProfileResult.Updated
+            }
+
+            // 트랜잭션에서는 읽기를 쓰기보다 먼저 모두 끝내야 한다
+            val newNicknameRef = db.collection("nicknames").document(nickname)
+            if (txn.get(newNicknameRef).exists()) {
+                return@runTransaction UpdateProfileResult.NicknameTaken
+            }
+
+            txn.set(newNicknameRef, mapOf("nickname" to nickname, "uid" to uid))
+            if (currentNickname.isNotEmpty()) {
+                txn.delete(db.collection("nicknames").document(currentNickname))
+            }
+            txn.update(
+                userRef,
                 "nickname", nickname,
                 "profileImg", profileImg
             )
-            .await()
-    }
-
-    // 오프라인 캐시만으로 중복 여부를 판단하지 않도록 서버 응답을 요구한다.
-    override suspend fun isNicknameTaken(nickname: String): Boolean {
-        val doc = db.collection("nicknames").document(nickname).get(Source.SERVER).await()
-        return doc.exists()
-    }
-
-    // 보안 규칙이 uid로 소유자를 확인하므로 닉네임 문서에는 항상 uid를 함께 저장한다.
-    override suspend fun registerNickname(uid: String, nickname: String) {
-        db.collection("nicknames")
-            .document(nickname)
-            .set(mapOf("nickname" to nickname, "uid" to uid))
-            .await()
-    }
-
-    override suspend fun deleteNickname(nickname: String) {
-        db.collection("nicknames").document(nickname).delete().await()
+            UpdateProfileResult.Updated
+        }.await()
     }
 
     override suspend fun checkAttendance(uid: String): AttendanceDecision {

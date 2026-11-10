@@ -2,7 +2,6 @@ package com.a32b.plant.domain.usecase.studying
 
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.StudyingSession
-import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.type.StudyingSessionStatus
@@ -14,19 +13,28 @@ class StartStudyingSessionUseCase @Inject constructor(
     private val repository: StudyingRepository
 ) {
     /**
-     * 로컬 백업을 먼저 저장한 뒤 "공부 중" 표시를 등록
-     * 오프라인에서는 원격 등록이 연결될 때까지 끝나지 않으므로, 호출부는 이 함수의 완료를 기다리는 후속 작업을 두면 안 됨
-     * 원격 등록 실패는 공부 진행에 영향이 없어 로컬 저장 결과만 반환 (에러 로그는 레포지토리에서 찍고 있음)
+     * 학습 화면 진입 시 로컬 백업 저장
+     * "공부 중" 표시(studying/{uid})는 여기서 등록하지 않는다 — 타이머가 실제로 시작될 때 등록하고
+     * 일시정지하면 지우므로(SaveStudyingUserUseCase, #525), 일시정지 상태로 진입해도 상위 3명에 나오지 않는다
+     * [sessionId]는 학습 기록 문서 ID로 쓰이므로 세션을 시작할 때 만든 값을 그대로 넘긴다 (#453)
      */
-    suspend operator fun invoke(tag: String, title: String, potId: String, time: Long, log: List<String>?, startedAt: Long, isPaused: Boolean) : Result<Unit> {
+    suspend operator fun invoke(tag: String, title: String, potId: String, time: Long, log: List<String>?, completed: List<Boolean>, startedAt: Long, isPaused: Boolean, sessionId: String) : Result<Unit> {
         return ensureCurrentUserUseCase {
-            val localResult = repository.saveLocalSession(
-                StudyingSession(it.uid, tag, title, potId, time, log, startedAt, isPaused, StudyingSessionStatus.STUDYING)
+            repository.saveLocalSession(
+                StudyingSession(
+                    userId = it.uid,
+                    tag = tag,
+                    title = title,
+                    potId = potId,
+                    time = time,
+                    log = log,
+                    startedAt = startedAt,
+                    isPaused = isPaused,
+                    status = StudyingSessionStatus.STUDYING,
+                    sessionId = sessionId,
+                    completed = completed
+                )
             )
-            repository.initStudyingUser(
-                StudyingUser(it.uid, it.nickname, it.profileImg, tag, time)
-            )
-            localResult
         } ?: Result.Failure(AppError.UnknownUser())
     }
 }

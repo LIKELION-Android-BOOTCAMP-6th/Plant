@@ -36,13 +36,27 @@ object NicknameRule {
     private val reservedIdPattern = Regex("^__.*__$")
 
     /**
-     * 입력값을 검사·저장할 형태로 바꾼다. 검사([isValidLength], [isUsable]) 전에 반드시 이 값으로 바꿔서 넘긴다.
+     * 입력값을 검사·저장할 형태로 바꾼다. 검사([validate], [isValidLength], [isUsable]) 전에 반드시 이 값으로 바꿔서 넘긴다.
      * - 앞뒤 공백 제거
      * - NFC 정규화: 자모로 나뉜 한글(맥에서 복사한 글 등, 예: U+1109 U+1162 U+110A U+1161 U+11A8)을
      *   완성형("새싹", U+C0C8 U+C2F9)으로 합쳐, 같은 모습의 닉네임이 다른 값으로 등록되지 않게 한다.
      *   (NFKC는 쓰지 않는다. 키보드로 입력한 "ㅋ"(U+314B) 같은 자모까지 분리형 자모로 바꿔 [hasLookAlikeChar]에 걸림)
      */
     fun normalize(input: String): String = Normalizer.normalize(input.trim(), Normalizer.Form.NFC)
+
+    /**
+     * 닉네임 형식을 검사하고, 통과하지 못하면 입력칸에 보여줄 메시지를, 통과하면 null을 돌려준다.
+     * 로그인(닉네임 설정)과 마이페이지(프로필 편집) UseCase가 함께 쓴다.
+     * - 길이를 먼저 검사한다. 길이와 사용 가능 여부가 함께 걸리면 [LENGTH_MESSAGE]
+     * - [normalize]한 값을 넘긴다. 정규화하지 않은 값을 넘기면 정규화 전 길이로 판정해 결과가 달라질 수 있다.
+     *   예: 자모로 나뉜 받침 있는 5글자는 15칸이라 [LENGTH_MESSAGE] (정규화하면 5글자라 통과할 값),
+     *       `" a"`는 정규화하면 1글자인데 2칸이라 길이를 통과하고, 정규화 전후가 달라 [isUsable]에서 걸려 [UNUSABLE_MESSAGE]
+     */
+    fun validate(nickname: String): String? = when {
+        !isValidLength(nickname) -> LENGTH_MESSAGE
+        !isUsable(nickname) -> UNUSABLE_MESSAGE
+        else -> null
+    }
 
     /**
      * 사용할 수 있는 닉네임인지 확인한다.

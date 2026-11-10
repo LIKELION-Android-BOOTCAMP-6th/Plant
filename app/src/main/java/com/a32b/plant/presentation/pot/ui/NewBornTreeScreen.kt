@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.TagSheet
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.util.PotNameRule
@@ -63,153 +64,156 @@ fun NewBornTreeScreen(navController: NavController,
         }
     }
 
-    Scaffold(
-        topBar = {
-            Text(
-                text = "Plant",
-                modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.headlineMedium,
-            )
-          },
-        bottomBar = {
-            // 하단 버튼
-            Button(
-                onClick = {
-                    selectedTag?.let { tag ->
-                        viewModel.createPot(tag, potName.trim()) {
-                            navController.popBackStack()
+    // 태그 목록 첫 방출 전에는 로딩 표시 — 전환 중 빈 폼 노출 방지 (#384)
+    LoadableScreen(viewModel) {
+        Scaffold(
+            topBar = {
+                Text(
+                    text = "Plant",
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.headlineMedium,
+                )
+              },
+            bottomBar = {
+                // 하단 버튼
+                Button(
+                    onClick = {
+                        selectedTag?.let { tag ->
+                            viewModel.createPot(tag, potName) {
+                                navController.popBackStack()
+                            }
                         }
-                    }
-                },
-                enabled = checkEnable(selectedTag,potName,isUploading),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp)
-                    .height(60.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    disabledContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    disabledContentColor = MaterialTheme.colorScheme.onSurface
-                ),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                if(isUploading){
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
-                }else{
-                    Text("완료", style = MaterialTheme.typography.titleSmall)
-                }
-            }
-        }
-      ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.background),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            contentPadding = PaddingValues(bottom = 20.dp)
-        ) {
-
-
-            // 화분 기본 이미지
-            item {
-                Spacer(modifier = Modifier.height(15.dp))
-                Box(
+                    },
+                    enabled = checkEnable(selectedTag,potName,isUploading),
                     modifier = Modifier
-                        .size(220.dp)
-                        .clip(RoundedCornerShape(32.dp))
-                        .background(MaterialTheme.colorScheme.primary),
-                    contentAlignment = Alignment.Center
-                ){
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Image(
-                            painter = painterResource(R.drawable.ic_pot_lv0),
-                            contentDescription = null,
-                            modifier = Modifier.size(170.dp)
-                        )
-                    }
-                }
-            }
-            // 태그 출력
-            item {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp)
+                        .fillMaxWidth()
+                        .padding(20.dp)
+                        .height(60.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        disabledContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurface
+                    ),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text(
-                        "태그 선택", style = MaterialTheme.typography.titleSmall,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
-
-                    //태그
-                    TagSheet(
-                        tags = tags,
-                        init = if (selectedTag != null) listOf(selectedTag!!) else emptyList(),
-                        isMultiSelected = false,
-                        enable = !isUploading,
-                        onSelectedChange = { selectedList ->
-                            if (selectedList.isNotEmpty()) {
-                                selectedTag = selectedList[0]
-                            }
-                        }
-                    )
-
-                    selectedTag?.let {
-                        Text(
-                            text = "선택됨: ${it.name}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(top = 8.dp, start = 4.dp)
-                        )
+                    if(isUploading){
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                    }else{
+                        Text("완료", style = MaterialTheme.typography.titleSmall)
                     }
                 }
-
             }
-            // 제목 입력
-            item {
-                val maxLength = PotNameRule.MAX_LENGTH
+          ) { paddingValues ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(MaterialTheme.colorScheme.background),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                contentPadding = PaddingValues(bottom = 20.dp)
+            ) {
 
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("화분 이름",
-                        style = MaterialTheme.typography.titleSmall,
-                        modifier = Modifier.padding(bottom = 11.dp)
-                    )
-                    OutlinedTextField(
-                        value = potName,
-                        textStyle = MaterialTheme.typography.bodyMedium,
-                        onValueChange = { input ->
-                            // 1. 줄바꿈 입력 방지
-                            if (!input.contains("\n")) {
-                                // 2. 글자 수 제한 및 토스트 알림 로직
-                                if (input.length <= maxLength) {
-                                    potName = input
-                                } else {
-                                    // 15글자를 초과해서 입력하려고 하면 토스트 발생
-                                    context.showToast("${maxLength}글자 이하로 입력해주세요.")
-                                }
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text(
-                            text="이름을 입력하세요 (최대 ${maxLength}글자)",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSecondary
-                        )},
 
-                        // 한 줄 입력 고정
-                        singleLine = true,
-
-                        // 3. 텍스트필드 우측 하단에 실시간 글자수 표시
-                        supportingText = {
-                            Text(
-                                text = "${potName.length} / $maxLength",
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = TextAlign.End, // 우측 정렬
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (potName.length >= maxLength) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline // 15글자 도달 시 붉은색
+                // 화분 기본 이미지
+                item {
+                    Spacer(modifier = Modifier.height(15.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(220.dp)
+                            .clip(RoundedCornerShape(32.dp))
+                            .background(MaterialTheme.colorScheme.primary),
+                        contentAlignment = Alignment.Center
+                    ){
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Image(
+                                painter = painterResource(R.drawable.ic_pot_lv0),
+                                contentDescription = null,
+                                modifier = Modifier.size(170.dp)
                             )
                         }
-                    )
+                    }
+                }
+                // 태그 출력
+                item {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp)
+                    ) {
+                        Text(
+                            "태그 선택", style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+
+                        //태그
+                        TagSheet(
+                            tags = tags,
+                            init = if (selectedTag != null) listOf(selectedTag!!) else emptyList(),
+                            isMultiSelected = false,
+                            enable = !isUploading,
+                            onSelectedChange = { selectedList ->
+                                if (selectedList.isNotEmpty()) {
+                                    selectedTag = selectedList[0]
+                                }
+                            }
+                        )
+
+                        selectedTag?.let {
+                            Text(
+                                text = "선택됨: ${it.name}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(top = 8.dp, start = 4.dp)
+                            )
+                        }
+                    }
+
+                }
+                // 제목 입력
+                item {
+                    val maxLength = PotNameRule.MAX_LENGTH
+
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("화분 이름",
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.padding(bottom = 11.dp)
+                        )
+                        OutlinedTextField(
+                            value = potName,
+                            textStyle = MaterialTheme.typography.bodyMedium,
+                            onValueChange = { input ->
+                                // 1. 줄바꿈 입력 방지
+                                if (!input.contains("\n")) {
+                                    // 2. 글자 수 제한 및 토스트 알림 로직
+                                    if (input.length <= maxLength) {
+                                        potName = input
+                                    } else {
+                                        // 15글자를 초과해서 입력하려고 하면 토스트 발생
+                                        context.showToast("${maxLength}글자 이하로 입력해주세요.")
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text(
+                                text="이름을 입력하세요 (최대 ${maxLength}글자)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondary
+                            )},
+
+                            // 한 줄 입력 고정
+                            singleLine = true,
+
+                            // 3. 텍스트필드 우측 하단에 실시간 글자수 표시
+                            supportingText = {
+                                Text(
+                                    text = "${potName.length} / $maxLength",
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.End, // 우측 정렬
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (potName.length >= maxLength) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline // 15글자 도달 시 붉은색
+                                )
+                            }
+                        )
+                    }
                 }
             }
         }

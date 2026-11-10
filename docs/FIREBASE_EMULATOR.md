@@ -116,6 +116,7 @@ npm --prefix rules-test test
 | 파일 | 대상 |
 |---|---|
 | `test/users.test.js` | `users`, 하위 `pots`·`logs` |
+| `test/studyLogs.test.js` | 학습 기록 저장 batch 검증(기록 생성 + 화분·유저 학습 시간), 보상 확인 표시, 쌓인 보상 조회 (#453) |
 | `test/posts.test.js` | `posts`(작성·수정·좋아요·신고), 하위 `comments`, `reports` |
 | `test/others.test.js` | `nicknames`, `feedbacks`, `studying`, `Tags` |
 

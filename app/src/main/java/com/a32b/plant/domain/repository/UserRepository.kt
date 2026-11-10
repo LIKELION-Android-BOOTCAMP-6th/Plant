@@ -44,11 +44,15 @@ interface UserRepository {
     suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit>
 
     suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit>
+    /**
+     * 닉네임·프로필 이미지를 한 트랜잭션으로 변경한다. 오프라인이면 기기 대기열에 남기지 않고 실패하며, 일부만 반영되는 상태는 만들지 않는다.
+     *
+     * 실패 시 [AppError.NicknameTaken] (다른 사용자가 사용 중), [AppError.Network] (오프라인·시간 초과),
+     * [AppError.Custom] (그 외 저장 실패)를 반환한다.
+     * 시간 초과로 [AppError.Network]를 반환해도 서버에는 뒤늦게 반영될 수 있다.
+     * 이미 같은 값으로 반영된 상태면 성공으로 처리한다.
+     */
     suspend fun updateProfile(user: User): Result<Unit>
-    suspend fun isNicknameTaken(nickname: String): Result<Boolean>
-    /** 닉네임 선점 문서에 소유자 uid를 함께 저장한다. 보안 규칙상 소유자만 삭제할 수 있다. */
-    suspend fun registerNickname(uid: String, nickname: String): Result<Unit>
-    suspend fun deleteNickname(nickname: String): Result<Unit>
     suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success>
     /**
      * 세션 토큰을 저장한다. 제한 시간 안에 서버 응답이 없어도 쓰기는 큐에 남아 나중에 반영되므로 성공으로 반환한다.

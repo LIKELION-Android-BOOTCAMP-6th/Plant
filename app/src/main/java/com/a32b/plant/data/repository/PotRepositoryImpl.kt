@@ -2,6 +2,8 @@ package com.a32b.plant.data.repository
 
 import android.util.Log
 import com.a32b.plant.core.util.safeRunCatching
+import com.a32b.plant.data.firestore.WriteResult
+import com.a32b.plant.data.firestore.awaitServerWrite
 import com.a32b.plant.data.source.remote.pot.PotRemoteDataSource
 import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.source.remote.pot.InsufficientItemsException
@@ -9,6 +11,7 @@ import com.a32b.plant.data.source.remote.pot.PotLevelMismatchException
 import com.a32b.plant.data.source.remote.pot.PotNotFoundException
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.Pot
+import com.a32b.plant.domain.model.SaveResult
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.PotRepository
@@ -26,6 +29,7 @@ import kotlinx.coroutines.tasks.await
 import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.seconds
 
 @Singleton
 class PotRepositoryImpl @Inject constructor(
@@ -92,12 +96,29 @@ class PotRepositoryImpl @Inject constructor(
         awaitClose { listener.remove() }
     }.catch { e -> Log.e("PotRepository", "태그 목록 구독 실패: ${e.message}", e) }
 
-    override suspend fun updatePotName(uid: String, potId: String, newName: String) {
-        db.collection("users").document(uid)
-            .collection("pots").document(potId)
-            .update("name", newName)
-            .await()
-    }
+    override suspend fun updatePotName(uid: String, potId: String, newName: String): Result<SaveResult> =
+        safeRunCatching {
+            // 쓰기를 시작하고(대기열 등록) 서버 반영을 제한 시간만큼만 기다린다.
+            // 오프라인이면 응답이 오지 않으므로 시간 초과(Pending)는 실패가 아니라 "전송 대기"로 처리한다.
+            // 기기 캐시에는 이미 반영됐고 연결되면 전송되므로, 같은 쓰기를 다시 보내지 않는다.
+            potRemoteDataSource.updatePotName(uid, potId, newName)
+                .awaitServerWrite(RENAME_TIMEOUT)
+        }.fold(
+            onSuccess = { write ->
+                when (write) {
+                    WriteResult.Confirmed -> Result.Success(SaveResult.Saved)
+                    WriteResult.Pending -> Result.Success(SaveResult.Pending)
+                    is WriteResult.Rejected -> {
+                        Log.e("PotRepository", "화분 이름 변경 거부", write.error)
+                        Result.Failure(handleError(write.error, RENAME_ERROR_MESSAGE, isWrite = true))
+                    }
+                }
+            },
+            onFailure = { e ->
+                Log.e("PotRepository", "화분 이름 변경 실패", e)
+                Result.Failure(handleError(e, RENAME_ERROR_MESSAGE, isWrite = true))
+            }
+        )
 
     override suspend fun deleteEntirePot(uid: String, potId: String, totalStudyingTime: Long) {
         val userRef = db.collection("users").document(uid)
@@ -142,13 +163,16 @@ class PotRepositoryImpl @Inject constructor(
 
         is InsufficientItemsException -> AppError.InsufficientItems()
         is PotLevelMismatchException -> AppError.Custom("이미 레벨업이 완료된 화분입니다.")
-        is PotNotFoundException -> AppError.Custom("존재하지 않거나 삭제된 화분입니다.")
+        is PotNotFoundException -> AppError.Custom(POT_NOT_FOUND_MESSAGE)
 
         is FirebaseFirestoreException -> when (e.code) {
             FirebaseFirestoreException.Code.UNAVAILABLE,
             FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
 
             FirebaseFirestoreException.Code.PERMISSION_DENIED -> AppError.Permission()
+
+            // 없는 문서를 update하면 NOT_FOUND (예: 다른 기기에서 화분을 삭제한 뒤 이름 변경) (#563)
+            FirebaseFirestoreException.Code.NOT_FOUND -> AppError.Custom(POT_NOT_FOUND_MESSAGE)
 
             else -> if (isWrite) AppError.Upload() else AppError.Custom(defaultMessage)
         }
@@ -172,5 +196,12 @@ class PotRepositoryImpl @Inject constructor(
                 Result.Failure(handleError(e, "화분 레벨업에 실패했습니다.", isWrite = true))
             }
         )
+    }
+
+    companion object {
+        /** 화분 이름 변경 제한 시간 — 학습 기록 저장(StudyingRepositoryImpl.SAVE_TIMEOUT)과 같은 5초 */
+        private val RENAME_TIMEOUT = 5.seconds
+        private const val RENAME_ERROR_MESSAGE = "화분 이름 변경에 실패했습니다."
+        private const val POT_NOT_FOUND_MESSAGE = "존재하지 않거나 삭제된 화분입니다."
     }
 }

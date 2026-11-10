@@ -6,4 +6,11 @@ package com.a32b.plant.domain.util
  */
 object PotNameRule {
     const val MAX_LENGTH = 15
+
+    /**
+     * 입력값을 저장할 형태로 바꾼다. 생성과 이름 변경 모두 저장 전에 이 값으로 바꿔서 저장한다. (#563)
+     * - 앞뒤 공백 제거
+     * - 가운데 공백("새  싹")은 그대로 둔다
+     */
+    fun normalize(name: String): String = name.trim()
 }
