@@ -250,6 +250,22 @@ describe("화분 레벨업 (#456)", () => {
       await assertFails(levelUpBatch(asAlice(), {...LV0, markedPotId: ""}));
     });
 
+    it("같은 레벨 화분 여러 개를 아이템 한 번 차감으로 올림 → 거부 (batch 하나에 표시한 화분 1개만)", async () => {
+      await setup({time: 10 * HOUR, items: itemsOf(1)});
+      await seed(testEnv, async (db) => {
+        await setDoc(doc(db, "users", ALICE, "pots", "pot2"), {name: "화분2", potTotalStudyingTime: 10 * HOUR, potLevel: 0});
+      });
+      const db = asAlice();
+      const batch = writeBatch(db);
+      batch.update(doc(db, "users", ALICE, "pots", "pot1"), {potLevel: 1});
+      batch.update(doc(db, "users", ALICE, "pots", "pot2"), {potLevel: 1});
+      batch.update(doc(db, "users", ALICE), {"item.heart": increment(-1), lastLevelUpPotId: "pot1"});
+      await assertFails(batch.commit());
+      assert.strictEqual((await read("users", ALICE, "pots", "pot1")).potLevel, 0);
+      assert.strictEqual((await read("users", ALICE, "pots", "pot2")).potLevel, 0);
+      assert.strictEqual((await read("users", ALICE)).item.heart, 1);
+    });
+
     it("같은 화분을 연속으로 레벨업하면 표시 값이 같아도 허용", async () => {
       await setup({time: 10 * HOUR, items: itemsOf(100)});
       await assertSucceeds(levelUpBatch(asAlice(), LV0));

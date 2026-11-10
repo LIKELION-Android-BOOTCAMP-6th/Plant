@@ -32,6 +32,12 @@ users
     │   ├── nutrient: Int
     │   └── box: Int
     │
+    ├── boxOpenings                       ← 보너스 박스 열기 결과 (functions openBonusBoxes만 씀, 앱은 읽기·쓰기 불가, #454)
+    │   └── {requestId}                   ← 앱이 보낸 요청 ID (같은 요청은 한 번만 추첨·지급)
+    │       ├── count: Int                ← 연 박스 수
+    │       ├── items: List<String>       ← 뽑힌 보상의 앱 ItemType 이름 (예: "HEART", "GOLD_300")
+    │       └── createdAt: Timestamp
+    │
     └── pots
         └── {potsId}
             ├── id: String

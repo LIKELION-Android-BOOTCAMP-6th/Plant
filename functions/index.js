@@ -15,6 +15,7 @@ const {
 const {onCall, HttpsError} = require("firebase-functions/https");
 const {onSchedule} = require("firebase-functions/scheduler");
 const logger = require("firebase-functions/logger");
+const {randomInt} = require("crypto");
 const {initializeApp} = require("firebase-admin/app");
 const {getAuth} = require("firebase-admin/auth");
 const {
@@ -197,6 +198,150 @@ exports.grantStudyReward = onDocumentCreated(
         event.params.uid, event.params.potId, event.params.logId,
     ),
 );
+
+// ---------------------------------------------------------------------------
+// 보너스 박스 열기 (#454)
+// ---------------------------------------------------------------------------
+// 앱이 추첨하고 결과를 쓰던 박스 열기를 서버가 추첨·지급한다 → 뽑기 결과를 조작할 수 없다.
+// - 온라인 전용: 오프라인에서는 호출이 실패하고 앱이 네트워크 안내를 보여준다
+// - 한 트랜잭션에서 보유량 확인 → 추첨 → 박스 차감·아이템/Gold 지급 → 결과 저장을 한다
+// - 멱등: 결과를 users/{uid}/boxOpenings/{requestId}에 저장한다. 같은 requestId로 다시 호출하면
+//   (응답을 받지 못해 앱이 재시도) 다시 추첨하지 않고 저장된 결과를 돌려준다
+//   boxOpenings는 보안 규칙에 match가 없어 앱이 읽거나 쓸 수 없다 (Admin SDK만 사용)
+//   회원탈퇴 시 deleteUserData의 recursiveDelete(users/{uid})가 함께 지운다
+// - 박스에서 박스가 나오면 순증감(뽑힌 박스 수 - 연 박스 수)으로 반영한다
+
+// 확률 표 (원본은 서버. 앱 ItemType에는 표시용 이름·가격만 있다)
+// type: 앱 ItemType 이름(응답으로 보냄), weight: 1000분율(합 1000), field: users.item 필드 키
+// gold: users.gold에 더할 값
+const BONUS_BOX_DROP_TABLE = [
+  {type: "HEART", weight: 600, field: "heart"},
+  {type: "SUN", weight: 130, field: "sun"},
+  {type: "WATER", weight: 90, field: "water"},
+  {type: "FERTILIZER", weight: 50, field: "fertilizer"},
+  {type: "NUTRIENT", weight: 20, field: "nutrient"},
+  {type: "BOX", weight: 50, field: "box"},
+  {type: "GOLD_300", weight: 35, gold: 300},
+  {type: "GOLD_500", weight: 20, gold: 500},
+  {type: "GOLD_1000", weight: 5, gold: 1000},
+];
+const BONUS_BOX_TOTAL_WEIGHT = BONUS_BOX_DROP_TABLE
+    .reduce((sum, drop) => sum + drop.weight, 0);
+
+// 한 번에 열 수 있는 최대 개수 (응답·저장 문서 크기 제한용)
+// 바꾸면 앱 OpenBonusBoxUseCase.MAX_OPEN_COUNT도 같이 바꿀 것
+const BONUS_BOX_MAX_OPEN_COUNT = 100;
+// requestId는 문서 ID로 쓰므로 "/" 등을 막는다 (앱은 UUID를 보낸다)
+const BONUS_BOX_REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
+const BONUS_BOX_NOT_ENOUGH_MESSAGE = "보너스 박스의 개수가 부족합니다.";
+
+/**
+ * 확률 표에서 하나를 뽑는다.
+ * @return {Object} BONUS_BOX_DROP_TABLE의 항목
+ */
+function drawBonusBoxOnce() {
+  let target = randomInt(BONUS_BOX_TOTAL_WEIGHT);
+  for (const drop of BONUS_BOX_DROP_TABLE) {
+    if (target < drop.weight) return drop;
+    target -= drop.weight;
+  }
+  // 가중치 합으로 뽑으므로 여기에 오지 않는다
+  return BONUS_BOX_DROP_TABLE[0];
+}
+
+/**
+ * 뽑힌 목록으로 users/{uid} 갱신 값을 만든다. 연 박스 수만큼 item.box를 줄인다.
+ * @param {Object[]} drops BONUS_BOX_DROP_TABLE의 항목 목록
+ * @param {number} openedCount
+ * @return {Object<string, FirebaseFirestore.FieldValue>}
+ */
+function buildBonusBoxUpdates(drops, openedCount) {
+  const itemCounts = {box: -openedCount};
+  let gold = 0;
+  drops.forEach((drop) => {
+    if (drop.field) {
+      itemCounts[drop.field] = (itemCounts[drop.field] || 0) + 1;
+    }
+    if (drop.gold) gold += drop.gold;
+  });
+
+  const updates = {};
+  Object.entries(itemCounts).forEach(([field, count]) => {
+    // 박스를 연 만큼 다시 뽑으면 순증감 0 → 쓰지 않는다
+    if (count !== 0) updates[`item.${field}`] = FieldValue.increment(count);
+  });
+  if (gold > 0) updates.gold = FieldValue.increment(gold);
+  return updates;
+}
+
+/**
+ * 박스를 열어 뽑힌 아이템 이름 목록을 돌려준다. 같은 requestId는 한 번만 처리한다.
+ * @param {string} uid
+ * @param {number} count
+ * @param {string} requestId
+ * @return {Promise<{items: string[]}>}
+ */
+async function openBonusBoxes(uid, count, requestId) {
+  const userRef = db.collection("users").doc(uid);
+  const openingRef = userRef.collection("boxOpenings").doc(requestId);
+
+  return db.runTransaction(async (transaction) => {
+    const [openingSnapshot, userSnapshot] = await Promise.all([
+      transaction.get(openingRef),
+      transaction.get(userRef),
+    ]);
+    if (openingSnapshot.exists) {
+      logger.info("이미 처리된 박스 열기 요청", {uid, requestId});
+      return {items: openingSnapshot.get("items") || []};
+    }
+    if (!userSnapshot.exists) {
+      throw new HttpsError("not-found", "사용자 정보를 찾을 수 없습니다.");
+    }
+
+    const box = userSnapshot.get("item.box");
+    const owned = typeof box === "number" ? box : 0;
+    if (owned < count) {
+      throw new HttpsError("failed-precondition", BONUS_BOX_NOT_ENOUGH_MESSAGE);
+    }
+
+    const drops = Array.from({length: count}, drawBonusBoxOnce);
+    const items = drops.map((drop) => drop.type);
+    transaction.update(userRef, buildBonusBoxUpdates(drops, count));
+    transaction.set(openingRef, {
+      count,
+      items,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+    return {items};
+  });
+}
+
+exports.openBonusBoxes = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+  }
+  const {count, requestId} = request.data || {};
+  if (!Number.isInteger(count) || count <= 0 ||
+      count > BONUS_BOX_MAX_OPEN_COUNT) {
+    throw new HttpsError(
+        "invalid-argument",
+        `보너스 박스는 한 번에 1~${BONUS_BOX_MAX_OPEN_COUNT}개까지 열 수 있습니다.`,
+    );
+  }
+  if (typeof requestId !== "string" ||
+      !BONUS_BOX_REQUEST_ID_PATTERN.test(requestId)) {
+    throw new HttpsError("invalid-argument", "잘못된 요청입니다.");
+  }
+
+  try {
+    return await openBonusBoxes(request.auth.uid, count, requestId);
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    // 원인은 로그로만 남긴다 (내부 정보 노출 방지)
+    logger.error("보너스 박스 열기 실패", {uid: request.auth.uid, error});
+    throw new HttpsError("internal", "보너스 박스 열기 실패");
+  }
+});
 
 // ---------------------------------------------------------------------------
 // 화분 삭제 후 하위 학습 기록 정리 (#455)
