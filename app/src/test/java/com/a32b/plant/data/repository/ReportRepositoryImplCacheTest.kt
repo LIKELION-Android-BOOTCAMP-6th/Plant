@@ -60,6 +60,49 @@ class ReportRepositoryImplCacheTest {
         assertTrue(repository.getPeriodData("uid", 0L, 1L).getOrThrow().isFromCache)
     }
 
+    @Test
+    fun `multiple pots are server based when every query is server based`() = runTest {
+        val repository = multiPotRepository(false, false, false)
+        assertFalse(repository.getPeriodData("uid", 0L, 1L).getOrThrow().isFromCache)
+    }
+
+    @Test
+    fun `multiple pots are cache based when first pot query is cached`() = runTest {
+        val repository = multiPotRepository(false, true, false)
+        assertTrue(repository.getPeriodData("uid", 0L, 1L).getOrThrow().isFromCache)
+    }
+
+    @Test
+    fun `multiple pots are cache based when last pot query is cached`() = runTest {
+        val repository = multiPotRepository(false, false, true)
+        assertTrue(repository.getPeriodData("uid", 0L, 1L).getOrThrow().isFromCache)
+    }
+
+    @Test
+    fun `multiple server pot queries are cache based when pot list is cached`() = runTest {
+        val repository = multiPotRepository(true, false, false)
+        assertTrue(repository.getPeriodData("uid", 0L, 1L).getOrThrow().isFromCache)
+    }
+
+    private fun multiPotRepository(
+        potListFromCache: Boolean,
+        firstPotFromCache: Boolean,
+        secondPotFromCache: Boolean
+    ) = ReportRepositoryImpl(
+        potRemoteDataSource = FakePotRemoteDataSource(
+            GetPotsOnceResult(
+                listOf(PotDto(id = "pot-1"), PotDto(id = "pot-2")),
+                isFromCache = potListFromCache
+            )
+        ),
+        studyLogRemoteDataSource = FakeStudyLogRemoteDataSource(
+            resultsByPotId = mapOf(
+                "pot-1" to GetPotLogsInPeriodResult(emptyList(), isFromCache = firstPotFromCache),
+                "pot-2" to GetPotLogsInPeriodResult(emptyList(), isFromCache = secondPotFromCache)
+            )
+        )
+    )
+
     private class FakePotRemoteDataSource(private val result: GetPotsOnceResult) : PotRemoteDataSource {
         override fun getPots(uid: String): Flow<List<PotDto>> = emptyFlow()
         override suspend fun addPot(uid: String, tag: Tag, name: String): kotlin.Result<Unit> = error("Unused")
@@ -73,21 +116,37 @@ class ReportRepositoryImplCacheTest {
             newLevel: Int,
             items: Map<ItemType, Int>
         ) = Unit
+        override suspend fun getPotPreferringCache(uid: String, potId: String): PotDto? = error("Unused")
+        override suspend fun getPotOnServer(uid: String, potId: String): PotDto? = error("Unused")
+        override fun completePot(uid: String, potId: String): Task<Void> = error("Unused")
+        override fun deletePot(
+            uid: String,
+            potId: String,
+            potTotalStudyingTime: Long,
+            isCompleted: Boolean
+        ): Task<Void> = error("Unused")
     }
 
-    private class FakeStudyLogRemoteDataSource(private val result: GetPotLogsInPeriodResult) : StudyLogRemoteDataSource {
+    private class FakeStudyLogRemoteDataSource(
+        private val result: GetPotLogsInPeriodResult? = null,
+        private val resultsByPotId: Map<String, GetPotLogsInPeriodResult> = emptyMap()
+    ) : StudyLogRemoteDataSource {
         override fun getStudyLogs(uid: String, potId: String): Flow<List<StudyLogDto>> = emptyFlow()
         override suspend fun getPotLogs(uid: String, potId: String): List<StudyLogDto> = error("Unused")
         override suspend fun getSelectedStudyLog(uid: String, potId: String, logId: String): StudyLogDto? =
             error("Unused")
-        override suspend fun executeDeleteBatch(uid: String, potId: String, logId: String, decreaseAmount: Long) =
+        override suspend fun getStudyLogPreferringCache(uid: String, potId: String, logId: String): StudyLogDto? =
+            error("Unused")
+        override suspend fun existsStudyLogOnServer(uid: String, potId: String, logId: String): Boolean =
+            error("Unused")
+        override fun deleteStudyLog(uid: String, potId: String, logId: String, studyingTime: Long): Task<Void> =
             error("Unused")
         override suspend fun getPotLogsInPeriod(
             uid: String,
             potId: String,
             startInclusive: Timestamp,
             endExclusive: Timestamp
-        ): GetPotLogsInPeriodResult = result
+        ): GetPotLogsInPeriodResult = resultsByPotId[potId] ?: result ?: error("Unexpected potId: $potId")
     }
 
     private fun <T> Result<T>.getOrThrow(): T = when (this) {
