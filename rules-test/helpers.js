@@ -128,7 +128,38 @@ function deletePotBatch(db, {
   return batch.commit();
 }
 
+// ---------------------------------------------------------------------------
+// 화분 레벨업 batch (#456) — 앱의 PotRemoteDataSourceImpl.levelUpPot과 같은 쓰기
+// ---------------------------------------------------------------------------
+
+/**
+ * 화분 레벨업 batch
+ * - newLevel: 화분에 쓸 새 레벨 (앱은 캐시의 현재 레벨 + 1)
+ * - items: 줄일 아이템 { heart: 1, sun: 3, ... } (앱은 조건 표의 requiredItems)
+ * - markedPotId: users.lastLevelUpPotId (기본 potId)
+ * - pot: 화분 문서 필드 덮어쓰기 (레벨 외 필드를 함께 바꾸는 거부 케이스용)
+ * - skipPot / skipUser: 화분 갱신·유저 갱신을 빼고 보냄
+ */
+function levelUpBatch(db, {
+  uid = ALICE, potId = "pot1", newLevel, items = {}, markedPotId, pot = {},
+  skipPot = false, skipUser = false,
+} = {}) {
+  const batch = writeBatch(db);
+  if (!skipPot) {
+    batch.update(doc(db, "users", uid, "pots", potId), {potLevel: newLevel, ...pot});
+  }
+  if (!skipUser) {
+    // 규칙이 아이템 차감이 어느 화분의 레벨업 때문인지 확인하도록 화분 ID를 함께 적는다
+    batch.update(doc(db, "users", uid), {
+      ...Object.fromEntries(Object.entries(items).map(([key, count]) => [`item.${key}`, increment(-count)])),
+      lastLevelUpPotId: markedPotId ?? potId,
+    });
+  }
+  return batch.commit();
+}
+
 module.exports = {
   ALICE, BOB, createTestEnv, seed,
   completePotBatch, deleteStudyLogBatch, deletePotBatch,
+  levelUpBatch,
 };

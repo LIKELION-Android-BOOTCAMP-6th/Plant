@@ -2,6 +2,8 @@ package com.a32b.plant.data.repository
 
 import android.util.Log
 import com.a32b.plant.core.util.safeRunCatching
+import com.a32b.plant.data.error.toFunctionsAppError
+import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.source.remote.item.ItemRemoteDataSource
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.repository.ItemRepository
@@ -17,36 +19,19 @@ class ItemRepositoryImpl @Inject constructor(
     private val itemRemoteDataSource: ItemRemoteDataSource
 ): ItemRepository {
 
-    override suspend fun addDrawItems(uid: String, items: List<ItemType>): Result<Unit> = safeRunCatching {
-        itemRemoteDataSource.addDrawItems(uid, items)
+    override suspend fun openBonusBoxes(boxCount: Int, requestId: String): Result<List<ItemType>> = safeRunCatching {
+        itemRemoteDataSource.openBonusBoxes(boxCount, requestId)
     }.fold(
-        onSuccess = { Result.Success(Unit)},
-        onFailure = { e -> Result.Failure(handleError(e, "알 수 없는 오류가 발생했습니다."))}
-    )
-
-    override suspend fun openBonusBoxes(uid: String, boxCount: Int, items: List<ItemType>): Result<Unit> = safeRunCatching {
-        itemRemoteDataSource.openBonusBoxes(uid, boxCount, items)
-    }.fold(
-        onSuccess = { Result.Success(Unit)},
-        onFailure = { e -> Result.Failure(handleError(e, "알 수 없는 오류가 발생했습니다."))}
+        onSuccess = { Result.Success(it.toDomain()) },
+        onFailure = { e ->
+            Log.e("ItemRepository", "보너스 박스 열기 함수 호출 실패: ${e.message}", e)
+            // 박스 부족 등 서버가 보낸 안내 문구는 AppError.Custom으로, 오프라인은 AppError.Network로 바뀐다
+            Result.Failure(e.toFunctionsAppError())
+        }
     )
 
     override fun getBoxCount(uid: String): Flow<Int> =
         itemRemoteDataSource.observeBoxCount(uid)
-
-    override suspend fun consumeItems(uid: String, items: Map<ItemType, Int>): Result<Unit> = safeRunCatching {
-        itemRemoteDataSource.consumeItems(uid, items)
-    }.fold(
-        onSuccess = { Result.Success(Unit) },
-        onFailure = { e -> Result.Failure(handleError(e, "아이템 소비 중 오류가 발생했습니다.")) }
-    )
-
-    override suspend fun canConsumeItems(uid: String, items: Map<ItemType, Int>): Result<Boolean> = safeRunCatching {
-        itemRemoteDataSource.canConsumeItems(uid, items)
-    }.fold(
-        onSuccess = { Result.Success(it) },
-        onFailure = { e -> Result.Failure(handleError(e, "아이템 확인 중 오류가 발생했습니다.")) }
-    )
 
     private fun handleError(e: Throwable, logMessage: String): AppError {
         Log.e("ItemRepository", "$logMessage: ${e.message}", e)

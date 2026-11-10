@@ -7,8 +7,6 @@ import com.a32b.plant.data.firestore.awaitServerWrite
 import com.a32b.plant.data.firestore.isRuleRejection
 import com.a32b.plant.data.source.remote.pot.PotRemoteDataSource
 import com.a32b.plant.data.mapper.toDomain
-import com.a32b.plant.data.source.remote.pot.InsufficientItemsException
-import com.a32b.plant.data.source.remote.pot.PotLevelMismatchException
 import com.a32b.plant.data.source.remote.pot.PotNotFoundException
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.Pot
@@ -210,8 +208,6 @@ class PotRepositoryImpl @Inject constructor(
     private fun handleError(e: Throwable, defaultMessage: String, isWrite: Boolean = false): AppError = when (e) {
         is AppError -> e
 
-        is InsufficientItemsException -> AppError.InsufficientItems()
-        is PotLevelMismatchException -> AppError.Custom("이미 레벨업이 완료된 화분입니다.")
         is PotNotFoundException -> AppError.Custom(POT_NOT_FOUND_MESSAGE)
 
         is FirebaseFirestoreException -> when (e.code) {
@@ -229,30 +225,50 @@ class PotRepositoryImpl @Inject constructor(
         else -> if (isWrite) AppError.Upload() else AppError.Custom(defaultMessage)
     }
 
-    //레벨업 및 아이템 차감
-    override suspend fun levelUpWithItemConsumption(
-        uid: String,
-        potId: String,
-        newLevel: Int,
-        items: Map<ItemType, Int>
-    ): Result<Unit> {
-        return safeRunCatching {
-            potRemoteDataSource.levelUpWithItemConsumption(uid, potId, newLevel, items)
+    override suspend fun getPotPreferringCache(uid: String, potId: String): Result<Pot?> =
+        safeRunCatching {
+            potRemoteDataSource.getPotPreferringCache(uid, potId)?.toDomain()
         }.fold(
             onSuccess = { Result.Success(it) },
             onFailure = { e ->
-                Log.e("PotRepository", "화분 레벨업 및 아이템 차감 실패", e)
-                Result.Failure(handleError(e, "화분 레벨업에 실패했습니다.", isWrite = true))
+                Log.e("PotRepository", "화분 조회 실패", e)
+                Result.Failure(handleError(e, POT_LOAD_ERROR_MESSAGE))
+            }
+        )
+
+    override suspend fun levelUpPot(
+        uid: String,
+        potId: String,
+        currentLevel: Int,
+        items: Map<ItemType, Int>
+    ): Result<SaveResult> {
+        val newLevel = currentLevel + 1
+        return safeRunCatching {
+            potRemoteDataSource.levelUpPot(uid, potId, newLevel, items).awaitServerWrite(WRITE_TIMEOUT)
+        }.fold(
+            onSuccess = { write ->
+                write.toSaveResult("화분 레벨업", LEVEL_UP_ERROR_MESSAGE) {
+                    // 거부됐지만 서버 레벨이 목표 레벨이면 먼저 도착한 같은 레벨업이 반영된 것 (연타·재전송)
+                    val serverPot = potRemoteDataSource.getPotOnServer(uid, potId) ?: throw PotNotFoundException()
+                    serverPot.potLevel == newLevel
+                }
+            },
+            onFailure = { e ->
+                Log.e("PotRepository", "화분 레벨업 실패", e)
+                Result.Failure(handleError(e, LEVEL_UP_ERROR_MESSAGE, isWrite = true))
             }
         )
     }
 
     companion object {
-        /** 화분 이름 변경·완료·삭제 제한 시간 — 학습 기록 저장(StudyingRepositoryImpl.SAVE_TIMEOUT)과 같은 5초 */
+        /** 화분 이름 변경·완료·삭제·레벨업 제한 시간 — 학습 기록 저장(StudyingRepositoryImpl.SAVE_TIMEOUT)과 같은 5초 */
         private val WRITE_TIMEOUT = 5.seconds
         private const val RENAME_ERROR_MESSAGE = "화분 이름 변경에 실패했습니다."
         private const val COMPLETE_ERROR_MESSAGE = "학습 완료에 실패했습니다. 다시 시도해주세요."
         private const val DELETE_POT_ERROR_MESSAGE = "화분 삭제에 실패했습니다. 다시 시도해주세요."
         private const val POT_NOT_FOUND_MESSAGE = "존재하지 않거나 삭제된 화분입니다."
+        private const val POT_LOAD_ERROR_MESSAGE = "화분 정보를 불러오지 못했습니다."
+        // 규칙은 거부 사유를 알려주지 않는다 — 예: 다른 기기에서 아이템을 먼저 써서 서버 기준으로 부족해진 경우
+        private const val LEVEL_UP_ERROR_MESSAGE = "레벨업에 실패했습니다. 아이템과 학습 시간을 확인해주세요."
     }
 }
