@@ -27,6 +27,15 @@ interface PotRepository {
     /** 화분 완료 (#455). 이미 완료된 화분이면 보내지 않고 성공, 없는 화분이면 실패 */
     suspend fun completeStudyPlan(uid: String, potId: String): Result<SaveResult>
     suspend fun getTodayStudyLogs(uid: String, potId: String, startOfToday: Date): Result<List<StudyLog>>
-    suspend fun levelUpWithItemConsumption(uid: String, potId: String, newLevel: Int, items: Map<ItemType, Int>): Result<Unit>
+
+    /** 기기 캐시의 화분 (캐시에 없으면 기본 조회). 없는 화분이면 null — 레벨업 조건을 오프라인에서도 확인하기 위함 (#456) */
+    suspend fun getPotPreferringCache(uid: String, potId: String): Result<Pot?>
+
+    /**
+     * 화분 레벨업 (#456). 레벨 [currentLevel] + 1과 아이템 [items] 차감을 batch 하나로 쓴다.
+     * 학습 시간·아이템 조건은 호출부가 먼저 확인하고, 서버에서는 보안 규칙이 같은 조건 표로 다시 검증한다.
+     * 거부됐지만 서버 레벨이 이미 목표 레벨이면(연타·재전송) 성공
+     */
+    suspend fun levelUpPot(uid: String, potId: String, currentLevel: Int, items: Map<ItemType, Int>): Result<SaveResult>
 
 }

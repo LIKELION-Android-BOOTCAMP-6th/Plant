@@ -13,6 +13,7 @@ import com.a32b.plant.domain.model.AttendanceReward
 import com.a32b.plant.domain.model.DailyCheckThisMonth
 import com.a32b.plant.domain.model.Item
 import com.a32b.plant.domain.model.Pot
+import com.a32b.plant.domain.model.SaveResult
 import com.a32b.plant.domain.model.PotLevelConditions
 import com.a32b.plant.domain.model.StudyReward
 import com.a32b.plant.domain.model.StudySaveResult
@@ -59,8 +60,8 @@ data class AttendanceUiState(
 )
 
 data class HomeUiState(
-    val levelUpReady: Boolean = false, //레벨업 버튼 활성화
-    val showInsufficientItemsDialog: Boolean = false, // 아이템 부족 다이얼로그
+    val levelUpReady: Boolean = false, // 레벨업 학습 시간 조건 충족 (false면 버튼을 비활성처럼 표시, 누르면 남은 시간 안내)
+    val insufficientItemsMessage: String? = null, // 아이템 부족 다이얼로그 문구 ("햇빛, 물이(가) 부족합니다.") — null이면 닫힘
     val levelUpProgress: Float = 0f,
     val levelUpProgressText: String = "",
     val isLoading: Boolean = false
@@ -69,7 +70,8 @@ data class HomeUiState(
 sealed class HomeEvent {
     data class ShowToast(val message: String) : HomeEvent()
     data class BonusBoxResult(val items: List<ItemType>) : HomeEvent()
-    object LevelUpSuccess : HomeEvent()
+    // isPending: 서버 응답 없이 기기에만 반영됨 (오프라인) — 연결되면 자동 전송, 다시 보내지 않음
+    data class LevelUpSuccess(val isPending: Boolean) : HomeEvent()
 }
 
 private fun DailyCheckThisMonth.toAttendanceUiState(): AttendanceUiState {
@@ -603,27 +605,25 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(levelUpReady = ready) }
     }
 
-    //레벨업 함수
-    fun onLevelUpClick(potId: String, currentPotLevel: Int) {
+    // 레벨업 (#456): 조건 확인·안내는 LevelUpPotUseCase가 하고, 여기서는 결과만 화면에 알린다
+    // 레벨 이미지·아이템 개수는 화분·유저 실시간 구독이 기기 캐시 반영 즉시 갱신하므로 직접 바꾸지 않는다
+    // (서버에서 거부되면 캐시가 되돌아가 구독이 원래 값으로 다시 그린다)
+    fun onLevelUpClick(potId: String) {
+        // 처리 중 연타 가드 — 같은 레벨업 batch가 두 번 가지 않게 한다 (두 번 가도 규칙이 두 번째를 거부함)
+        if (_uiState.value.isLoading) return
+        _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            levelUpPotUseCase(potId, currentPotLevel)
-                .onSuccess {
-                    val leveledUp = _displayPot.value.let {
-                        if (it.id == potId) it.copy(potLevel = currentPotLevel + 1) else it
-                    }
-
-                    updateProgressAndCondition(leveledUp)
-
+            levelUpPotUseCase(potId)
+                .onSuccess { result ->
                     _uiState.update { it.copy(isLoading = false) }
-                    _eventChannel.send(HomeEvent.LevelUpSuccess)
+                    _eventChannel.send(HomeEvent.LevelUpSuccess(isPending = result == SaveResult.Pending))
                 }
                 .onFailure { e ->
                     _uiState.update { it.copy(isLoading = false) }
                     when (e) {
                         is AppError.UnknownUser -> Unit
                         is AppError.InsufficientItems -> {
-                            _uiState.update { it.copy(showInsufficientItemsDialog = true) }
+                            _uiState.update { it.copy(insufficientItemsMessage = e.message) }
                         }
                         else -> sendToast(e.message)
                     }
@@ -632,7 +632,7 @@ class HomeViewModel @Inject constructor(
     }
 
     fun onDismissInsufficientDialog() {
-        _uiState.update { it.copy(showInsufficientItemsDialog = false) }
+        _uiState.update { it.copy(insufficientItemsMessage = null) }
     }
 
     //바 계산 & 레벨업 조건 검증 일괄 처리용

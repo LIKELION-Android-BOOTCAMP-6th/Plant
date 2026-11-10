@@ -64,6 +64,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -172,9 +173,9 @@ fun HomeScreen(
         )
     }
 
-    if (uiState.showInsufficientItemsDialog) {
+    uiState.insufficientItemsMessage?.let { message ->
         ConfirmDialog(
-            text = "아이템이 부족합니다",
+            text = message,
             semiText = "아이템 상점에서 구매할 수 있어요.",
             onDismiss = { viewModel.onDismissInsufficientDialog() },
             onConfirm = { viewModel.onDismissInsufficientDialog() }
@@ -188,7 +189,9 @@ fun HomeScreen(
                 is HomeEvent.BonusBoxResult -> bonusBoxResult = event.items
                 is HomeEvent.LevelUpSuccess -> {
                     showLevelUpConfetti = true
-                    context.showToast("레벨업 성공!")
+                    context.showToast(
+                        if (event.isPending) "레벨업 성공! 네트워크에 연결되면 자동으로 저장돼요." else "레벨업 성공!"
+                    )
                 }
             }
         }
@@ -258,7 +261,7 @@ fun HomeScreen(
                         },
                         onLevelUpClick = {
                             if (!hasNoPot && !uiState.isLoading) {
-                                viewModel.onLevelUpClick(displayPot.id, displayPot.potLevel)
+                                viewModel.onLevelUpClick(displayPot.id)
                             }
                         },
 
@@ -799,10 +802,16 @@ fun MainPlantCard(
 
                 Spacer(modifier = Modifier.height(8.dp.compactIf(compact)))
 
+                // 학습 시간 부족·최고 레벨이면 비활성처럼만 표시 — enabled=false면 클릭이 막혀 남은 시간 안내를 띄울 수 없으므로
+                // 조건 확인과 안내는 ViewModel(LevelUpPotUseCase)에서 한다. 실제로 막는 것은 처리 중일 때뿐
                 Button(
                     onClick = onLevelUpClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = levelUpReady && !isLoading,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .alpha(if (levelUpReady) 1f else 0.38f)
+                        // alpha는 시각 표시뿐이라 TalkBack에 상태를 따로 알림
+                        .semantics { if (!levelUpReady) stateDescription = LEVEL_UP_NOT_READY_STATE_DESCRIPTION },
+                    enabled = !isLoading,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
                     )
@@ -1064,6 +1073,9 @@ private val ITEM_LABEL_LINE_HEIGHT = 14.sp
 
 /** 아이템 이름 자리 높이에 쓰는 줄 수. "보너스" / "박스"가 2줄이라 모든 칸의 이름 자리를 2줄 높이로 맞춘다 (#387) */
 private const val ITEM_LABEL_LINE_SLOTS = 2
+
+// 레벨업 버튼이 비활성처럼 보일 때(학습 시간 부족·최고 레벨) TalkBack이 읽는 상태
+private const val LEVEL_UP_NOT_READY_STATE_DESCRIPTION = "조건 미충족"
 
 /**
  * 홈 타일에 쓰는 이름을 줄 단위로 나눈 목록 (#387)

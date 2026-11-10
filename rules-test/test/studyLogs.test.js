@@ -227,10 +227,9 @@ describe("studyLogs", () => {
       await assertFails(updateDoc(doc(asAlice(), "users", ALICE, "pots", "pot1"), {lastStudiedAt: serverTimestamp()}));
     });
 
-    // 화분 완료는 완료 수와 함께 검증한다 (potCompleteDelete.test.js, #455)
-    it("화분 이름 변경·레벨업은 학습 저장 검증과 무관하게 허용", async () => {
+    // 화분 완료는 완료 수와 함께 (potCompleteDelete.test.js, #455), 레벨업은 아이템 차감과 함께 (potLevelUp.test.js, #456) 검증한다
+    it("화분 이름 변경은 학습 저장 검증과 무관하게 허용", async () => {
       await assertSucceeds(updateDoc(doc(asAlice(), "users", ALICE, "pots", "pot1"), {name: "새 이름"}));
-      await assertSucceeds(updateDoc(doc(asAlice(), "users", ALICE, "pots", "pot1"), {potLevel: 1}));
     });
 
     it("화분과 유저는 학습 시간 0으로만 만들 수 있다", async () => {

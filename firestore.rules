@@ -295,11 +295,12 @@ service cloud.firestore {
         getAfter(userPath(userId)).data.get('lastCompletedPotId', '') == potId;
     }
 
-    // pots/{potId} 수정 중 위 검증이 없는 쓰기(이름 변경, 레벨업 등): 학습 시간·학습 저장·완료·삭제 표시 필드는 바꿀 수 없다
+    // pots/{potId} 수정 중 위 검증이 없는 쓰기(이름 변경 등): 학습 시간·학습 저장·완료·삭제 표시 필드와 레벨은 바꿀 수 없다
+    // 레벨은 레벨업 검증(potLeveledUp, #456)으로만 바꿀 수 있다
     function potCountedFieldsKept() {
       return !changedKeys().hasAny([
         'potTotalStudyingTime', 'lastStudiedAt', 'lastStudySessionId',
-        'lastDeletedLogId', 'isCompleted', 'completedAt'
+        'lastDeletedLogId', 'isCompleted', 'completedAt', 'potLevel'
       ]);
     }
 
@@ -342,11 +343,12 @@ service cloud.firestore {
     }
 
     // users/{uid} 수정 중 위 검증이 없는 쓰기(닉네임, 이미지, 출석, 아이템 등):
-    // 학습 시간·학습 저장·완료 수·삭제/완료 표시 필드는 바꿀 수 없다
+    // 학습 시간·학습 저장·완료 수·삭제/완료/레벨업 표시 필드는 바꿀 수 없다
     function userCountedFieldsKept() {
       return !changedKeys().hasAny([
         'totalStudyTime', 'lastStudyEndedAt', 'lastStudyPotId', 'lastStudySessionId',
-        'completedPotsCount', 'lastCompletedPotId', 'lastDeletedPotId', 'lastDeletedLogId'
+        'completedPotsCount', 'lastCompletedPotId', 'lastDeletedPotId', 'lastDeletedLogId',
+        'lastLevelUpPotId'
       ]);
     }
 
@@ -375,30 +377,124 @@ service cloud.firestore {
       return userDeletionMarkedInThisWrite(userId, potId, '');
     }
 
+    // ---------------------------------------------------------------------
+    // 화분 레벨업 검증 (#456)
+    // ---------------------------------------------------------------------
+    // 앱은 아래 2개를 batch 하나로 쓴다. 오프라인이면 기기 캐시에 먼저 반영되고 연결되면 전송된다.
+    //   - pots/{potId}: potLevel = 현재 레벨 + 1 (증가값이 아닌 정해진 값)
+    //   - users/{uid}:  item.* -= 레벨업 조건 표의 필요 개수 (FieldValue.increment), lastLevelUpPotId = potId
+    // 두 문서의 규칙이 서로를 확인한다.
+    //   - 화분 규칙(potLeveledUp): 같은 쓰기의 유저 아이템 변화(get → getAfter)가 조건 표와 같은지
+    //   - 유저 규칙(userLeveledUpPot): 성장 아이템이 줄어드는 쓰기면, 같은 쓰기에서 표시한 화분의 레벨이 1 올라가는지
+    // 같은 레벨업이 두 번 도착하면(연타, 재전송) 두 번째의 화분 쓰기는 서버 레벨과 같은 값이라 바뀌는 것이 없다.
+    // 화분 쓰기 자체는 통과하지만 유저 규칙이 "레벨이 오르지 않았는데 아이템이 줄어듦"으로 거부한다
+    // → 두 단계 연속 상승·이중 차감이 생기지 않는다.
+    // 학습 시간 조건은 레벨업 시점에만 확인한다: 나중에 기록을 지워 시간이 조건 아래로 내려가도 오른 레벨은 유지한다
+    // 완료된 화분은 레벨업할 수 없다 (홈은 진행 중인 화분만 보여주고, 학습 저장(potStudySaved)도 완료 화분을 거부함)
+
+    // 최고 레벨 — 앱의 PotLevelConditions.table에 조건이 있는 마지막 레벨(5) + 1
+    function maxPotLevel() {
+      return 6;
+    }
+
+    // 레벨업 조건 표: 아래 두 함수의 [현재 레벨] 값이 다음 레벨로 올리는 조건이다
+    // 앱 domain/model/LevelUpCondition.kt의 PotLevelConditions.table(minHoursForLevelUp, requiredItems)과 같아야 한다.
+    // 값을 바꾸면 두 곳을 함께 수정한다 — rules-test/test/potLevelUp.test.js가 앱 파일을 읽어 레벨마다 경계값을 확인한다
+    function levelUpMinStudyMs(level) {
+      return [1, 5, 15, 30, 70, 150][level] * 60 * 60 * 1000;
+    }
+
+    function levelUpRequiredItems(level) {
+      return [
+        {'heart': 1},
+        {'sun': 3, 'water': 1, 'heart': 5},
+        {'water': 5, 'sun': 15, 'heart': 22},
+        {'fertilizer': 3, 'sun': 13, 'water': 4},
+        {'nutrient': 1, 'fertilizer': 10, 'sun': 17, 'heart': 30},
+        {'nutrient': 5, 'fertilizer': 10, 'water': 35, 'sun': 30, 'heart': 50}
+      ][level];
+    }
+
+    // 아이템 하나가 필요 개수만큼 정확히 줄었는지 (필요 없는 아이템은 그대로여야 함). 줄인 아이템은 0 이상으로 남아야 한다
+    function itemDeductedBy(before, after, required, key) {
+      let need = required.get(key, 0);
+      return after.get(key, 0) == before.get(key, 0) - need &&
+        (need == 0 || after.get(key, 0) >= 0);
+    }
+
+    // 성장 아이템 5종이 모두 조건 표대로 줄었는지 (box·gold는 레벨업과 무관해 확인하지 않음)
+    function itemsDeductedForLevelUp(userId, required) {
+      let before = get(userPath(userId)).data.get('item', {});
+      let after = getAfter(userPath(userId)).data.get('item', {});
+      return itemDeductedBy(before, after, required, 'heart') &&
+        itemDeductedBy(before, after, required, 'sun') &&
+        itemDeductedBy(before, after, required, 'water') &&
+        itemDeductedBy(before, after, required, 'fertilizer') &&
+        itemDeductedBy(before, after, required, 'nutrient');
+    }
+
+    // pots/{potId} 수정 중 레벨업: 레벨만 1 오르고, 학습 시간이 조건 이상이며, 같은 쓰기에서 아이템이 조건 표대로 줄어야 한다
+    // 화분이 없으면 update 자체가 실패한다 (없는 화분)
+    function potLeveledUp(userId) {
+      let level = oldValue('potLevel', 0);
+      return changedKeys().hasOnly(['potLevel']) &&
+        level is int &&
+        level >= 0 &&
+        level < maxPotLevel() &&
+        request.resource.data.potLevel == level + 1 &&
+        oldValue('isCompleted', false) == false &&
+        oldValue('potTotalStudyingTime', 0) >= levelUpMinStudyMs(level) &&
+        itemsDeductedForLevelUp(userId, levelUpRequiredItems(level));
+    }
+
+    // users/{uid} 일반 쓰기(출석, 보너스 박스 개봉 등)는 성장 아이템을 줄일 수 없다 — 줄이는 것은 레벨업뿐이다
+    // (늘리는 쓰기와 box·gold 검증은 #532에서 잠근다)
+    function growthItemsNotDecreased() {
+      let before = oldValue('item', {});
+      let after = newValue('item', {});
+      return after.get('heart', 0) >= before.get('heart', 0) &&
+        after.get('sun', 0) >= before.get('sun', 0) &&
+        after.get('water', 0) >= before.get('water', 0) &&
+        after.get('fertilizer', 0) >= before.get('fertilizer', 0) &&
+        after.get('nutrient', 0) >= before.get('nutrient', 0);
+    }
+
+    // users/{uid} 수정 중 레벨업: 같은 쓰기에서 표시한 화분의 레벨이 1 올라가야 한다 (차감량 검증은 potLeveledUp)
+    // 표시 값이 이전과 같아도(같은 화분을 연속 레벨업) 화분 레벨 변화로 구분된다. 화분이 없으면 get이 실패해 거부된다
+    function userLeveledUpPot(userId) {
+      let potId = newValue('lastLevelUpPotId', '');
+      return changedKeys().hasOnly(['item', 'lastLevelUpPotId']) &&
+        isNonEmptyString(potId) &&
+        getAfter(potPath(userId, potId)).data.get('potLevel', 0) ==
+          get(potPath(userId, potId)).data.get('potLevel', 0) + 1;
+    }
+
     match /users/{userId} {
       allow read: if isUid(userId);
       // 삭제 규칙 없음 = 거부: 회원탈퇴는 deleteAccount 함수(Admin SDK, 규칙 무관)가 처리한다 (#457)
 
       // 생성: 앱은 빈 닉네임으로 만든다 (createUser). 다른 사람 닉네임으로 만드는 것을 막는다
-      // 학습 시간·완료 수는 0으로 시작하고, 학습 저장(#453)·완료/삭제 표시(#455) 필드는 해당 batch로만 생긴다
+      // 학습 시간·완료 수는 0으로 시작하고, 학습 저장(#453)·완료/삭제 표시(#455)·레벨업 표시(#456) 필드는 해당 batch로만 생긴다
       allow create: if isUid(userId) &&
         (newValue('nickname', '') == '' || ownsNicknameAfterWrite(request.resource.data.nickname)) &&
         newValue('totalStudyTime', 0) == 0 &&
         newValue('completedPotsCount', 0) == 0 &&
         !request.resource.data.keys().hasAny([
           'lastStudyEndedAt', 'lastStudyPotId', 'lastStudySessionId',
-          'lastCompletedPotId', 'lastDeletedPotId', 'lastDeletedLogId'
+          'lastCompletedPotId', 'lastDeletedPotId', 'lastDeletedLogId', 'lastLevelUpPotId'
         ]);
 
       // 수정: nickname을 바꾸지 않는 쓰기(이미지, 다크모드, gold, 출석, 아이템, 세션 토큰 등)는 닉네임 검사를 하지 않는다
       // 학습 시간·완료 수는 학습 기록 저장(#453), 화분 완료·기록 삭제·화분 삭제(#455) batch에서만 바꿀 수 있다
+      // 성장 아이템(heart·sun·water·fertilizer·nutrient)을 줄이는 것은 화분 레벨업(#456) batch에서만 할 수 있다
       allow update: if isUid(userId) &&
         (!changedKeys().hasAny(['nickname']) || ownsNicknameAfterWrite(request.resource.data.get('nickname', null))) &&
-        (userCountedFieldsKept() ||
+        ((userCountedFieldsKept() && growthItemsNotDecreased()) ||
           userStudySaved(userId) ||
           userPotCompleted(userId) ||
           userStudyLogDeleted(userId) ||
-          userPotDeleted(userId));
+          userPotDeleted(userId) ||
+          userLeveledUpPot(userId));
 
       match /pots/{potsId} {
         allow read: if isUid(userId);
@@ -406,9 +502,10 @@ service cloud.firestore {
         // 삭제는 유저 학습 시간 차감과 같은 batch에서만 (#455). 하위 logs는 onPotDeleted 트리거가 지운다
         allow delete: if isUid(userId) && potDeletedWithTotals(userId, potsId);
 
-        // 새 화분은 학습 시간 0, 미완료로 시작한다 (앱의 PotDto는 lastStudiedAt·completedAt을 null로 함께 보낸다)
+        // 새 화분은 학습 시간 0, 레벨 0, 미완료로 시작한다 (앱의 PotDto는 lastStudiedAt·completedAt을 null로 함께 보낸다)
         allow create: if isUid(userId) &&
           newValue('potTotalStudyingTime', 0) == 0 &&
+          newValue('potLevel', 0) == 0 &&
           newValue('lastStudiedAt', null) == null &&
           newValue('isCompleted', false) == false &&
           newValue('completedAt', null) == null &&
@@ -418,7 +515,8 @@ service cloud.firestore {
           (potCountedFieldsKept() ||
             potStudySaved(userId, potsId) ||
             potCompleted(userId, potsId) ||
-            potStudyLogDeleted(userId, potsId));
+            potStudyLogDeleted(userId, potsId) ||
+            potLeveledUp(userId));
 
         match /logs/{logsId} {
           allow read: if isUid(userId);
