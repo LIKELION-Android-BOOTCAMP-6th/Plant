@@ -6,7 +6,9 @@ const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 const {assertFails, assertSucceeds} = require("@firebase/rules-unit-testing");
-const {deleteDoc, doc, getDoc, increment, setDoc, updateDoc} = require("firebase/firestore");
+const {
+  Timestamp, deleteDoc, doc, getDoc, increment, serverTimestamp, setDoc, updateDoc, writeBatch,
+} = require("firebase/firestore");
 const {ALICE, BOB, createTestEnv, seed, levelUpBatch} = require("../helpers");
 
 const HOUR = 60 * 60 * 1000;
@@ -182,6 +184,35 @@ describe("화분 레벨업 (#456)", () => {
       });
       await assertSucceeds(levelUpBatch(asAlice(), {...LV0, potId: "old"}));
       await assertFails(levelUpBatch(asAlice(), {...LV0, potId: "empty"}));
+    });
+
+    // 오프라인에서 학습 저장 → 레벨업: 대기열은 보낸 순서대로 도착하므로 학습 시간이 먼저 반영된 뒤 레벨업이 검증된다
+    // (학습 저장 batch는 앱의 StudyingRemoteDataSourceImpl과 같은 쓰기, studyLogs.test.js의 studyBatch 참고)
+    function studyBatch(db, {sessionId, time}) {
+      const start = Date.now() - time - 60 * 1000;
+      const batch = writeBatch(db);
+      const potRef = doc(db, "users", ALICE, "pots", "pot1");
+      batch.set(doc(potRef, "logs", sessionId), {
+        uid: ALICE, title: "학습", contents: [], completedContents: [], studyingTime: time,
+        createAt: Timestamp.now(), startedAt: Timestamp.fromMillis(start),
+        rewardStatus: "pending", rewardSeen: false,
+      });
+      batch.update(potRef, {
+        potTotalStudyingTime: increment(time), lastStudiedAt: serverTimestamp(), lastStudySessionId: sessionId,
+      });
+      batch.update(doc(db, "users", ALICE), {
+        totalStudyTime: increment(time), lastStudyEndedAt: Timestamp.fromMillis(start + time),
+        lastStudyPotId: "pot1", lastStudySessionId: sessionId,
+      });
+      return batch.commit();
+    }
+
+    it("학습 저장(59분 → 61분) 뒤에 도착한 레벨업은 허용, 학습 저장보다 먼저 도착하면 거부", async () => {
+      await setup({time: 59 * 60 * 1000, items: itemsOf(100)});
+      await assertFails(levelUpBatch(asAlice(), LV0));
+      await assertSucceeds(studyBatch(asAlice(), {sessionId: "s1", time: 2 * 60 * 1000}));
+      await assertSucceeds(levelUpBatch(asAlice(), LV0));
+      assert.strictEqual((await read("users", ALICE, "pots", "pot1")).potLevel, 1);
     });
 
     it("새 화분은 레벨 0으로만 만들 수 있다", async () => {
