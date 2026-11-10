@@ -110,12 +110,12 @@ class ReportRepositoryImplCacheTest {
         override fun updatePotName(uid: String, potId: String, name: String): Task<Void> = error("Unused")
         override suspend fun getTodayStudyLogs(uid: String, potId: String, startOfToday: Date): List<StudyLogDto> =
             error("Unused")
-        override suspend fun levelUpWithItemConsumption(
+        override fun levelUpPot(
             uid: String,
             potId: String,
             newLevel: Int,
             items: Map<ItemType, Int>
-        ) = Unit
+        ): Task<Void> = error("Unused")
         override suspend fun getPotPreferringCache(uid: String, potId: String): PotDto? = error("Unused")
         override suspend fun getPotOnServer(uid: String, potId: String): PotDto? = error("Unused")
         override fun completePot(uid: String, potId: String): Task<Void> = error("Unused")
