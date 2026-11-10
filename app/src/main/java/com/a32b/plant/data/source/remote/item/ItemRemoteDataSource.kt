@@ -7,6 +7,4 @@ import kotlinx.coroutines.flow.Flow
 interface ItemRemoteDataSource {
     suspend fun openBonusBoxes(boxCount: Int, requestId: String): BonusBoxOpeningDto
     fun observeBoxCount(uid: String): Flow<Int>
-    suspend fun consumeItems(uid: String, items: Map<ItemType, Int>)
-    suspend fun canConsumeItems(uid: String, items: Map<ItemType, Int>): Boolean
 }

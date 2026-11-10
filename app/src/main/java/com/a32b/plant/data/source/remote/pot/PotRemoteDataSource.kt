@@ -13,7 +13,6 @@ interface PotRemoteDataSource {
     suspend fun addPot(uid: String, tag: Tag, name: String): Result<Unit>
     suspend fun getPotsOnce(uid: String): List<PotDto>
     suspend fun getTodayStudyLogs(uid: String, potId: String, startOfToday: Date): List<StudyLogDto>
-    suspend fun levelUpWithItemConsumption(uid: String, potId: String, newLevel: Int, items: Map<ItemType, Int>)
 
     /** 화분 이름 변경 쓰기를 시작하고, 서버 반영을 나타내는 Task를 돌려준다. (오프라인이면 Task가 끝나지 않음) */
     fun updatePotName(uid: String, potId: String, name: String): Task<Void>
@@ -36,4 +35,11 @@ interface PotRemoteDataSource {
      * 두 값은 저장된 화분 문서의 값이어야 규칙을 통과한다. 하위 logs는 onPotDeleted 트리거가 지운다
      */
     fun deletePot(uid: String, potId: String, potTotalStudyingTime: Long, isCompleted: Boolean): Task<Void>
+
+    /**
+     * 화분 레벨업 batch를 시작하고 서버 반영 Task를 돌려준다 (#456, firestore.rules potLeveledUp·userLeveledUpPot).
+     * 화분 레벨 = [newLevel] + 유저 아이템 [items]만큼 차감 (+ lastLevelUpPotId = potId).
+     * [newLevel]은 저장된 레벨 + 1, [items]는 저장된 레벨의 조건 표 값이어야 규칙을 통과한다
+     */
+    fun levelUpPot(uid: String, potId: String, newLevel: Int, items: Map<ItemType, Int>): Task<Void>
 }

@@ -11,6 +11,4 @@ interface ItemRepository {
      */
     suspend fun openBonusBoxes(boxCount: Int, requestId: String) : Result<List<ItemType>>
     fun getBoxCount(uid: String): Flow<Int>
-    suspend fun consumeItems(uid: String, items: Map<ItemType, Int>): Result<Unit>
-    suspend fun canConsumeItems(uid: String, items: Map<ItemType, Int>): Result<Boolean>
 }

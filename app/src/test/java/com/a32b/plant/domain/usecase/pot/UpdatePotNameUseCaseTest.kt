@@ -137,12 +137,13 @@ class UpdatePotNameUseCaseTest {
         override suspend fun completeStudyPlan(uid: String, potId: String): Result<SaveResult> = error("Unused")
         override suspend fun getTodayStudyLogs(uid: String, potId: String, startOfToday: Date): Result<List<StudyLog>> =
             error("Unused")
-        override suspend fun levelUpWithItemConsumption(
+        override suspend fun getPotPreferringCache(uid: String, potId: String): Result<Pot?> = error("Unused")
+        override suspend fun levelUpPot(
             uid: String,
             potId: String,
-            newLevel: Int,
+            currentLevel: Int,
             items: Map<ItemType, Int>
-        ): Result<Unit> = error("Unused")
+        ): Result<SaveResult> = error("Unused")
     }
 
     private class FakeUserRepository(user: User?) : UserRepository {
