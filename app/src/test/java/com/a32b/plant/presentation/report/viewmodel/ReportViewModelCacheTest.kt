@@ -57,8 +57,11 @@ class ReportViewModelCacheTest {
         try {
             val viewModel = createViewModel(isFromCache = false)
 
+            assertFalse(viewModel.uiState.value.isLoading)
+            assertNotNull(viewModel.uiState.value.dailyReport)
             assertFalse(viewModel.uiState.value.isFromCache)
             viewModel.selectTab(ReportTab.MONTHLY)
+            assertNotNull(viewModel.uiState.value.monthlyReport)
             assertFalse(viewModel.uiState.value.isFromCache)
         } finally {
             Dispatchers.resetMain()
@@ -99,6 +102,7 @@ class ReportViewModelCacheTest {
             assertNotNull(viewModel.uiState.value.dailyReport)
             assertTrue(viewModel.uiState.value.isFromCache)
             viewModel.selectTab(ReportTab.MONTHLY)
+            assertNotNull(viewModel.uiState.value.monthlyReport)
             assertFalse(viewModel.uiState.value.isFromCache)
         } finally {
             Dispatchers.resetMain()
@@ -117,6 +121,7 @@ class ReportViewModelCacheTest {
             assertNotNull(viewModel.uiState.value.dailyReport)
             assertFalse(viewModel.uiState.value.isFromCache)
             viewModel.selectTab(ReportTab.MONTHLY)
+            assertNotNull(viewModel.uiState.value.monthlyReport)
             assertFalse(viewModel.uiState.value.isFromCache)
         } finally {
             Dispatchers.resetMain()
