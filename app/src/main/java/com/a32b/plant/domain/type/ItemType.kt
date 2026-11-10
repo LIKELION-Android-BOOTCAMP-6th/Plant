@@ -1,18 +1,18 @@
 package com.a32b.plant.domain.type
 
+// 보너스 박스 확률 표는 서버(functions/index.js BONUS_BOX_DROP_TABLE)가 원본이다 (#454)
 enum class ItemType(
     val kor: String,
     val price: Int,
-    val prob: Double,
     val fieldKey: String
 ) {
-    HEART("정성", 50, 60.0, "heart"),
-    SUN("햇빛", 100, 13.0, "sun"),
-    WATER("물", 250, 9.0, "water"),
-    FERTILIZER("비료", 450, 5.0, "fertilizer"),
-    NUTRIENT("영양제", 950, 2.0, "nutrient"),
-    BOX("보너스 박스", 250, 5.0, "box"),
-    GOLD_300("300골드", 300, 3.5, "gold"),
-    GOLD_500("500골드", 500, 2.0, "gold"),
-    GOLD_1000("1000골드", 1000, 0.5, "gold")
+    HEART("정성", 50, "heart"),
+    SUN("햇빛", 100, "sun"),
+    WATER("물", 250, "water"),
+    FERTILIZER("비료", 450, "fertilizer"),
+    NUTRIENT("영양제", 950, "nutrient"),
+    BOX("보너스 박스", 250, "box"),
+    GOLD_300("300골드", 300, "gold"),
+    GOLD_500("500골드", 500, "gold"),
+    GOLD_1000("1000골드", 1000, "gold")
 }

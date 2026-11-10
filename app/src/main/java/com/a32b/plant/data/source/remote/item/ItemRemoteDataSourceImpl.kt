@@ -1,8 +1,10 @@
 package com.a32b.plant.data.source.remote.item
 
+import com.a32b.plant.data.model.BonusBoxOpeningDto
 import com.a32b.plant.domain.type.ItemType
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -12,33 +14,16 @@ import javax.inject.Singleton
 
 @Singleton
 class ItemRemoteDataSourceImpl @Inject constructor(
-    private val db : FirebaseFirestore
+    private val db : FirebaseFirestore,
+    private val functions: FirebaseFunctions
 ): ItemRemoteDataSource {
 
-    override suspend fun addDrawItems(uid: String, items: List<ItemType>) {
-        val updates = buildUpdates(items)
-
-        if (updates.isEmpty()) return
-
-        db.collection("users").document(uid)
-            .update(updates)
+    override suspend fun openBonusBoxes(boxCount: Int, requestId: String): BonusBoxOpeningDto {
+        val result = functions.getHttpsCallable("openBonusBoxes")
+            .call(mapOf("count" to boxCount, "requestId" to requestId))
             .await()
-    }
-
-    override suspend fun openBonusBoxes(uid: String, boxCount: Int, items: List<ItemType>) {
-        val ref = db.collection("users").document(uid)
-        val neededBoxes = boxCount.toLong()
-
-        db.runTransaction { transaction ->
-            val box = transaction.get(ref).getLong("item.box") ?: 0
-            check( box >= neededBoxes) {"보너스 박스의 개수가 부족합니다."}
-
-            val drawnBoxCount = items.count { it == ItemType.BOX }
-            val netBoxChange = drawnBoxCount.toLong() - neededBoxes
-            val updates = buildUpdates(items).toMutableMap()
-            updates["item.box"] = FieldValue.increment(netBoxChange)
-            transaction.update(ref, updates)
-        }.await()
+        val items = (result.getData() as? Map<*, *>)?.get("items") as? List<*>
+        return BonusBoxOpeningDto(items = items.orEmpty().filterIsInstance<String>())
     }
 
     override suspend fun consumeItems(uid: String, items: Map<ItemType, Int>) {
@@ -77,25 +62,5 @@ class ItemRemoteDataSourceImpl @Inject constructor(
                 trySend(snap?.getLong("item.box")?.toInt() ?: 0)
             }
         awaitClose { listener.remove() }
-    }
-
-    private fun buildUpdates(items: List<ItemType>) : Map<String, Any>{
-        val updates = mutableMapOf<String, Any>()
-
-        val (coinItems, normalItems) = items.partition { it.fieldKey == ItemType.GOLD_300.fieldKey }
-
-        normalItems
-            .groupingBy { it.fieldKey }
-            .eachCount()
-            .forEach { (key, count) ->
-                updates["item.$key"] = FieldValue.increment(count.toLong())
-            }
-
-        val totalCoin = coinItems.sumOf { it.price }
-        if (totalCoin > 0) {
-            updates[ItemType.GOLD_300.fieldKey] = FieldValue.increment(totalCoin.toLong())
-        }
-
-        return updates
     }
 }
