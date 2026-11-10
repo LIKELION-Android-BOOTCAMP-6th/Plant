@@ -199,6 +199,39 @@ exports.grantStudyReward = onDocumentCreated(
 );
 
 // ---------------------------------------------------------------------------
+// 화분 삭제 후 하위 학습 기록 정리 (#455)
+// ---------------------------------------------------------------------------
+// 앱은 화분 문서 삭제 + 유저 학습 시간 차감을 batch 하나로 쓰고(보안 규칙이 검증),
+// Firestore는 하위 컬렉션을 함께 지우지 않으므로 남은 logs는 이 트리거가 지운다.
+// - 오프라인에서 지운 화분도 서버에 도착하는 순간 실행된다
+// - recursiveDelete(Admin SDK)라 보안 규칙의 영향을 받지 않고, batch 500건 제한도 없다
+// - 이미 지운 기록은 조회되지 않으므로 같은 이벤트로 두 번 실행되거나 재시도돼도 결과가 같다
+// - 회원탈퇴(deleteAccount)가 화분과 logs를 함께 지울 때도 화분마다 실행되는데,
+//   이때는 지울 기록이 없어 아무것도 하지 않고 끝난다
+// - users/{uid}에는 쓰지 않는다 (대표 화분 lastSelectedPotId는 비우지 않음: 홈에서 다른 화분을 보여준다)
+//   → 탈퇴로 지워진 users 문서를 다시 만들 일이 없다
+// - retry: 일시 오류로 실패하면 다시 실행해 남은 기록을 지운다 (2세대 함수는 최대 24시간 재시도)
+const POT_DOCUMENT = "users/{uid}/pots/{potId}";
+const POT_DELETED_TRIGGER_OPTIONS = {document: POT_DOCUMENT, retry: true};
+
+/**
+ * 지워진 화분의 하위 logs를 모두 지운다. 여러 번 실행해도 결과가 같다.
+ * @param {string} uid
+ * @param {string} potId
+ * @return {Promise<void>}
+ */
+async function deletePotStudyLogs(uid, potId) {
+  const logs = db.collection("users").doc(uid)
+      .collection("pots").doc(potId).collection("logs");
+  await db.recursiveDelete(logs);
+}
+
+exports.onPotDeleted = onDocumentDeleted(
+    POT_DELETED_TRIGGER_OPTIONS,
+    (event) => deletePotStudyLogs(event.params.uid, event.params.potId),
+);
+
+// ---------------------------------------------------------------------------
 // 회원탈퇴 (#457)
 // ---------------------------------------------------------------------------
 // 앱이 문서를 하나씩 지우던 탈퇴를 이 함수 하나로 처리한다.

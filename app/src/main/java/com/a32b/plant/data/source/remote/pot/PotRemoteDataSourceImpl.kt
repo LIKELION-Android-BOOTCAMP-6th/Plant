@@ -1,6 +1,7 @@
 package com.a32b.plant.data.source.remote.pot
 
 import android.util.Log
+import com.a32b.plant.data.firestore.getPreferringCache
 import com.a32b.plant.data.model.PotDto
 import com.a32b.plant.data.model.StudyLogDto
 import com.a32b.plant.domain.model.Tag
@@ -8,6 +9,7 @@ import com.a32b.plant.domain.type.ItemType
 import com.google.android.gms.tasks.Task
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -68,6 +70,54 @@ class PotRemoteDataSourceImpl @Inject constructor(
         db.collection("users").document(uid)
             .collection("pots").document(potId)
             .update("name", name)
+
+    private fun userRef(uid: String) = db.collection("users").document(uid)
+
+    private fun potRef(uid: String, potId: String) = userRef(uid).collection("pots").document(potId)
+
+    override suspend fun getPotPreferringCache(uid: String, potId: String): PotDto? =
+        potRef(uid, potId).getPreferringCache()
+            .takeIf { it.exists() }
+            ?.toObject(PotDto::class.java)
+
+    override suspend fun getPotOnServer(uid: String, potId: String): PotDto? =
+        potRef(uid, potId).get(Source.SERVER).await()
+            .takeIf { it.exists() }
+            ?.toObject(PotDto::class.java)
+
+    override fun completePot(uid: String, potId: String): Task<Void> =
+        db.runBatch { batch ->
+            batch.update(
+                potRef(uid, potId),
+                mapOf(
+                    "isCompleted" to true,
+                    "completedAt" to FieldValue.serverTimestamp()
+                )
+            )
+            // 규칙이 완료 수 +1이 어느 화분 때문인지 확인하도록 화분 ID를 함께 적는다
+            batch.update(
+                userRef(uid),
+                mapOf(
+                    "completedPotsCount" to FieldValue.increment(1),
+                    "lastCompletedPotId" to potId
+                )
+            )
+        }
+
+    override fun deletePot(uid: String, potId: String, potTotalStudyingTime: Long, isCompleted: Boolean): Task<Void> {
+        // 규칙이 차감이 어느 화분 때문인지 확인하도록 화분 ID를 함께 적는다 (lastDeletedLogId = "": 기록 삭제가 아닌 화분 삭제)
+        val userUpdates = mutableMapOf<String, Any>(
+            "totalStudyTime" to FieldValue.increment(-potTotalStudyingTime),
+            "lastDeletedPotId" to potId,
+            "lastDeletedLogId" to ""
+        )
+        if (isCompleted) userUpdates["completedPotsCount"] = FieldValue.increment(-1)
+        return db.runBatch { batch ->
+            batch.delete(potRef(uid, potId))
+            batch.update(userRef(uid), userUpdates)
+        }
+    }
+
 
     // 화분 목록 일회 조회 (리포트용) - 완료 화분 포함
     override suspend fun getPotsOnce(uid: String): GetPotsOnceResult {

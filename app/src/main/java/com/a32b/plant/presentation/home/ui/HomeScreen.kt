@@ -46,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.IntrinsicMeasurable
 import androidx.compose.ui.layout.IntrinsicMeasureScope
@@ -89,6 +90,7 @@ import com.a32b.plant.presentation.core.extension.resId
 import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.home.viewmodel.HomeEvent
 import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
+import com.a32b.plant.presentation.home.viewmodel.ZERO_STUDY_TIME
 import com.a32b.plant.presentation.theme.PlantTheme
 
 import com.a32b.plant.core.util.TimeFormatter
@@ -651,7 +653,8 @@ fun HomeTopBar(
 fun MainPlantCard(
     displayPot: Pot,
     hasNoPot: Boolean,
-    todayStudyTime: String,
+    // null: 조회 중
+    todayStudyTime: String?,
     levelUpProgress: Float,
     levelUpProgressText: String,
     levelUpReady: Boolean,
@@ -744,8 +747,16 @@ fun MainPlantCard(
                 color = MaterialTheme.colorScheme.onSecondary,
             )
             Spacer(modifier = Modifier.height(2.dp.compactIf(compact)))
+            // 조회 중(null)에는 같은 스타일의 0으로 자리만 차지하고 글자를 숨긴다 (#584)
+            // → 첫 화면에서 0이 먼저 보였다가 실제 값으로 바뀌지 않고, 카드 높이도 그대로 유지됨
+            // 화분 없음은 조회가 없으므로 바로 0 (화분 조회가 방출 없이 끝나 null로 남은 경우 포함)
+            // alpha는 화면에서만 숨기므로, 숨긴 동안 TalkBack이 자리용 0을 읽지 않게 접근성 정보도 비운다
+            val studyTimeText = if (hasNoPot) ZERO_STUDY_TIME else todayStudyTime
             Text(
-                text = if(hasNoPot) "00:00:00" else todayStudyTime,
+                text = studyTimeText ?: ZERO_STUDY_TIME,
+                modifier = Modifier
+                    .alpha(if (studyTimeText == null) 0f else 1f)
+                    .then(if (studyTimeText == null) Modifier.clearAndSetSemantics { } else Modifier),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.tertiary,
                 fontSize = 26.sp

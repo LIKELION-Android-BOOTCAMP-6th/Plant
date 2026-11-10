@@ -1,5 +1,6 @@
 package com.a32b.plant.presentation.core.component
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -38,49 +40,61 @@ fun ConfirmDialog(
     onConfirm: () -> Unit,
     confirmBtnText: String = "예",
     textStyle: TextStyle? = null,
-    buttonTextStyle: TextStyle? = null
+    buttonTextStyle: TextStyle? = null,
+    isLoading: Boolean = false
 ) {
-    Dialog(onDismissRequest = {if (isCancelable) onDismiss() }) {
-        Card(shape = RoundedCornerShape(30.dp),
-            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.primaryContainer),
-            elevation = CardDefaults.cardElevation(3.dp)) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(22.dp)) {
-                Spacer(modifier = Modifier.height(10.dp))
-
-                val maxContentHeight = LocalConfiguration.current.screenHeightDp.dp * DIALOG_CONTENT_MAX_HEIGHT_RATIO
+    // isLoading: 확인 후 처리 중 — 버튼을 막고 로딩 표시, 바깥 터치·뒤로가기로 닫지 않음
+    Dialog(onDismissRequest = { if (isCancelable && !isLoading) onDismiss() }) {
+        // 다이얼로그는 별도 창이라 화면의 LoadingBox가 위에 그려지지 않으므로 다이얼로그 안에 겹쳐 표시
+        Box {
+            Card(shape = RoundedCornerShape(30.dp),
+                colors = CardDefaults.cardColors(MaterialTheme.colorScheme.primaryContainer),
+                elevation = CardDefaults.cardElevation(3.dp)) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .heightIn(max = maxContentHeight)
-                        .verticalScroll(rememberScrollState())) {
-                    Text(text, style = textStyle ?: MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
-                    semiText?.let {
-                        Spacer(modifier = Modifier.height(9.dp))
-                        Text(semiText, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
+                    modifier = Modifier.padding(22.dp)) {
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    val maxContentHeight = LocalConfiguration.current.screenHeightDp.dp * DIALOG_CONTENT_MAX_HEIGHT_RATIO
+                    Column(horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .heightIn(max = maxContentHeight)
+                            .verticalScroll(rememberScrollState())) {
+                        Text(text, style = textStyle ?: MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+                        semiText?.let {
+                            Spacer(modifier = Modifier.height(9.dp))
+                            Text(semiText, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
+                        }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(22.dp))
+                    Spacer(modifier = Modifier.height(22.dp))
 
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    if (!isSingleBtn){
-                        Button(onClick = onDismiss,
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        if (!isSingleBtn){
+                            Button(onClick = onDismiss,
+                                modifier = Modifier.heightIn(min = 30.dp).weight(1f),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.outline)) {
+                                Text("취소", style = buttonTextStyle ?: MaterialTheme.typography.bodyMedium)
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                        }
+
+                        Button(onClick = onConfirm,
                             modifier = Modifier.heightIn(min = 30.dp).weight(1f),
                             shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.outline)) {
-                            Text("취소", style = buttonTextStyle ?: MaterialTheme.typography.bodyMedium)
+                            colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.primary)) {
+                            Text(confirmBtnText, style = buttonTextStyle ?: MaterialTheme.typography.bodyMedium)
                         }
-                        Spacer(modifier = Modifier.width(10.dp))
                     }
 
-                    Button(onClick = onConfirm,
-                        modifier = Modifier.heightIn(min = 30.dp).weight(1f),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.primary)) {
-                        Text(confirmBtnText, style = buttonTextStyle ?: MaterialTheme.typography.bodyMedium)
-                    }
                 }
-
+            }
+            if (isLoading) {
+                LoadingBox(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clip(RoundedCornerShape(30.dp))
+                )
             }
         }
     }
