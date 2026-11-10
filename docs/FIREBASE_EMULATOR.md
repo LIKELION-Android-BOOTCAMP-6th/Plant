@@ -117,6 +117,8 @@ npm --prefix rules-test test
 |---|---|
 | `test/users.test.js` | `users`, 하위 `pots`·`logs` |
 | `test/studyLogs.test.js` | 학습 기록 저장 batch 검증(기록 생성 + 화분·유저 학습 시간), 보상 확인 표시, 쌓인 보상 조회 (#453) |
+| `test/potCompleteDelete.test.js` | 화분 완료·학습 기록 삭제·화분 삭제 batch 검증 (#455) |
+| `test/potLevelUp.test.js` | 화분 레벨업 batch 검증(레벨 +1, 학습 시간 조건, 아이템 차감량). 앱 `LevelUpCondition.kt`를 읽어 레벨마다 경계값을 확인하므로 조건 표가 앱과 규칙에서 다르면 실패 (#456) |
 | `test/posts.test.js` | `posts`(작성·수정·좋아요·신고), 하위 `comments`, `reports` |
 | `test/others.test.js` | `nicknames`, `feedbacks`, `studying`, `Tags` |
 

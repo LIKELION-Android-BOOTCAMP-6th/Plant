@@ -64,6 +64,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -82,6 +83,7 @@ import com.a32b.plant.domain.model.Item
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.type.ItemType
 import com.a32b.plant.domain.type.StudyingSessionStatus
+import com.a32b.plant.domain.usecase.item.OpenBonusBoxUseCase
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.ProfileImage
@@ -172,9 +174,9 @@ fun HomeScreen(
         )
     }
 
-    if (uiState.showInsufficientItemsDialog) {
+    uiState.insufficientItemsMessage?.let { message ->
         ConfirmDialog(
-            text = "아이템이 부족합니다",
+            text = message,
             semiText = "아이템 상점에서 구매할 수 있어요.",
             onDismiss = { viewModel.onDismissInsufficientDialog() },
             onConfirm = { viewModel.onDismissInsufficientDialog() }
@@ -185,10 +187,16 @@ fun HomeScreen(
         viewModel.events.collect { event ->
             when (event) {
                 is HomeEvent.ShowToast -> context.showToast(event.message)
-                is HomeEvent.BonusBoxResult -> bonusBoxResult = event.items
+                is HomeEvent.BonusBoxResult -> {
+                    showOpenDialog = false
+                    // 앱이 모르는 보상만 나오면 비어 있다 (지급은 서버에서 끝남) → 결과 창 없이 닫기만 한다
+                    bonusBoxResult = event.items.takeIf { it.isNotEmpty() }
+                }
                 is HomeEvent.LevelUpSuccess -> {
                     showLevelUpConfetti = true
-                    context.showToast("레벨업 성공!")
+                    context.showToast(
+                        if (event.isPending) "레벨업 성공! 네트워크에 연결되면 자동으로 저장돼요." else "레벨업 성공!"
+                    )
                 }
             }
         }
@@ -258,7 +266,7 @@ fun HomeScreen(
                         },
                         onLevelUpClick = {
                             if (!hasNoPot && !uiState.isLoading) {
-                                viewModel.onLevelUpClick(displayPot.id, displayPot.potLevel)
+                                viewModel.onLevelUpClick(displayPot.id)
                             }
                         },
 
@@ -298,13 +306,13 @@ fun HomeScreen(
                 //수량 선택 다이얼로그 (별도 창이라 본문 배치와 무관해 HomeBodyLayout 밖에 둔다)
                 if (showOpenDialog) {
                     BonusBoxOpenDialog(
-                        maxCount = userItem.box,
+                        ownedCount = userItem.box,
+                        maxCount = userItem.box.coerceAtMost(OpenBonusBoxUseCase.MAX_OPEN_COUNT),
                         isOpening = isBoxOpening,
                         onDismiss = {if (!isBoxOpening) showOpenDialog = false },
-                        onConfirm = { count ->
-                            showOpenDialog = false
-                            viewModel.openBoxes(count)
-                        }
+                        // 서버 응답까지 다이얼로그를 열어 둔다 (isOpening으로 버튼·닫기를 막음, #454)
+                        // 성공하면 BonusBoxResult 이벤트에서 닫고, 실패하면 그대로 두어 다시 시도할 수 있게 한다
+                        onConfirm = { count -> viewModel.openBoxes(count) }
                     )
                 }
             }
@@ -799,10 +807,16 @@ fun MainPlantCard(
 
                 Spacer(modifier = Modifier.height(8.dp.compactIf(compact)))
 
+                // 학습 시간 부족·최고 레벨이면 비활성처럼만 표시 — enabled=false면 클릭이 막혀 남은 시간 안내를 띄울 수 없으므로
+                // 조건 확인과 안내는 ViewModel(LevelUpPotUseCase)에서 한다. 실제로 막는 것은 처리 중일 때뿐
                 Button(
                     onClick = onLevelUpClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = levelUpReady && !isLoading,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .alpha(if (levelUpReady) 1f else 0.38f)
+                        // alpha는 시각 표시뿐이라 TalkBack에 상태를 따로 알림
+                        .semantics { if (!levelUpReady) stateDescription = LEVEL_UP_NOT_READY_STATE_DESCRIPTION },
+                    enabled = !isLoading,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
                     )
@@ -1064,6 +1078,9 @@ private val ITEM_LABEL_LINE_HEIGHT = 14.sp
 
 /** 아이템 이름 자리 높이에 쓰는 줄 수. "보너스" / "박스"가 2줄이라 모든 칸의 이름 자리를 2줄 높이로 맞춘다 (#387) */
 private const val ITEM_LABEL_LINE_SLOTS = 2
+
+// 레벨업 버튼이 비활성처럼 보일 때(학습 시간 부족·최고 레벨) TalkBack이 읽는 상태
+private const val LEVEL_UP_NOT_READY_STATE_DESCRIPTION = "조건 미충족"
 
 /**
  * 홈 타일에 쓰는 이름을 줄 단위로 나눈 목록 (#387)
@@ -1350,7 +1367,8 @@ private fun RecoveryDialog(
 
 @Composable
 fun BonusBoxOpenDialog(
-    maxCount: Int,
+    ownedCount: Int,
+    maxCount: Int, // 한 번에 열 수 있는 개수 (보유량과 서버 상한 중 작은 값)
     isOpening: Boolean,
     onDismiss: () -> Unit,
     onConfirm: (Int) -> Unit
@@ -1373,10 +1391,17 @@ fun BonusBoxOpenDialog(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = "보유한 박스: ${maxCount}개",
+                    text = "보유한 박스: ${ownedCount}개",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSecondary
                 )
+                if (ownedCount > maxCount) {
+                    Text(
+                        text = "한 번에 최대 ${maxCount}개까지 열 수 있어요",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondary
+                    )
+                }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1414,7 +1439,7 @@ fun BonusBoxOpenDialog(
 
                 TextButton(
                     onClick = { count = maxCount },
-                    enabled = count < maxCount
+                    enabled = count < maxCount && !isOpening
                 ) {
                     Text("전체 선택 (MAX)", color = MaterialTheme.colorScheme.primary)
                 }
@@ -1426,7 +1451,7 @@ fun BonusBoxOpenDialog(
                 enabled = !isOpening,
                 colors = ButtonDefaults.buttonColors(containerColor = primary)
             ) {
-                Text("${count}개 개봉하기")
+                Text(if (isOpening) "개봉 중..." else "${count}개 개봉하기")
             }
         },
         dismissButton = {

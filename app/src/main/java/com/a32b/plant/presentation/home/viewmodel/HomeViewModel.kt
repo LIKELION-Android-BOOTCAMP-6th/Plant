@@ -13,6 +13,7 @@ import com.a32b.plant.domain.model.AttendanceReward
 import com.a32b.plant.domain.model.DailyCheckThisMonth
 import com.a32b.plant.domain.model.Item
 import com.a32b.plant.domain.model.Pot
+import com.a32b.plant.domain.model.SaveResult
 import com.a32b.plant.domain.model.PotLevelConditions
 import com.a32b.plant.domain.model.StudyReward
 import com.a32b.plant.domain.model.StudySaveResult
@@ -48,6 +49,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.UUID
 import javax.inject.Inject
 
 data class AttendanceUiState(
@@ -59,8 +61,8 @@ data class AttendanceUiState(
 )
 
 data class HomeUiState(
-    val levelUpReady: Boolean = false, //레벨업 버튼 활성화
-    val showInsufficientItemsDialog: Boolean = false, // 아이템 부족 다이얼로그
+    val levelUpReady: Boolean = false, // 레벨업 학습 시간 조건 충족 (false면 버튼을 비활성처럼 표시, 누르면 LevelUpPotUseCase가 이유 안내 — 남은 시간·최고 레벨 등)
+    val insufficientItemsMessage: String? = null, // 아이템 부족 다이얼로그 문구 ("햇빛, 물이(가) 부족합니다.") — null이면 닫힘
     val levelUpProgress: Float = 0f,
     val levelUpProgressText: String = "",
     val isLoading: Boolean = false
@@ -69,7 +71,8 @@ data class HomeUiState(
 sealed class HomeEvent {
     data class ShowToast(val message: String) : HomeEvent()
     data class BonusBoxResult(val items: List<ItemType>) : HomeEvent()
-    object LevelUpSuccess : HomeEvent()
+    // isPending: 서버 응답 없이 기기에만 반영됨 (오프라인) — 연결되면 자동 전송, 다시 보내지 않음
+    data class LevelUpSuccess(val isPending: Boolean) : HomeEvent()
 }
 
 private fun DailyCheckThisMonth.toAttendanceUiState(): AttendanceUiState {
@@ -196,6 +199,13 @@ class HomeViewModel @Inject constructor(
     //박스 개봉 로딩
     private val _isBoxOpening = MutableStateFlow(false)
     val isBoxOpening = _isBoxOpening.asStateFlow()
+
+    // 결과를 알 수 없는(응답을 받지 못한) 박스 열기 요청 (#454)
+    // 같은 개수로 다시 열면 같은 requestId를 보낸다 → 서버가 이미 처리했으면 다시 추첨하지 않고 이전 결과를 받는다
+    // 개수를 바꿔 열면 새 요청으로 본다 (이전 요청이 처리됐다면 보유량은 유저 문서 구독(observeUserItem)으로 반영됨)
+    private var pendingBoxRequest: PendingBoxRequest? = null
+
+    private data class PendingBoxRequest(val count: Int, val requestId: String)
 
     // 레벨업 상태
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -559,18 +569,28 @@ class HomeViewModel @Inject constructor(
         if (count <= 0) return
         if (_isBoxOpening.value) return
 
+        val requestId = pendingBoxRequest?.takeIf { it.count == count }?.requestId
+            ?: UUID.randomUUID().toString()
+        pendingBoxRequest = PendingBoxRequest(count, requestId)
+
         viewModelScope.launch {
             _isBoxOpening.value = true
             try {
-                openBonusBoxUseCase(count)
+                openBonusBoxUseCase(count, requestId)
                     .onSuccess { droppedItem ->
-                        if (droppedItem.isNotEmpty()) {
-                            _eventChannel.send(HomeEvent.BonusBoxResult(droppedItem))
-                        }
+                        pendingBoxRequest = null
+                        // 비어 있어도 보낸다: 화면이 이 이벤트로 개봉 다이얼로그를 닫는다
+                        _eventChannel.send(HomeEvent.BonusBoxResult(droppedItem))
                     }
                     .onFailure { error ->
+                        // 연결 끊김·서버 오류는 서버에서 처리됐을 수도 있으므로 다음 시도에 같은 requestId를 쓴다
+                        // 박스 부족 등 서버가 거절한 경우는 처리되지 않았으므로 버린다
+                        if (error !is AppError.Network && error !is AppError.Server) {
+                            pendingBoxRequest = null
+                        }
                         when (error) {
-                            is AppError.UnknownUser -> ensureCurrentUserUseCase()
+                            // OpenBonusBoxUseCase가 이미 ensureCurrentUserUseCase로 세션 만료를 알렸다
+                            is AppError.UnknownUser -> Unit
                             else -> sendToast(error.message)
                         }
                     }
@@ -603,27 +623,25 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(levelUpReady = ready) }
     }
 
-    //레벨업 함수
-    fun onLevelUpClick(potId: String, currentPotLevel: Int) {
+    // 레벨업 (#456): 조건 확인·안내는 LevelUpPotUseCase가 하고, 여기서는 결과만 화면에 알린다
+    // 레벨 이미지·아이템 개수는 화분·유저 실시간 구독이 기기 캐시 반영 즉시 갱신하므로 직접 바꾸지 않는다
+    // (서버에서 거부되면 캐시가 되돌아가 구독이 원래 값으로 다시 그린다)
+    fun onLevelUpClick(potId: String) {
+        // 처리 중 연타 가드 — 같은 레벨업 batch가 두 번 가지 않게 한다 (두 번 가도 규칙이 두 번째를 거부함)
+        if (_uiState.value.isLoading) return
+        _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            levelUpPotUseCase(potId, currentPotLevel)
-                .onSuccess {
-                    val leveledUp = _displayPot.value.let {
-                        if (it.id == potId) it.copy(potLevel = currentPotLevel + 1) else it
-                    }
-
-                    updateProgressAndCondition(leveledUp)
-
+            levelUpPotUseCase(potId)
+                .onSuccess { result ->
                     _uiState.update { it.copy(isLoading = false) }
-                    _eventChannel.send(HomeEvent.LevelUpSuccess)
+                    _eventChannel.send(HomeEvent.LevelUpSuccess(isPending = result == SaveResult.Pending))
                 }
                 .onFailure { e ->
                     _uiState.update { it.copy(isLoading = false) }
                     when (e) {
                         is AppError.UnknownUser -> Unit
                         is AppError.InsufficientItems -> {
-                            _uiState.update { it.copy(showInsufficientItemsDialog = true) }
+                            _uiState.update { it.copy(insufficientItemsMessage = e.message) }
                         }
                         else -> sendToast(e.message)
                     }
@@ -632,7 +650,7 @@ class HomeViewModel @Inject constructor(
     }
 
     fun onDismissInsufficientDialog() {
-        _uiState.update { it.copy(showInsufficientItemsDialog = false) }
+        _uiState.update { it.copy(insufficientItemsMessage = null) }
     }
 
     //바 계산 & 레벨업 조건 검증 일괄 처리용

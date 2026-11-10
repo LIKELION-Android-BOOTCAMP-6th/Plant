@@ -143,43 +143,14 @@ class PotRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun levelUpWithItemConsumption(
-        uid: String,
-        potId: String,
-        newLevel: Int,
-        items: Map<ItemType, Int>
-    ) {
-        val userRef = db.collection("users").document(uid)
-        val potRef = userRef.collection("pots").document(potId)
-
-        db.runTransaction { transaction ->
-            val userSnapshot = transaction.get(userRef)
-            val potSnapshot = transaction.get(potRef)
-
-            if (!potSnapshot.exists()) {
-                throw PotNotFoundException()
-            }
-
-            val currentDbLevel = potSnapshot.getLong("potLevel")?.toInt() ?: 0
-            if (currentDbLevel != newLevel - 1) {
-                throw PotLevelMismatchException()
-            }
-
-            for ((itemType, requiredCount) in items) {
-                val currentCount = userSnapshot.getLong("item.${itemType.fieldKey}") ?: 0L
-
-                if (currentCount < requiredCount) {
-                    throw InsufficientItemsException()
-                }
-            }
-            val updatedItems = items.entries.associate { (type, required) ->
-                "item.${type.fieldKey}" to FieldValue.increment(-required.toLong())
-            }
-
-            if  (updatedItems.isNotEmpty()) {
-                transaction.update(userRef, updatedItems)
-            }
-            transaction.update(potRef, "potLevel", newLevel)
-        }.await()
-    }
+    override fun levelUpPot(uid: String, potId: String, newLevel: Int, items: Map<ItemType, Int>): Task<Void> =
+        db.runBatch { batch ->
+            // 서버 레벨과 비교할 수 있도록 증가값이 아닌 정해진 레벨을 쓴다 (같은 레벨업이 두 번 도착하면 두 번째는 거부됨)
+            batch.update(potRef(uid, potId), "potLevel", newLevel)
+            // 규칙이 아이템 차감이 어느 화분의 레벨업 때문인지 확인하도록 화분 ID를 함께 적는다
+            val userUpdates = items.entries.associate { (type, count) ->
+                "item.${type.fieldKey}" to FieldValue.increment(-count.toLong())
+            } + ("lastLevelUpPotId" to potId)
+            batch.update(userRef(uid), userUpdates)
+        }
 }

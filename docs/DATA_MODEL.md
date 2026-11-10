@@ -20,16 +20,23 @@ users
     ├── lastCompletedPotId: String?      ← 마지막으로 완료한 화분 ID (완료 수 +1 검증, #455)
     ├── lastDeletedPotId: String?        ← 마지막 기록 삭제·화분 삭제의 화분 ID (학습 시간 차감 검증, #455)
     ├── lastDeletedLogId: String?        ← 마지막 기록 삭제의 기록 ID, 화분 삭제면 "" (#455)
+    ├── lastLevelUpPotId: String?        ← 마지막으로 레벨업한 화분 ID (아이템 차감 검증, #456)
     ├── dailyCheckThisMonth
     │   ├── count: Int
     │   └── lastCheckedAt: Timestamp?
-    ├── item
+    ├── item                             ← heart~nutrient(성장 아이템)는 화분 레벨업 batch에서만 감소 (#456)
     │   ├── heart: Int
     │   ├── sun: Int
     │   ├── water: Int
     │   ├── fertilizer: Int
     │   ├── nutrient: Int
     │   └── box: Int
+    │
+    ├── boxOpenings                       ← 보너스 박스 열기 결과 (functions openBonusBoxes만 씀, 앱은 읽기·쓰기 불가, #454)
+    │   └── {requestId}                   ← 앱이 보낸 요청 ID (같은 요청은 한 번만 추첨·지급)
+    │       ├── count: Int                ← 연 박스 수
+    │       ├── items: List<String>       ← 뽑힌 보상의 앱 ItemType 이름 (예: "HEART", "GOLD_300")
+    │       └── createdAt: Timestamp
     │
     └── pots
         └── {potsId}
@@ -45,6 +52,7 @@ users
             ├── lastStudiedAt: Timestamp?     ← 학습 기록 저장 시 서버 시각 (최근 학습순 정렬용)
             ├── lastStudySessionId: String?   ← 마지막 저장 세션 ID (#453)
             ├── lastDeletedLogId: String?     ← 마지막으로 삭제한 기록 ID (학습 시간 차감 검증, #455)
+            ├── potLevel: Int                 ← 0으로 생성, 레벨업 batch에서만 +1 (최대 6, 조건 표는 LevelUpCondition.kt, #456)
             │
             └── logs                          ← 화분을 삭제하면 onPotDeleted 트리거가 함께 삭제 (#455)
                 └── {logId}                   ← 학습 세션 ID (같은 세션은 한 번만 저장, #453)

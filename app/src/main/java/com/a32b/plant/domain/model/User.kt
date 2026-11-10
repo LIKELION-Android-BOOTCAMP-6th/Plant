@@ -1,5 +1,6 @@
 package com.a32b.plant.domain.model
 
+import com.a32b.plant.domain.type.ItemType
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -59,7 +60,18 @@ data class Item(
     val fertilizer: Int,
     val nutrient: Int,
     val box: Int,
-)
+) {
+    /** 아이템 종류별 보유 개수 (골드는 아이템이 아니므로 0) */
+    fun countOf(type: ItemType): Int = when (type) {
+        ItemType.HEART -> heart
+        ItemType.SUN -> sun
+        ItemType.WATER -> water
+        ItemType.FERTILIZER -> fertilizer
+        ItemType.NUTRIENT -> nutrient
+        ItemType.BOX -> box
+        ItemType.GOLD_300, ItemType.GOLD_500, ItemType.GOLD_1000 -> 0
+    }
+}
 data class User(
     val uid: String,
     val nickname: String,
