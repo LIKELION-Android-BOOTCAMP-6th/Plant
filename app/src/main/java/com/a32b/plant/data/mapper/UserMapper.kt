@@ -40,7 +40,8 @@ fun UserDto.toDomain() : User = User(
     gold = gold,
     monthCheck = monthCheck.toDomain(),
     item = item.toDomain(),
-    activeSessionToken = activeSessionToken
+    activeSessionToken = activeSessionToken,
+    unlockedProfileLevel = unlockedProfileLevel ?: 0
 )
 
 fun User.toDto(): UserDto = UserDto(
@@ -53,5 +54,6 @@ fun User.toDto(): UserDto = UserDto(
     gold = gold,
     monthCheck = monthCheck.toDto(),
     item = item.toDto(),
-    activeSessionToken = activeSessionToken
+    activeSessionToken = activeSessionToken,
+    unlockedProfileLevel = unlockedProfileLevel
 )

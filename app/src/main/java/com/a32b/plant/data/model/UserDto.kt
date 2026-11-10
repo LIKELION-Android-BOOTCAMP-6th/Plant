@@ -27,7 +27,9 @@ data class UserDto(
     @get:PropertyName("item") @set:PropertyName("item")
     var item: ItemDto = ItemDto(),
     @get:PropertyName("activeSessionToken") @set:PropertyName("activeSessionToken")
-    var activeSessionToken: String? = null
+    var activeSessionToken: String? = null,
+    @get:PropertyName("unlockedProfileLevel") @set:PropertyName("unlockedProfileLevel")
+    var unlockedProfileLevel: Int? = null
 )
 
 data class DailyCheckThisMonthDto(

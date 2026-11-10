@@ -9,6 +9,7 @@ users
 └── {uid}
     ├── nickname: String
     ├── profileImg: String
+    ├── unlockedProfileLevel: Int       ← 프로필 이미지 해금 최고 레벨 0~6. 가입 시 0, 필드가 없으면 0으로 읽음 (#475)
     ├── lastSelectedPotId: String
     ├── isFirstLogin: Boolean?
     ├── totalStudyTime: Long             ← 학습 기록 저장 batch에서만 증가 (#453), 기록 삭제·화분 삭제 batch에서만 감소 (#455)

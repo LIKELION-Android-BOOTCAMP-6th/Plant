@@ -402,7 +402,7 @@ com.a32b.plant
 
 | 컬렉션 | 구조 | 용도 |
 |--------|------|------|
-| `users/{uid}` | nickname, profileImg, lastSelectedPotId, isFirstLogin, totalStudyTime, gold, completedPotsCount, dailyCheckThisMonth{count,lastCheckedAt}, item{heart,sun,water,fertilizer,nutrient,box} | 사용자 프로필 |
+| `users/{uid}` | nickname, profileImg, unlockedProfileLevel, lastSelectedPotId, isFirstLogin, totalStudyTime, gold, completedPotsCount, dailyCheckThisMonth{count,lastCheckedAt}, item{heart,sun,water,fertilizer,nutrient,box} | 사용자 프로필 |
 | `users/{uid}/pots/{potId}` | id, tag_id, tag_name, name, imageUrl, potTotalStudyingTime, createdAt, completedAt, isCompleted, **lastStudiedAt** (신규) | 화분 정보 |
 | `users/{uid}/pots/{potId}/logs/{logId}` | id, title, contents[], studyingTime, createAt | 학습 기록 |
 | `posts/{postId}` | author{id,nickname,profileImg}, title, content, tag{id,name,parentId,no}, commentCount, likeCount, likedBy[], bookmarkCount, bookmarkedBy[], createdAt, activityId, isShared, studyLogs[] | 게시글 |
