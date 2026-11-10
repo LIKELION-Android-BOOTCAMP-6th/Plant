@@ -82,6 +82,7 @@ import com.a32b.plant.domain.model.Item
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.type.ItemType
 import com.a32b.plant.domain.type.StudyingSessionStatus
+import com.a32b.plant.domain.usecase.item.OpenBonusBoxUseCase
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.ProfileImage
@@ -298,7 +299,8 @@ fun HomeScreen(
                 //수량 선택 다이얼로그 (별도 창이라 본문 배치와 무관해 HomeBodyLayout 밖에 둔다)
                 if (showOpenDialog) {
                     BonusBoxOpenDialog(
-                        maxCount = userItem.box,
+                        ownedCount = userItem.box,
+                        maxCount = userItem.box.coerceAtMost(OpenBonusBoxUseCase.MAX_OPEN_COUNT),
                         isOpening = isBoxOpening,
                         onDismiss = {if (!isBoxOpening) showOpenDialog = false },
                         onConfirm = { count ->
@@ -1350,7 +1352,8 @@ private fun RecoveryDialog(
 
 @Composable
 fun BonusBoxOpenDialog(
-    maxCount: Int,
+    ownedCount: Int,
+    maxCount: Int, // 한 번에 열 수 있는 개수 (보유량과 서버 상한 중 작은 값)
     isOpening: Boolean,
     onDismiss: () -> Unit,
     onConfirm: (Int) -> Unit
@@ -1373,10 +1376,17 @@ fun BonusBoxOpenDialog(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = "보유한 박스: ${maxCount}개",
+                    text = "보유한 박스: ${ownedCount}개",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSecondary
                 )
+                if (ownedCount > maxCount) {
+                    Text(
+                        text = "한 번에 최대 ${maxCount}개까지 열 수 있어요",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondary
+                    )
+                }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),

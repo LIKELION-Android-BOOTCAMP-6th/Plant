@@ -292,10 +292,12 @@ SplashViewModel.checkAuthLogin()
 │                                                                       │
 │   보너스박스 개봉 (홈 화면 진입)                                          │
 │   ├─ HomeScreen에서 보유 박스 수 표시, 박스 보유 시 개봉 버튼 활성화          │
-│   ├─ [개봉] 탭 → DrawAndSaveItemsUseCase(isBoxOpened=true) 호출         │
-│   ├─ Firestore Transaction: item.box -1 + 드롭 아이템 +1                │
-│   ├─ 확률 테이블 기반 드롭 (아이템 / Gold / 보너스박스)                    │
-│   └─ users/{uid} 결과 반영 → UI에 드롭 결과 표시                         │
+│   ├─ [개봉] 탭 → OpenBonusBoxUseCase → Callable openBonusBoxes (#454) │
+│   ├─ 서버 Transaction: 보유량 확인 → 서버 추첨 → item.box 순증감         │
+│   │   + 아이템/Gold 지급 + boxOpenings/{requestId}에 결과 저장           │
+│   ├─ 확률 테이블(서버 원본) 기반 드롭 (아이템 / Gold / 보너스박스)          │
+│   ├─ 같은 requestId 재시도 → 다시 추첨하지 않고 이전 결과 반환            │
+│   └─ 뽑힌 목록 응답 → UI에 드롭 결과 표시 (온라인 전용)                   │
 │                                                                       │
 │   상점 구매                                                            │
 │   ├─ Gold 잔액 확인 → Firestore Transaction으로 Gold 차감 + 아이템 증가   │
