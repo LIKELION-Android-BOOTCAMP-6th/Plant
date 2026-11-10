@@ -118,7 +118,6 @@ class PotRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-
     // 화분 목록 일회 조회 (리포트용) - 완료 화분 포함
     override suspend fun getPotsOnce(uid: String): GetPotsOnceResult {
         val snapshot = db.collection("users").document(uid)
