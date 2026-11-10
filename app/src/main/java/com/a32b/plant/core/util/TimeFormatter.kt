@@ -10,8 +10,8 @@ object TimeFormatter {
     /**
     분단위 표시 : fun formatToMinute(time: Long): String
      -> ~분
-     시분초 표시 : fun formatToDigitalClock(time: Long): String
-     -> HH:mm:ss
+     시분초 표시 : fun formatToDigitalClock(millis: Long): String
+     -> 1시간 이상 HH:mm:ss, 1시간 미만 mm:ss
      시간 길이 표시 : fun formatToKoreanDuration(millis: Long): String
      -> ~시간 ~분 ~초 (0인 단위는 생략, 1초 미만은 0초)
 
