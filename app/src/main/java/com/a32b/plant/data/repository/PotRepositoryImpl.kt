@@ -268,7 +268,7 @@ class PotRepositoryImpl @Inject constructor(
         private const val DELETE_POT_ERROR_MESSAGE = "화분 삭제에 실패했습니다. 다시 시도해주세요."
         private const val POT_NOT_FOUND_MESSAGE = "존재하지 않거나 삭제된 화분입니다."
         private const val POT_LOAD_ERROR_MESSAGE = "화분 정보를 불러오지 못했습니다."
-        // 규칙은 거부 사유를 알려주지 않는다 — 대부분 다른 기기에서 아이템을 먼저 써서 부족해진 경우
+        // 규칙은 거부 사유를 알려주지 않는다 — 예: 다른 기기에서 아이템을 먼저 써서 서버 기준으로 부족해진 경우
         private const val LEVEL_UP_ERROR_MESSAGE = "레벨업에 실패했습니다. 아이템과 학습 시간을 확인해주세요."
     }
 }

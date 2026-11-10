@@ -60,7 +60,7 @@ data class AttendanceUiState(
 )
 
 data class HomeUiState(
-    val levelUpReady: Boolean = false, // 레벨업 학습 시간 조건 충족 (false면 버튼을 비활성처럼 표시, 누르면 남은 시간 안내)
+    val levelUpReady: Boolean = false, // 레벨업 학습 시간 조건 충족 (false면 버튼을 비활성처럼 표시, 누르면 LevelUpPotUseCase가 이유 안내 — 남은 시간·최고 레벨 등)
     val insufficientItemsMessage: String? = null, // 아이템 부족 다이얼로그 문구 ("햇빛, 물이(가) 부족합니다.") — null이면 닫힘
     val levelUpProgress: Float = 0f,
     val levelUpProgressText: String = "",

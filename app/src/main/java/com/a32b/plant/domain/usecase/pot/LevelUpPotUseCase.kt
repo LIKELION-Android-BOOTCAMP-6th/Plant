@@ -16,7 +16,7 @@ import javax.inject.Inject
  * - 화분: 캐시의 화분 문서 (아직 서버에 가지 않은 학습 저장도 반영됨)
  * - 아이템: 현재 유저 (users 문서 실시간 구독 값 — 캐시에 반영된 쓰기 포함)
  * 조건을 채우지 못하면 요청하지 않고 부족한 항목을 알려준다.
- * 서버에서는 보안 규칙이 같은 조건 표로 다시 검증하므로, 캐시 값이 서버와 달랐으면(다른 기기에서 아이템 사용 등) 거부된다.
+ * 서버에서는 보안 규칙이 같은 조건 표로 다시 검증하므로, 캐시 값으로는 충족했어도 서버 값으로 부족하면(다른 기기에서 아이템 사용 등) 거부된다.
  */
 class LevelUpPotUseCase @Inject constructor(
     private val potRepository: PotRepository,
