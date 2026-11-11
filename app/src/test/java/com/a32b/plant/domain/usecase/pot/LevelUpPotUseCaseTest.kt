@@ -149,7 +149,6 @@ class LevelUpPotUseCaseTest {
         override fun getAvailableTags(): Flow<List<Tag>> = error("Unused")
         override suspend fun addPot(uid: String, tag: Tag, name: String): Result<Unit> = error("Unused")
         override suspend fun getUserPotById(uid: String, potId: String): Pot? = error("Unused")
-        override suspend fun getDuplicationLevelList(uid: String): List<Int> = error("Unused")
         override suspend fun getUserPotsByStatus(uid: String, isCompleted: Boolean): List<Pot> = error("Unused")
         override suspend fun updatePotName(uid: String, potId: String, newName: String): Result<SaveResult> =
             error("Unused")

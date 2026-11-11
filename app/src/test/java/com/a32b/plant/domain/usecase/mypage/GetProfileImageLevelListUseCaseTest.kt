@@ -2,6 +2,7 @@ package com.a32b.plant.domain.usecase.mypage
 
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.AttendanceDecision
+import com.a32b.plant.domain.model.PotLevelConditions
 import com.a32b.plant.domain.model.User
 import com.a32b.plant.domain.model.UserSnapshot
 import com.a32b.plant.domain.repository.UserRepository
@@ -43,11 +44,11 @@ class GetProfileImageLevelListUseCaseTest {
     }
 
     @Test
-    fun `clamps an unlocked level above six to six`() = runTest {
-        val result = createUseCase(testUser(7))()
+    fun `clamps an unlocked level above the max level to the max level`() = runTest {
+        val result = createUseCase(testUser(PotLevelConditions.MAX_LEVEL + 1))()
 
         assertTrue(result is Result.Success)
-        assertEquals((0..6).toList(), (result as Result.Success).data)
+        assertEquals((0..PotLevelConditions.MAX_LEVEL).toList(), (result as Result.Success).data)
     }
 
     @Test
