@@ -118,8 +118,8 @@ private fun DailyCheckThisMonth.toAttendanceUiStateKeeping(
 
 // 출석 안내 문구 (#531)
 internal const val ATTENDANCE_OFFLINE_MESSAGE = "인터넷에 연결되면 출석할 수 있어요"
-internal const val ATTENDANCE_NETWORK_ERROR_MESSAGE =
-    "인터넷 연결이 원활하지 않아 출석 결과를 받지 못했어요. 출석판을 확인한 뒤 다시 시도해주세요."
+// 토스트는 두 줄까지만 보이므로(실기기에서 앞 문구는 "출석판을 확인..."에서 잘림) 짧게 유지한다
+internal const val ATTENDANCE_NETWORK_ERROR_MESSAGE = "출석 결과를 받지 못했어요. 출석판을 확인해주세요."
 
 /**
  * 홈 "오늘 학습 시간"의 0 표시 — 화분 있음(기록 0)·화분 없음·조회 실패를 같은 형식으로 맞춘다 (#584)
