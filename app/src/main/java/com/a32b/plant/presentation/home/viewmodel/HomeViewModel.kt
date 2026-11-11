@@ -118,7 +118,7 @@ private fun DailyCheckThisMonth.toAttendanceUiStateKeeping(
 
 // 출석 안내 문구 (#531)
 internal const val ATTENDANCE_OFFLINE_MESSAGE = "인터넷에 연결되면 출석할 수 있어요"
-// 토스트는 두 줄까지만 보이므로(실기기에서 앞 문구는 "출석판을 확인..."에서 잘림) 짧게 유지한다
+// Android 12부터 텍스트 토스트는 두 줄까지만 보이므로(Android 13 실기기에서 이전 문구는 "출석판을 확인..."에서 잘림) 짧게 유지한다
 internal const val ATTENDANCE_NETWORK_ERROR_MESSAGE = "출석 결과를 받지 못했어요. 출석판을 확인해주세요."
 
 /**

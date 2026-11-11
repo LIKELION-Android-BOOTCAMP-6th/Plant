@@ -15,7 +15,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 // 출석 함수 응답 대기 시간. 기본값(70초)이면 요청 중 연결이 끊겼을 때 출석 다이얼로그가
-// 처리 중 상태로 잠겨 오래 닫을 수 없다. 함수 콜드 스타트(#528 트리거 운영 측정 약 3초)보다 넉넉하게 둔다.
+// 처리 중 상태로 잠겨 오래 닫을 수 없다. 콜드 스타트(운영 미측정)에도 여유가 있으면서 기본값(70초)보다 충분히 짧게 둔다.
 // 시간 초과는 AppError.Network로 바뀌고, 서버에서 처리됐다면 출석판은 유저 문서 구독으로 갱신된다
 private const val ATTENDANCE_TIMEOUT_SECONDS = 20L
 
