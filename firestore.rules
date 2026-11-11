@@ -295,13 +295,30 @@ service cloud.firestore {
         getAfter(userPath(userId)).data.get('lastCompletedPotId', '') == potId;
     }
 
-    // pots/{potId} 수정 중 위 검증이 없는 쓰기(이름 변경 등): 학습 시간·학습 저장·완료·삭제 표시 필드와 레벨은 바꿀 수 없다
-    // 레벨은 레벨업 검증(potLeveledUp, #456)으로만 바꿀 수 있다
-    function potCountedFieldsKept() {
-      return !changedKeys().hasAny([
-        'potTotalStudyingTime', 'lastStudiedAt', 'lastStudySessionId',
-        'lastDeletedLogId', 'isCompleted', 'completedAt', 'potLevel'
-      ]);
+    // 화분 이름 검사 (#561) — 앱의 PotNameRule(MAX_LENGTH = 15, normalize = trim)과 화면의 줄바꿈 차단('\n')과 같은 기준
+    // 앱이 저장하는 이름을 규칙이 거부하면 안 되므로 앱보다 엄격하게 만들지 않는다
+    // - 1~15자: 규칙의 size()는 앱의 String.length처럼 UTF-16 단위로 센다 (이모지 🌱 = 2)
+    //   (rules-test/test/potName.test.js에서 에뮬레이터로 확인)
+    // - 앞뒤 공백 없음: 앱은 저장 전에 Kotlin trim()으로 지운다 (#563)
+    //   규칙의 trim()은 지우는 문자가 Kotlin과 달라서(U+0020 이하 제어 문자는 지우고 U+3000·U+00A0은 지우지 않음)
+    //   쓰지 않고, Kotlin Char.isWhitespace와 같은 문자(\p{Z}, \t \n \x0B \f \r, \x1C–\x1F)를 정규식으로 확인한다
+    // - 줄바꿈('\n') 없음: 앱은 붙여넣은 줄바꿈을 화면에서만 막고, trim은 가운데 줄바꿈을 지우지 않는다
+    function isValidPotName(name) {
+      let space = '[\\p{Z}\\t\\n\\x{0B}\\f\\r\\x{1C}-\\x{1F}]';
+      return name is string &&
+        name.size() >= 1 &&
+        name.size() <= 15 &&
+        !name.matches('(?s)' + space + '.*') &&
+        !name.matches('(?s).*' + space) &&
+        !name.matches('(?s).*\\n.*');
+    }
+
+    // pots/{potId} 수정 중 위 검증이 없는 쓰기: 앱은 이름 변경(updatePotName)만 한다 (#532)
+    // 학습 시간·학습 저장·완료·삭제 표시 필드와 레벨, 태그 등 그 외 필드는 바꿀 수 없다
+    // 이름은 바꿀 때만 검사한다 — 바뀌는 것이 없는 쓰기(레벨업 재전송 등)는 이름 때문에 거부되지 않는다
+    function potRenamedOnly() {
+      return changedKeys().hasOnly(['name']) &&
+        (!changedKeys().hasAny(['name']) || isValidPotName(request.resource.data.name));
     }
 
     // users/{uid} 수정 중 기록 삭제: 같은 쓰기에서 지워지는 기록의 저장된 학습 시간만큼만 줄어든다
@@ -342,14 +359,44 @@ service cloud.firestore {
         newValue('completedPotsCount', 0) == oldValue('completedPotsCount', 0) + 1;
     }
 
-    // users/{uid} 수정 중 위 검증이 없는 쓰기(닉네임, 이미지, 출석, 아이템 등):
-    // 학습 시간·학습 저장·완료 수·삭제/완료/레벨업 표시 필드는 바꿀 수 없다
-    function userCountedFieldsKept() {
-      return !changedKeys().hasAny([
-        'totalStudyTime', 'lastStudyEndedAt', 'lastStudyPotId', 'lastStudySessionId',
-        'completedPotsCount', 'lastCompletedPotId', 'lastDeletedPotId', 'lastDeletedLogId',
-        'lastLevelUpPotId'
-      ]);
+    // users/{uid} 수정 중 위 검증이 없는 쓰기: 앱이 직접 바꾸는 프로필 필드만 허용한다 (#532)
+    //   nickname·isFirstLogin: completeFirstLogin, nickname·profileImg: updateProfile,
+    //   lastSelectedPotId: updateLastSelectedPot, activeSessionToken: updateSessionToken
+    // 그 외 필드는 모두 거부한다 (목록에 없는 새 필드도 거부)
+    //   - gold, item.*, dailyCheckThisMonth, unlockedProfileLevel: 서버(Cloud Functions, Admin SDK라 규칙 무관)만 쓴다
+    //     학습 보상(grantStudyReward), 출석(checkAttendance), 보너스 박스(openBonusBoxes), 해금 레벨(unlockProfileLevelOnPotLevelUp)
+    //   - 학습 시간·완료 수·학습 저장/완료/삭제/레벨업 표시 필드: 아래 batch 검증으로만 바꿀 수 있다
+    function userProfileFieldsOnly() {
+      return changedKeys().hasOnly(['nickname', 'profileImg', 'lastSelectedPotId', 'isFirstLogin', 'activeSessionToken']);
+    }
+
+    // users/{uid} 생성 (createUser): 앱의 User.create() 값만 허용한다 (#532)
+    // 재화·아이템·학습 시간·해금 레벨은 0, 출석은 기록 없음으로 시작하고, 그 외 필드(완료 수, 각 batch의 표시 필드 등)는 넣을 수 없다
+    // 값이 없는 필드는 0·없음으로 읽으므로 생략해도 된다
+    function isInitialUser() {
+      let data = request.resource.data;
+      let item = newValue('item', {});
+      let monthCheck = newValue('dailyCheckThisMonth', {});
+      return data.keys().hasOnly([
+          'nickname', 'profileImg', 'lastSelectedPotId', 'isFirstLogin', 'activeSessionToken',
+          'totalStudyTime', 'gold', 'item', 'dailyCheckThisMonth', 'unlockedProfileLevel'
+        ]) &&
+        newValue('totalStudyTime', 0) == 0 &&
+        newValue('gold', 0) == 0 &&
+        newValue('unlockedProfileLevel', 0) == 0 &&
+        item is map &&
+        item.keys().hasOnly(['heart', 'sun', 'water', 'fertilizer', 'nutrient', 'box']) &&
+        item.get('heart', 0) == 0 &&
+        item.get('sun', 0) == 0 &&
+        item.get('water', 0) == 0 &&
+        item.get('fertilizer', 0) == 0 &&
+        item.get('nutrient', 0) == 0 &&
+        item.get('box', 0) == 0 &&
+        monthCheck is map &&
+        monthCheck.keys().hasOnly(['count', 'lastCheckedAt', 'lastCheckedDate']) &&
+        monthCheck.get('count', 0) == 0 &&
+        monthCheck.get('lastCheckedAt', null) == null &&
+        monthCheck.get('lastCheckedDate', null) == null;
     }
 
     // users의 삭제 표시가 이 쓰기에서 (potId, logId)로 바뀌는지 — 쓰기 전에도 같은 값이면 users를 쓰지 않은 것
@@ -451,24 +498,15 @@ service cloud.firestore {
         itemsDeductedForLevelUp(userId, levelUpRequiredItems(level));
     }
 
-    // users/{uid} 일반 쓰기(출석 보상 등)는 성장 아이템을 줄일 수 없다 — 앱에서 줄이는 것은 레벨업뿐이다
-    // (보너스 박스는 #454부터 서버 함수 openBonusBoxes가 Admin SDK로 처리해 규칙과 무관.
-    //  아이템·gold를 늘리는 쓰기와 box 감소는 #532에서 잠근다)
-    function growthItemsNotDecreased() {
-      let before = oldValue('item', {});
-      let after = newValue('item', {});
-      return after.get('heart', 0) >= before.get('heart', 0) &&
-        after.get('sun', 0) >= before.get('sun', 0) &&
-        after.get('water', 0) >= before.get('water', 0) &&
-        after.get('fertilizer', 0) >= before.get('fertilizer', 0) &&
-        after.get('nutrient', 0) >= before.get('nutrient', 0);
-    }
-
     // users/{uid} 수정 중 레벨업: 같은 쓰기에서 표시한 화분의 레벨이 1 올라가야 한다 (차감량 검증은 potLeveledUp)
     // 표시 값이 이전과 같아도(같은 화분을 연속 레벨업) 화분 레벨 변화로 구분된다. 화분이 없으면 get이 실패해 거부된다
+    // item 안에서는 성장 아이템 5종만 바뀔 수 있다 — box와 목록에 없는 키는 그대로여야 한다 (#532)
+    // (potLeveledUp은 성장 아이템 5종만 확인하므로, 여기서 막지 않으면 레벨업 batch에 box 증가를 끼워 넣을 수 있다)
     function userLeveledUpPot(userId) {
       let potId = newValue('lastLevelUpPotId', '');
       return changedKeys().hasOnly(['item', 'lastLevelUpPotId']) &&
+        newValue('item', {}).diff(oldValue('item', {})).affectedKeys()
+          .hasOnly(['heart', 'sun', 'water', 'fertilizer', 'nutrient']) &&
         isNonEmptyString(potId) &&
         getAfter(potPath(userId, potId)).data.get('potLevel', 0) ==
           get(potPath(userId, potId)).data.get('potLevel', 0) + 1;
@@ -479,22 +517,18 @@ service cloud.firestore {
       // 삭제 규칙 없음 = 거부: 회원탈퇴는 deleteAccount 함수(Admin SDK, 규칙 무관)가 처리한다 (#457)
 
       // 생성: 앱은 빈 닉네임으로 만든다 (createUser). 다른 사람 닉네임으로 만드는 것을 막는다
-      // 학습 시간·완료 수는 0으로 시작하고, 학습 저장(#453)·완료/삭제 표시(#455)·레벨업 표시(#456) 필드는 해당 batch로만 생긴다
+      // 재화·아이템·학습 시간 등은 초기값만 (isInitialUser). 학습 저장(#453)·완료/삭제 표시(#455)·레벨업 표시(#456) 필드는 해당 batch로만 생긴다
       allow create: if isUid(userId) &&
         (newValue('nickname', '') == '' || ownsNicknameAfterWrite(request.resource.data.nickname)) &&
-        newValue('totalStudyTime', 0) == 0 &&
-        newValue('completedPotsCount', 0) == 0 &&
-        !request.resource.data.keys().hasAny([
-          'lastStudyEndedAt', 'lastStudyPotId', 'lastStudySessionId',
-          'lastCompletedPotId', 'lastDeletedPotId', 'lastDeletedLogId', 'lastLevelUpPotId'
-        ]);
+        isInitialUser();
 
-      // 수정: nickname을 바꾸지 않는 쓰기(이미지, 다크모드, gold, 출석, 아이템, 세션 토큰 등)는 닉네임 검사를 하지 않는다
+      // 수정: nickname을 바꾸지 않는 쓰기(이미지, 세션 토큰, 화분 선택 등)는 닉네임 검사를 하지 않는다
+      // 일반 쓰기는 프로필 필드만 (userProfileFieldsOnly). gold·item·출석·해금 레벨은 서버만 쓴다 (#532)
       // 학습 시간·완료 수는 학습 기록 저장(#453), 화분 완료·기록 삭제·화분 삭제(#455) batch에서만 바꿀 수 있다
       // 성장 아이템(heart·sun·water·fertilizer·nutrient)을 줄이는 것은 화분 레벨업(#456) batch에서만 할 수 있다
       allow update: if isUid(userId) &&
         (!changedKeys().hasAny(['nickname']) || ownsNicknameAfterWrite(request.resource.data.get('nickname', null))) &&
-        ((userCountedFieldsKept() && growthItemsNotDecreased()) ||
+        (userProfileFieldsOnly() ||
           userStudySaved(userId) ||
           userPotCompleted(userId) ||
           userStudyLogDeleted(userId) ||
@@ -508,7 +542,9 @@ service cloud.firestore {
         allow delete: if isUid(userId) && potDeletedWithTotals(userId, potsId);
 
         // 새 화분은 학습 시간 0, 레벨 0, 미완료로 시작한다 (앱의 PotDto는 lastStudiedAt·completedAt을 null로 함께 보낸다)
+        // 이름은 isValidPotName 기준 (#561)
         allow create: if isUid(userId) &&
+          isValidPotName(newValue('name', null)) &&
           newValue('potTotalStudyingTime', 0) == 0 &&
           newValue('potLevel', 0) == 0 &&
           newValue('lastStudiedAt', null) == null &&
@@ -517,7 +553,7 @@ service cloud.firestore {
           !request.resource.data.keys().hasAny(['lastStudySessionId', 'lastDeletedLogId']);
 
         allow update: if isUid(userId) &&
-          (potCountedFieldsKept() ||
+          (potRenamedOnly() ||
             potStudySaved(userId, potsId) ||
             potCompleted(userId, potsId) ||
             potStudyLogDeleted(userId, potsId) ||

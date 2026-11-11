@@ -2,7 +2,7 @@
 const {describe, it, before, after, beforeEach} = require("node:test");
 const assert = require("node:assert");
 const {assertFails, assertSucceeds} = require("@firebase/rules-unit-testing");
-const {deleteDoc, deleteField, doc, getDoc, increment, runTransaction, setDoc, updateDoc} = require("firebase/firestore");
+const {deleteDoc, deleteField, doc, getDoc, runTransaction, setDoc, updateDoc} = require("firebase/firestore");
 const {ALICE, BOB, createTestEnv, deletePotBatch, deleteStudyLogBatch, seed} = require("../helpers");
 
 describe("users", () => {
@@ -34,12 +34,12 @@ describe("users", () => {
   // 닉네임 변경은 nicknames 문서 소유 확인 (#535)
   describe("nickname", () => {
     // totalStudyTime 증가는 학습 기록 저장 batch에서만 허용된다 (#453, studyLogs.test.js)
-    it("닉네임 외 필드 쓰기는 검사하지 않는다 (출석, 아이템, 세션 토큰, 화분 선택 등)", async () => {
+    // 출석·아이템·gold는 앱이 쓸 수 없다 (#532, rewardLock.test.js)
+    it("닉네임 외 프로필 필드 쓰기는 닉네임 검사를 하지 않는다 (세션 토큰, 화분 선택 등)", async () => {
       await assertSucceeds(updateDoc(doc(asAlice(), "users", ALICE), {
         "activeSessionToken": "token",
         "lastSelectedPotId": "pot1",
-        "item.water": increment(1),
-        "dailyCheckThisMonth.count": increment(1),
+        "profileImg": "2",
       }));
     });
 
@@ -207,9 +207,8 @@ describe("users", () => {
     await assertFails(updateDoc(doc(asBob(), "users", ALICE, "pots", "pot1"), {name: "해킹"}));
   });
 
-  // 알려진 구멍: 본인 문서는 모든 필드를 자유롭게 쓸 수 있다 (#453~#456에서 검증 규칙 추가, #532에서 잠금)
-  // 잠금 작업 후에는 이 테스트를 assertFails로 바꾼다
-  it("[현재 허용 - #532에서 잠금 예정] 본인이 gold를 임의 값으로 바꿀 수 있다", async () => {
-    await assertSucceeds(updateDoc(doc(asAlice(), "users", ALICE), {gold: 999999}));
+  // 본인 문서도 프로필 필드 외에는 직접 쓸 수 없다 (#532). 잠근 필드 전체는 rewardLock.test.js
+  it("본인도 gold를 임의 값으로 바꿀 수 없다", async () => {
+    await assertFails(updateDoc(doc(asAlice(), "users", ALICE), {gold: 999999}));
   });
 });

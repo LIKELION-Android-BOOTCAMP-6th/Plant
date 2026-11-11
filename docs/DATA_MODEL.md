@@ -9,24 +9,24 @@ users
 └── {uid}
     ├── nickname: String
     ├── profileImg: String
-    ├── unlockedProfileLevel: Int       ← 프로필 이미지 해금 최고 레벨 0~6. 가입 시 0, 필드가 없으면 0으로 읽음 (#475). 화분 레벨업 시 트리거(functions unlockProfileLevelOnPotLevelUp)가 min(max(기존 값, 새 레벨), 6)으로 갱신, 내려가지 않음 (#598)
+    ├── unlockedProfileLevel: Int       ← 프로필 이미지 해금 최고 레벨 0~6. 가입 시 0, 필드가 없으면 0으로 읽음 (#475). 화분 레벨업 시 트리거(functions unlockProfileLevelOnPotLevelUp)가 min(max(기존 값, 새 레벨), 6)으로 갱신, 내려가지 않음 (#598). 앱은 수정 불가 (#532)
     ├── lastSelectedPotId: String
     ├── isFirstLogin: Boolean?
     ├── totalStudyTime: Long             ← 학습 기록 저장 batch에서만 증가 (#453), 기록 삭제·화분 삭제 batch에서만 감소 (#455)
     ├── lastStudyEndedAt: Timestamp?     ← 마지막 저장 세션의 startedAt + 학습 시간 (세션 겹침 검증, #453)
     ├── lastStudyPotId: String?          ← 마지막 저장 세션의 화분 ID (#453)
     ├── lastStudySessionId: String?      ← 마지막 저장 세션 ID (#453)
-    ├── gold: Int
+    ├── gold: Int                        ← 서버(보상·출석·박스 함수)만 씀, 앱은 가입 시 0으로 생성만 (#532)
     ├── completedPotsCount: Int          ← write-only. 화분 완료 batch에서 +1, 완료된 화분 삭제 batch에서 -1 (#455)
     ├── lastCompletedPotId: String?      ← 마지막으로 완료한 화분 ID (완료 수 +1 검증, #455)
     ├── lastDeletedPotId: String?        ← 마지막 기록 삭제·화분 삭제의 화분 ID (학습 시간 차감 검증, #455)
     ├── lastDeletedLogId: String?        ← 마지막 기록 삭제의 기록 ID, 화분 삭제면 "" (#455)
     ├── lastLevelUpPotId: String?        ← 마지막으로 레벨업한 화분 ID (아이템 차감 검증, #456)
-    ├── dailyCheckThisMonth              ← 출석은 functions checkAttendance가 갱신, 앱은 가입 시 초기값 생성만 (#531). 규칙으로 앱 수정을 막는 것은 #532
+    ├── dailyCheckThisMonth              ← 출석은 functions checkAttendance가 갱신, 앱은 가입 시 초기값 생성만 (#531), 규칙으로 앱 수정 거부 (#532)
     │   ├── count: Int                   ← 이번 달 출석 수 (0~28, 달이 바뀐 뒤 첫 출석에서 1로 다시 시작)
     │   ├── lastCheckedDate: String?     ← 마지막 출석일, 서버 시각 기준 KST "yyyy-MM-dd". "오늘 출석했나"·"같은 달인가"는 이 값으로 판단 (#531)
     │   └── lastCheckedAt: Timestamp?    ← 마지막 출석 시각 (기록용, 판단에는 쓰지 않음)
-    ├── item                             ← heart~nutrient(성장 아이템)는 화분 레벨업 batch에서만 감소 (#456)
+    ├── item                             ← 증가는 서버(보상·출석·박스 함수)만, heart~nutrient(성장 아이템) 감소는 화분 레벨업 batch에서만 (#456). 앱은 가입 시 0으로 생성, box는 수정 불가 (#532)
     │   ├── heart: Int
     │   ├── sun: Int
     │   ├── water: Int
@@ -45,7 +45,7 @@ users
             ├── id: String
             ├── tag_id: String
             ├── tag_name: String
-            ├── name: String
+            ├── name: String                  ← 1~15자(UTF-16 단위), 앞뒤 공백·줄바꿈 없음 — 생성·이름 변경 시 규칙 검사 (#532). batch 검증 없이 앱이 바꿀 수 있는 화분 필드는 이것뿐
             ├── imageUrl: String
             ├── potTotalStudyingTime: Long    ← 학습 기록 저장 batch에서만 증가 (#453), 기록 삭제 batch에서만 감소 (#455)
             ├── createdAt: Timestamp?
