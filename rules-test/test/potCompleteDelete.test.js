@@ -269,9 +269,11 @@ describe("화분 완료·기록 삭제·화분 삭제 (#455)", () => {
 
   describe("그 외 쓰기", () => {
     // 레벨업은 아이템 차감과 함께 검증한다 (potLevelUp.test.js, #456)
-    it("화분 이름 변경, 유저의 일반 필드 쓰기는 그대로 허용", async () => {
+    // 아이템 등 프로필 외 필드 잠금은 rewardLock.test.js (#532)
+    it("화분 이름 변경, 유저의 프로필 필드 쓰기는 그대로 허용", async () => {
       await assertSucceeds(updateDoc(doc(asAlice(), "users", ALICE, "pots", "pot1"), {name: "새 이름"}));
-      await assertSucceeds(updateDoc(doc(asAlice(), "users", ALICE), {"item.heart": increment(1), "lastSelectedPotId": "pot1"}));
+      await assertSucceeds(updateDoc(doc(asAlice(), "users", ALICE), {"lastSelectedPotId": "pot1"}));
+      await assertFails(updateDoc(doc(asAlice(), "users", ALICE), {"item.heart": increment(1), "lastSelectedPotId": "pot1"}));
     });
 
     it("새 화분은 미완료로, 새 유저는 완료 수 0으로만 만들 수 있고 표시 필드는 넣을 수 없다", async () => {

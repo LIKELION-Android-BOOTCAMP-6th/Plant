@@ -225,15 +225,32 @@ describe("화분 레벨업 (#456)", () => {
   describe("유저 아이템 차감 (레벨업과 함께여야 함)", () => {
     const LV0 = {newLevel: 1, items: {heart: 1}};
 
-    it("레벨업 없이 성장 아이템만 줄임 → 거부, 늘리거나 보너스 박스를 줄이는 쓰기는 허용", async () => {
+    // 레벨업 batch가 아닌 쓰기는 아이템을 늘리거나 줄일 수 없다 (#532: 보상·박스는 서버만 씀)
+    it("레벨업 없이 아이템을 줄이거나 늘림 → 거부 (보너스 박스 포함)", async () => {
       await setup({time: 10 * HOUR, items: itemsOf(100)});
       await assertFails(levelUpBatch(asAlice(), {...LV0, skipPot: true}));
-      for (const key of ITEM_KEYS) {
+      for (const key of [...ITEM_KEYS, "box"]) {
         await assertFails(updateDoc(doc(asAlice(), "users", ALICE), {[`item.${key}`]: increment(-1)}));
+        await assertFails(updateDoc(doc(asAlice(), "users", ALICE), {[`item.${key}`]: increment(1)}));
       }
-      await assertSucceeds(updateDoc(doc(asAlice(), "users", ALICE), {"item.heart": increment(1)}));
-      await assertSucceeds(updateDoc(doc(asAlice(), "users", ALICE), {"item.box": increment(1)}));
-      await assertSucceeds(updateDoc(doc(asAlice(), "users", ALICE), {"item.box": increment(-1)}));
+    });
+
+    // potLeveledUp은 성장 아이템 5종만 확인하므로 box·새 키는 유저 규칙(userLeveledUpPot)이 막는다 (#532)
+    it("레벨업 batch에 보너스 박스 증가·감소나 item의 새 키, gold를 끼워 넣음 → 거부", async () => {
+      await setup({time: 10 * HOUR, items: itemsOf(100)});
+      const withUserExtra = (extra) => {
+        const db = asAlice();
+        const batch = writeBatch(db);
+        batch.update(doc(db, "users", ALICE, "pots", "pot1"), {potLevel: 1});
+        batch.update(doc(db, "users", ALICE), {"item.heart": increment(-1), lastLevelUpPotId: "pot1", ...extra});
+        return batch.commit();
+      };
+      await assertFails(withUserExtra({"item.box": increment(1)}));
+      await assertFails(withUserExtra({"item.box": increment(-1)}));
+      await assertFails(withUserExtra({"item.gem": 1}));
+      await assertFails(withUserExtra({gold: increment(100)}));
+      assert.strictEqual((await read("users", ALICE, "pots", "pot1")).potLevel, 0);
+      await assertSucceeds(withUserExtra({}));
     });
 
     it("화분 레벨을 그대로 두고(이미 오른 레벨) 아이템만 줄임 → 거부", async () => {
