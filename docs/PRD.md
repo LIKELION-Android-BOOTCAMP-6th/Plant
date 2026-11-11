@@ -100,7 +100,7 @@
 | | 프로필 이미지 변경 | 🚧 | 화분 성장 이미지 기반, 변경 가능성 있음 |
 | | 다크모드 | ✅ | DataStore 기반, 기기별 로컬 저장 |
 | **출석체크** | 출석판 (28일 고정) | 🚧 | 윤달/윤년 등은 28일 통일 |
-| | 하루 1회 출석 + 누적 보상 | 🚧 | Gold·성장 아이템 지급, Transaction 기반, 서버 시간 판정은 미적용 (클라이언트 KST) |
+| | 하루 1회 출석 + 누적 보상 | 🚧 | Gold·성장 아이템 지급, Callable Function `checkAttendance`가 서버 시간(KST 00:00 기준)으로 판정·지급 (#531), 온라인 전용 |
 | **리포트/통계** | 학습 달력 (공부한 날짜 표시) | 🚧 | ReportScreen 존재, 세부 미확인 |
 | | 일간 학습 통계 (총/최대/최소/평균) | | |
 | | 월간 학습 통계 (그래프 포함) | | |
@@ -219,9 +219,9 @@
 | 항목 | 분류 | 설명 | 플로우 | 비고 |
 |------|------|------|--------|------|
 | **출석판** | 특징 | 28일 고정, 월간 출석 현황 표시 | — | 윤달/윤년 등 날짜 차이 무시 |
-| **출석 방식** | 특징 | 하루 1회, 당일 중복 불가 | — | 서버 시간 기준 판정 |
+| **출석 방식** | 특징 | 하루 1회, 당일 중복 불가 | — | 서버 시간 기준 판정 (KST 00:00에 하루 시작, 기기 시간과 무관). 온라인 전용 — 오프라인이면 버튼을 비활성처럼 표시하고 누르면 안내 |
 | **출석 기록** | 특징 | 누적 방식 | 5일과 12일에 출석하면 두 번째 칸까지 체크 | — |
-| **보상** | 기능 | 출석 칸별 Gold/성장 아이템 지급 | — | Transaction 기반, `lastCheckedAt` 날짜로 중복 출석 방지 |
+| **보상** | 기능 | 출석 칸별 Gold/성장 아이템 지급 | — | 서버 Transaction에서 지급, `lastCheckedDate`(KST 날짜)로 중복 출석 방지. 보상표 원본은 서버(`functions/index.js`), 앱 `AttendanceRewardTable`은 출석판 표시용 |
 
 #### G. 보상 · Gold · 상점 (신규)
 
@@ -402,7 +402,7 @@ com.a32b.plant
 
 | 컬렉션 | 구조 | 용도 |
 |--------|------|------|
-| `users/{uid}` | nickname, profileImg, unlockedProfileLevel, lastSelectedPotId, isFirstLogin, totalStudyTime, gold, completedPotsCount, dailyCheckThisMonth{count,lastCheckedAt}, item{heart,sun,water,fertilizer,nutrient,box} | 사용자 프로필 |
+| `users/{uid}` | nickname, profileImg, unlockedProfileLevel, lastSelectedPotId, isFirstLogin, totalStudyTime, gold, completedPotsCount, dailyCheckThisMonth{count,lastCheckedDate,lastCheckedAt}, item{heart,sun,water,fertilizer,nutrient,box} | 사용자 프로필 |
 | `users/{uid}/pots/{potId}` | id, tag_id, tag_name, name, imageUrl, potTotalStudyingTime, createdAt, completedAt, isCompleted, **lastStudiedAt** (신규) | 화분 정보 |
 | `users/{uid}/pots/{potId}/logs/{logId}` | id, title, contents[], studyingTime, createAt | 학습 기록 |
 | `posts/{postId}` | author{id,nickname,profileImg}, title, content, tag{id,name,parentId,no}, commentCount, likeCount, likedBy[], bookmarkCount, bookmarkedBy[], createdAt, activityId, isShared, studyLogs[] | 게시글 |

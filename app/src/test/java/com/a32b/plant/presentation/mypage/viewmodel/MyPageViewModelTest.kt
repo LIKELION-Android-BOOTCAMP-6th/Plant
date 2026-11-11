@@ -311,7 +311,7 @@ class MyPageViewModelTest {
             updateProfileGate?.await()
             return updateProfileResult
         }
-        override suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success> = error("Unused")
+        override suspend fun checkAttendance(): Result<AttendanceDecision.Success> = error("Unused")
         override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> = error("Unused")
     }
 

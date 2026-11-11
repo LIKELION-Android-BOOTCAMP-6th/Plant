@@ -18,6 +18,7 @@ import com.a32b.plant.domain.model.PotLevelConditions
 import com.a32b.plant.domain.model.StudyReward
 import com.a32b.plant.domain.model.StudySaveResult
 import com.a32b.plant.domain.model.UnseenStudyReward
+import com.a32b.plant.domain.network.NetworkMonitor
 import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.onFailure
@@ -115,6 +116,11 @@ private fun DailyCheckThisMonth.toAttendanceUiStateKeeping(
     isChecking = current.isChecking
 )
 
+// 출석 안내 문구 (#531)
+internal const val ATTENDANCE_OFFLINE_MESSAGE = "인터넷에 연결되면 출석할 수 있어요"
+internal const val ATTENDANCE_NETWORK_ERROR_MESSAGE =
+    "인터넷 연결이 원활하지 않아 출석 결과를 받지 못했어요. 출석판을 확인한 뒤 다시 시도해주세요."
+
 /**
  * 홈 "오늘 학습 시간"의 0 표시 — 화분 있음(기록 0)·화분 없음·조회 실패를 같은 형식으로 맞춘다 (#584)
  * formatToDigitalClock은 학습 타이머·알림·결과 화면 등 여러 곳에서 쓰므로 반환 형식을 바꾸지 않고, 0을 이 함수 결과에 맞춘다
@@ -134,7 +140,8 @@ class HomeViewModel @Inject constructor(
     private val openBonusBoxUseCase: OpenBonusBoxUseCase,
     private val checkLevelUpConditionUseCase: CheckLevelUpConditionUseCase,
     private val levelUpPotUseCase: LevelUpPotUseCase,
-    private val studyingTimerServiceController: StudyingTimerServiceController
+    private val studyingTimerServiceController: StudyingTimerServiceController,
+    private val networkMonitor: NetworkMonitor
 ) : BaseViewModel() {
 
     private val _displayPot = MutableStateFlow(Pot.EMPTY)
@@ -162,6 +169,10 @@ class HomeViewModel @Inject constructor(
     // 출석체크 UI 상태
     private val _attendanceUiState = MutableStateFlow(AttendanceUiState())
     val attendanceUiState = _attendanceUiState.asStateFlow()
+
+    // 출석은 온라인 전용 (#531). 오프라인이면 출석 버튼을 비활성처럼 표시한다
+    val isOnline: StateFlow<Boolean> = networkMonitor.observeIsOnline()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), networkMonitor.isOnline())
 
     private val _showAttendanceDialog = MutableStateFlow(false)
     val showAttendanceDialog = _showAttendanceDialog.asStateFlow()
@@ -527,13 +538,19 @@ class HomeViewModel @Inject constructor(
 
     fun checkAttendance() {
         if (_attendanceUiState.value.isChecking) return
+        // 출석은 서버 시각으로만 판정하므로 오프라인에서는 요청하지 않는다 (#531)
+        if (!networkMonitor.isOnline()) {
+            sendToast(ATTENDANCE_OFFLINE_MESSAGE)
+            return
+        }
 
         viewModelScope.launch {
             _attendanceUiState.update { it.copy(isChecking = true) }
 
             try {
                 ensureCurrentUserUseCase { user ->
-                    userRepository.checkAttendance(user.uid)
+                    // 사용자는 서버가 로그인 토큰으로 확인한다. 여기서는 세션 만료만 먼저 확인한다
+                    userRepository.checkAttendance()
                         .onSuccess { decision ->
                             _attendanceUiState.update {
                                 it.copy(
@@ -551,6 +568,10 @@ class HomeViewModel @Inject constructor(
                         .onFailure { error ->
                             when (error) {
                                 is AppError.UnknownUser -> ensureCurrentUserUseCase()
+                                // 응답만 못 받았고 서버에서는 처리됐을 수 있다.
+                                // 출석판은 유저 문서 구독(observeUserItem의 currentUser)이 서버 값으로 갱신한다
+                                is AppError.Network ->
+                                    _eventChannel.send(HomeEvent.ShowToast(ATTENDANCE_NETWORK_ERROR_MESSAGE))
                                 else -> _eventChannel.send(HomeEvent.ShowToast(error.message))
                             }
                         }

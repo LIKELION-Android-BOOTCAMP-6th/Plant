@@ -2,6 +2,11 @@ package com.a32b.plant.domain.model
 
 import com.a32b.plant.domain.type.ItemType
 
+/**
+ * 출석판 표시용 보상 표 (#531).
+ * 원본은 서버(functions/index.js ATTENDANCE_REWARD_TABLE)이고, 실제 지급도 서버가 한다.
+ * 서버 표를 바꾸면 이 표도 같이 바꿀 것 (다르면 출석판에 보이는 보상과 실제 지급이 어긋난다)
+ */
 object AttendanceRewardTable {
     fun of(count: Int): AttendanceReward? = when (count) {
         2 -> AttendanceReward.ItemReward(ItemType.HEART, 1)

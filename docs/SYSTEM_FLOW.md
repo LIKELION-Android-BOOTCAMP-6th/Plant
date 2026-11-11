@@ -265,16 +265,23 @@ SplashViewModel.checkAuthLogin()
 │   HomeScreen → 출석체크 아이콘 탭 → AttendanceCheckDialog           │
 │       │                                                          │
 │       ▼ [출석하기] 버튼 탭                                         │
-│   출석 판정 (오늘 이미 출석 / 28일 완료 / 달 변경 / 정상 출석)        │
+│       ├─ 오프라인 → 요청하지 않고 안내 토스트 (온라인 전용)           │
 │       │                                                          │
-│       ├─ 오늘 이미 출석 → 출석 불가                                 │
-│       ├─ 28일 완료 (같은 달) → 출석 불가                            │
-│       ├─ 달 바뀜 → 출석 횟수 1로 재시작                             │
+│       ▼ Callable checkAttendance (#531)                          │
+│   서버가 서버 시각 + 9시간으로 KST 날짜 키(yyyy-MM-dd) 계산         │
+│   출석 판정 (lastCheckedDate 기준)                                 │
+│       │                                                          │
+│       ├─ 28일 완료 (같은 달) → MONTH_COMPLETED, 쓰지 않음           │
+│       ├─ 오늘 이미 출석 → ALREADY_CHECKED, 쓰지 않음               │
+│       ├─ 달 바뀜 (앞 7자리 다름) → 출석 횟수 1로 재시작              │
 │       └─ 정상 출석 → 출석 횟수 +1                                  │
 │              │                                                   │
-│              ▼ Firestore Transaction (출석 기록 + 보상 원자적 저장) │
-│              ├─ users/{uid} 출석 횟수·시각 갱신                    │
+│              ▼ 서버 Transaction (판정 + 출석 기록 + 보상 원자적 처리)│
+│              ├─ users/{uid} count·lastCheckedDate·lastCheckedAt  │
 │              └─ 보상 지급 (Gold 또는 아이템)                        │
+│                                                                  │
+│   응답(SUCCESS: 횟수·보상) → 출석판 갱신 + 보상 다이얼로그          │
+│   연결 끊김 → 네트워크 안내, 출석판은 users 문서 구독 값으로 갱신     │
 │                                                                  │
 │   ※ 28일 출석판 보상표 상세는 PRD 참조                              │
 └──────────────────────────────────────────────────────────────────┘

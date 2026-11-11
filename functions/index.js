@@ -344,6 +344,138 @@ exports.openBonusBoxes = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
+// 출석 체크 (#531)
+// ---------------------------------------------------------------------------
+// 앱이 기기 날짜로 판단하고 직접 쓰던 출석을 서버가 서버 시각 기준으로 판단·지급한다
+// → 기기 시간을 바꾸거나 Firestore API를 직접 호출해도 하루 1번만 출석된다.
+// - 온라인 전용: 앱은 오프라인이면 호출하지 않는다
+// - 하루 시작은 KST 00:00 고정. 함수는 UTC로 실행되므로 서버 시각에 9시간을 더한 날짜를 쓴다
+//   (그대로 쓰면 KST 00:00~09:00 출석이 전날로 판정됨)
+// - 계산한 KST 날짜를 dailyCheckThisMonth.lastCheckedDate("yyyy-MM-dd")에 저장한다
+//   → 앱 출석판도 이 값으로 "오늘 출석했는지"를 표시해, 서버 판정과 같은 값을 본다
+//   "같은 달인가"는 앞 7자리("yyyy-MM") 비교. lastCheckedAt(Timestamp)은 기록용으로 유지
+// - 한 트랜잭션에서 확인 → 갱신·지급을 한다 → 연타·재시도·응답 유실 후 재요청에도 1번만 지급
+// - 이미 출석했거나 이번 달을 모두 채운 경우는 오류가 아니라 결과(status)로 돌려준다
+const MONTHLY_ATTENDANCE_LIMIT = 28;
+const KST_OFFSET_MS = 9 * HOUR_MS;
+const ATTENDANCE_STATUS = {
+  SUCCESS: "SUCCESS",
+  ALREADY_CHECKED: "ALREADY_CHECKED",
+  MONTH_COMPLETED: "MONTH_COMPLETED",
+};
+
+// 출석 보상 표 (원본은 서버). 키: 이번 달 몇 번째 출석인지
+// item: users.item의 필드 키, gold: users.gold에 더할 값
+// 앱 AttendanceRewardTable은 출석판 표시용 사본 → 바꾸면 함께 바꿀 것
+const ATTENDANCE_REWARD_TABLE = {
+  2: {item: "heart", amount: 1},
+  4: {item: "sun", amount: 1},
+  7: {gold: 100},
+  9: {item: "water", amount: 1},
+  12: {item: "heart", amount: 1},
+  14: {gold: 200},
+  17: {item: "sun", amount: 1},
+  20: {item: "fertilizer", amount: 1},
+  21: {gold: 300},
+  23: {item: "water", amount: 1},
+  25: {item: "nutrient", amount: 1},
+  28: {gold: 500},
+};
+
+/**
+ * 시각(ms)을 KST 날짜 키("yyyy-MM-dd")로 바꾼다. 실행 환경의 시간대와 무관하다.
+ * @param {number} nowMs
+ * @return {string}
+ */
+function toKstDateKey(nowMs) {
+  return new Date(nowMs + KST_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+/**
+ * 저장된 출석 정보와 오늘 날짜 키로 이번 출석 결과를 정한다.
+ * @param {*} monthCheck users.dailyCheckThisMonth 값
+ * @param {string} todayKey toKstDateKey 결과
+ * @return {Object} {status, newCount} (newCount는 SUCCESS일 때만)
+ */
+function decideAttendance(monthCheck, todayKey) {
+  const saved = monthCheck || {};
+  const lastKey = typeof saved.lastCheckedDate === "string" ?
+    saved.lastCheckedDate : null;
+  const isSameMonth = lastKey !== null &&
+    lastKey.slice(0, 7) === todayKey.slice(0, 7);
+  const savedCount = Number.isInteger(saved.count) ? saved.count : 0;
+  // 달이 바뀌었으면 지난달 횟수는 보지 않는다 (이번 출석이 1회차)
+  const count = isSameMonth ? savedCount : 0;
+
+  if (count >= MONTHLY_ATTENDANCE_LIMIT) {
+    return {status: ATTENDANCE_STATUS.MONTH_COMPLETED};
+  }
+  if (lastKey === todayKey) {
+    return {status: ATTENDANCE_STATUS.ALREADY_CHECKED};
+  }
+  return {status: ATTENDANCE_STATUS.SUCCESS, newCount: count + 1};
+}
+
+/**
+ * 출석을 처리한다. 하루에 여러 번 호출해도 1번만 반영·지급된다.
+ * @param {string} uid
+ * @param {number} nowMs 서버 시각(ms)
+ * @return {Promise<Object>} {status, newCount?, reward?}
+ */
+async function checkAttendance(uid, nowMs) {
+  const userRef = db.collection("users").doc(uid);
+  const todayKey = toKstDateKey(nowMs);
+
+  return db.runTransaction(async (transaction) => {
+    const userSnapshot = await transaction.get(userRef);
+    if (!userSnapshot.exists) {
+      // reason: 앱이 지역 불일치로 오는 NOT_FOUND와 구분해 세션 만료로 처리한다
+      throw new HttpsError(
+          "not-found",
+          "사용자 정보를 찾을 수 없습니다.",
+          {reason: "USER_NOT_FOUND"},
+      );
+    }
+
+    const decision = decideAttendance(
+        userSnapshot.get("dailyCheckThisMonth"), todayKey,
+    );
+    if (decision.status !== ATTENDANCE_STATUS.SUCCESS) return decision;
+
+    const reward = ATTENDANCE_REWARD_TABLE[decision.newCount] || null;
+    const updates = {
+      "dailyCheckThisMonth.count": decision.newCount,
+      "dailyCheckThisMonth.lastCheckedDate": todayKey,
+      "dailyCheckThisMonth.lastCheckedAt": Timestamp.fromMillis(nowMs),
+    };
+    if (reward && reward.item) {
+      updates[`item.${reward.item}`] = FieldValue.increment(reward.amount);
+    }
+    if (reward && reward.gold) {
+      updates.gold = FieldValue.increment(reward.gold);
+    }
+    transaction.update(userRef, updates);
+
+    return {status: decision.status, newCount: decision.newCount, reward};
+  });
+}
+
+exports.checkAttendance = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+  }
+
+  try {
+    return await checkAttendance(request.auth.uid, Date.now());
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    // 원인은 로그로만 남긴다 (내부 정보 노출 방지)
+    logger.error("출석 처리 실패", {uid: request.auth.uid, error});
+    throw new HttpsError("internal", "출석 처리 실패");
+  }
+});
+
+// ---------------------------------------------------------------------------
 // 화분 삭제 후 하위 학습 기록 정리 (#455)
 // ---------------------------------------------------------------------------
 // 앱은 화분 문서 삭제 + 유저 학습 시간 차감을 batch 하나로 쓰고(보안 규칙이 검증),

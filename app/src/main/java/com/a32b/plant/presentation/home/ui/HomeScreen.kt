@@ -119,6 +119,7 @@ fun HomeScreen(
     val allPots by viewModel.allPots.collectAsState()
     val tempSelectedPot by viewModel.tempSelectedPot.collectAsState()
     val attendanceUiState by viewModel.attendanceUiState.collectAsState()
+    val isOnline by viewModel.isOnline.collectAsState()
     val showAttendanceDialog by viewModel.showAttendanceDialog.collectAsState()
     val userItem by viewModel.userItem.collectAsState()
     val recoverySession by viewModel.recoverySession.collectAsState()
@@ -160,6 +161,7 @@ fun HomeScreen(
     if (showAttendanceDialog && isSplashFinished && recoverySession == null) {
         AttendanceCheckDialog(
             uiState = attendanceUiState,
+            isOnline = isOnline,
             onCheckClick = { viewModel.checkAttendance() },
             onDismiss = viewModel::closeAttendanceDialog
         )

@@ -2,6 +2,7 @@ package com.a32b.plant.data.repository
 
 import android.util.Log
 import com.a32b.plant.core.util.safeRunCatching
+import com.a32b.plant.data.error.toFunctionsAppError
 import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.mapper.toDto
 import com.a32b.plant.data.source.local.SettingsLocalDataSource
@@ -20,6 +21,7 @@ import com.a32b.plant.domain.session.SessionExpiredReason
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.functions.FirebaseFunctionsException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -41,6 +43,9 @@ private const val COMPLETE_FIRST_LOGIN_TIMEOUT_MS = 10_000L
 private const val UPDATE_PROFILE_TIMEOUT_MS = 10_000L
 private const val GET_USER_SERVER_TIMEOUT_MS = 2_000L
 private const val SESSION_TOKEN_WRITE_TIMEOUT_MS = 1_500L
+
+// 출석 함수가 users 문서가 없을 때 보내는 details.reason (functions/index.js checkAttendance)
+private const val ATTENDANCE_USER_NOT_FOUND_REASON = "USER_NOT_FOUND"
 
 @Singleton
 class UserRepositoryImpl @Inject constructor(
@@ -288,16 +293,20 @@ class UserRepositoryImpl @Inject constructor(
         onFailure = { e -> Result.Failure(handleUpdateProfileError(e)) }
     )
 
-    override suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success> = safeRunCatching {
-        userRemoteDataSource.checkAttendance(uid)
+    override suspend fun checkAttendance(): Result<AttendanceDecision.Success> = safeRunCatching {
+        userRemoteDataSource.checkAttendance()
     }.fold(
-        onSuccess = { decision ->
-            when (decision) {
+        onSuccess = { dto ->
+            when (val decision = dto.toDomain()) {
                 is AttendanceDecision.Success -> Result.Success(decision)
                 AttendanceDecision.AlreadyChecked ->
                     Result.Failure(AppError.Custom("이미 오늘 출석했습니다."))
                 AttendanceDecision.MonthCompleted ->
                     Result.Failure(AppError.Custom("이번 달 출석을 모두 완료했습니다."))
+                null -> {
+                    Log.e("UserRepository", "출석 함수 응답을 해석할 수 없음: $dto")
+                    Result.Failure(AppError.Server())
+                }
             }
         },
         onFailure = { e -> Result.Failure(handleAttendanceError(e)) }
@@ -319,22 +328,17 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     private fun handleAttendanceError(e: Throwable): AppError {
-        // safeRunCatching이 CancellationException을 이미 가로채 다시 던지므로,
-        // 여기 e는 CancellationException일 수 없다 (fold()의 onFailure로 넘어오는 시점엔 항상 필터됨).
-        Log.e("UserRepository", "출석 처리 실패: ${e.message}", e)
-
-        return when (e) {
-            is AppError -> e
-            is FirebaseFirestoreException -> when (e.code) {
-                FirebaseFirestoreException.Code.UNAVAILABLE,
-                FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
-                FirebaseFirestoreException.Code.PERMISSION_DENIED ->
-                    AppError.Permission("출석 처리에 실패했습니다.")
-                else -> AppError.Custom("출석 처리 실패")
-            }
-            is FirebaseNetworkException -> AppError.Network()
-            else -> AppError.Custom("출석 처리 실패")
+        Log.e("UserRepository", "출석 함수 호출 실패: ${e.message}", e)
+        // users 문서가 없음 → 세션 만료 흐름. 함수가 details.reason으로 알려준다
+        // (코드만 보면 앱·함수 지역이 달라 생기는 NOT_FOUND와 구분할 수 없음)
+        if (e is FirebaseFunctionsException &&
+            e.code == FirebaseFunctionsException.Code.NOT_FOUND &&
+            (e.details as? Map<*, *>)?.get("reason") == ATTENDANCE_USER_NOT_FOUND_REASON
+        ) {
+            return AppError.UnknownUser()
         }
+        // 오프라인·타임아웃은 AppError.Network, 미인증은 AppError.Auth, 그 외 서버 오류는 AppError.Server
+        return e.toFunctionsAppError()
     }
 
     private fun handleCompleteFirstLoginError(e: Throwable): AppError {

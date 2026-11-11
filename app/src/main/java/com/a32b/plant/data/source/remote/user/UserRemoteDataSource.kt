@@ -1,7 +1,7 @@
 package com.a32b.plant.data.source.remote.user
 
 import com.a32b.plant.data.model.UserDto
-import com.a32b.plant.domain.model.AttendanceDecision
+import com.a32b.plant.data.model.AttendanceResultDto
 import kotlinx.coroutines.flow.Flow
 
 interface UserRemoteDataSource {
@@ -15,6 +15,7 @@ interface UserRemoteDataSource {
     suspend fun completeFirstLogin(uid: String, nickname: String): CompleteFirstLoginResult
     /** 닉네임 중복 확인·새 닉네임 문서 생성·이전 닉네임 문서 삭제와 users 수정을 한 트랜잭션으로 처리하고, 확인한 서버 상태를 반환 */
     suspend fun updateProfile(uid: String, nickname: String, profileImg: String): UpdateProfileResult
-    suspend fun checkAttendance(uid: String): AttendanceDecision
+    /** 출석 체크 함수 호출. 판정·저장·보상 지급은 서버가 서버 시각 기준으로 한다 (#531) */
+    suspend fun checkAttendance(): AttendanceResultDto
     suspend fun updateSessionToken(uid: String, token: String?)
 }

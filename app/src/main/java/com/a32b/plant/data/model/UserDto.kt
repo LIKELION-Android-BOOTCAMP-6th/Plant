@@ -36,7 +36,10 @@ data class DailyCheckThisMonthDto(
     @get:PropertyName("count") @set:PropertyName("count")
     var count: Int = 0,
     @get:PropertyName("lastCheckedAt") @set:PropertyName("lastCheckedAt")
-    var lastCheckedAt: Timestamp? = null
+    var lastCheckedAt: Timestamp? = null,
+    // 서버(checkAttendance 함수)가 저장한 마지막 출석일, KST "yyyy-MM-dd" (#531)
+    @get:PropertyName("lastCheckedDate") @set:PropertyName("lastCheckedDate")
+    var lastCheckedDate: String? = null
 )
 
 data class ItemDto(

@@ -1,7 +1,7 @@
 ## 📐 데이터 모델
 
 > **최초 작성일**: 2026-09-09
-> **최종 수정일**: 2026-11-10
+> **최종 수정일**: 2026-11-11
 
 ### users
 ```
@@ -22,9 +22,10 @@ users
     ├── lastDeletedPotId: String?        ← 마지막 기록 삭제·화분 삭제의 화분 ID (학습 시간 차감 검증, #455)
     ├── lastDeletedLogId: String?        ← 마지막 기록 삭제의 기록 ID, 화분 삭제면 "" (#455)
     ├── lastLevelUpPotId: String?        ← 마지막으로 레벨업한 화분 ID (아이템 차감 검증, #456)
-    ├── dailyCheckThisMonth
-    │   ├── count: Int
-    │   └── lastCheckedAt: Timestamp?
+    ├── dailyCheckThisMonth              ← 출석은 functions checkAttendance가 갱신, 앱은 가입 시 초기값 생성만 (#531). 규칙으로 앱 수정을 막는 것은 #532
+    │   ├── count: Int                   ← 이번 달 출석 수 (0~28, 달이 바뀐 뒤 첫 출석에서 1로 다시 시작)
+    │   ├── lastCheckedDate: String?     ← 마지막 출석일, 서버 시각 기준 KST "yyyy-MM-dd". "오늘 출석했나"·"같은 달인가"는 이 값으로 판단 (#531)
+    │   └── lastCheckedAt: Timestamp?    ← 마지막 출석 시각 (기록용, 판단에는 쓰지 않음)
     ├── item                             ← heart~nutrient(성장 아이템)는 화분 레벨업 batch에서만 감소 (#456)
     │   ├── heart: Int
     │   ├── sun: Int
