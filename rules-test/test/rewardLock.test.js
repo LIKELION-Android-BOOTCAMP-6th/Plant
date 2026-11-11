@@ -133,7 +133,7 @@ describe("보상·재화·학습 시간 잠금 (#532)", () => {
     it("profileImg, lastSelectedPotId, isFirstLogin, activeSessionToken은 바꿀 수 있다", async () => {
       await assertSucceeds(updateDoc(aliceRef(), {profileImg: "1"}));
       await assertSucceeds(updateDoc(aliceRef(), {lastSelectedPotId: "pot1"}));
-      // 시드가 false라 실제로 바뀌는 값(true)으로 쓴다 (앱은 false만 쓰지만 이 테스트는 필드를 바꿀 수 있는지 확인)
+      // 시드가 false라 실제로 바뀌는 값(true)으로 쓴다 (앱은 수정에서 false만 쓰지만(completeFirstLogin) 이 테스트는 필드를 바꿀 수 있는지 확인)
       await assertSucceeds(updateDoc(aliceRef(), {isFirstLogin: true}));
       await assertSucceeds(updateDoc(aliceRef(), {activeSessionToken: "token"}));
       await assertSucceeds(updateDoc(aliceRef(), {activeSessionToken: null}));
