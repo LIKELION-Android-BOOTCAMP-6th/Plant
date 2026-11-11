@@ -8,7 +8,7 @@
 users
 └── {uid}
     ├── nickname: String
-    ├── profileImg: String               ← 고른 프로필 이미지 레벨 "0"~"6" (숫자 문자열). 가입 시 ""(선택 전)로만 생성. 바꿀 때만 규칙 검사: "0"~"6"이고 unlockedProfileLevel(없으면 0) 이하 (#602). 예전 형식 "lv.N"은 화면에서 읽기만 함. 게시글·댓글·공부 중 표시에 복사된 값은 검사하지 않음
+    ├── profileImg: String               ← 고른 프로필 이미지 레벨 "0"~"6" (숫자 문자열). 가입 시 ""(선택 전)로만 생성. 바꿀 때만 규칙 검사: "0"~"6"이고 unlockedProfileLevel(없으면 0) 이하 (#602). 예전 형식 "lv.N"은 화면에서 읽기만 함. 게시글·댓글·공부 중 표시에 복사된 값은 해금 레벨을 검사하지 않음 (공부 중 표시는 문자열인지만, 게시글·댓글은 검사 없음)
     ├── unlockedProfileLevel: Int       ← 프로필 이미지 해금 최고 레벨 0~6. 가입 시 0, 필드가 없으면 0으로 읽음 (#475). 화분 레벨업 시 트리거(functions unlockProfileLevelOnPotLevelUp)가 min(max(기존 값, 새 레벨), 6)으로 갱신, 내려가지 않음 (#598). 앱은 수정 불가 (#532)
     ├── lastSelectedPotId: String
     ├── isFirstLogin: Boolean?
