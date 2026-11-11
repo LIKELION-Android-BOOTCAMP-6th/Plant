@@ -62,16 +62,6 @@ class PotRepositoryImpl @Inject constructor(
         return document?.toObject(com.a32b.plant.data.model.PotDto::class.java)?.toDomain()
     }
 
-    //중복 제거된 레벨 리스트 조회
-    override suspend fun getDuplicationLevelList(uid: String): List<Int> {
-        val result = db.collection("users").document(uid).collection("pots")
-            .get().await()
-        return result.documents
-            .mapNotNull { it.getLong("potLevel")?.toInt() }
-            .distinct()
-            .sorted()
-    }
-
     override suspend fun getUserPotsByStatus(uid: String, isCompleted: Boolean): List<Pot> {
         val snapshot = db.collection("users").document(uid)
             .collection("pots")

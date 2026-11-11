@@ -83,7 +83,8 @@ data class User(
     val gold: Int,
     val monthCheck: DailyCheckThisMonth,
     val item: Item,
-    val activeSessionToken: String?
+    val activeSessionToken: String?,
+    val unlockedProfileLevel: Int
 ) {
     companion object{
         fun create() = User(
@@ -99,7 +100,8 @@ data class User(
                 lastCheckedAt = null
             ),
             item = Item(0,0,0,0,0,0),
-            activeSessionToken = null
+            activeSessionToken = null,
+            unlockedProfileLevel = 0
         )
     }
 }

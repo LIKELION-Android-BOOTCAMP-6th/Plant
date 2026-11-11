@@ -65,5 +65,8 @@ object PotLevelConditions {
         )
     )
 
+    // 최고 레벨: 다음 레벨로 올리는 조건이 있는 마지막 레벨 + 1 (firestore.rules의 maxPotLevel()과 같은 기준)
+    val MAX_LEVEL: Int = table.keys.max() + 1
+
     fun getCondition(currentLevel: Int): LevelUpCondition? = table[currentLevel]
 }
