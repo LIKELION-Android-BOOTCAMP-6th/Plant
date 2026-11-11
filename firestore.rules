@@ -373,6 +373,8 @@ service cloud.firestore {
     // users/{uid} 생성 (createUser): 앱의 User.create() 값만 허용한다 (#532)
     // 재화·아이템·학습 시간·해금 레벨은 0, 출석은 기록 없음으로 시작하고, 그 외 필드(완료 수, 각 batch의 표시 필드 등)는 넣을 수 없다
     // 값이 없는 필드는 0·없음으로 읽으므로 생략해도 된다
+    // 앱 UserDto·ItemDto·DailyCheckThisMonthDto에 필드를 추가하면 아래 hasOnly 목록에 없어서 회원가입(createUser)이 거부된다
+    // → DTO에 필드를 추가할 때 이 목록과 rules-test/test/rewardLock.test.js의 appNewUser()도 함께 수정한다
     function isInitialUser() {
       let data = request.resource.data;
       let item = newValue('item', {});

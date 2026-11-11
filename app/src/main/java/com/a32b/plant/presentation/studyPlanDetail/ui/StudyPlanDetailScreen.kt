@@ -325,7 +325,9 @@ fun StudyPlanDetailScreen(
                                                 when {
                                                     // 붙여넣기로 줄바꿈이 새로 들어오면 반영하지 않음 (생성 화면과 같은 방식)
                                                     // singleLine은 키보드 엔터만 막고 붙여넣은 줄바꿈은 막지 않음.
-                                                    // 개수가 늘어날 때만 막아, 이미 줄바꿈이 들어간 채 저장된 이름도 수정·삭제할 수 있게 함
+                                                    // 개수가 늘어날 때만 막아, 이미 줄바꿈이 들어간 채 저장된 이름도 입력창에서 고칠 수 있게 함
+                                                    // (보안 규칙은 줄바꿈이 남은 이름의 저장을 거부한다(#532). 데이터 초기화 후에는 그런 이름이 없어
+                                                    //  생성 화면의 contains 검사와 결과가 같다. 이 검사를 지우면 붙여넣은 줄바꿈이 다시 들어간다)
                                                     input.count { it == '\n' } > editNameText.count { it == '\n' } -> Unit
 
                                                     input.length <= maxLength -> editNameText = input

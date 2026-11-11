@@ -6,6 +6,9 @@ import com.google.firebase.firestore.PropertyName
 
 // TODO: 화분 목록은 따로 받아온 후 매퍼로 변환 시 넣어주기
 
+// 회원가입(createUser)은 이 DTO를 그대로 저장하고, 보안 규칙(firestore.rules isInitialUser)은 정해진 필드만 허용한다 (#532)
+// UserDto·ItemDto·DailyCheckThisMonthDto에 필드를 추가하면 규칙 목록과 rules-test의 appNewUser()도 함께 수정해야 한다
+// (수정하지 않으면 새 필드 때문에 회원가입이 거부된다)
 data class UserDto(
     @DocumentId
     var uid: String = "",
