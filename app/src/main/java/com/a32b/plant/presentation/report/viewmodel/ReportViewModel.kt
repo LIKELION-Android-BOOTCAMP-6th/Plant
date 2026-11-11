@@ -3,7 +3,7 @@ package com.a32b.plant.presentation.report.viewmodel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.KST_ZONE_ID
-import com.a32b.plant.core.util.NETWORK_SLOW_MESSAGE
+import com.a32b.plant.core.util.NETWORK_SLOW_READ_MESSAGE
 import com.a32b.plant.core.util.withSlowNotice
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.DailyReport
@@ -188,7 +188,7 @@ class ReportViewModel @Inject constructor(
             onSlow = {
                 if (!hasShownSlowNotice) {
                     hasShownSlowNotice = true
-                    sendToast(NETWORK_SLOW_MESSAGE)
+                    sendToast(NETWORK_SLOW_READ_MESSAGE)
                 }
             },
             block = block

@@ -13,11 +13,11 @@ class GetDailyReportUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(uid: String, date: LocalDate): Result<DailyReport> {
         val recordsResult = getReportRecordsUseCase(uid, date, date.plusDays(1))
-        // 시작 시각 순으로 정렬해 두면 같은 공부 시간일 때 먼저 시작한 기록이 최고·최저로 뽑힌다.
         val reportRecords = when (recordsResult) {
             is Result.Success -> recordsResult.data
             is Result.Failure -> return recordsResult
         }
+        // 시작 시각 순으로 정렬해 두면 같은 공부 시간일 때 먼저 시작한 기록이 최고·최저로 뽑힌다.
         val sortedRecords = reportRecords.records.sortedBy { it.startedAt }
         val totalMillis = sortedRecords.sumOf { it.studyingTime }
         val streakResult = when (val result = getStreakDays(uid, date, totalMillis)) {

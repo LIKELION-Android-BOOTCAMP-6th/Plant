@@ -4,7 +4,7 @@ import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.ReportPeriodData
 import com.a32b.plant.domain.model.User
 import com.a32b.plant.domain.model.UserSnapshot
-import com.a32b.plant.core.util.NETWORK_SLOW_MESSAGE
+import com.a32b.plant.core.util.NETWORK_SLOW_READ_MESSAGE
 import com.a32b.plant.domain.repository.ReportRepository
 import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
@@ -139,7 +139,7 @@ class ReportViewModelCacheTest {
             }
 
             advanceTimeBy(2_001L)
-            assertEquals(listOf(ReportEvent.ShowToast(NETWORK_SLOW_MESSAGE)), events)
+            assertEquals(listOf(ReportEvent.ShowToast(NETWORK_SLOW_READ_MESSAGE)), events)
 
             advanceUntilIdle()
             eventJob.cancel()
