@@ -11,6 +11,7 @@ const {setGlobalOptions} = require("firebase-functions");
 const {
   onDocumentCreated,
   onDocumentDeleted,
+  onDocumentUpdated,
 } = require("firebase-functions/firestore");
 const {onCall, HttpsError} = require("firebase-functions/https");
 const {onSchedule} = require("firebase-functions/scheduler");
@@ -506,6 +507,73 @@ async function deletePotStudyLogs(uid, potId) {
 exports.onPotDeleted = onDocumentDeleted(
     POT_DELETED_TRIGGER_OPTIONS,
     (event) => deletePotStudyLogs(event.params.uid, event.params.potId),
+);
+
+// ---------------------------------------------------------------------------
+// 프로필 이미지 해금 레벨 갱신 (#598)
+// ---------------------------------------------------------------------------
+// 화분이 레벨업하면 users/{uid}.unlockedProfileLevel을 올려 프로필 이미지 후보(0..값)를 늘린다.
+// 레벨업 batch의 보안 규칙(userLeveledUpPot)은 유저 문서에서 item·lastLevelUpPotId만 허용하므로
+// 앱이 같은 batch에 이 값을 넣을 수 없다 → Admin SDK로 실행되는 트리거가 갱신한다.
+// - potLevel이 올라간 수정만 처리한다. 학습 시간 저장·이름 변경·완료 등은 유저 문서를 읽지 않고 끝낸다
+// - 새 값 = min(max(기존 값, 새 potLevel), 최고 레벨) → 값은 올라가기만 하고, 화분을 지워도 해금은 유지된다
+//   max 계산이라 같은 이벤트로 두 번 실행되거나 재시도돼도 결과가 같다. 값이 그대로면 쓰지 않는다
+// - 오프라인에서 레벨업해도 화분 수정이 서버에 도착하는 순간 실행된다
+// - potLevel이 정수가 아니면(비정상 데이터) 로그만 남기고 끝낸다
+// - users/{uid}가 없으면(회원탈퇴로 삭제) 쓰지 않고 끝낸다.
+//   set(..., {merge: true})는 지워진 users 문서를 다시 만들기 때문에 쓰지 않는다
+//   위 두 경우는 오류로 끝내지 않으므로 재시도하지 않는다
+// - retry: 일시 오류(네트워크, 트랜잭션 경합 등)로 실패하면 다시 실행한다 (2세대 함수는 최대 24시간 재시도)
+const POT_UPDATED_TRIGGER_OPTIONS = {document: POT_DOCUMENT, retry: true};
+
+// 화분 최고 레벨. firestore.rules의 maxPotLevel()과
+// 앱 domain/model/LevelUpCondition.kt의 PotLevelConditions.MAX_LEVEL과 같은 값이어야 한다
+const MAX_POT_LEVEL = 6;
+
+/**
+ * 레벨업한 화분의 새 레벨로 유저의 unlockedProfileLevel을 올린다. 여러 번 실행해도 결과가 같다.
+ * @param {string} uid
+ * @param {string} potId
+ * @param {*} beforeLevel 수정 전 potLevel
+ * @param {*} afterLevel 수정 후 potLevel
+ * @return {Promise<void>}
+ */
+async function unlockProfileLevel(uid, potId, beforeLevel, afterLevel) {
+  // potLevel이 바뀌지 않은 수정 (학습 시간 저장, 이름 변경, 완료 등)
+  if (beforeLevel === afterLevel) return;
+  if (!Number.isInteger(afterLevel)) {
+    logger.warn("potLevel이 정수가 아니어서 해금 레벨 갱신을 건너뜀",
+        {uid, potId, afterLevel});
+    return;
+  }
+  const previous = Number.isInteger(beforeLevel) ? beforeLevel : 0;
+  // 레벨이 내려간 수정은 해금 대상이 아니다
+  if (afterLevel <= previous) return;
+
+  const userRef = db.collection("users").doc(uid);
+  await db.runTransaction(async (transaction) => {
+    const userSnapshot = await transaction.get(userRef);
+    if (!userSnapshot.exists) {
+      logger.info("유저 문서가 없어 해금 레벨 갱신을 건너뜀", {uid, potId});
+      return;
+    }
+    const stored = userSnapshot.get("unlockedProfileLevel");
+    // 필드가 없거나 정수가 아니면 0으로 본다
+    const current = Number.isInteger(stored) ? stored : 0;
+    const next = Math.min(Math.max(current, afterLevel), MAX_POT_LEVEL);
+    if (stored === next) return;
+    transaction.update(userRef, {unlockedProfileLevel: next});
+  });
+}
+
+exports.unlockProfileLevelOnPotLevelUp = onDocumentUpdated(
+    POT_UPDATED_TRIGGER_OPTIONS,
+    (event) => unlockProfileLevel(
+        event.params.uid,
+        event.params.potId,
+        event.data.before.get("potLevel"),
+        event.data.after.get("potLevel"),
+    ),
 );
 
 // ---------------------------------------------------------------------------

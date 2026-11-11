@@ -1,7 +1,7 @@
 ## 📐 데이터 모델
 
 > **최초 작성일**: 2026-09-09
-> **최종 수정일**: 2026-11-11
+> **최종 수정일**: 2026-11-12
 
 ### users
 ```
@@ -9,7 +9,7 @@ users
 └── {uid}
     ├── nickname: String
     ├── profileImg: String
-    ├── unlockedProfileLevel: Int       ← 프로필 이미지 해금 최고 레벨 0~6. 가입 시 0, 필드가 없으면 0으로 읽음 (#475)
+    ├── unlockedProfileLevel: Int       ← 프로필 이미지 해금 최고 레벨 0~6. 가입 시 0, 필드가 없으면 0으로 읽음 (#475). 화분 레벨업 시 트리거(functions unlockProfileLevelOnPotLevelUp)가 min(max(기존 값, 새 레벨), 6)으로 갱신, 내려가지 않음 (#598)
     ├── lastSelectedPotId: String
     ├── isFirstLogin: Boolean?
     ├── totalStudyTime: Long             ← 학습 기록 저장 batch에서만 증가 (#453), 기록 삭제·화분 삭제 batch에서만 감소 (#455)
