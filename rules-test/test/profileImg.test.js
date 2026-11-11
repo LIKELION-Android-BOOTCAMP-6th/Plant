@@ -119,7 +119,8 @@ describe("프로필 이미지 해금 레벨 검사 (#602)", () => {
     // 저장된 값이 형식 밖(회원가입 값 "", 예전 형식 "lv.N", 해금 레벨보다 높은 예전 값)이어도 다른 쓰기는 막지 않는다
     for (const stored of ["", "lv.3", "6"]) {
       it(`저장된 값이 ${JSON.stringify(stored)}이어도 세션 토큰·대표 화분·첫 로그인 쓰기는 허용`, async () => {
-        await seedAlice({profileImg: stored, unlockedProfileLevel: 0});
+        // isFirstLogin을 true로 두어 아래 첫 로그인 쓰기(false)가 실제로 바뀌는 쓰기가 되게 한다
+        await seedAlice({profileImg: stored, unlockedProfileLevel: 0, isFirstLogin: true});
         await assertSucceeds(updateDoc(aliceRef(), {activeSessionToken: "token"}));
         await assertSucceeds(updateDoc(aliceRef(), {lastSelectedPotId: "pot1"}));
         await assertSucceeds(updateDoc(aliceRef(), {isFirstLogin: false}));
@@ -129,7 +130,7 @@ describe("프로필 이미지 해금 레벨 검사 (#602)", () => {
       });
     }
 
-    it("저장된 값이 \"lv.3\"이어도 닉네임만 바꾸는 프로필 편집은 허용 (앱은 고른 이미지를 그대로 다시 보냄)", async () => {
+    it("저장된 값이 \"lv.3\"이어도 닉네임만 바꾸는 프로필 편집은 허용 (이미지를 고르지 않으면 앱은 저장된 이미지 값을 그대로 다시 보냄)", async () => {
       await seedAlice({profileImg: "lv.3", unlockedProfileLevel: 3});
       await assertSucceeds(updateProfileTxn(asAlice(), {nickname: "새이름", profileImg: "lv.3"}));
       assert.strictEqual(await readProfileImg(), "lv.3");
