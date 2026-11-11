@@ -16,7 +16,8 @@ describe("users", () => {
   beforeEach(async () => {
     await testEnv.clearFirestore();
     await seed(testEnv, async (db) => {
-      await setDoc(doc(db, "users", ALICE), {nickname: "앨리스", gold: 100, totalStudyTime: 60});
+      // 프로필 이미지 변경 테스트가 "0"~"3"을 쓰므로 해금 레벨 3으로 둔다 (해금 레벨 검사는 profileImg.test.js, #602)
+      await setDoc(doc(db, "users", ALICE), {nickname: "앨리스", gold: 100, totalStudyTime: 60, unlockedProfileLevel: 3});
       await setDoc(doc(db, "users", ALICE, "pots", "pot1"), {potName: "화분", potTotalStudyingTime: 60});
       await setDoc(doc(db, "users", ALICE, "pots", "pot1", "logs", "log1"), {studyingTime: 60});
     });
@@ -85,7 +86,7 @@ describe("users", () => {
 
     it("프로필 변경: 새 nicknames 생성 + 이전 nicknames 삭제 + users 수정을 한 트랜잭션에서 하면 허용 (updateProfile)", async () => {
       await seed(testEnv, async (db) => {
-        await setDoc(doc(db, "users", ALICE), {nickname: "앨리스", profileImg: "1"});
+        await setDoc(doc(db, "users", ALICE), {nickname: "앨리스", profileImg: "1", unlockedProfileLevel: 3});
         await setDoc(doc(db, "nicknames", "앨리스"), {nickname: "앨리스", uid: ALICE});
       });
       const db = asAlice();
@@ -103,7 +104,7 @@ describe("users", () => {
 
     it("프로필 변경: 이전 닉네임 문서가 없어도 트랜잭션은 허용 (데이터 어긋남)", async () => {
       await seed(testEnv, async (db) => {
-        await setDoc(doc(db, "users", ALICE), {nickname: "옛이름", profileImg: "1"});
+        await setDoc(doc(db, "users", ALICE), {nickname: "옛이름", profileImg: "1", unlockedProfileLevel: 3});
       });
       const db = asAlice();
       await assertSucceeds(runTransaction(db, async (txn) => {
@@ -120,7 +121,7 @@ describe("users", () => {
 
     it("프로필 변경: 같은 닉네임을 다른 사용자가 먼저 등록하면 재시도에서 중복으로 판정", async () => {
       await seed(testEnv, async (db) => {
-        await setDoc(doc(db, "users", ALICE), {nickname: "앨리스", profileImg: "1"});
+        await setDoc(doc(db, "users", ALICE), {nickname: "앨리스", profileImg: "1", unlockedProfileLevel: 3});
         await setDoc(doc(db, "nicknames", "앨리스"), {nickname: "앨리스", uid: ALICE});
       });
       const db = asAlice();
@@ -154,7 +155,7 @@ describe("users", () => {
     });
 
     it("빈 닉네임으로 문서를 만들 수 있다 (createUser)", async () => {
-      await assertSucceeds(setDoc(doc(asBob(), "users", BOB), {nickname: "", profileImg: "1", isFirstLogin: true}));
+      await assertSucceeds(setDoc(doc(asBob(), "users", BOB), {nickname: "", profileImg: "", isFirstLogin: true}));
     });
 
     it("본인이 선점한 닉네임으로는 문서를 만들 수 있다", async () => {

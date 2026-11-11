@@ -128,7 +128,7 @@ describe("기타 컬렉션", () => {
   describe("nicknames 삭제 시 users.nickname 확인", () => {
     beforeEach(async () => {
       await seed(testEnv, async (db) => {
-        await setDoc(doc(db, "users", ALICE), {nickname: "앨리스", profileImg: "1"});
+        await setDoc(doc(db, "users", ALICE), {nickname: "앨리스", profileImg: "1", unlockedProfileLevel: 3});
       });
     });
 
