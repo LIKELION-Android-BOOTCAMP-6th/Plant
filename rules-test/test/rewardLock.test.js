@@ -129,10 +129,12 @@ describe("보상·재화·학습 시간 잠금 (#532)", () => {
 
   describe("users 수정: 앱이 쓰는 프로필 필드 (기존 동작 유지)", () => {
     // nickname 변경은 nicknames 문서 소유 확인이 함께 필요하다 (users.test.js, #535)
+    // profileImg는 해금 레벨(시드 1) 이하로만 바꿀 수 있다 (profileImg.test.js, #602)
     it("profileImg, lastSelectedPotId, isFirstLogin, activeSessionToken은 바꿀 수 있다", async () => {
-      await assertSucceeds(updateDoc(aliceRef(), {profileImg: "2"}));
+      await assertSucceeds(updateDoc(aliceRef(), {profileImg: "1"}));
       await assertSucceeds(updateDoc(aliceRef(), {lastSelectedPotId: "pot1"}));
-      await assertSucceeds(updateDoc(aliceRef(), {isFirstLogin: false}));
+      // 시드가 false라 실제로 바뀌는 값(true)으로 쓴다 (앱은 수정에서 false만 쓰지만(completeFirstLogin) 이 테스트는 필드를 바꿀 수 있는지 확인)
+      await assertSucceeds(updateDoc(aliceRef(), {isFirstLogin: true}));
       await assertSucceeds(updateDoc(aliceRef(), {activeSessionToken: "token"}));
       await assertSucceeds(updateDoc(aliceRef(), {activeSessionToken: null}));
     });
@@ -141,11 +143,11 @@ describe("보상·재화·학습 시간 잠금 (#532)", () => {
       await seed(testEnv, async (db) => {
         await setDoc(doc(db, "nicknames", "새이름"), {nickname: "새이름", uid: ALICE});
       });
-      await assertSucceeds(updateDoc(aliceRef(), {nickname: "새이름", profileImg: "3"}));
+      await assertSucceeds(updateDoc(aliceRef(), {nickname: "새이름", profileImg: "1"}));
     });
 
     it("프로필 필드와 잠긴 필드를 함께 쓰면 전체가 거부된다", async () => {
-      await assertFails(updateDoc(aliceRef(), {profileImg: "2", gold: increment(100)}));
+      await assertFails(updateDoc(aliceRef(), {profileImg: "1", gold: increment(100)}));
       await assertFails(updateDoc(aliceRef(), {lastSelectedPotId: "pot1", "item.box": increment(1)}));
       assert.strictEqual((await readAlice()).profileImg, "");
     });
