@@ -216,7 +216,7 @@ class SignInViewModelTest {
         }
         override suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit> = error("Unused")
         override suspend fun updateProfile(user: User): Result<Unit> = error("Unused")
-        override suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success> = error("Unused")
+        override suspend fun checkAttendance(): Result<AttendanceDecision.Success> = error("Unused")
         override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> = error("Unused")
     }
 

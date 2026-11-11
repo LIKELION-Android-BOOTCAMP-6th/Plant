@@ -26,8 +26,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -46,6 +49,7 @@ import com.a32b.plant.presentation.theme.PlantTheme
 @Composable
 fun AttendanceCheckDialog(
     uiState: AttendanceUiState,
+    isOnline: Boolean,
     onCheckClick: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -54,7 +58,7 @@ fun AttendanceCheckDialog(
         onDismissRequest = { if (!uiState.isChecking) onDismiss() },
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        AttendanceDialogContent(uiState, onCheckClick, onDismiss)
+        AttendanceDialogContent(uiState, isOnline, onCheckClick, onDismiss)
     }
 }
 
@@ -62,6 +66,7 @@ fun AttendanceCheckDialog(
 @Composable
 private fun AttendanceDialogContent(
     uiState: AttendanceUiState = AttendanceUiState(),
+    isOnline: Boolean = true,
     onCheckClick: () -> Unit = {},
     onDismiss: () -> Unit = {}
 ) {
@@ -102,12 +107,19 @@ private fun AttendanceDialogContent(
                     )
                 }
 
+                // 오프라인: 출석은 온라인 전용이라 비활성처럼 보이게 한다 (#531)
+                // enabled = false면 클릭 자체가 막혀 안내 토스트를 띄울 수 없으므로 alpha로 시각만 처리하고,
+                // 누르면 ViewModel이 요청 없이 안내한다
+                val isOfflineLooking = !isOnline && !uiState.isAttendanceCompleted
                 Button(
                     onClick = onCheckClick,
                     enabled = !uiState.isAttendanceCompleted && !uiState.isChecking,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 24.dp)
+                        .alpha(if (isOfflineLooking) OFFLINE_BUTTON_ALPHA else 1f)
+                        // alpha는 시각 표시뿐이라 TalkBack에 상태를 따로 알림
+                        .semantics { if (isOfflineLooking) stateDescription = OFFLINE_STATE_DESCRIPTION }
                 ) {
                     Text(uiState.buttonText, style = MaterialTheme.typography.bodyMedium)
                 }
@@ -140,6 +152,20 @@ private fun AttendanceDialogContentPreview() {
                 count = 8,
                 buttonText = "출석하기"
             )
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "출석체크 다이얼로그 - 오프라인", widthDp = 360)
+@Composable
+private fun AttendanceDialogContentOfflinePreview() {
+    PlantTheme {
+        AttendanceDialogContent(
+            uiState = AttendanceUiState(
+                count = 8,
+                buttonText = "출석하기"
+            ),
+            isOnline = false
         )
     }
 }
@@ -308,6 +334,10 @@ private data class AttendanceRewardUi(
     val showLabelBelow: Boolean = false
 )
 
+
+// 홈 레벨업 버튼의 비활성처럼 보이기(alpha 0.38f)와 같은 값
+private const val OFFLINE_BUTTON_ALPHA = 0.38f
+private const val OFFLINE_STATE_DESCRIPTION = "오프라인"
 
 private val attendanceRewards: List<AttendanceRewardUi> = (1..28).map { day ->
     when (val reward = AttendanceRewardTable.of(day)) {

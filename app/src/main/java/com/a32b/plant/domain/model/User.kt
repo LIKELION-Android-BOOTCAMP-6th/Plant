@@ -1,10 +1,7 @@
 package com.a32b.plant.domain.model
 
 import com.a32b.plant.domain.type.ItemType
-import java.time.Instant
 import java.time.LocalDate
-import java.time.YearMonth
-import java.time.ZoneId
 
 
 sealed interface AttendanceDecision {
@@ -21,31 +18,42 @@ sealed interface AttendanceDecision {
 }
 
 private const val MONTHLY_ATTENDANCE_LIMIT = 28
-private val KST_ZONE_ID = ZoneId.of("Asia/Seoul")
+
+/**
+ * 이번 달 출석 정보.
+ * 출석 판정·저장·보상 지급은 서버 함수 checkAttendance(functions/index.js)가 한다 (#531).
+ * 앱은 출석판 표시에만 쓴다.
+ *
+ * @param lastCheckedDate 서버가 서버 시각 기준으로 계산해 저장한 마지막 출석일 (KST, "yyyy-MM-dd").
+ *   출석한 적 없으면 null
+ * @param lastCheckedAt 마지막 출석 시각 (기록용). 판정에는 쓰지 않는다
+ */
 data class DailyCheckThisMonth(
     val count: Int,
     val lastCheckedAt: Long?,
+    val lastCheckedDate: String?,
 ) {
-    fun decideNext(nowKst: LocalDate): AttendanceDecision {
-        val lastDate = lastCheckedAt
-            ?.takeIf { it > 0L }
-            ?.let { Instant.ofEpochMilli(it).atZone(KST_ZONE_ID).toLocalDate() }
-        val isSameMonth = lastDate != null &&
-            YearMonth.from(lastDate) == YearMonth.from(nowKst)
+    /**
+     * 출석판 표시용으로, [todayKst]에 출석하면 어떤 결과가 될지 계산한다.
+     * 서버 decideAttendance와 같은 기준(날짜 키 비교, 앞 7자리로 같은 달 확인)을 쓴다.
+     * 실제 결과는 서버가 서버 시각으로 정하므로, 기기 날짜가 틀리면 표시만 다를 수 있다.
+     */
+    fun decideNext(todayKst: LocalDate): AttendanceDecision {
+        val todayKey = todayKst.toString() // ISO-8601 "yyyy-MM-dd"
+        val isSameMonth = lastCheckedDate != null &&
+            lastCheckedDate.take(7) == todayKey.take(7)
+        // 달이 바뀌었으면 지난달 횟수는 보지 않는다 (이번 출석이 1회차)
+        val currentCount = if (isSameMonth) count else 0
 
-        if (isSameMonth && count >= MONTHLY_ATTENDANCE_LIMIT) {
+        if (currentCount >= MONTHLY_ATTENDANCE_LIMIT) {
             return AttendanceDecision.MonthCompleted
         }
 
-        if (lastDate == nowKst) {
+        if (lastCheckedDate == todayKey) {
             return AttendanceDecision.AlreadyChecked
         }
 
-        val newCount = if (isSameMonth) count + 1 else 1
-        if (newCount > MONTHLY_ATTENDANCE_LIMIT) {
-            return AttendanceDecision.MonthCompleted
-        }
-
+        val newCount = currentCount + 1
         return AttendanceDecision.Success(
             newCount = newCount,
             reward = AttendanceRewardTable.of(newCount)
@@ -97,7 +105,8 @@ data class User(
             gold = 0,
             monthCheck = DailyCheckThisMonth(
                 count = 0,
-                lastCheckedAt = null
+                lastCheckedAt = null,
+                lastCheckedDate = null
             ),
             item = Item(0,0,0,0,0,0),
             activeSessionToken = null,

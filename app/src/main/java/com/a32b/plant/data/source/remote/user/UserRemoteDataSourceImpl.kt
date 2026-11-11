@@ -1,26 +1,28 @@
 package com.a32b.plant.data.source.remote.user
 
-import com.a32b.plant.data.mapper.toDomain
+import com.a32b.plant.data.model.AttendanceResultDto
+import com.a32b.plant.data.model.AttendanceRewardDto
 import com.a32b.plant.data.model.UserDto
-import com.a32b.plant.domain.error.AppError
-import com.a32b.plant.domain.model.AttendanceDecision
-import com.a32b.plant.domain.model.AttendanceReward
-import com.a32b.plant.domain.type.ItemType
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Source
+import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import java.time.LocalDate
-import java.time.ZoneId
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
+// 출석 함수 응답 대기 시간. 기본값(70초)이면 요청 중 연결이 끊겼을 때 출석 다이얼로그가
+// 처리 중 상태로 잠겨 오래 닫을 수 없다. 콜드 스타트(운영 미측정)에도 여유가 있으면서 기본값(70초)보다 충분히 짧게 둔다.
+// 시간 초과는 AppError.Network로 바뀌고, 서버에서 처리됐다면 출석판은 유저 문서 구독으로 갱신된다
+private const val ATTENDANCE_TIMEOUT_SECONDS = 20L
+
 @Singleton
 class UserRemoteDataSourceImpl @Inject constructor(
-    private val db: FirebaseFirestore
+    private val db: FirebaseFirestore,
+    private val functions: FirebaseFunctions
 ) : UserRemoteDataSource {
 
     override suspend fun getUser(uid: String): UserDto? {
@@ -138,50 +140,25 @@ class UserRemoteDataSourceImpl @Inject constructor(
         }.await()
     }
 
-    override suspend fun checkAttendance(uid: String): AttendanceDecision {
-        val userRef = db.collection("users").document(uid)
-
-        return db.runTransaction { txn ->
-            val snapshot = txn.get(userRef)
-            val dto = snapshot.toObject(UserDto::class.java)
-                ?: throw AppError.UnknownUser()
-
-            val nowKst = LocalDate.now(ZoneId.of("Asia/Seoul"))
-            val decision = dto.toDomain().monthCheck.decideNext(nowKst)
-
-            if (decision is AttendanceDecision.Success) {
-                val updates = mutableMapOf<String, Any>(
-                    "dailyCheckThisMonth.count" to decision.newCount,
-                    "dailyCheckThisMonth.lastCheckedAt" to FieldValue.serverTimestamp()
+    override suspend fun checkAttendance(): AttendanceResultDto {
+        // 사용자는 서버가 로그인 토큰으로 확인한다 (uid를 보내지 않음)
+        val result = functions.getHttpsCallable("checkAttendance")
+            .withTimeout(ATTENDANCE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .call()
+            .await()
+        val data = result.getData() as? Map<*, *>
+        val reward = data?.get("reward") as? Map<*, *>
+        return AttendanceResultDto(
+            status = data?.get("status") as? String ?: "",
+            newCount = (data?.get("newCount") as? Number)?.toInt(),
+            reward = reward?.let {
+                AttendanceRewardDto(
+                    item = it["item"] as? String,
+                    amount = (it["amount"] as? Number)?.toInt(),
+                    gold = (it["gold"] as? Number)?.toInt()
                 )
-
-                when (val reward = decision.reward) {
-                    is AttendanceReward.Coin ->
-                        updates[ItemType.GOLD_300.fieldKey] = FieldValue.increment(reward.amount.toLong())
-
-                    is AttendanceReward.ItemReward -> {
-                        val type = reward.type
-
-                        check(
-                            type != ItemType.GOLD_300 &&
-                                    type != ItemType.GOLD_500 &&
-                                    type != ItemType.GOLD_1000
-                        ) {
-                            "출석 아이템 보상에 골드 타입은 사용할 수 없습니다: $type"
-                        }
-
-                        updates["item.${type.fieldKey}"] =
-                            FieldValue.increment(reward.amount.toLong())
-                    }
-
-                    null -> Unit
-                }
-
-                txn.update(userRef, updates)
             }
-
-            decision
-        }.await()
+        )
     }
 
     override suspend fun updateSessionToken(uid: String, token: String?) {

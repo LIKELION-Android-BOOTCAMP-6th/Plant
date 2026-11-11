@@ -16,11 +16,13 @@ fun DailyCheckThisMonthDto.toDomain() : DailyCheckThisMonth = DailyCheckThisMont
     count = count,
     // Firestore에 값이 없어도 0L로 들어옴 (진짜 null이 아님).
     // "출석한 적 있는지" 판단할 땐 이 필드로 null 비교하지 말 것.
-    lastCheckedAt = lastCheckedAt.toLong()
+    lastCheckedAt = lastCheckedAt.toLong(),
+    lastCheckedDate = lastCheckedDate
 )
 fun DailyCheckThisMonth.toDto() : DailyCheckThisMonthDto = DailyCheckThisMonthDto(
     count = count,
-    lastCheckedAt = lastCheckedAt?.toTimestamp()
+    lastCheckedAt = lastCheckedAt?.toTimestamp(),
+    lastCheckedDate = lastCheckedDate
 )
 
 fun ItemDto.toDomain() : Item = Item(

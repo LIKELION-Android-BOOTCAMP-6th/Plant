@@ -53,7 +53,14 @@ interface UserRepository {
      * 이미 같은 값으로 반영된 상태면 성공으로 처리한다.
      */
     suspend fun updateProfile(user: User): Result<Unit>
-    suspend fun checkAttendance(uid: String): Result<AttendanceDecision.Success>
+    /**
+     * 출석 체크 (#531). 서버 함수가 서버 시각(KST 00:00 기준)으로 판정·저장·보상 지급을 한다 (온라인 전용).
+     * 사용자는 서버가 로그인 토큰으로 확인하므로 uid를 받지 않는다.
+     *
+     * 실패 시 [AppError.Custom] (이미 오늘 출석 / 이번 달 완료), [AppError.UnknownUser] (users 문서 없음),
+     * [AppError.Network] (오프라인·시간 초과 — 서버에는 반영됐을 수 있음), [AppError.Auth], [AppError.Server]를 반환한다.
+     */
+    suspend fun checkAttendance(): Result<AttendanceDecision.Success>
     /**
      * 세션 토큰을 저장한다. 제한 시간 안에 서버 응답이 없어도 쓰기는 큐에 남아 나중에 반영되므로 성공으로 반환한다.
      * 뒤늦게 반영되면 다른 기기를 로그아웃시킬 수 있으므로, 사용자가 직접 로그인한 경우가 아닌 자동 진입에서는
