@@ -13,13 +13,14 @@ class GetDailyReportUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(uid: String, date: LocalDate): Result<DailyReport> {
         val recordsResult = getReportRecordsUseCase(uid, date, date.plusDays(1))
-        // 시작 시각 순으로 정렬해 두면 같은 공부 시간일 때 먼저 시작한 기록이 최고·최저로 뽑힌다.
-        val sortedRecords = when (recordsResult) {
-            is Result.Success -> recordsResult.data.sortedBy { it.startedAt }
+        val reportRecords = when (recordsResult) {
+            is Result.Success -> recordsResult.data
             is Result.Failure -> return recordsResult
         }
+        // 시작 시각 순으로 정렬해 두면 같은 공부 시간일 때 먼저 시작한 기록이 최고·최저로 뽑힌다.
+        val sortedRecords = reportRecords.records.sortedBy { it.startedAt }
         val totalMillis = sortedRecords.sumOf { it.studyingTime }
-        val streakDays = when (val result = getStreakDays(uid, date, totalMillis)) {
+        val streakResult = when (val result = getStreakDays(uid, date, totalMillis)) {
             is Result.Success -> result.data
             is Result.Failure -> return result
         }
@@ -31,29 +32,35 @@ class GetDailyReportUseCase @Inject constructor(
                 highest = sortedRecords.maxByOrNull { it.studyingTime },
                 lowest = if (sortedRecords.size < 2) null else sortedRecords.minByOrNull { it.studyingTime },
                 records = sortedRecords,
-                streakDays = streakDays
+                streakDays = streakResult.streakDays,
+                isFromCache = reportRecords.isFromCache || streakResult.isFromCache
             )
         )
     }
 
-    private suspend fun getStreakDays(uid: String, date: LocalDate, totalMillis: Long): Result<Int> {
-        if (!isStudyDay(totalMillis)) return Result.Success(0)
+    private suspend fun getStreakDays(uid: String, date: LocalDate, totalMillis: Long): Result<StreakResult> {
+        if (!isStudyDay(totalMillis)) return Result.Success(StreakResult(0, false))
 
         var streakDays = 1
+        var isFromCache = false
         var chunkEnd = date
         var chunkDays = FIRST_STREAK_CHUNK_DAYS
         while (true) {
             val chunkStart = chunkEnd.minusDays(chunkDays)
-            val records = when (val result = getReportRecordsUseCase(uid, chunkStart, chunkEnd)) {
+            val reportRecords = when (val result = getReportRecordsUseCase(uid, chunkStart, chunkEnd)) {
                 is Result.Success -> result.data
                 is Result.Failure -> return result
             }
+            isFromCache = isFromCache || reportRecords.isFromCache
+            val records = reportRecords.records
             val totalsByDate = records.groupBy { it.startedAt.toLocalDate() }
                 .mapValues { (_, dayRecords) -> dayRecords.sumOf { it.studyingTime } }
 
             var day = chunkEnd.minusDays(1)
             while (!day.isBefore(chunkStart)) {
-                if (!isStudyDay(totalsByDate[day] ?: 0L)) return Result.Success(streakDays)
+                if (!isStudyDay(totalsByDate[day] ?: 0L)) {
+                    return Result.Success(StreakResult(streakDays, isFromCache))
+                }
                 streakDays++
                 day = day.minusDays(1)
             }
@@ -61,4 +68,6 @@ class GetDailyReportUseCase @Inject constructor(
             chunkDays = NEXT_STREAK_CHUNK_DAYS
         }
     }
+
+    private data class StreakResult(val streakDays: Int, val isFromCache: Boolean)
 }

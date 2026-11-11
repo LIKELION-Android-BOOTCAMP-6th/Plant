@@ -60,15 +60,18 @@ class StudyLogRemoteDataSourceImpl @Inject constructor(
         potId: String,
         startInclusive: Timestamp,
         endExclusive: Timestamp
-    ): List<StudyLogDto> {
+    ): GetPotLogsInPeriodResult {
         val snapshot = db.collection("users").document(uid)
             .collection("pots").document(potId)
             .collection("logs")
             .whereGreaterThanOrEqualTo("startedAt", startInclusive)
             .whereLessThan("startedAt", endExclusive)
-            .get(Source.SERVER)
+            .get()
             .await()
-        return snapshot.documents.mapNotNull { it.toObject(StudyLogDto::class.java) }
+        return GetPotLogsInPeriodResult(
+            logs = snapshot.documents.mapNotNull { it.toObject(StudyLogDto::class.java) },
+            isFromCache = snapshot.metadata.isFromCache
+        )
     }
 
     private fun userRef(uid: String) = db.collection("users").document(uid)

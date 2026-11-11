@@ -26,5 +26,5 @@ interface StudyLogRemoteDataSource {
         potId: String,
         startInclusive: Timestamp,
         endExclusive: Timestamp
-    ): List<StudyLogDto>
+    ): GetPotLogsInPeriodResult
 }

@@ -33,3 +33,4 @@ suspend fun <T> withSlowNotice(
 
 val NETWORK_SLOW_THRESHOLD = 2.seconds
 const val NETWORK_SLOW_MESSAGE = "네트워크가 불안정합니다. 연결되면 자동으로 처리됩니다."
+const val NETWORK_SLOW_READ_MESSAGE = "네트워크가 느려 기록을 불러오는 데 시간이 걸리고 있어요."

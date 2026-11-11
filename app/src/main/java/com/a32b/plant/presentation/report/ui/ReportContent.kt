@@ -71,6 +71,13 @@ fun ReportContent(
             )
             ReportTabs(state.tab, onTabSelected)
 
+            if (!state.isLoading && !state.loadError && state.isFromCache) {
+                Text(
+                    text = "이 기기에 저장된 기록 기준이에요",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
             when {
                 state.isLoading -> LoadingBox(Modifier.fillMaxWidth().height(200.dp))
                 state.loadError -> ReportFailure("기록을 불러오지 못했어요", onRetry)

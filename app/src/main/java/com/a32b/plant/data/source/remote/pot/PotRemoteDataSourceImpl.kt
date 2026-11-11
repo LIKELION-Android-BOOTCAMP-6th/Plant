@@ -118,13 +118,16 @@ class PotRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    // 화분 목록 일회 조회 (리포트용) - 완료 화분 포함, 캐시 대신 서버 최신 상태만 사용
-    override suspend fun getPotsOnce(uid: String): List<PotDto> {
+    // 화분 목록 일회 조회 (리포트용) - 완료 화분 포함
+    override suspend fun getPotsOnce(uid: String): GetPotsOnceResult {
         val snapshot = db.collection("users").document(uid)
             .collection("pots")
-            .get(Source.SERVER)
+            .get()
             .await()
-        return snapshot.documents.mapNotNull { it.toObject(PotDto::class.java) }
+        return GetPotsOnceResult(
+            pots = snapshot.documents.mapNotNull { it.toObject(PotDto::class.java) },
+            isFromCache = snapshot.metadata.isFromCache
+        )
     }
 
     override suspend fun getTodayStudyLogs(uid: String, potId: String, startOfToday: Date): List<StudyLogDto> {

@@ -12,7 +12,8 @@ class GetMonthlyReportUseCase @Inject constructor(
     private val getReportRecordsUseCase: GetReportRecordsUseCase
 ) {
     suspend operator fun invoke(uid: String, month: YearMonth): Result<MonthlyReport> =
-        getReportRecordsUseCase(uid, month.atDay(1), month.plusMonths(1).atDay(1)).map { records ->
+        getReportRecordsUseCase(uid, month.atDay(1), month.plusMonths(1).atDay(1)).map { reportRecords ->
+            val records = reportRecords.records
             val totalsByDate = records.groupBy { it.startedAt.toLocalDate() }
                 .mapValues { (_, dayRecords) -> dayRecords.sumOf { it.studyingTime } }
             val dailyTotals = (1..month.lengthOfMonth()).map { day ->
@@ -32,7 +33,8 @@ class GetMonthlyReportUseCase @Inject constructor(
                 dailyTotals = dailyTotals,
                 highestDay = recordDays.maxByOrNull { it.totalMillis },
                 lowestDay = recordDays.minByOrNull { it.totalMillis },
-                recordDates = totalsByDate.keys
+                recordDates = totalsByDate.keys,
+                isFromCache = reportRecords.isFromCache
             )
         }
 }
