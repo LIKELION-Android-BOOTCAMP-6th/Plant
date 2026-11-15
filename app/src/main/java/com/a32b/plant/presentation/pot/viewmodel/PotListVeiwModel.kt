@@ -4,14 +4,16 @@ import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.domain.model.Pot
+import com.a32b.plant.domain.type.PlantSortType
 import com.a32b.plant.domain.usecase.pot.GetPotListUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
+import com.a32b.plant.domain.util.sortedBy
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -27,24 +29,31 @@ class PotListViewModel @Inject constructor(
     private val _pots = MutableStateFlow<List<Pot>>(emptyList())
     val pots = _pots.asStateFlow()
 
-    // 공부 중인 화분 리스트
-   val studyingPots: StateFlow<List<Pot>> = _pots
-        .map { pots -> pots.filter { !it.isCompleted } }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+    // 정렬
+    private val _sortType = MutableStateFlow(PlantSortType.CREATED_DATE)
+    val sortType: StateFlow<PlantSortType> = _sortType.asStateFlow()
 
+    fun setSortType(sortType: PlantSortType) {
+        _sortType.value = sortType
+    }
+
+    // 공부 중인 화분 리스트
+   val studyingPots: StateFlow<List<Pot>> = combine(_pots, _sortType) { pots, sortType ->
+       pots.filter { !it.isCompleted }.sortedBy(sortType)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     // 공부 완료된 화분 리스트
-    val completedPots: StateFlow<List<Pot>> = _pots
-        .map { pots -> pots.filter { it.isCompleted } }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+    val completedPots: StateFlow<List<Pot>> = combine(_pots, _sortType) { pots, sortType ->
+        pots.filter { it.isCompleted }.sortedBy(sortType)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
 
     init {

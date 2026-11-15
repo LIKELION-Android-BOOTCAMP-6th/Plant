@@ -3,21 +3,24 @@ package com.a32b.plant.presentation.pot.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.domain.type.PlantSortType
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.component.TabTopBar
@@ -30,6 +33,7 @@ fun PotListScreen(
 ) {
     val studyingPots by viewModel.studyingPots.collectAsState()
     val completedPots by viewModel.completedPots.collectAsState()
+    val currentSort by viewModel.sortType.collectAsState()
 
     // 탭 상태 관리: 0 = 공부 중 (진행 중인 화분), 1 = 기른 화분 (완료된 화분)
     var selectedTab by remember { mutableStateOf(0) }
@@ -83,6 +87,19 @@ fun PotListScreen(
                             Text(text = " | ", color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodySmall)
                         }
                     }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    PlantSortExposedDropdown(
+                        currentSort = currentSort,
+                        onSortSelected = { viewModel.setSortType(it) }
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -163,5 +180,58 @@ fun PotGridItem(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.outline
         )
+    }
+}
+
+@Composable
+fun PlantSortExposedDropdown(
+    currentSort: PlantSortType,
+    onSortSelected: (PlantSortType) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier.wrapContentSize(Alignment.TopEnd)
+    ) {
+        // 버튼 형태의 드롭다운 앵커
+        OutlinedButton(
+            onClick = { expanded = true },
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+        ) {
+            Text(
+                text = currentSort.displayName,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(
+                imageVector = Icons.Default.ArrowDropDown,
+                contentDescription = "정렬 기준 변경",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+
+        // 드롭다운 메뉴 리스트
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            PlantSortType.entries.forEach { sortType ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = sortType.displayName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (sortType == currentSort) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    },
+                    onClick = {
+                        onSortSelected(sortType) // 뷰모델에 선택된 정렬 타입 전달
+                        expanded = false         // 메뉴 닫기
+                    }
+                )
+            }
+        }
     }
 }
