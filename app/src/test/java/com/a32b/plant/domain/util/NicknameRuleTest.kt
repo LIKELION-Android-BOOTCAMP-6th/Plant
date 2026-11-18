@@ -160,6 +160,20 @@ class NicknameRuleTest {
         }
     }
 
+    // 비교용 값에 NFKC를 쓰고, 소문자를 거르기 전에 바꾸는지 확인한다
+    @Test
+    fun `validate rejects banned word written with look-alike letter forms`() {
+        listOf(
+            "ｆｕｃｋ", // 전각
+            "𝐟𝐮𝐜𝐤", // 수학용 굵은 글자 𝐟𝐮𝐜𝐤
+            "ⓕⓤⓒⓚ", // 원 문자
+            "ADMİN", // 터키어 İ — 거른 뒤 소문자로 바꾸면 "i"+결합 점이 되어 빠져나감
+            "ｐｌａｎｔ", // 전각 사칭 토큰
+        ).forEach { nickname ->
+            assertEquals("거부되어야 함: ${nickname.codePointsHex()}", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
+        }
+    }
+
     @Test
     fun `validate rejects banned word mixing jamo, syllables and digits`() {
         listOf("ㅅ발", "시ㅂ", "시1발", "ㅅ1ㅂ", "병ㅅ").forEach { nickname ->
@@ -184,24 +198,30 @@ class NicknameRuleTest {
 
     @Test
     fun `validate rejects impersonation words anywhere in nickname`() {
+        listOf("Plant운영자", "운영진입니다", "고객센터", "ADMIN", "a.d.m.i.n").forEach { nickname ->
+            assertEquals("거부되어야 함: $nickname", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
+        }
+    }
+
+    @Test
+    fun `validate rejects nickname made only of reserved tokens`() {
         listOf(
-            "Plant운영자",
-            "관리자입니다",
-            "고객센터",
-            "ADMIN",
-            "a.d.m.i.n",
-            "시간관리자", // 정상 닉네임이지만 사칭 방지를 위해 막는 것으로 정함 (감수)
+            "Plant", "PLANT", "P.L.A.N.T", "플랜트", "공식", "GM", "g m", // 토큰 하나
+            "플랜트공식", "공식플랜트", "Plant팀", "PlantTeam", "공식official", "공식계정", // 서비스명 + 공식 표시
+            "Plant관리자", "관리자님", "관리자입니다", "teamplant", // 직책·호칭, 순서 바꿈
         ).forEach { nickname ->
             assertEquals("거부되어야 함: $nickname", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
         }
     }
 
     @Test
-    fun `validate rejects reserved word only when whole nickname matches`() {
-        listOf("Plant", "PLANT", "P.L.A.N.T", "플랜트", "공식", "GM", "g m").forEach { nickname ->
-            assertEquals("거부되어야 함: $nickname", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
-        }
-        listOf("plantlover", "플랜트러버", "공식처럼", "bigmac", "Plant_01").forEach { nickname ->
+    fun `validate allows nickname with reserved token and other letters`() {
+        listOf(
+            "plantlover", "플랜트러버", "공식처럼", "Plant_01",
+            "bigmac", // "gm"이 들어 있음
+            "시간관리자", "공부관리자", "자기관리자", "독서관리자", // 학습 앱에서 자연스러운 "OO관리자"
+            "공부님", "팀장", "운영체제",
+        ).forEach { nickname ->
             assertNull("통과해야 함: $nickname", NicknameRule.validate(nickname))
         }
     }
@@ -212,7 +232,11 @@ class NicknameRuleTest {
     @Test
     fun `validate allows normal words that look like banned words`() {
         listOf(
-            "시발점", "시발역", "십팔번", "팔등신", "등신대", "등신불", "짱깨끗", "애비뉴", "애비로드", "badminton", // 예외 목록
+            "시발점", "시발역", "십팔번", "팔등신", "등신대", "등신불", "짱깨끗", "badminton", // 예외 목록
+            "공부씹어먹기", "영어씹어먹자", "수학씹어먹는중", // 예외 목록 "씹어먹"
+            "엄창호", // "엄창"은 실명과 겹쳐 넣지 않음
+            "애미", "애비로드", "애비뉴", // 단독 "애미"·"애비"는 영어 이름 표기와 겹쳐 넣지 않음
+            "ㅋㅋ", "❤️하트", // NFKC로 바꿔도 정상 닉네임은 그대로 통과
             "시바견", // "시발"과 한 글자 다름
             "새끼고양이", // "새끼"만으로는 막지 않음
             "class", // "ass"는 목록에 넣지 않음
@@ -239,7 +263,7 @@ class NicknameRuleTest {
     @Test
     fun `validate rejects banned word outside allowed word`() {
         // 예외 단어를 지운 뒤에도 금칙어가 남으면 거부
-        listOf("시발점씨발", "시발역ㅅㅂ").forEach { nickname ->
+        listOf("시발점씨발", "시발역ㅅㅂ", "씹어먹기씹").forEach { nickname ->
             assertEquals("거부되어야 함: $nickname", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
         }
     }
@@ -260,14 +284,14 @@ class NicknameRuleTest {
         NicknameBannedWords.words.forEach { word ->
             assertTrue("금칙어로 걸려야 함: $word", NicknameRule.containsBannedWord(word))
         }
-        NicknameBannedWords.reservedWords.forEach { word ->
-            assertTrue("예약어로 걸려야 함: $word", NicknameRule.isReservedWord(word))
+        NicknameBannedWords.reservedTokens.forEach { token ->
+            assertTrue("사칭 토큰으로 걸려야 함: $token", NicknameRule.consistsOfReservedTokens(token))
         }
     }
 
     @Test
     fun `every allowed word passes by itself`() {
-        // 예외 단어 안에 다른 금칙어가 들어 있으면 예외로 둔 의미가 없으므로 확인한다
+        // 예외 단어 안에 다른 금칙어가 들어 있거나 사칭 토큰으로만 이루어져 있으면 예외로 둔 의미가 없으므로 확인한다
         NicknameBannedWords.allowedWords.forEach { word ->
             assertNull("통과해야 함: $word", NicknameRule.validate(word))
         }
