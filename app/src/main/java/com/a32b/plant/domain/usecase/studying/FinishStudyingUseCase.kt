@@ -17,7 +17,8 @@ class FinishStudyingUseCase @Inject constructor(
      * 학습 기록 저장 — 기록 생성과 화분·유저 학습 시간 누적을 batch 하나로 보낸다 (#453)
      * - 같은 [sessionId]가 여러 번 와도 서버(보안 규칙)가 한 번만 반영한다
      * - 보상은 앱이 지급하지 않는다. 기록이 서버에 생기면 트리거가 지급한다
-     * - 규칙이 거부할 것이 확실한 학습 시간(0 이하, 24시간 초과)은 보내지 않고 거부로 돌려준다
+     * - 규칙이 거부할 것이 확실한 기록(학습 시간 0 이하·24시간 초과, 시작한 지 오프라인 동기화 허용 기간 초과)은
+     *   보내지 않고 거부로 돌려준다
      *   (오프라인이면 연결된 뒤에야 거부되어, 그동안 기기 캐시에만 반영된 기록이 보이게 됨)
      * - 로컬 백업 삭제는 호출부가 결과에 따라 한다 ([StudySaveResult.Pending]이면 유지)
      */
@@ -38,6 +39,11 @@ class FinishStudyingUseCase @Inject constructor(
         if (sessionId.isBlank()) return Result.Failure(AppError.Unknown())
         if (time <= 0L || time > StudyLog.MAX_STUDYING_TIME_MS) {
             return Result.Success(StudySaveResult.Rejected(StudySaveRejection.INVALID_TIME))
+        }
+        // 시작한 지 오프라인 동기화 허용 기간이 지난 기록도 규칙이 거부한다 (#633)
+        // 오래 오프라인이었다가 대기열 전송이 거부된 기록은 홈 복구 창(RecoverStudySessionUseCase)을 거쳐 여기서 걸린다
+        if (StudyLog.isTooOldToSave(startedAt, System.currentTimeMillis())) {
+            return Result.Success(StudySaveResult.Rejected(StudySaveRejection.TOO_OLD))
         }
         // 규칙이 목표와 완료 상태의 개수가 다르면 거부하므로 목표 개수에 맞춘다 (모자란 칸은 미완료)
         val normalizedCompleted = List(log.size) { index -> completed.getOrNull(index) ?: false }

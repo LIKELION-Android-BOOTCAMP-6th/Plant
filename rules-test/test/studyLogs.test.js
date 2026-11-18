@@ -105,6 +105,10 @@ describe("studyLogs", () => {
       await assertSucceeds(studyBatch(asAlice(), {startedAt: Date.now() - 5 * DAY, time: 2 * HOUR}));
     });
 
+    it("시작 시각이 서버 시각 기준 7일 이내면 저장된다 (#633 경계)", async () => {
+      await assertSucceeds(studyBatch(asAlice(), {startedAt: Date.now() - 7 * DAY + MINUTE, time: HOUR}));
+    });
+
     it("이전 세션이 끝난 시각 이후에 시작한 세션은 이어서 저장된다", async () => {
       const first = Date.now() - 5 * HOUR;
       await assertSucceeds(studyBatch(asAlice(), {sessionId: "s1", startedAt: first, time: HOUR}));
@@ -155,6 +159,17 @@ describe("studyLogs", () => {
     it("종료 시각(startedAt + 학습 시간)이 서버 시각 + 허용 오차(5분)보다 늦으면 거부", async () => {
       await assertFails(studyBatch(asAlice(), {startedAt: Date.now() - HOUR + 10 * MINUTE, time: HOUR}));
       await assertFails(studyBatch(asAlice(), {startedAt: Date.now() + DAY, time: HOUR}));
+    });
+
+    it("시작 시각이 서버 시각 기준 7일보다 과거면 거부 (#633)", async () => {
+      await assertFails(studyBatch(asAlice(), {startedAt: Date.now() - 7 * DAY - MINUTE, time: HOUR}));
+      assert.deepStrictEqual(await totals(), {user: 0, pot: 0});
+    });
+
+    it("lastStudyEndedAt이 없는 새 계정이 1970년부터 기록을 차례로 만들 수 없다 (#633 재현 경로)", async () => {
+      await assertFails(studyBatch(asAlice(), {sessionId: "s1", startedAt: 0, time: HOUR}));
+      await assertFails(studyBatch(asAlice(), {sessionId: "s2", startedAt: HOUR, time: HOUR}));
+      assert.deepStrictEqual(await totals(), {user: 0, pot: 0});
     });
 
     it("이전 세션과 겹치면 거부", async () => {
