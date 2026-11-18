@@ -11,7 +11,6 @@ sealed interface Routes {
     @Serializable data object Mypage: Routes
     @Serializable data object AccountManage : Routes
     @Serializable data object OpenSourceLicense : Routes
-    @Serializable data object StudyCompleted: Routes
     @Serializable data object CommunityActivity: Routes
 
     @Serializable data class StudyPlanDetail(val potId: String) : Routes
@@ -23,9 +22,7 @@ sealed interface Routes {
 
     @Serializable data class CommunityPost(val postId: String? = null, val potId: String? = null, val tagId: String? = null, val tagName: String? = null, val title: String? = null, val studyLogIds: List<String>? = emptyList()) : Routes
     @Serializable data class CommunityDetail(val postId: String) : Routes
-    @Serializable data class StudyCompletedDetail(val potId: String): Routes
     @Serializable data object PotList : Routes
-    @Serializable data class PotDetail(val potId: String) : Routes
 
     @Serializable data object Report : Routes
     @Serializable data object BugReport : Routes

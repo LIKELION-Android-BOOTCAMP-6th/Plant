@@ -18,7 +18,6 @@ interface PotRepository {
      */
     suspend fun addPot(uid: String, tag: Tag, name: String): Result<SaveResult>
     suspend fun getUserPotById(uid: String, potId: String): Pot?
-    suspend fun getUserPotsByStatus(uid: String, isCompleted: Boolean): List<Pot>
     suspend fun updatePotName(uid: String, potId: String, newName: String): Result<SaveResult>
 
     /**

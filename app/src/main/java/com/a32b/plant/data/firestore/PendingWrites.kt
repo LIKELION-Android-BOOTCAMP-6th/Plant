@@ -2,13 +2,7 @@ package com.a32b.plant.data.firestore
 
 import com.a32b.plant.core.util.safeRunCatching
 import com.google.android.gms.tasks.Task
-import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.MetadataChanges
-import com.google.firebase.firestore.snapshots
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration
@@ -82,18 +76,3 @@ suspend fun FirebaseFirestore.awaitPendingWrites(timeout: Duration): Boolean =
             true
         } ?: false
     }.getOrElse { false }
-
-/**
- * 이 문서에 서버 반영 대기 중인 쓰기가 있는지 실시간으로 알려준다 (true = 대기 중).
- * 화면에 "동기화 대기 중" 같은 표시를 할 때 사용.
- *
- * 주의
- * - false가 됐다고 성공한 것은 아니다. 규칙에서 거부돼 되돌아가도 false가 된다.
- *   성공 여부는 [awaitServerWrite] 결과나 문서 내용으로 판단한다.
- * - 리스너 에러(예: 로그아웃 후 PERMISSION_DENIED)는 Flow 예외로 전달된다 → 호출부에서 `.catch` 필수.
- *   에러를 false로 바꾸면 "대기 없음"과 구분되지 않으므로 여기서 삼키지 않는다.
- */
-fun DocumentReference.pendingWritesFlow(): Flow<Boolean> =
-    snapshots(MetadataChanges.INCLUDE)
-        .map { it.metadata.hasPendingWrites() }
-        .distinctUntilChanged()

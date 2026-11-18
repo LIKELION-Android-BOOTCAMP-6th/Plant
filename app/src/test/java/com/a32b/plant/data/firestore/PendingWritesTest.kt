@@ -13,7 +13,7 @@ import kotlin.time.Duration.Companion.seconds
 
 /**
  * [awaitServerWrite]를 Firestore 쓰기 Task 대신 [TaskCompletionSource]로 검증한다.
- * (awaitPendingWrites, pendingWritesFlow는 Firestore SDK를 그대로 감싼 것이라 #453에서 실제 흐름으로 확인)
+ * (awaitPendingWrites는 Firestore SDK를 그대로 감싼 것이라 #453에서 실제 흐름으로 확인)
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PendingWritesTest {

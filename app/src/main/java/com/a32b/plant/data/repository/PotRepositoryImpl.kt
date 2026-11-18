@@ -73,15 +73,6 @@ class PotRepositoryImpl @Inject constructor(
         return document?.toObject(com.a32b.plant.data.model.PotDto::class.java)?.toDomain()
     }
 
-    override suspend fun getUserPotsByStatus(uid: String, isCompleted: Boolean): List<Pot> {
-        val snapshot = db.collection("users").document(uid)
-            .collection("pots")
-            .whereEqualTo("isCompleted", isCompleted)
-            .get()
-            .await()
-        return snapshot.toObjects(com.a32b.plant.data.model.PotDto::class.java).map { it.toDomain() }
-    }
-
     override fun getAvailableTags(): Flow<List<Tag>> = callbackFlow {
         val collectionRef = db.collection("Tags").orderBy("no")
         val listener = collectionRef.addSnapshotListener { snapshot, error ->
