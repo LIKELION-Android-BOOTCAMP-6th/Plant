@@ -50,19 +50,27 @@ class CommunityReportRepositoryImplTest {
 
     @Test
     fun `이미 신고한 대상이면 사유와 관계없이 실패한다`() = runTest {
-        val remote = FakeCommunityReportRemoteDataSource(reported = false)
-        val repository = CommunityReportRepositoryImpl(remote)
+        // 사유마다 Fake를 새로 만들어 앞 사유의 기록이 섞이지 않게 한다
+        ReportReason.entries.forEach { reason ->
+            val remote = FakeCommunityReportRemoteDataSource(reported = false)
+            val repository = CommunityReportRepositoryImpl(remote)
 
-        val result = repository.createReport(
-            reporterUid = "uid-1",
-            targetType = "post",
-            targetId = "post-1",
-            parentPostId = null,
-            reason = ReportReason.COPYRIGHT,
-            detail = null
-        )
+            val result = repository.createReport(
+                reporterUid = "uid-1",
+                targetType = "post",
+                targetId = "post-1",
+                parentPostId = null,
+                reason = reason,
+                detail = null
+            )
 
-        assertEquals("이미 신고한 콘텐츠입니다.", (result as Result.Failure).error.message)
+            assertEquals(reason.firestoreKey, remote.lastReason)
+            assertEquals(
+                "사유: $reason",
+                "이미 신고한 콘텐츠입니다.",
+                (result as Result.Failure).error.message
+            )
+        }
     }
 
     private class FakeCommunityReportRemoteDataSource(
