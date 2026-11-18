@@ -14,6 +14,7 @@ object NicknameRule {
     const val MAX_LENGTH = 10
     const val LENGTH_MESSAGE = "${MIN_LENGTH}~${MAX_LENGTH}자로 입력해주세요."
     const val UNUSABLE_MESSAGE = "사용할 수 없는 닉네임입니다."
+    const val BANNED_WORD_MESSAGE = "사용할 수 없는 단어가 포함되어 있어요."
 
     fun isValidLength(nickname: String): Boolean =
         nickname.length in MIN_LENGTH..MAX_LENGTH
@@ -47,7 +48,8 @@ object NicknameRule {
     /**
      * 닉네임 형식을 검사하고, 통과하지 못하면 입력칸에 보여줄 메시지를, 통과하면 null을 돌려준다.
      * 로그인(닉네임 설정)과 마이페이지(프로필 편집) UseCase가 함께 쓴다.
-     * - 길이를 먼저 검사한다. 길이와 사용 가능 여부가 함께 걸리면 [LENGTH_MESSAGE]
+     * - 길이 → 사용 가능 여부 → 금칙어 순서로 검사해, 여러 개가 함께 걸리면 앞의 메시지를 돌려준다.
+     *   (길이와 금칙어가 함께 걸리면 [LENGTH_MESSAGE])
      * - [normalize]한 값을 넘긴다. 정규화하지 않은 값을 넘기면 정규화 전 길이로 판정해 결과가 달라질 수 있다.
      *   예: 자모로 나뉜 받침 있는 5글자는 15칸이라 [LENGTH_MESSAGE] (정규화하면 5글자라 통과할 값),
      *       `" a"`는 정규화하면 1글자인데 2칸이라 길이를 통과하고, 정규화 전후가 달라 [isUsable]에서 걸려 [UNUSABLE_MESSAGE]
@@ -55,8 +57,58 @@ object NicknameRule {
     fun validate(nickname: String): String? = when {
         !isValidLength(nickname) -> LENGTH_MESSAGE
         !isUsable(nickname) -> UNUSABLE_MESSAGE
+        containsBannedWord(nickname) || consistsOfReservedTokens(nickname) -> BANNED_WORD_MESSAGE
         else -> null
     }
+
+    private val bannedWordKeys = NicknameBannedWords.words.map { it.toComparisonKey() }
+    private val allowedWordKeys = NicknameBannedWords.allowedWords.map { it.toComparisonKey() }
+
+    // 긴 토큰부터 지운다. 짧은 토큰이 긴 토큰의 일부일 때 짧은 것을 먼저 지우면 긴 토큰의 나머지가 남는다.
+    private val reservedTokenKeys = NicknameBannedWords.reservedTokens.map { it.toComparisonKey() }
+        .sortedByDescending { it.length }
+
+    /**
+     * 비교용 값([toComparisonKey])에서 [NicknameBannedWords.reservedTokens]를 모두 지웠을 때 아무것도 남지 않는지 확인한다.
+     * 서비스명·직책·공식 표시만으로 이루어진 닉네임(사칭)을 막고, 다른 글자가 붙은 정상 닉네임은 통과시킨다.
+     * (예: "Plant", "플랜트공식", "공식계정", "Plant관리자", "관리자님"은 거부 / "plantlover", "공부관리자", "bigmac"은 통과)
+     *
+     * 알려진 한계 (받아들임)
+     * - 토큰이 아닌 글자가 붙으면 통과한다. (예: "관리자다", "진짜관리자" — "공부관리자" 같은 정상 닉네임을 살리기 위한 대가)
+     * - 토큰끼리 글자가 겹쳐 붙으면(예: "PlanTeam" = plant + team이 t를 같이 씀) 지운 뒤 글자가 남아 통과한다.
+     * - 토큰마다 한 번씩만 지우므로, 짧은 토큰을 긴 토큰 사이에 끼워 넣으면(예: "pl팀ant", "플공식랜트") 통과한다.
+     */
+    fun consistsOfReservedTokens(nickname: String): Boolean =
+        reservedTokenKeys.fold(nickname.toComparisonKey()) { acc, token -> acc.replace(token, "") }.isEmpty()
+
+    /**
+     * [NicknameBannedWords.words]의 단어가 들어 있는지 확인한다.
+     * - 닉네임과 금칙어를 둘 다 비교용 값([toComparisonKey])으로 바꿔, 공백·특수문자·이모지를 끼우거나
+     *   대소문자·전각·수학용 굵은 글자·원 문자를 섞어도 걸리게 한다. (예: "씨.발", "FuCk", "ｆｕｃｋ", "𝐟𝐮𝐜𝐤", "ⓕⓤⓒⓚ")
+     * - 숫자를 뺀 비교용 값으로도 한 번 더 찾는다. 숫자를 끼운 변형("씨2발", "개1새끼", NFKC로 숫자가 되는 "개①새끼", "시²발")을
+     *   목록에 하나씩 적지 않고 막기 위해서다. (사칭 토큰 검사는 숫자를 빼지 않는다. 빼면 "Plant_01"이 "plant"만 남아 거부됨)
+     * - [NicknameBannedWords.allowedWords]의 단어는 두 값 모두에서 먼저 지운 뒤 찾는다 (오탐 예외).
+     *
+     * 알려진 한계: 목록에 없는 변형(글자를 더 늘인 "씨이이발", 비슷한 글자로 바꾼 "^ㅂ", 숫자로 글자를 대신한 "f4ck"·"s3x" 등)은 통과한다.
+     */
+    fun containsBannedWord(nickname: String): Boolean {
+        val key = nickname.toComparisonKey()
+        return listOf(key, key.filterNot { it.isDigit() }).any { candidate ->
+            val remaining = allowedWordKeys.fold(candidate) { acc, allowed -> acc.replace(allowed, "") }
+            bannedWordKeys.any { it in remaining }
+        }
+    }
+
+    /**
+     * 비교용 값: NFKC로 바꾸고, 소문자로 맞춘 뒤, 글자·숫자(한글 자모 포함)만 남긴다. 검사에만 쓰고 저장하지 않는다.
+     * - NFKC: 전각("ｆ"), 수학용 굵은 글자("𝐟"), 원 문자("ⓕ"), 위 첨자("¹")를 보통 글자로 바꾼다.
+     *   키보드 자모("ㅅ", U+3145)도 분리형 자모(U+1109)로 바뀌지만, 목록 단어도 같은 방식으로 바꿔 비교하므로 결과는 같다.
+     *   ([normalize]가 NFKC를 쓰지 않는 이유는 키보드 자모가 분리형 자모로 바뀌어 [hasLookAlikeChar]에 걸리기 때문인데,
+     *   이 값은 [hasLookAlikeChar]에 넘기지 않고 저장하지도 않으므로 해당하지 않는다)
+     * - 소문자를 먼저 바꾼다. 거른 뒤 바꾸면 "İ"(U+0130)가 "i"+결합 점(U+0307)이 되어 "ADMİN"이 "admin"과 달라진다.
+     */
+    private fun String.toComparisonKey(): String =
+        Normalizer.normalize(this, Normalizer.Form.NFKC).lowercase().filter { it.isLetterOrDigit() }
 
     /**
      * 사용할 수 있는 닉네임인지 확인한다.

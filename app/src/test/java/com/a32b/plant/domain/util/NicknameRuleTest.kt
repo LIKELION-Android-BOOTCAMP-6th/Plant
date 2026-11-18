@@ -137,6 +137,175 @@ class NicknameRuleTest {
         assertEquals(NicknameRule.LENGTH_MESSAGE, NicknameRule.validate("."))
     }
 
+    // 금칙어 검사는 앱에서만 한다 (보안 규칙은 형식만 검사). 그래서 아래 값은 rules-test와 맞출 필요가 없다.
+
+    @Test
+    fun `validate rejects banned word as is`() {
+        listOf("씨발", "개새끼야", "나는병신", "fuck", "ㅅㅂ", "ㅄ임", "tlqkf").forEach { nickname ->
+            assertEquals("거부되어야 함: $nickname", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
+        }
+    }
+
+    @Test
+    fun `validate rejects banned word mixed with spaces, symbols and emoji`() {
+        listOf("씨 발", "씨.발", "씨_발!", "시🌱발", "f u c k", "f.u.c.k", "ㅅ_ㅂ").forEach { nickname ->
+            assertEquals("거부되어야 함: $nickname", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
+        }
+    }
+
+    @Test
+    fun `validate rejects banned word with mixed letter case`() {
+        listOf("FUCK", "FuCk", "SiBaL", "TlqKf").forEach { nickname ->
+            assertEquals("거부되어야 함: $nickname", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
+        }
+    }
+
+    // 비교용 값에 NFKC를 쓰고, 소문자를 거르기 전에 바꾸는지 확인한다
+    @Test
+    fun `validate rejects banned word written with look-alike letter forms`() {
+        listOf(
+            "ｆｕｃｋ", // 전각
+            "𝐟𝐮𝐜𝐤", // 수학용 굵은 글자 𝐟𝐮𝐜𝐤
+            "ⓕⓤⓒⓚ", // 원 문자
+            "ADMİN", // 터키어 İ — 거른 뒤 소문자로 바꾸면 "i"+결합 점이 되어 빠져나감
+            "ｐｌａｎｔ", // 전각 사칭 토큰
+        ).forEach { nickname ->
+            assertEquals("거부되어야 함: ${nickname.codePointsHex()}", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
+        }
+    }
+
+    @Test
+    fun `validate rejects banned word mixing jamo, syllables and digits`() {
+        listOf(
+            "ㅅ발", "시ㅂ", "병ㅅ",
+            "시1발", "ㅅ1ㅂ", "씨2발", "개1새끼", // 숫자를 뺀 값으로도 찾음 (목록에 숫자 변형을 적지 않음)
+            "개①새끼", "시²발", // NFKC로 숫자가 되는 동그라미·위 첨자 숫자
+        ).forEach { nickname ->
+            assertEquals("거부되어야 함: $nickname", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
+        }
+    }
+
+    @Test
+    fun `validate rejects variants, compounds, hate, sexual and threat words`() {
+        listOf(
+            "시이발", "쒸펄", "병1신", // 발음·숫자 변형
+            "이새끼", "개자식", // 합성 욕설
+            "느개비", // 부모 욕
+            "조센징", "짱깨", // 혐오 표현
+            "후장", // 성적 표현
+            "뒤져라", // 위협
+            "asshole",
+        ).forEach { nickname ->
+            assertEquals("거부되어야 함: $nickname", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
+        }
+    }
+
+    @Test
+    fun `validate rejects impersonation words anywhere in nickname`() {
+        listOf("Plant운영자", "운영진입니다", "고객센터", "ADMIN", "a.d.m.i.n").forEach { nickname ->
+            assertEquals("거부되어야 함: $nickname", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
+        }
+    }
+
+    @Test
+    fun `validate rejects nickname made only of reserved tokens`() {
+        listOf(
+            "Plant", "PLANT", "P.L.A.N.T", "플랜트", "공식", "GM", "g m", // 토큰 하나
+            "플랜트공식", "공식플랜트", "Plant팀", "PlantTeam", "공식official", "공식계정", // 서비스명 + 공식 표시
+            "Plant관리자", "관리자님", "관리자입니다", "teamplant", // 직책·호칭, 순서 바꿈
+            "Plant매니저", "플랜트스태프", "PlantStaff", "플랜트공지", "매니저", // 매니저·스태프·공지
+        ).forEach { nickname ->
+            assertEquals("거부되어야 함: $nickname", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
+        }
+    }
+
+    @Test
+    fun `validate allows nickname with reserved token and other letters`() {
+        listOf(
+            "plantlover", "플랜트러버", "공식처럼", "Plant_01",
+            "bigmac", // "gm"이 들어 있음
+            "시간관리자", "공부관리자", "자기관리자", "독서관리자", // 학습 앱에서 자연스러운 "OO관리자"
+            "공부님", "팀장", "운영체제",
+            "공지영", "공지천", "매니저꿈나무", "스태프롤", // 토큰 + 이름·지명 등
+            "관리자다", "진짜관리자", // 토큰이 아닌 글자가 붙으면 통과 (받아들인 한계, consistsOfReservedTokens KDoc 참고)
+        ).forEach { nickname ->
+            assertNull("통과해야 함: $nickname", NicknameRule.validate(nickname))
+        }
+    }
+
+    // 금칙어 일부가 들어가거나 비슷하지만 정상적인 단어 (오탐 목록)
+    // 넣지 않기로 한 단어(보지·자지·좇·졸라·rape·cock·pussy·토토·애자·니미 등)의 이유가 되는 닉네임도 함께 둔다.
+    // 목록에 단어를 더했을 때 이 테스트가 깨지면 그 단어는 넣지 않거나 예외 목록에 추가할 것.
+    @Test
+    fun `validate allows normal words that look like banned words`() {
+        listOf(
+            "시발점", "시발역", "십팔번", "팔등신", "등신대", "등신불", "짱깨끗", "badminton", // 예외 목록
+            "공부씹어먹기", "영어씹어먹자", "수학씹어먹는중", // 예외 목록 "씹어먹"
+            "5개년계획", "공시발표", // 예외 목록 "개년계획", "공시발표"
+            "고3수험생", "수학1등급", "Plant_01", // 숫자를 뺀 값으로 찾아도 정상 닉네임은 통과
+            "엄창호", // "엄창"은 실명과 겹쳐 넣지 않음
+            "애미", "애비로드", "애비뉴", // 단독 "애미"·"애비"는 영어 이름 표기와 겹쳐 넣지 않음
+            "ㅋㅋ", "❤️하트", // NFKC로 바꿔도 정상 닉네임은 그대로 통과
+            "시바견", // "시발"과 한 글자 다름
+            "새끼고양이", // "새끼"만으로는 막지 않음
+            "class", // "ass"는 목록에 넣지 않음
+            "병아리",
+            "씨앗발아",
+            "ㅅㅅ",
+            "디저트", // "디져"와 한 글자 다름
+            "초보지존", // "보지"는 넣지 않음
+            "감자지킴이", // "자지"는 넣지 않음
+            "꿈을좇는", // "좇"은 넣지 않음 (목록의 "좆"과 다른 글자)
+            "졸라맨", // "졸라"는 넣지 않음
+            "grape", // "rape"는 넣지 않음
+            "peacock", // "cock"은 넣지 않음
+            "pussycat", // "pussy"는 넣지 않음
+            "토토로", // "토토"는 넣지 않음
+            "애자일", // "애자"는 넣지 않음
+            "미니미", // "니미"는 넣지 않음
+            "홍어회", // "홍어"는 넣지 않음
+        ).forEach { nickname ->
+            assertNull("통과해야 함: $nickname", NicknameRule.validate(nickname))
+        }
+    }
+
+    @Test
+    fun `validate rejects banned word outside allowed word`() {
+        // 예외 단어를 지운 뒤에도 금칙어가 남으면 거부
+        listOf("시발점씨발", "시발역ㅅㅂ", "씹어먹기씹").forEach { nickname ->
+            assertEquals("거부되어야 함: $nickname", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
+        }
+    }
+
+    @Test
+    fun `validate checks length and usability before banned word`() {
+        // 길이 + 금칙어 → 길이 메시지 (1글자 / 11글자)
+        assertEquals(NicknameRule.LENGTH_MESSAGE, NicknameRule.validate("씹"))
+        assertEquals(NicknameRule.LENGTH_MESSAGE, NicknameRule.validate("씨발씨발씨발씨발씨발씨"))
+        // 사용할 수 없는 값 + 금칙어 → 사용할 수 없는 닉네임 메시지 ("/" 포함, U+200B 포함)
+        assertEquals(NicknameRule.UNUSABLE_MESSAGE, NicknameRule.validate("씨/발"))
+        assertEquals(NicknameRule.UNUSABLE_MESSAGE, NicknameRule.validate("씨​발"))
+    }
+
+    @Test
+    fun `every banned word is rejected by itself`() {
+        // 목록에 새 단어를 넣을 때 비교용 값으로 바꾸면 빈 값이 되는 등의 실수를 잡는다
+        NicknameBannedWords.words.forEach { word ->
+            assertTrue("금칙어로 걸려야 함: $word", NicknameRule.containsBannedWord(word))
+        }
+        NicknameBannedWords.reservedTokens.forEach { token ->
+            assertTrue("사칭 토큰으로 걸려야 함: $token", NicknameRule.consistsOfReservedTokens(token))
+        }
+    }
+
+    @Test
+    fun `every allowed word passes by itself`() {
+        // 예외 단어 안에 다른 금칙어가 들어 있거나 사칭 토큰으로만 이루어져 있으면 예외로 둔 의미가 없으므로 확인한다
+        NicknameBannedWords.allowedWords.forEach { word ->
+            assertNull("통과해야 함: $word", NicknameRule.validate(word))
+        }
+    }
+
     private fun String.codePointsHex(): String =
         codePoints().toArray().joinToString(" ") { "U+%04X".format(it) }
 }

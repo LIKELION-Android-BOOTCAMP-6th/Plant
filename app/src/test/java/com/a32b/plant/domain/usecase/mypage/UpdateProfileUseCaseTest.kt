@@ -196,6 +196,34 @@ class UpdateProfileUseCaseTest {
         assertTrue(users.updatedUsers.isEmpty())
     }
 
+    @Test
+    fun `nickname change with banned word is rejected without updating`() = runTest {
+        val users = FakeUserRepository(testUser(nickname = "새싹", profileImg = "1"))
+        val useCase = createUseCase(users)
+
+        val result = useCase("씨.발", "1")
+
+        assertTrue(result is Result.Failure)
+        val error = (result as Result.Failure).error
+        assertTrue(error is AppError.NicknameInvalid)
+        assertEquals(NicknameRule.BANNED_WORD_MESSAGE, error.message)
+        assertTrue(users.updatedUsers.isEmpty())
+    }
+
+    @Test
+    fun `existing nickname with banned word is not checked when only image changes`() = runTest {
+        // 금칙어 검사가 생기기 전에 등록된 닉네임 — 닉네임을 바꾸지 않으면 검사하지 않는다
+        val users = FakeUserRepository(testUser(nickname = "씨발", profileImg = "1"))
+        users.updateProfileResult = Result.Success(Unit)
+        val useCase = createUseCase(users)
+
+        val result = useCase("씨발", "3")
+
+        assertTrue(result is Result.Success)
+        assertEquals("씨발", (result as Result.Success).data)
+        assertEquals("씨발", users.updatedUsers.single().nickname)
+    }
+
     private fun createUseCase(users: FakeUserRepository) = UpdateProfileUseCase(
         userRepository = users,
         ensureCurrentUserUseCase = EnsureCurrentUserUseCase(
