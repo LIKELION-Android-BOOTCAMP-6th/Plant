@@ -1,11 +1,7 @@
 package com.a32b.plant.presentation.mypage.viewmodel
 
 import com.a32b.plant.domain.error.AppError
-import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.User
-import com.a32b.plant.domain.model.UserSnapshot
-import com.a32b.plant.domain.repository.AuthRepository
-import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.session.SessionExpiredNotifier
 import com.a32b.plant.domain.session.SessionExpiredReason
@@ -15,12 +11,12 @@ import com.a32b.plant.domain.usecase.mypage.ObserveDarkModeUseCase
 import com.a32b.plant.domain.usecase.mypage.UpdateProfileUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import com.a32b.plant.domain.util.NicknameRule
+import com.a32b.plant.fake.FakeAuthRepository
+import com.a32b.plant.fake.FakeUserRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
@@ -259,6 +255,8 @@ class MyPageViewModelTest {
 
     private fun createViewModel(users: FakeUserRepository): MyPageViewModel {
         val notifier = NoopSessionExpiredNotifier
+        // 끝나는 Flow면 ObserveDarkModeUseCase가 5초 뒤 재구독을 예약해, 테스트 종료 후 Main이 복원된 뒤 남은 지연이 실행된다.
+        users.darkModeFlow = flow { awaitCancellation() }
         return MyPageViewModel(
             ensureCurrentUserUseCase = EnsureCurrentUserUseCase(users, notifier),
             getProfileImageLevelListUseCase = GetProfileImageLevelListUseCase(EnsureCurrentUserUseCase(users, notifier)),
@@ -287,44 +285,6 @@ class MyPageViewModelTest {
 
     private object NoopSessionExpiredNotifier : SessionExpiredNotifier {
         override fun notifySessionExpired(reason: SessionExpiredReason) = Unit
-    }
-
-    private class FakeUserRepository(
-        initialUser: User?,
-        private val updateProfileResult: Result<Unit> = Result.Success(Unit),
-        private val updateProfileGate: CompletableDeferred<Unit>? = null
-    ) : UserRepository {
-        override val currentUser = MutableStateFlow(initialUser)
-
-        // 끝나는 Flow면 ObserveDarkModeUseCase가 5초 뒤 재구독을 예약해, 테스트 종료 후 Main이 복원된 뒤 남은 지연이 실행된다.
-        override fun observeDarkMode(): Flow<Boolean> = flow { awaitCancellation() }
-        override fun startUserSession(user: User): Unit = error("Unused")
-        override fun endUserSession(): Unit = error("Unused")
-        override fun takeExpiredSessionReason(): SessionExpiredReason? = error("Unused")
-        override suspend fun updateLastSelectedPot(uid: String, potId: String): Unit = error("Unused")
-        override suspend fun getUser(uid: String): Result<User?> = error("Unused")
-        override suspend fun getUserPreferringServer(uid: String): Result<UserSnapshot> = error("Unused")
-        override suspend fun createUser(uid: String): Result<User> = error("Unused")
-        override suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit> = error("Unused")
-        override suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit> = error("Unused")
-        override suspend fun updateProfile(user: User): Result<Unit> {
-            updateProfileGate?.await()
-            return updateProfileResult
-        }
-        override suspend fun checkAttendance(): Result<AttendanceDecision.Success> = error("Unused")
-        override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> = error("Unused")
-    }
-
-    private class FakeAuthRepository : AuthRepository {
-        override fun currentUid(): String? = error("Unused")
-        override fun currentEmail(): String? = error("Unused")
-        override fun hasSession(): Boolean = error("Unused")
-        override fun getSignInProvider(): String? = error("Unused")
-        override suspend fun signInWithGoogle(idToken: String): Result<String> = error("Unused")
-        override suspend fun reauthenticateWithGoogle(idToken: String): Result<Unit> = error("Unused")
-        override suspend fun refreshIdToken(): Result<Unit> = error("Unused")
-        override suspend fun deleteAccount(): Result<Unit> = error("Unused")
-        override fun signOut(): Unit = error("Unused")
     }
 
 }

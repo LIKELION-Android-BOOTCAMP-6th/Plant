@@ -2,16 +2,10 @@ package com.a32b.plant.domain.usecase.auth
 
 import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.domain.error.AppError
-import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.User
-import com.a32b.plant.domain.model.UserSnapshot
-import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
-import com.a32b.plant.domain.session.SessionExpiredReason
 import com.a32b.plant.domain.util.NicknameRule
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.emptyFlow
+import com.a32b.plant.fake.FakeUserRepository
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -87,7 +81,7 @@ class SetNicknameUseCaseTest {
 
     @Test
     fun `nickname taken failure is returned as is`() = runTest {
-        val users = FakeUserRepository(completeResult = Result.Failure(AppError.NicknameTaken()))
+        val users = FakeUserRepository(completeFirstLoginResult = Result.Failure(AppError.NicknameTaken()))
         val useCase = SetNicknameUseCase(users)
 
         val result = useCase("uid-1", "새싹")
@@ -100,7 +94,7 @@ class SetNicknameUseCaseTest {
 
     @Test
     fun `network failure is returned as is`() = runTest {
-        val users = FakeUserRepository(completeResult = Result.Failure(AppError.Network()))
+        val users = FakeUserRepository(completeFirstLoginResult = Result.Failure(AppError.Network()))
         val useCase = SetNicknameUseCase(users)
 
         val result = useCase("uid-1", "새싹")
@@ -109,30 +103,5 @@ class SetNicknameUseCaseTest {
         assertTrue((result as Result.Failure).error is AppError.Network)
         assertEquals(1, users.completedNicknames.size)
         assertNull(CurrentUser.user.value)
-    }
-
-    private class FakeUserRepository(
-        initialUser: User? = null,
-        private val completeResult: Result<Unit> = Result.Success(Unit)
-    ) : UserRepository {
-        override val currentUser = MutableStateFlow(initialUser)
-        val completedNicknames = mutableListOf<Pair<String, String>>()
-
-        override fun observeDarkMode(): Flow<Boolean> = emptyFlow()
-        override fun startUserSession(user: User): Unit = error("Unused")
-        override fun endUserSession(): Unit = error("Unused")
-        override fun takeExpiredSessionReason(): SessionExpiredReason? = error("Unused")
-        override suspend fun updateLastSelectedPot(uid: String, potId: String): Unit = error("Unused")
-        override suspend fun getUser(uid: String): Result<User?> = error("Unused")
-        override suspend fun getUserPreferringServer(uid: String): Result<UserSnapshot> = error("Unused")
-        override suspend fun createUser(uid: String): Result<User> = error("Unused")
-        override suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit> {
-            completedNicknames += uid to nickname
-            return completeResult
-        }
-        override suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit> = error("Unused")
-        override suspend fun updateProfile(user: User): Result<Unit> = error("Unused")
-        override suspend fun checkAttendance(): Result<AttendanceDecision.Success> = error("Unused")
-        override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> = error("Unused")
     }
 }
