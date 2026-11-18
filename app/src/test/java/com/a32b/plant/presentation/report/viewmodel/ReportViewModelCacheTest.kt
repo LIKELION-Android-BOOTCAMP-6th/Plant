@@ -1,28 +1,19 @@
 package com.a32b.plant.presentation.report.viewmodel
 
-import com.a32b.plant.domain.model.AttendanceDecision
-import com.a32b.plant.domain.model.ReportPeriodData
-import com.a32b.plant.domain.model.User
-import com.a32b.plant.domain.model.UserSnapshot
 import com.a32b.plant.core.util.NETWORK_SLOW_READ_MESSAGE
-import com.a32b.plant.domain.repository.ReportRepository
-import com.a32b.plant.domain.repository.UserRepository
-import com.a32b.plant.domain.result.Result
+import com.a32b.plant.domain.model.User
 import com.a32b.plant.domain.session.SessionExpiredNotifier
 import com.a32b.plant.domain.session.SessionExpiredReason
 import com.a32b.plant.domain.usecase.report.GetDailyReportUseCase
 import com.a32b.plant.domain.usecase.report.GetMonthlyReportUseCase
 import com.a32b.plant.domain.usecase.report.GetReportRecordsUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
+import com.a32b.plant.fake.FakeReportRepository
+import com.a32b.plant.fake.FakeUserRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -153,7 +144,7 @@ class ReportViewModelCacheTest {
         delayMillis: Long = 0L,
         onRepositoryCreated: (FakeReportRepository) -> Unit = {}
     ): ReportViewModel {
-        val users = FakeUserRepository()
+        val users = FakeUserRepository(User.create().copy(uid = "uid"))
         val ensureCurrentUser = EnsureCurrentUserUseCase(
             userRepository = users,
             notifier = object : SessionExpiredNotifier {
@@ -168,33 +159,5 @@ class ReportViewModelCacheTest {
             getDailyReportUseCase = GetDailyReportUseCase(records),
             getMonthlyReportUseCase = GetMonthlyReportUseCase(records)
         )
-    }
-
-    private class FakeReportRepository(var isFromCache: Boolean, private val delayMillis: Long) : ReportRepository {
-        override suspend fun getPeriodData(
-            uid: String,
-            startInclusive: Long,
-            endExclusive: Long
-        ): Result<ReportPeriodData> {
-            delay(delayMillis)
-            return Result.Success(ReportPeriodData(emptyList(), isFromCache))
-        }
-    }
-
-    private class FakeUserRepository : UserRepository {
-        override val currentUser: StateFlow<User?> = MutableStateFlow(User.create().copy(uid = "uid"))
-        override fun observeDarkMode(): Flow<Boolean> = emptyFlow()
-        override fun startUserSession(user: User) = Unit
-        override fun endUserSession() = Unit
-        override fun takeExpiredSessionReason(): SessionExpiredReason? = null
-        override suspend fun updateLastSelectedPot(uid: String, potId: String) = Unit
-        override suspend fun getUser(uid: String): Result<User?> = error("Unused")
-        override suspend fun getUserPreferringServer(uid: String): Result<UserSnapshot> = error("Unused")
-        override suspend fun createUser(uid: String): Result<User> = error("Unused")
-        override suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit> = error("Unused")
-        override suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit> = error("Unused")
-        override suspend fun updateProfile(user: User): Result<Unit> = error("Unused")
-        override suspend fun checkAttendance(): Result<AttendanceDecision.Success> = error("Unused")
-        override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> = error("Unused")
     }
 }

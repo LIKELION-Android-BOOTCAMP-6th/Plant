@@ -4,8 +4,8 @@ import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.model.ReportPeriodData
 import com.a32b.plant.domain.model.ReportPotLogs
 import com.a32b.plant.domain.model.StudyLog
-import com.a32b.plant.domain.repository.ReportRepository
 import com.a32b.plant.domain.result.Result
+import com.a32b.plant.fake.FakeReportRepository
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -79,23 +79,6 @@ class GetReportCacheUseCasesTest {
         assertTrue(report.isFromCache)
         assertTrue(report.records.isEmpty())
         assertEquals(0, report.streakDays)
-    }
-
-    private class FakeReportRepository(
-        private val periodData: ((Int) -> ReportPeriodData)? = null,
-        var isFromCache: Boolean = false
-    ) : ReportRepository {
-        var calls = 0
-
-        override suspend fun getPeriodData(
-            uid: String,
-            startInclusive: Long,
-            endExclusive: Long
-        ): Result<ReportPeriodData> {
-            val result = periodData?.invoke(calls) ?: ReportPeriodData(emptyList(), isFromCache)
-            calls++
-            return Result.Success(result)
-        }
     }
 
     private fun <T> Result<T>.getOrThrow(): T = when (this) {

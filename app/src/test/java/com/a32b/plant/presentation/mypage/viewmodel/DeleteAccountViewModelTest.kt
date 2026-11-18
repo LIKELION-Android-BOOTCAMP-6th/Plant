@@ -1,30 +1,17 @@
 package com.a32b.plant.presentation.mypage.viewmodel
 
 import com.a32b.plant.domain.error.AppError
-import com.a32b.plant.domain.model.AttendanceDecision
-import com.a32b.plant.domain.model.StudyLog
-import com.a32b.plant.domain.model.StudyLogRef
-import com.a32b.plant.domain.model.StudyRewardStatus
-import com.a32b.plant.domain.model.StudySaveResult
-import com.a32b.plant.domain.model.StudyingGoalDraft
-import com.a32b.plant.domain.model.StudyingSession
-import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.domain.model.User
-import com.a32b.plant.domain.model.UnseenStudyReward
-import com.a32b.plant.domain.model.UserSnapshot
-import com.a32b.plant.domain.repository.AuthRepository
-import com.a32b.plant.domain.repository.StudyingRepository
-import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.session.SessionExpiredNotifier
 import com.a32b.plant.domain.session.SessionExpiredReason
 import com.a32b.plant.domain.usecase.auth.DeleteAccountUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
+import com.a32b.plant.fake.FakeAuthRepository
+import com.a32b.plant.fake.FakeStudyingRepository
+import com.a32b.plant.fake.FakeUserRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -44,7 +31,10 @@ class DeleteAccountViewModelTest {
         Dispatchers.setMain(dispatcher)
         try {
             val users = FakeUserRepository(User.create().copy(uid = "uid-1"))
-            val auth = FakeAuthRepository(Result.Failure(AppError.UnknownUser()))
+            val auth = FakeAuthRepository(
+                reauthenticationResult = Result.Failure(AppError.UnknownUser()),
+                refreshResult = Result.Failure(AppError.Network())
+            )
             val useCaseNotifier = CountingSessionExpiredNotifier()
             val viewModelNotifier = CountingSessionExpiredNotifier()
             val viewModel = DeleteAccountViewModel(
@@ -119,59 +109,5 @@ class DeleteAccountViewModelTest {
         override fun notifySessionExpired(reason: SessionExpiredReason) {
             calls++
         }
-    }
-
-    private class FakeAuthRepository(
-        private val reauthenticationResult: Result<Unit>,
-        private val refreshResult: Result<Unit> = Result.Failure(AppError.Network())
-    ) : AuthRepository {
-        override fun currentUid(): String? = "uid-1"
-        override fun currentEmail(): String? = null
-        override fun hasSession(): Boolean = true
-        override fun getSignInProvider(): String? = "google.com"
-        override suspend fun signInWithGoogle(idToken: String): Result<String> = error("Not used")
-        override suspend fun reauthenticateWithGoogle(idToken: String): Result<Unit> = reauthenticationResult
-        override suspend fun refreshIdToken(): Result<Unit> = refreshResult
-        override suspend fun deleteAccount(): Result<Unit> = error("Not used")
-        override fun signOut() = Unit
-    }
-
-    private class FakeUserRepository(
-        user: User?
-    ) : UserRepository {
-        override val currentUser = MutableStateFlow(user)
-        override fun observeDarkMode(): Flow<Boolean> = emptyFlow()
-        override fun startUserSession(user: User) = error("Not used")
-        override fun endUserSession() {
-            currentUser.value = null
-        }
-        override fun takeExpiredSessionReason(): SessionExpiredReason? = error("Not used")
-        override suspend fun updateLastSelectedPot(uid: String, potId: String) = error("Not used")
-        override suspend fun getUser(uid: String): Result<User?> = error("Not used")
-        override suspend fun getUserPreferringServer(uid: String): Result<UserSnapshot> = error("Not used")
-        override suspend fun createUser(uid: String): Result<User> = error("Not used")
-        override suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit> = error("Not used")
-        override suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit> = Result.Success(Unit)
-        override suspend fun updateProfile(user: User): Result<Unit> = error("Not used")
-        override suspend fun checkAttendance(): Result<AttendanceDecision.Success> = error("Not used")
-        override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> = error("Not used")
-    }
-
-    private class FakeStudyingRepository : StudyingRepository {
-        override fun observeStudyingUser(tag: String): Flow<List<StudyingUser>> = error("Not used")
-        override suspend fun saveStudyingUser(user: StudyingUser): Result<Unit> = error("Not used")
-        override suspend fun saveStudySession(uid: String, potId: String, sessionId: String, log: StudyLog): Result<StudySaveResult> = error("Not used")
-        override suspend fun awaitPendingWrites(): Boolean = error("Not used")
-        override suspend fun isStudySessionSaved(uid: String, potId: String, sessionId: String): Result<Boolean> = error("Not used")
-        override fun observeStudyReward(uid: String, potId: String, sessionId: String): Flow<StudyRewardStatus?> = error("Not used")
-        override fun observeUnseenStudyRewards(uid: String): Flow<List<UnseenStudyReward>> = error("Not used")
-        override suspend fun markStudyRewardsSeen(uid: String, refs: List<StudyLogRef>): Result<Unit> = error("Not used")
-        override suspend fun deleteStudyingUserInfo(): Result<Unit> = error("Not used")
-        override suspend fun saveLocalSession(studying: StudyingSession): Result<Unit> = error("Not used")
-        override suspend fun readLocalSession(): Result<StudyingSession?> = error("Not used")
-        override suspend fun clearLocalSession(): Result<Unit> = Result.Success(Unit)
-        override suspend fun saveLocalGoalDraft(draft: StudyingGoalDraft): Result<Unit> = error("Not used")
-        override suspend fun readLocalGoalDraft(): Result<StudyingGoalDraft?> = error("Not used")
-        override suspend fun clearLocalGoalDraft(): Result<Unit> = error("Not used")
     }
 }
