@@ -1,8 +1,6 @@
 package com.a32b.plant.data.source.remote.item
 
 import com.a32b.plant.data.model.BonusBoxOpeningDto
-import com.a32b.plant.domain.type.ItemType
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
