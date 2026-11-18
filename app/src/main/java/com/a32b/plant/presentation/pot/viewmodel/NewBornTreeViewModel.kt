@@ -2,7 +2,9 @@ package com.a32b.plant.presentation.pot.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
+import com.a32b.plant.core.util.NETWORK_SLOW_MESSAGE
 import com.a32b.plant.di.CurrentUser
+import com.a32b.plant.domain.model.SaveResult
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.PotRepository
 import com.a32b.plant.domain.result.onFailure
@@ -47,8 +49,12 @@ class NewBornTreeViewModel @Inject constructor(private val potRepository: PotRep
         }
     }
 
-    //DB -> 새 화분 생성
-    fun createPot(tag: Tag, name: String, onSuccess: () -> Unit){
+    /**
+     * DB -> 새 화분 생성.
+     * [onCreated]에는 화면을 닫으면서 보여줄 안내 문구를 넘긴다 (없으면 null).
+     * 오프라인(Pending)이어도 기기 캐시에 이미 반영됐으므로 화면을 닫는다 — 다시 누를 일이 없어 중복 생성되지 않음 (#640)
+     */
+    fun createPot(tag: Tag, name: String, onCreated: (notice: String?) -> Unit){
         if(currentUid.isEmpty()){
             _errorMessage.value = "사용자 정보가 없습니다. 다시 로그인해주세요."
             return
@@ -59,7 +65,9 @@ class NewBornTreeViewModel @Inject constructor(private val potRepository: PotRep
             val result = potRepository.addPot(currentUid, tag, PotNameRule.normalize(name))
             _isUploading.value = false
 
-            result.onSuccess { onSuccess() }
+            result.onSuccess { saveResult ->
+                onCreated(if (saveResult == SaveResult.Pending) NETWORK_SLOW_MESSAGE else null)
+            }
                 .onFailure { exception ->
                     val msg = exception.message ?: "화분 생성에 실패했습니다. 다시 시도해주세요"
                     _errorMessage.emit(msg)

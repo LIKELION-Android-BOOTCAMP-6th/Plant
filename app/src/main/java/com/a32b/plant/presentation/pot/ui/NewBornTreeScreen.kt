@@ -79,7 +79,9 @@ fun NewBornTreeScreen(navController: NavController,
                 Button(
                     onClick = {
                         selectedTag?.let { tag ->
-                            viewModel.createPot(tag, potName) {
+                            viewModel.createPot(tag, potName) { notice ->
+                                // 오프라인이면 "연결되면 자동으로 처리됩니다" 안내 후 닫기 (#640)
+                                notice?.let { context.showToast(it) }
                                 navController.popBackStack()
                             }
                         }

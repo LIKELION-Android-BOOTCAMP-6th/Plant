@@ -42,17 +42,28 @@ class PotRepositoryImpl @Inject constructor(
             // 이때 서버가 PERMISSION_DENIED를 반환하는데, 처리하지 않으면 앱 전체가 죽는다.
             .catch { e -> Log.e("PotRepository", "화분 목록 구독 실패: ${e.message}", e) }
 
-    override suspend fun addPot(uid: String, tag: Tag, name: String): Result<Unit> {
-        return safeRunCatching {
-            potRemoteDataSource.addPot(uid, tag, name).getOrThrow()
+    override suspend fun addPot(uid: String, tag: Tag, name: String): Result<SaveResult> =
+        safeRunCatching {
+            // 이름 변경과 같은 방식 (#640): 오프라인이면 응답이 오지 않으므로 시간 초과(Pending)는 "전송 대기"로 처리한다.
+            // 기기 캐시에는 이미 반영됐고 연결되면 전송되므로, 같은 쓰기를 다시 보내지 않는다.
+            potRemoteDataSource.addPot(uid, tag, name)
+                .awaitServerWrite(WRITE_TIMEOUT)
         }.fold(
-            onSuccess = { Result.Success(it) },
+            onSuccess = { write ->
+                when (write) {
+                    WriteResult.Confirmed -> Result.Success(SaveResult.Saved)
+                    WriteResult.Pending -> Result.Success(SaveResult.Pending)
+                    is WriteResult.Rejected -> {
+                        Log.e("PotRepository", "화분 추가 거부", write.error)
+                        Result.Failure(handleError(write.error, ADD_POT_ERROR_MESSAGE, isWrite = true))
+                    }
+                }
+            },
             onFailure = { e ->
                 Log.e("PotRepository", "화분 추가 실패", e)
-                Result.Failure(handleError(e, "화분 추가에 실패했습니다.", isWrite = true))
+                Result.Failure(handleError(e, ADD_POT_ERROR_MESSAGE, isWrite = true))
             }
         )
-    }
 
     //특정 화분 정보 조회
     override suspend fun getUserPotById(uid: String, potId: String): Pot? {
@@ -251,8 +262,9 @@ class PotRepositoryImpl @Inject constructor(
     }
 
     companion object {
-        /** 화분 이름 변경·완료·삭제·레벨업 제한 시간 — 학습 기록 저장(StudyingRepositoryImpl.SAVE_TIMEOUT)과 같은 5초 */
+        /** 화분 생성·이름 변경·완료·삭제·레벨업 제한 시간 — 학습 기록 저장(StudyingRepositoryImpl.SAVE_TIMEOUT)과 같은 5초 */
         private val WRITE_TIMEOUT = 5.seconds
+        private const val ADD_POT_ERROR_MESSAGE = "화분 추가에 실패했습니다."
         private const val RENAME_ERROR_MESSAGE = "화분 이름 변경에 실패했습니다."
         private const val COMPLETE_ERROR_MESSAGE = "학습 완료에 실패했습니다. 다시 시도해주세요."
         private const val DELETE_POT_ERROR_MESSAGE = "화분 삭제에 실패했습니다. 다시 시도해주세요."
