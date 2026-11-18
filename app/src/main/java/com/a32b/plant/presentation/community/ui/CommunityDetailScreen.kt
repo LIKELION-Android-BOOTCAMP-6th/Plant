@@ -921,6 +921,7 @@ fun ReportBottomSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -961,11 +962,12 @@ fun ReportBottomSheet(
                 }
             }
 
-            if (selectedReason == ReportReason.OTHER) {
+            if (selectedReason?.allowsDetail == true) {
                 Spacer(modifier = Modifier.height(8.dp))
                 TextField(
                     value = detailText,
-                    onValueChange = { if (it.length <= 200) onDetailChange(it) },
+                    // 긴 링크를 붙여 넣으면 잘린 URL이 저장되지 않도록 자르지 않고 거부한 뒤 안내한다 (#638)
+                    onValueChange = { limitLength(it, 200, context, onDetailChange) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
@@ -974,7 +976,11 @@ fun ReportBottomSheet(
                             }
                         },
                     placeholder = {
-                        Text("상세 내용을 입력해주세요.", style = MaterialTheme.typography.labelMedium)
+                        Text(
+                            if (selectedReason == ReportReason.COPYRIGHT) "원문 출처나 링크를 입력해주세요."
+                            else "상세 내용을 입력해주세요.",
+                            style = MaterialTheme.typography.labelMedium
+                        )
                     },
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
