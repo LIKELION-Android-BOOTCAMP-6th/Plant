@@ -3,6 +3,7 @@ package com.a32b.plant.data.model
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
+import com.google.firebase.firestore.ServerTimestamp
 
 data class PotDto(
     @DocumentId
@@ -15,6 +16,7 @@ data class PotDto(
     var name: String = "",
     @get:PropertyName("potTotalStudyingTime") @set:PropertyName("potTotalStudyingTime")
     var potTotalStudyingTime: Long = 0L,
+    @ServerTimestamp
     @get:PropertyName("createdAt") @set:PropertyName("createdAt")
     var createdAt: Timestamp? = null,
     @get:PropertyName("completedAt") @set:PropertyName("completedAt")

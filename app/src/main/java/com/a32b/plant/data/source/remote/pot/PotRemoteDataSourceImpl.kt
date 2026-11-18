@@ -7,6 +7,7 @@ import com.a32b.plant.data.model.StudyLogDto
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.type.ItemType
 import com.google.android.gms.tasks.Task
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Source
@@ -40,8 +41,9 @@ class PotRemoteDataSourceImpl @Inject constructor(
 
             // Firebase -> PotDto 리스트 변환. 문서 ID는 doc.id로 직접 채운다
             // (필드 자체가 없거나 값이 어긋난 문서가 있어도 항상 올바른 ID를 보장한다).
+            // 서버 타임스탬프 확정 전 값으 -> 기기 시각 추정치로 사용 -> 최근 학습순/생성일 왜곡 방지
             val pots = snapshot?.documents?.mapNotNull { doc ->
-                doc.toObject(PotDto::class.java)
+                doc.toObject(PotDto::class.java, DocumentSnapshot.ServerTimestampBehavior.ESTIMATE)
             } ?: emptyList()
             trySend(pots)
         }
@@ -58,6 +60,7 @@ class PotRemoteDataSourceImpl @Inject constructor(
             tagName = tag.name,
             name = name,
             potTotalStudyingTime = 0L,
+            // createdAt = null, 자동으로 생성시에 서버 시간으로 채워짐
             createdAt = null,
             completedAt = null,
             isCompleted = false

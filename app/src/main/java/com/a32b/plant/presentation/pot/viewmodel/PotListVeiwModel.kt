@@ -4,10 +4,10 @@ import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.domain.model.Pot
-import com.a32b.plant.domain.type.PlantSortType
+import com.a32b.plant.domain.type.PotSortType
 import com.a32b.plant.domain.usecase.pot.GetPotListUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
-import com.a32b.plant.domain.util.sortedBy
+import com.a32b.plant.domain.util.sortedByType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -30,16 +30,16 @@ class PotListViewModel @Inject constructor(
     val pots = _pots.asStateFlow()
 
     // 정렬
-    private val _sortType = MutableStateFlow(PlantSortType.CREATED_DATE)
-    val sortType: StateFlow<PlantSortType> = _sortType.asStateFlow()
+    private val _sortType = MutableStateFlow(PotSortType.CREATED_DATE)
+    val sortType: StateFlow<PotSortType> = _sortType.asStateFlow()
 
-    fun setSortType(sortType: PlantSortType) {
+    fun setSortType(sortType: PotSortType) {
         _sortType.value = sortType
     }
 
     // 공부 중인 화분 리스트
    val studyingPots: StateFlow<List<Pot>> = combine(_pots, _sortType) { pots, sortType ->
-       pots.filter { !it.isCompleted }.sortedBy(sortType)
+       pots.filter { !it.isCompleted }.sortedByType(sortType)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -48,7 +48,7 @@ class PotListViewModel @Inject constructor(
 
     // 공부 완료된 화분 리스트
     val completedPots: StateFlow<List<Pot>> = combine(_pots, _sortType) { pots, sortType ->
-        pots.filter { it.isCompleted }.sortedBy(sortType)
+        pots.filter { it.isCompleted }.sortedByType(sortType)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),

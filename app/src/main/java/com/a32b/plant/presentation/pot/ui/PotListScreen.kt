@@ -3,10 +3,10 @@ package com.a32b.plant.presentation.pot.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -14,17 +14,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.TimeFormatter
-import com.a32b.plant.domain.type.PlantSortType
+import com.a32b.plant.domain.type.PotSortType
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.component.TabTopBar
 import com.a32b.plant.presentation.pot.viewmodel.PotListViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun PotListScreen(
@@ -36,10 +38,13 @@ fun PotListScreen(
     val currentSort by viewModel.sortType.collectAsState()
 
     // 탭 상태 관리: 0 = 공부 중 (진행 중인 화분), 1 = 기른 화분 (완료된 화분)
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("공부 중", "기른 화분")
 
     val currentPots = if (selectedTab == 0) studyingPots else completedPots
+
+    val gridState = rememberLazyGridState()
+    val scope = rememberCoroutineScope()
 
     // 화분 목록 첫 방출 전에는 로딩 표시 — 전환 중 빈 그리드 노출 방지 (#384)
     LoadableScreen(viewModel) {
@@ -96,9 +101,12 @@ fun PotListScreen(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    PlantSortExposedDropdown(
+                    PlantSortDropdown(
                         currentSort = currentSort,
-                        onSortSelected = { viewModel.setSortType(it) }
+                        onSortSelected = {
+                            viewModel.setSortType(it)
+                            scope.launch { gridState.scrollToItem(0) }
+                        }
                     )
                 }
 
@@ -108,6 +116,7 @@ fun PotListScreen(
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
                     modifier = Modifier.fillMaxSize(),
+                    state = gridState,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
@@ -116,7 +125,6 @@ fun PotListScreen(
                             potName = pot.name,
                             potLevel = pot.potLevel,
                             totalStudyingTime = pot.potTotalStudyingTime,
-                            isCompleted = pot.isCompleted,
                             onClick = {
                                 navController.navigate(Routes.StudyPlanDetail(potId = pot.id))
                             }
@@ -133,7 +141,6 @@ fun PotGridItem(
     potName: String,
     potLevel: Int,
     totalStudyingTime: Long,
-    isCompleted: Boolean,
     onClick: () -> Unit
 ) {
     Column(
@@ -184,9 +191,9 @@ fun PotGridItem(
 }
 
 @Composable
-fun PlantSortExposedDropdown(
-    currentSort: PlantSortType,
-    onSortSelected: (PlantSortType) -> Unit
+fun PlantSortDropdown(
+    currentSort: PotSortType,
+    onSortSelected: (PotSortType) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -217,13 +224,13 @@ fun PlantSortExposedDropdown(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            PlantSortType.entries.forEach { sortType ->
+            PotSortType.entries.forEach { sortType ->
                 DropdownMenuItem(
                     text = {
                         Text(
                             text = sortType.displayName,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = if (sortType == currentSort) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            color = if (sortType == currentSort) MaterialTheme.colorScheme.primary else Color.Unspecified
                         )
                     },
                     onClick = {
