@@ -167,18 +167,70 @@ class NicknameRuleTest {
         }
     }
 
+    @Test
+    fun `validate rejects variants, compounds, hate, sexual and threat words`() {
+        listOf(
+            "시이발", "쒸펄", "병1신", // 발음·숫자 변형
+            "이새끼", "개자식", // 합성 욕설
+            "느개비", // 부모 욕
+            "조센징", "짱깨", // 혐오 표현
+            "후장", // 성적 표현
+            "뒤져라", // 위협
+            "asshole",
+        ).forEach { nickname ->
+            assertEquals("거부되어야 함: $nickname", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
+        }
+    }
+
+    @Test
+    fun `validate rejects impersonation words anywhere in nickname`() {
+        listOf(
+            "Plant운영자",
+            "관리자입니다",
+            "고객센터",
+            "ADMIN",
+            "a.d.m.i.n",
+            "시간관리자", // 정상 닉네임이지만 사칭 방지를 위해 막는 것으로 정함 (감수)
+        ).forEach { nickname ->
+            assertEquals("거부되어야 함: $nickname", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
+        }
+    }
+
+    @Test
+    fun `validate rejects reserved word only when whole nickname matches`() {
+        listOf("Plant", "PLANT", "P.L.A.N.T", "플랜트", "공식", "GM", "g m").forEach { nickname ->
+            assertEquals("거부되어야 함: $nickname", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
+        }
+        listOf("plantlover", "플랜트러버", "공식처럼", "bigmac", "Plant_01").forEach { nickname ->
+            assertNull("통과해야 함: $nickname", NicknameRule.validate(nickname))
+        }
+    }
+
     // 금칙어 일부가 들어가거나 비슷하지만 정상적인 단어 (오탐 목록)
+    // 넣지 않기로 한 단어(보지·자지·좇·졸라·rape·cock·pussy·토토·애자·니미 등)의 이유가 되는 닉네임도 함께 둔다.
+    // 목록에 단어를 더했을 때 이 테스트가 깨지면 그 단어는 넣지 않거나 예외 목록에 추가할 것.
     @Test
     fun `validate allows normal words that look like banned words`() {
         listOf(
-            "시발점", // 예외 목록
-            "시발역", // 예외 목록
+            "시발점", "시발역", "십팔번", "팔등신", "등신대", "등신불", "짱깨끗", "애비뉴", "애비로드", "badminton", // 예외 목록
             "시바견", // "시발"과 한 글자 다름
             "새끼고양이", // "새끼"만으로는 막지 않음
             "class", // "ass"는 목록에 넣지 않음
             "병아리",
             "씨앗발아",
             "ㅅㅅ",
+            "디저트", // "디져"와 한 글자 다름
+            "초보지존", // "보지"는 넣지 않음
+            "감자지킴이", // "자지"는 넣지 않음
+            "꿈을좇는", // "좇"은 넣지 않음 (목록의 "좆"과 다른 글자)
+            "졸라맨", // "졸라"는 넣지 않음
+            "grape", // "rape"는 넣지 않음
+            "peacock", // "cock"은 넣지 않음
+            "pussycat", // "pussy"는 넣지 않음
+            "토토로", // "토토"는 넣지 않음
+            "애자일", // "애자"는 넣지 않음
+            "미니미", // "니미"는 넣지 않음
+            "홍어회", // "홍어"는 넣지 않음
         ).forEach { nickname ->
             assertNull("통과해야 함: $nickname", NicknameRule.validate(nickname))
         }
@@ -207,6 +259,17 @@ class NicknameRuleTest {
         // 목록에 새 단어를 넣을 때 비교용 값으로 바꾸면 빈 값이 되는 등의 실수를 잡는다
         NicknameBannedWords.words.forEach { word ->
             assertTrue("금칙어로 걸려야 함: $word", NicknameRule.containsBannedWord(word))
+        }
+        NicknameBannedWords.reservedWords.forEach { word ->
+            assertTrue("예약어로 걸려야 함: $word", NicknameRule.isReservedWord(word))
+        }
+    }
+
+    @Test
+    fun `every allowed word passes by itself`() {
+        // 예외 단어 안에 다른 금칙어가 들어 있으면 예외로 둔 의미가 없으므로 확인한다
+        NicknameBannedWords.allowedWords.forEach { word ->
+            assertNull("통과해야 함: $word", NicknameRule.validate(word))
         }
     }
 

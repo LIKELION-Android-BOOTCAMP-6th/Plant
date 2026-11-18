@@ -57,12 +57,19 @@ object NicknameRule {
     fun validate(nickname: String): String? = when {
         !isValidLength(nickname) -> LENGTH_MESSAGE
         !isUsable(nickname) -> UNUSABLE_MESSAGE
-        containsBannedWord(nickname) -> BANNED_WORD_MESSAGE
+        containsBannedWord(nickname) || isReservedWord(nickname) -> BANNED_WORD_MESSAGE
         else -> null
     }
 
     private val bannedWordKeys = NicknameBannedWords.words.map { it.toComparisonKey() }
+    private val reservedWordKeys = NicknameBannedWords.reservedWords.map { it.toComparisonKey() }.toSet()
     private val allowedWordKeys = NicknameBannedWords.allowedWords.map { it.toComparisonKey() }
+
+    /**
+     * 비교용 값([toComparisonKey]) 전체가 [NicknameBannedWords.reservedWords]의 단어와 같은지 확인한다.
+     * (예: "Plant", "P.L.A.N.T"는 거부, "plantlover"는 통과)
+     */
+    fun isReservedWord(nickname: String): Boolean = nickname.toComparisonKey() in reservedWordKeys
 
     /**
      * [NicknameBannedWords.words]의 단어가 들어 있는지 확인한다.
