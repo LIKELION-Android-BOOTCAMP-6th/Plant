@@ -64,6 +64,24 @@ class SetNicknameUseCaseTest {
     }
 
     @Test
+    fun `nickname with banned word is rejected without saving`() = runTest {
+        val users = FakeUserRepository()
+        val useCase = SetNicknameUseCase(users)
+
+        // 금칙어 그대로 / 공백을 끼운 금칙어 / 대소문자를 섞은 금칙어
+        listOf("씨발", "씨 발", "FuCk").forEach { input ->
+            val result = useCase("uid-1", input)
+
+            assertTrue(result is Result.Failure)
+            val error = (result as Result.Failure).error
+            assertTrue(error is AppError.NicknameInvalid)
+            assertEquals(NicknameRule.BANNED_WORD_MESSAGE, error.message)
+        }
+        assertTrue(users.completedNicknames.isEmpty())
+        assertNull(CurrentUser.user.value)
+    }
+
+    @Test
     fun `valid nickname is saved normalized and returned`() = runTest {
         val users = FakeUserRepository(initialUser = User.create().copy(uid = "uid-1", profileImg = "2"))
         val useCase = SetNicknameUseCase(users)

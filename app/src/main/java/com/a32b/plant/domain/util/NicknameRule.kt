@@ -14,6 +14,7 @@ object NicknameRule {
     const val MAX_LENGTH = 10
     const val LENGTH_MESSAGE = "${MIN_LENGTH}~${MAX_LENGTH}자로 입력해주세요."
     const val UNUSABLE_MESSAGE = "사용할 수 없는 닉네임입니다."
+    const val BANNED_WORD_MESSAGE = "사용할 수 없는 단어가 포함되어 있어요."
 
     fun isValidLength(nickname: String): Boolean =
         nickname.length in MIN_LENGTH..MAX_LENGTH
@@ -47,7 +48,8 @@ object NicknameRule {
     /**
      * 닉네임 형식을 검사하고, 통과하지 못하면 입력칸에 보여줄 메시지를, 통과하면 null을 돌려준다.
      * 로그인(닉네임 설정)과 마이페이지(프로필 편집) UseCase가 함께 쓴다.
-     * - 길이를 먼저 검사한다. 길이와 사용 가능 여부가 함께 걸리면 [LENGTH_MESSAGE]
+     * - 길이 → 사용 가능 여부 → 금칙어 순서로 검사해, 여러 개가 함께 걸리면 앞의 메시지를 돌려준다.
+     *   (길이와 금칙어가 함께 걸리면 [LENGTH_MESSAGE])
      * - [normalize]한 값을 넘긴다. 정규화하지 않은 값을 넘기면 정규화 전 길이로 판정해 결과가 달라질 수 있다.
      *   예: 자모로 나뉜 받침 있는 5글자는 15칸이라 [LENGTH_MESSAGE] (정규화하면 5글자라 통과할 값),
      *       `" a"`는 정규화하면 1글자인데 2칸이라 길이를 통과하고, 정규화 전후가 달라 [isUsable]에서 걸려 [UNUSABLE_MESSAGE]
@@ -55,8 +57,30 @@ object NicknameRule {
     fun validate(nickname: String): String? = when {
         !isValidLength(nickname) -> LENGTH_MESSAGE
         !isUsable(nickname) -> UNUSABLE_MESSAGE
+        containsBannedWord(nickname) -> BANNED_WORD_MESSAGE
         else -> null
     }
+
+    private val bannedWordKeys = NicknameBannedWords.words.map { it.toComparisonKey() }
+    private val allowedWordKeys = NicknameBannedWords.allowedWords.map { it.toComparisonKey() }
+
+    /**
+     * [NicknameBannedWords.words]의 단어가 들어 있는지 확인한다.
+     * - 닉네임과 금칙어를 둘 다 비교용 값([toComparisonKey])으로 바꿔, 공백·특수문자·이모지를 끼우거나 대소문자를 섞어도 걸리게 한다.
+     * - [NicknameBannedWords.allowedWords]의 단어는 먼저 지운 뒤 찾는다 (오탐 예외).
+     *
+     * 알려진 한계
+     * - 전각 영문("ｆｕｃｋ")은 소문자로만 바뀌고 반각으로 바뀌지 않아 통과한다.
+     * - 목록에 없는 변형(글자 늘이기 "씨이발", 비슷한 글자로 바꾸기 등)은 통과한다.
+     */
+    fun containsBannedWord(nickname: String): Boolean {
+        val key = allowedWordKeys.fold(nickname.toComparisonKey()) { acc, allowed -> acc.replace(allowed, "") }
+        return bannedWordKeys.any { it in key }
+    }
+
+    /** 비교용 값: 글자·숫자(한글 자모 포함)만 남기고 영문은 소문자로 맞춘다. */
+    private fun String.toComparisonKey(): String =
+        filter { it.isLetterOrDigit() }.lowercase()
 
     /**
      * 사용할 수 있는 닉네임인지 확인한다.

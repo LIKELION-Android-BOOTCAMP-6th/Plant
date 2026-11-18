@@ -137,6 +137,79 @@ class NicknameRuleTest {
         assertEquals(NicknameRule.LENGTH_MESSAGE, NicknameRule.validate("."))
     }
 
+    // 금칙어 검사는 앱에서만 한다 (보안 규칙은 형식만 검사). 그래서 아래 값은 rules-test와 맞출 필요가 없다.
+
+    @Test
+    fun `validate rejects banned word as is`() {
+        listOf("씨발", "개새끼야", "나는병신", "fuck", "ㅅㅂ", "ㅄ임", "tlqkf").forEach { nickname ->
+            assertEquals("거부되어야 함: $nickname", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
+        }
+    }
+
+    @Test
+    fun `validate rejects banned word mixed with spaces, symbols and emoji`() {
+        listOf("씨 발", "씨.발", "씨_발!", "시🌱발", "f u c k", "f.u.c.k", "ㅅ_ㅂ").forEach { nickname ->
+            assertEquals("거부되어야 함: $nickname", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
+        }
+    }
+
+    @Test
+    fun `validate rejects banned word with mixed letter case`() {
+        listOf("FUCK", "FuCk", "SiBaL", "TlqKf").forEach { nickname ->
+            assertEquals("거부되어야 함: $nickname", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
+        }
+    }
+
+    @Test
+    fun `validate rejects banned word mixing jamo, syllables and digits`() {
+        listOf("ㅅ발", "시ㅂ", "시1발", "ㅅ1ㅂ", "병ㅅ").forEach { nickname ->
+            assertEquals("거부되어야 함: $nickname", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
+        }
+    }
+
+    // 금칙어 일부가 들어가거나 비슷하지만 정상적인 단어 (오탐 목록)
+    @Test
+    fun `validate allows normal words that look like banned words`() {
+        listOf(
+            "시발점", // 예외 목록
+            "시발역", // 예외 목록
+            "시바견", // "시발"과 한 글자 다름
+            "새끼고양이", // "새끼"만으로는 막지 않음
+            "class", // "ass"는 목록에 넣지 않음
+            "병아리",
+            "씨앗발아",
+            "ㅅㅅ",
+        ).forEach { nickname ->
+            assertNull("통과해야 함: $nickname", NicknameRule.validate(nickname))
+        }
+    }
+
+    @Test
+    fun `validate rejects banned word outside allowed word`() {
+        // 예외 단어를 지운 뒤에도 금칙어가 남으면 거부
+        listOf("시발점씨발", "시발역ㅅㅂ").forEach { nickname ->
+            assertEquals("거부되어야 함: $nickname", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
+        }
+    }
+
+    @Test
+    fun `validate checks length and usability before banned word`() {
+        // 길이 + 금칙어 → 길이 메시지 (1글자 / 11글자)
+        assertEquals(NicknameRule.LENGTH_MESSAGE, NicknameRule.validate("씹"))
+        assertEquals(NicknameRule.LENGTH_MESSAGE, NicknameRule.validate("씨발씨발씨발씨발씨발씨"))
+        // 사용할 수 없는 값 + 금칙어 → 사용할 수 없는 닉네임 메시지 ("/" 포함, U+200B 포함)
+        assertEquals(NicknameRule.UNUSABLE_MESSAGE, NicknameRule.validate("씨/발"))
+        assertEquals(NicknameRule.UNUSABLE_MESSAGE, NicknameRule.validate("씨​발"))
+    }
+
+    @Test
+    fun `every banned word is rejected by itself`() {
+        // 목록에 새 단어를 넣을 때 비교용 값으로 바꾸면 빈 값이 되는 등의 실수를 잡는다
+        NicknameBannedWords.words.forEach { word ->
+            assertTrue("금칙어로 걸려야 함: $word", NicknameRule.containsBannedWord(word))
+        }
+    }
+
     private fun String.codePointsHex(): String =
         codePoints().toArray().joinToString(" ") { "U+%04X".format(it) }
 }
