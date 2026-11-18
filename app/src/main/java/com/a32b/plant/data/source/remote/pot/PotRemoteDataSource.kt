@@ -10,7 +10,8 @@ import java.util.Date
 
 interface PotRemoteDataSource {
     fun getPots(uid: String): Flow<List<PotDto>>
-    suspend fun addPot(uid: String, tag: Tag, name: String): Result<Unit>
+    /** 화분 생성 쓰기를 시작하고, 서버 반영을 나타내는 Task를 돌려준다. (오프라인이면 Task가 끝나지 않음, #640) */
+    fun addPot(uid: String, tag: Tag, name: String): Task<Void>
     suspend fun getPotsOnce(uid: String): GetPotsOnceResult
     suspend fun getTodayStudyLogs(uid: String, potId: String, startOfToday: Date): List<StudyLogDto>
 

@@ -105,7 +105,7 @@ class ReportRepositoryImplCacheTest {
 
     private class FakePotRemoteDataSource(private val result: GetPotsOnceResult) : PotRemoteDataSource {
         override fun getPots(uid: String): Flow<List<PotDto>> = emptyFlow()
-        override suspend fun addPot(uid: String, tag: Tag, name: String): kotlin.Result<Unit> = error("Unused")
+        override fun addPot(uid: String, tag: Tag, name: String): Task<Void> = error("Unused")
         override suspend fun getPotsOnce(uid: String): GetPotsOnceResult = result
         override fun updatePotName(uid: String, potId: String, name: String): Task<Void> = error("Unused")
         override suspend fun getTodayStudyLogs(uid: String, potId: String, startOfToday: Date): List<StudyLogDto> =

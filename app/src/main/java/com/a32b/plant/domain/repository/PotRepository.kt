@@ -12,7 +12,11 @@ import java.util.Date
 interface PotRepository {
     fun getPots(uid: String): Flow<List<Pot>>
     fun getAvailableTags(): Flow<List<Tag>>
-    suspend fun addPot(uid: String, tag: Tag, name: String): Result<Unit>
+    /**
+     * 화분 생성 (#640). 오프라인이면 기기 캐시에 바로 반영되고 [SaveResult.Pending]을 반환한다
+     * (연결되면 전송됨, 재전송 금지)
+     */
+    suspend fun addPot(uid: String, tag: Tag, name: String): Result<SaveResult>
     suspend fun getUserPotById(uid: String, potId: String): Pot?
     suspend fun getUserPotsByStatus(uid: String, isCompleted: Boolean): List<Pot>
     suspend fun updatePotName(uid: String, potId: String, newName: String): Result<SaveResult>

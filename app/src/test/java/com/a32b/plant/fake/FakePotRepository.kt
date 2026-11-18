@@ -43,7 +43,7 @@ class FakePotRepository(
 
     override fun getPots(uid: String): Flow<List<Pot>> = error("Unused")
     override fun getAvailableTags(): Flow<List<Tag>> = error("Unused")
-    override suspend fun addPot(uid: String, tag: Tag, name: String): Result<Unit> = error("Unused")
+    override suspend fun addPot(uid: String, tag: Tag, name: String): Result<SaveResult> = error("Unused")
     override suspend fun getUserPotById(uid: String, potId: String): Pot? = error("Unused")
     override suspend fun getUserPotsByStatus(uid: String, isCompleted: Boolean): List<Pot> = error("Unused")
     override suspend fun deleteEntirePot(uid: String, potId: String): Result<SaveResult> = error("Unused")

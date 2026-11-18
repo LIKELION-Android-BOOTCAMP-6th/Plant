@@ -51,8 +51,9 @@ class PotRemoteDataSourceImpl @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-    //새로운 화분 추가
-    override suspend fun addPot(uid: String, tag: Tag, name: String): Result<Unit> =runCatching {
+    // 새로운 화분 추가 — 기다리지 않고 Task를 그대로 돌려준다 (기다리는 시간은 Repository가 정함, #640)
+    // 문서 ID를 기기에서 만들므로 오프라인이어도 기기 캐시에 바로 반영된다
+    override fun addPot(uid: String, tag: Tag, name: String): Task<Void> {
         val newDocRef = db.collection("users").document(uid).collection("pots").document()
         val newPotDto = PotDto(
             id = newDocRef.id,
@@ -65,7 +66,7 @@ class PotRemoteDataSourceImpl @Inject constructor(
             completedAt = null,
             isCompleted = false
         )
-        newDocRef.set(newPotDto).await()
+        return newDocRef.set(newPotDto)
     }
 
     // 화분 이름 변경 — 기다리지 않고 Task를 그대로 돌려준다 (기다리는 시간은 Repository가 정함)
