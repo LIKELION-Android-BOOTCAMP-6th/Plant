@@ -74,8 +74,10 @@ fun OpenSourceLicenseScreen(navController: NavController) {
                     .fillMaxSize()
                     .padding(innerPadding),
                 colors = LibraryDefaults.libraryColors(
-                    // 기본값(primary)은 다크모드 배경(background)에서 대비가 낮아 본문과 같은 글자색을 쓴다
-                    dialogConfirmButtonColor = MaterialTheme.colorScheme.onBackground
+                    // 전문 다이얼로그 배경은 앱의 다른 다이얼로그(ConfirmDialog)와 같은 primaryContainer
+                    dialogBackgroundColor = MaterialTheme.colorScheme.primaryContainer,
+                    // 기본값 contentColorFor(primaryContainer)는 Theme.kt에 없는 onPrimaryContainer(Material 기본 색)라 메인 폰트 색을 지정
+                    dialogContentColor = MaterialTheme.colorScheme.onSurface
                 ),
                 textStyles = LibraryDefaults.libraryTextStyles(
                     nameTextStyle = MaterialTheme.typography.titleMedium,
