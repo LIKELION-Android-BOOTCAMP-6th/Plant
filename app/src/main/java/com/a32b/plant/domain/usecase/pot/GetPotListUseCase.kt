@@ -15,8 +15,4 @@ class GetPotListUseCase @Inject constructor(
     // 공부 중인 화분만
     fun getStudyingPots(uid: String): Flow<List<Pot>> =
         repository.getPots(uid).map { pots -> pots.filter { !it.isCompleted } }
-
-    // 공부 완료된 화분만
-    fun getCompletedPots(uid: String): Flow<List<Pot>> =
-        repository.getPots(uid).map { pots -> pots.filter { it.isCompleted } }
 }

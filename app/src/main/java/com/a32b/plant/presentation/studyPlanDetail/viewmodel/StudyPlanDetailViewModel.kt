@@ -19,8 +19,6 @@ import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.pot.*
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import com.a32b.plant.domain.usecase.studyLog.*
-import com.google.firebase.Firebase
-import com.google.firebase.auth.auth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
@@ -46,8 +44,6 @@ class StudyPlanDetailViewModel @Inject constructor(
     private val completeStudyPlanUseCase: CompleteStudyPlanUseCase,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase
 ) : BaseViewModel() {
-    private val auth = Firebase.auth
-
     // Navigation에서 넘겨준 potId
     private val args = savedStateHandle.toRoute<Routes.StudyPlanDetail>()
     private val potId: String = args.potId

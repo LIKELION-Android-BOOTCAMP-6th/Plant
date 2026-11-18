@@ -400,7 +400,6 @@ fun CommunityDetailScreen(
                                     Icon(
                                         painterResource(id = R.drawable.ic_community_comment), null,
                                         tint = MaterialTheme.colorScheme.onSurface,
-    //                                tint = Color.Gray
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Text(

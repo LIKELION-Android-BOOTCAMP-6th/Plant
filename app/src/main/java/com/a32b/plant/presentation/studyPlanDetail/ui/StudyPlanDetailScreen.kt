@@ -352,9 +352,7 @@ fun StudyPlanDetailScreen(
                                             },
                                             shape = RoundedCornerShape(12.dp),
                                             colors = OutlinedTextFieldDefaults.colors(
-        //                                        focusedBorderColor = Color(0xFFA5C16C), // 강조색 (primary)
                                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-        //                                        unfocusedBorderColor = Color.LightGray
                                                 unfocusedBorderColor = MaterialTheme.colorScheme.outline
                                             )
                                         )
@@ -367,13 +365,11 @@ fun StudyPlanDetailScreen(
                                                 onClick = { viewModel.setEditDialogShown(false) },
                                                 modifier = Modifier.height(36.dp).weight(1f),
                                                 shape = RoundedCornerShape(8.dp),
-        //                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F3EE)) // sub2 색상 느낌
                                                 colors = ButtonDefaults.buttonColors(
                                                     containerColor = MaterialTheme.colorScheme.outline,
                                                 )
                                             ) {
                                                 Text("취소", style = MaterialTheme.typography.bodyMedium,
-        //                                            color = Color.Gray)
                                                     color = MaterialTheme.colorScheme.onSecondary)
                                             }
                                             Spacer(modifier = Modifier.width(10.dp))
@@ -386,7 +382,6 @@ fun StudyPlanDetailScreen(
                                                 modifier = Modifier.height(36.dp).weight(1f),
                                                 shape = RoundedCornerShape(8.dp),
                                                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary
-        //                                            Color(0xFFA5C16C)) // primary 색상
                                                 )
                                             ) {
                                                 Text("확인", style = MaterialTheme.typography.bodyMedium)
@@ -502,7 +497,6 @@ fun StudyRecordCard(
                         Icon(
                             painterResource(R.drawable.ic_trash),
                             contentDescription = "상세 공부 기록 삭제",
-//                            tint = Color.LightGray
                             tint = MaterialTheme.colorScheme.outline
                         )
                     }
