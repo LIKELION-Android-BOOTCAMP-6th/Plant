@@ -961,7 +961,7 @@ fun ReportBottomSheet(
                 }
             }
 
-            if (selectedReason == ReportReason.OTHER) {
+            if (selectedReason?.allowsDetail == true) {
                 Spacer(modifier = Modifier.height(8.dp))
                 TextField(
                     value = detailText,
@@ -974,7 +974,11 @@ fun ReportBottomSheet(
                             }
                         },
                     placeholder = {
-                        Text("상세 내용을 입력해주세요.", style = MaterialTheme.typography.labelMedium)
+                        Text(
+                            if (selectedReason == ReportReason.COPYRIGHT) "원문 출처나 링크를 입력해주세요."
+                            else "상세 내용을 입력해주세요.",
+                            style = MaterialTheme.typography.labelMedium
+                        )
                     },
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
