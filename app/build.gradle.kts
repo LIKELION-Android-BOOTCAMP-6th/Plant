@@ -130,10 +130,6 @@ dependencies {
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
     ///파이어스토어
     implementation("com.google.firebase:firebase-firestore")
-    //realtime-database
-    implementation("com.google.firebase:firebase-database")
-    //fcm
-    implementation("com.google.firebase:firebase-messaging")
     //function
     implementation("com.google.firebase:firebase-functions")
 
