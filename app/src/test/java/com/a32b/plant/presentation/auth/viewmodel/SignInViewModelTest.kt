@@ -2,23 +2,16 @@ package com.a32b.plant.presentation.auth.viewmodel
 
 import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.domain.error.AppError
-import com.a32b.plant.domain.model.AttendanceDecision
-import com.a32b.plant.domain.model.User
-import com.a32b.plant.domain.model.UserSnapshot
-import com.a32b.plant.domain.repository.AuthRepository
-import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
-import com.a32b.plant.domain.session.SessionExpiredReason
 import com.a32b.plant.domain.usecase.auth.ResolveUserSessionUseCase
 import com.a32b.plant.domain.usecase.auth.SetNicknameUseCase
 import com.a32b.plant.domain.usecase.auth.SignInWithGoogleUseCase
 import com.a32b.plant.domain.util.NicknameRule
+import com.a32b.plant.fake.FakeAuthRepository
+import com.a32b.plant.fake.FakeUserRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestDispatcher
@@ -149,7 +142,7 @@ class SignInViewModelTest {
     @Test
     fun `repeated confirm while saving sends only one request`() = runSignInTest { users, viewModel, _ ->
         val gate = CompletableDeferred<Unit>()
-        users.completeGate = gate
+        users.completeFirstLoginGate = gate
         viewModel.onNicknameChange("새싹")
 
         viewModel.confirmNickname()
@@ -171,7 +164,7 @@ class SignInViewModelTest {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
         try {
             Dispatchers.setMain(dispatcher)
-            val users = FakeUserRepository(completeResult)
+            val users = FakeUserRepository(completeFirstLoginResult = completeResult)
             val viewModel = createViewModel(users)
             val events = collectEvents(viewModel, dispatcher)
             block(users, viewModel, events)
@@ -192,43 +185,5 @@ class SignInViewModelTest {
         val events = mutableListOf<SignInEvent>()
         backgroundScope.launch(dispatcher) { viewModel.events.toList(events) }
         return events
-    }
-
-    private class FakeUserRepository(
-        private val completeResult: Result<Unit>
-    ) : UserRepository {
-        override val currentUser = MutableStateFlow<User?>(null)
-        val completedNicknames = mutableListOf<Pair<String, String>>()
-        var completeGate: CompletableDeferred<Unit>? = null
-
-        override fun observeDarkMode(): Flow<Boolean> = emptyFlow()
-        override fun startUserSession(user: User): Unit = error("Unused")
-        override fun endUserSession(): Unit = error("Unused")
-        override fun takeExpiredSessionReason(): SessionExpiredReason? = error("Unused")
-        override suspend fun updateLastSelectedPot(uid: String, potId: String): Unit = error("Unused")
-        override suspend fun getUser(uid: String): Result<User?> = error("Unused")
-        override suspend fun getUserPreferringServer(uid: String): Result<UserSnapshot> = error("Unused")
-        override suspend fun createUser(uid: String): Result<User> = error("Unused")
-        override suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit> {
-            completedNicknames += uid to nickname
-            completeGate?.await()
-            return completeResult
-        }
-        override suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit> = error("Unused")
-        override suspend fun updateProfile(user: User): Result<Unit> = error("Unused")
-        override suspend fun checkAttendance(): Result<AttendanceDecision.Success> = error("Unused")
-        override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> = error("Unused")
-    }
-
-    private class FakeAuthRepository : AuthRepository {
-        override fun currentUid(): String? = error("Unused")
-        override fun currentEmail(): String? = error("Unused")
-        override fun hasSession(): Boolean = error("Unused")
-        override fun getSignInProvider(): String? = error("Unused")
-        override suspend fun signInWithGoogle(idToken: String): Result<String> = error("Unused")
-        override suspend fun reauthenticateWithGoogle(idToken: String): Result<Unit> = error("Unused")
-        override suspend fun refreshIdToken(): Result<Unit> = error("Unused")
-        override suspend fun deleteAccount(): Result<Unit> = error("Unused")
-        override fun signOut(): Unit = error("Unused")
     }
 }

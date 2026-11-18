@@ -2,18 +2,13 @@ package com.a32b.plant.domain.usecase.mypage
 
 import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.domain.error.AppError
-import com.a32b.plant.domain.model.AttendanceDecision
 import com.a32b.plant.domain.model.User
-import com.a32b.plant.domain.model.UserSnapshot
-import com.a32b.plant.domain.repository.UserRepository
 import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.session.SessionExpiredNotifier
 import com.a32b.plant.domain.session.SessionExpiredReason
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import com.a32b.plant.domain.util.NicknameRule
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.emptyFlow
+import com.a32b.plant.fake.FakeUserRepository
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -64,7 +59,7 @@ class UpdateProfileUseCaseTest {
     @Test
     fun `image only change keeps current nickname`() = runTest {
         val users = FakeUserRepository(testUser(nickname = "새싹", profileImg = "1"))
-        users.updateResult = Result.Success(Unit)
+        users.updateProfileResult = Result.Success(Unit)
         val useCase = createUseCase(users)
 
         val result = useCase("새싹", "3")
@@ -82,7 +77,7 @@ class UpdateProfileUseCaseTest {
     @Test
     fun `nickname change sends normalized nickname and returns it`() = runTest {
         val users = FakeUserRepository(testUser(nickname = "새싹", profileImg = "1"))
-        users.updateResult = Result.Success(Unit)
+        users.updateProfileResult = Result.Success(Unit)
         val useCase = createUseCase(users)
 
         val result = useCase("  새로운  ", "2")
@@ -117,7 +112,7 @@ class UpdateProfileUseCaseTest {
     @Test
     fun `repository nickname taken failure is returned as is`() = runTest {
         val users = FakeUserRepository(testUser(nickname = "새싹", profileImg = "1"))
-        users.updateResult = Result.Failure(AppError.NicknameTaken())
+        users.updateProfileResult = Result.Failure(AppError.NicknameTaken())
         val useCase = createUseCase(users)
 
         val result = useCase("새로운", "1")
@@ -131,7 +126,7 @@ class UpdateProfileUseCaseTest {
     @Test
     fun `repository network failure is returned as is`() = runTest {
         val users = FakeUserRepository(testUser(nickname = "새싹", profileImg = "1"))
-        users.updateResult = Result.Failure(AppError.Network())
+        users.updateProfileResult = Result.Failure(AppError.Network())
         val useCase = createUseCase(users)
 
         val result = useCase("새로운", "1")
@@ -145,7 +140,7 @@ class UpdateProfileUseCaseTest {
     @Test
     fun `image only change save failure is not a nickname input error`() = runTest {
         val users = FakeUserRepository(testUser(nickname = "새싹", profileImg = "1"))
-        users.updateResult = Result.Failure(AppError.Custom("프로필 저장에 실패했습니다. 잠시 후 다시 시도해주세요."))
+        users.updateProfileResult = Result.Failure(AppError.Custom("프로필 저장에 실패했습니다. 잠시 후 다시 시도해주세요."))
         val useCase = createUseCase(users)
 
         val result = useCase("새싹", "2")
@@ -159,7 +154,7 @@ class UpdateProfileUseCaseTest {
     @Test
     fun `server nickname with trailing space is kept when only image changes`() = runTest {
         val users = FakeUserRepository(testUser(nickname = "새싹 ", profileImg = "1"))
-        users.updateResult = Result.Success(Unit)
+        users.updateProfileResult = Result.Success(Unit)
         val useCase = createUseCase(users)
 
         val result = useCase("새싹", "3")
@@ -216,29 +211,4 @@ class UpdateProfileUseCaseTest {
         nickname = nickname,
         profileImg = profileImg
     )
-
-    private class FakeUserRepository(
-        initialUser: User?
-    ) : UserRepository {
-        override val currentUser = MutableStateFlow(initialUser)
-        val updatedUsers = mutableListOf<User>()
-        var updateResult: Result<Unit> = Result.Success(Unit)
-
-        override fun observeDarkMode(): Flow<Boolean> = emptyFlow()
-        override fun startUserSession(user: User) = TODO()
-        override fun endUserSession() = TODO()
-        override fun takeExpiredSessionReason(): SessionExpiredReason? = TODO()
-        override suspend fun updateLastSelectedPot(uid: String, potId: String) = TODO()
-        override suspend fun getUser(uid: String): Result<User?> = TODO()
-        override suspend fun getUserPreferringServer(uid: String): Result<UserSnapshot> = TODO()
-        override suspend fun createUser(uid: String): Result<User> = TODO()
-        override suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit> = TODO()
-        override suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit> = TODO()
-        override suspend fun updateProfile(user: User): Result<Unit> {
-            updatedUsers += user
-            return updateResult
-        }
-        override suspend fun checkAttendance(): Result<AttendanceDecision.Success> = TODO()
-        override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> = TODO()
-    }
 }
