@@ -53,13 +53,15 @@ firebase emulators:exec --only firestore,functions --project demo-plant "node �
 - `--project demo-plant`를 꼭 붙인다. 빼면 `.firebaserc`의 운영 프로젝트 ID로 실행되어, 에뮬레이터로 켜지 않은 서비스 호출이 실서버로 갈 수 있다
 - `--only`에는 스크립트가 쓰는 에뮬레이터만 넣는다 (예: 함수 트리거 확인은 `firestore,functions`)
 - 규칙 테스트(`npm --prefix rules-test test`)도 내부적으로 이 명령을 쓴다 (`rules-test/package.json`의 `test` 스크립트)
-- `functions/`에는 테스트 스크립트·테스트 도구가 없다. `firebase-functions-test`가 `firebase-admin` 14를 지원하지 않아 제거함 (#554). 함수 동작은 이 명령으로 에뮬레이터를 켜고 Admin SDK로 문서를 쓰고 읽는 스크립트로 확인한다
+- 함수 자동 테스트는 `functions/test/`에 있다 (아래 "Cloud Functions 테스트" 참고). `firebase-functions-test`는 `firebase-admin` 14를 지원하지 않아 쓰지 않는다 (#554). 테스트도 이 명령으로 에뮬레이터를 켜고 Admin SDK로 문서를 쓰고 읽는 방식이다
 
 ### 함수 확인 스크립트 작성 시 주의
 
-- ⚠️ 스크립트는 **`functions/` 밖**(개인 임시 폴더 등)에 둔다
+> 계속 남길 확인은 일회성 스크립트 대신 `functions/test/`에 테스트로 추가한다 (아래 "Cloud Functions 테스트")
+
+- ⚠️ 일회성 스크립트는 **`functions/` 밖**(개인 임시 폴더 등)에 둔다
   - `functions/` 안에 두면 배포 전 lint(`eslint .`)가 그 파일도 검사해, 오류가 있으면 배포가 멈춘다
-  - `firebase.json`의 배포 제외 목록에 없으므로 함수와 함께 서버에 올라간다
+  - `functions/test/` 외의 위치는 `firebase.json`의 배포 제외 목록에 없으므로 함수와 함께 서버에 올라간다
 - `functions/` 밖에서는 `require("firebase-admin/app")`가 바로 되지 않는다 (가까운 `node_modules`가 없음). 경로를 직접 적어 `require(".../node_modules/firebase-admin/app")`로 불러와도 패키지의 `exports` 규칙 때문에 실패한다
   → 아래처럼 `createRequire`로 `functions/`에서 불러온다. 인자는 폴더가 아니라 **`functions/` 안의 파일 경로**(`functions/index.js`)를 준다
 - 프로젝트 루트에서 실행한다 (스크립트 안의 `functions/index.js` 경로가 현재 폴더 기준)
@@ -147,6 +149,81 @@ GitHub Actions(`.github/workflows/rules-test.yml`)가 같은 명령(`npm --prefi
 - CI 환경: JDK 21, Node 24, `firebase-tools@15`. 에뮬레이터 프로그램은 `~/.cache/firebase/emulators`로 캐시
 - 실패·시간 초과 시 에뮬레이터 로그(`rules-test/*.log`)가 실행 결과의 Artifacts(`rules-test-logs`)에 올라간다 (실행 결과 페이지 **Summary** 맨 아래)
 - CI가 있어도 규칙을 고쳤다면 **푸시 전에 로컬에서 먼저 돌려 보는 것**을 권장 (CI 결과를 기다리는 시간 절약)
+
+## Cloud Functions 테스트 (`functions/test/`)
+
+함수(`functions/index.js`)가 주석에 적힌 약속("1번만 지급", "재시도해도 결과가 같다" 등)을 지키는지 자동으로 검사한다 (#620).
+테스트는 두 층으로 나뉜다.
+
+| 종류 | 위치 | 무엇을 | 에뮬레이터 |
+|---|---|---|---|
+| 계산 로직 유닛 테스트 | `test/unit/*.test.js` | `functions/calculations.js`의 함수(보상 티어, KST 날짜, 출석 판정 등) | 필요 없음 |
+| 통합 테스트 | `test/integration/*.test.js` | 실제 문서를 쓰고 트리거·Callable이 남긴 결과 문서 확인 | Firestore·Auth·Functions |
+
+처음 한 번:
+
+```bash
+npm --prefix functions ci
+```
+
+실행:
+
+```bash
+npm --prefix functions test
+```
+
+- 에뮬레이터 3개(`firestore,auth,functions`)를 켜고 → `test/*/*.test.js`(`unit/`, `integration/`처럼 `test/` **바로 아래 폴더**의 테스트 파일)를 실행 → 자동 종료 (`functions/package.json`의 `test` 스크립트)
+  - `test/` 바로 안의 파일이나 두 단계 아래 폴더의 파일은 실행되지 않는다. 새 테스트는 `unit/`·`integration/`에 둔다
+  - `test/helpers/`의 파일은 이름이 `*.test.js`가 아니라서 테스트로 실행되지 않는다
+- 에뮬레이터 없이 계산 로직만 빠르게: `npm --prefix functions run test:unit`
+- 프로젝트 ID는 `demo-plant` (에뮬레이터 전용, 실서버 접속 없음)
+- `test/`는 `firebase.json`의 functions `ignore`에 있어 **배포에 포함되지 않는다**. 단 배포 전 lint(`eslint .`)는 테스트 파일도 검사하므로 lint 규칙을 지켜 작성한다 (CI에서도 lint를 먼저 돌린다)
+
+### 테스트 작성 방법
+
+- 값만 계산하는 로직은 `index.js`가 아니라 `calculations.js`에 두고 `index.js`가 require한다
+  - `index.js`는 불러오는 순간 `initializeApp()`과 함수 등록을 하므로 테스트에서 직접 require하지 않는다
+- 통합 테스트는 `test/helpers/emulator.js`의 헬퍼를 쓴다
+
+| 헬퍼 | 용도 |
+|---|---|
+| `db` | 테스트용 Admin SDK Firestore (규칙 무시). 시드 데이터 쓰기·결과 읽기 |
+| `uniqueId(prefix)` | 테스트마다 겹치지 않는 uid·문서 ID (앞 테스트의 늦은 트리거가 섞이지 않게) |
+| `clearFirestore()` / `clearAuth()` | 에뮬레이터 데이터 전체 삭제 (파일의 `before`에서 호출) |
+| `waitForDoc(ref, predicate)` | 트리거 결과가 반영될 때까지 기다림 (기본 20초, 0.2초 간격). 문서가 없으면 `undefined`를 넘긴다 |
+| `waitFor(check)` | 문서 하나가 아닌 조건(쿼리 결과 개수 등)을 기다릴 때. `check`가 참인 값을 돌려줄 때까지 기다리며 `0`·`""`도 "아직"으로 보므로 boolean으로 돌려준다 (예: `async () => (await query.get()).size === 2`) |
+| `callFunction(name, data, {uid})` | Callable 호출. `uid`를 주면 Auth 에뮬레이터에서 그 uid로 로그인한 토큰으로 호출, 빼면 로그인 안 한 호출. ⚠️ `uid`로 부르면 **호출할 때마다 로그인하고 계정이 없으면 새로 만든다** → 계정 삭제 확인·삭제 뒤 재호출 테스트는 `signIn`으로 받은 토큰을 `{idToken}`으로 재사용 |
+| `signIn(uid)` | ID 토큰만 따로 받을 때 (`callFunction(..., {idToken})`에 넘김) |
+| `CallableError` | Callable 실패 시 던지는 오류. `code`는 HttpsError 코드 그대로(`"not-found"` 등), `details`도 담김 |
+
+```js
+// 트리거: 문서를 쓰고 → 트리거가 남기는 표시가 바뀔 때까지 기다린 뒤 → 결과 확인
+await logRef.set({studyingTime: HOUR_MS, rewardStatus: "pending"});
+const log = await waitForDoc(logRef, (data) => data && data.rewardStatus !== "pending");
+assert.strictEqual(log.rewardStatus, "granted");
+
+// Callable: 성공은 result, 실패는 CallableError
+const result = await callFunction("checkAttendance", {}, {uid});
+await assert.rejects(callFunction("checkAttendance"), (e) => e.code === "unauthenticated");
+```
+
+- ⚠️ 트리거는 문서를 쓴 뒤 따로(비동기로) 실행된다. 쓰고 바로 읽지 말고 `waitForDoc`으로 기다린다
+- ⚠️ "아무것도 바뀌지 않음"(두 번째 실행은 지급 안 함 등)은 기다려도 끝을 알 수 없다. 트리거가 끝났다는 표시(`rewardStatus` 등)를 먼저 기다린 뒤 값을 비교한다
+- 함수별 첫 실행은 에뮬레이터가 함수를 준비하느라 몇 초 걸린다 (파일별 첫 테스트 측정 예: Windows PC 4~11초, CI 약 2초. 실행마다 달라진다)
+- 예약 함수(`cleanUpStaleStudying`)는 Pub/Sub 에뮬레이터를 켜지 않아 에뮬레이터에 등록되지 않는다 (실행 로그: `function ignored because the pubsub emulator does not exist or is not running`)
+- ⚠️ 모든 테스트가 `... does not exist, valid functions are:`(404)나 대기 시간 초과로 실패하고, 실행 로그에 `Failed to load function definition ... Timeout after 10000`이 있으면 코드 문제가 아니라 **함수 목록을 불러오는 시간(기본 10초)이 모자란 것**이다
+  - PC가 바쁠 때(Gradle 빌드 동시 실행 등) 생긴다. 다른 작업이 끝난 뒤 다시 돌리거나, 제한 시간(초)을 늘려 실행한다: PowerShell `$env:FUNCTIONS_DISCOVERY_TIMEOUT=60; npm --prefix functions test`
+  - CI는 워크플로에서 60초로 지정해 두었다
+- 테스트 파일은 `--test-concurrency=1`로 한 파일씩 실행한다 (파일마다 `clearFirestore()`로 데이터를 지우므로 동시에 돌면 서로 지움)
+
+### CI에서도 실행됨
+
+GitHub Actions(`.github/workflows/functions-test.yml`, job 이름 `functions-test`)가 `develop`·`main` 대상 PR과 머지 후에 lint → `npm --prefix functions test`를 실행한다.
+
+- 구성은 규칙 테스트 CI와 같다 (JDK 21, Node 24, `firebase-tools@15`, 에뮬레이터 캐시, 경로 조건 없이 항상 실행)
+- 10분 안에 끝나지 않으면 실패로 처리된다 (Windows PC에서 `npm --prefix functions test` 전체 약 37초, 1회 측정)
+- 실패·시간 초과 시 에뮬레이터 로그(`functions/*.log`)가 Artifacts(`functions-test-logs`)에 올라간다
+- 머지 필수 검사로 지정할지는 별도로 정한다 (지정하면 job 이름을 바꿀 때 보호 규칙도 함께 바꿀 것)
 
 ## 데이터를 남기고 싶을 때 (선택)
 
