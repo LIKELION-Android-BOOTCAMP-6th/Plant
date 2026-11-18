@@ -209,7 +209,7 @@ await assert.rejects(callFunction("checkAttendance"), (e) => e.code === "unauthe
 
 - ⚠️ 트리거는 문서를 쓴 뒤 따로(비동기로) 실행된다. 쓰고 바로 읽지 말고 `waitForDoc`으로 기다린다
 - ⚠️ "아무것도 바뀌지 않음"(두 번째 실행은 지급 안 함 등)은 기다려도 끝을 알 수 없다. 트리거가 끝났다는 표시(`rewardStatus` 등)를 먼저 기다린 뒤 값을 비교한다
-- 함수별 첫 실행은 에뮬레이터가 함수를 준비하느라 몇 초 걸린다 (파일별 첫 테스트 측정: Windows PC 4~11초, CI 1~2초)
+- 함수별 첫 실행은 에뮬레이터가 함수를 준비하느라 몇 초 걸린다 (파일별 첫 테스트 측정 예: Windows PC 4~11초, CI 약 2초. 실행마다 달라진다)
 - 예약 함수(`cleanUpStaleStudying`)는 Pub/Sub 에뮬레이터를 켜지 않아 에뮬레이터에 등록되지 않는다 (실행 로그: `function ignored because the pubsub emulator does not exist or is not running`)
 - ⚠️ 모든 테스트가 `... does not exist, valid functions are:`(404)나 대기 시간 초과로 실패하고, 실행 로그에 `Failed to load function definition ... Timeout after 10000`이 있으면 코드 문제가 아니라 **함수 목록을 불러오는 시간(기본 10초)이 모자란 것**이다
   - PC가 바쁠 때(Gradle 빌드 동시 실행 등) 생긴다. 다른 작업이 끝난 뒤 다시 돌리거나, 제한 시간(초)을 늘려 실행한다: PowerShell `$env:FUNCTIONS_DISCOVERY_TIMEOUT=60; npm --prefix functions test`
