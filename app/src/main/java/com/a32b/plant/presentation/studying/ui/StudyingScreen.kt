@@ -271,6 +271,9 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
         ConfirmDialog(
             text = "${uiState.error}",
             semiText = "메인 화면으로 이동합니다.",
+            isSingleBtn = true,
+            isCancelable = false,
+            confirmBtnText = "확인",
             onDismiss = {},
             onConfirm = { viewModel.onErrorConfirmClicked() }
         )
