@@ -73,7 +73,10 @@ object NicknameRule {
      * 서비스명·직책·공식 표시만으로 이루어진 닉네임(사칭)을 막고, 다른 글자가 붙은 정상 닉네임은 통과시킨다.
      * (예: "Plant", "플랜트공식", "공식계정", "Plant관리자", "관리자님"은 거부 / "plantlover", "공부관리자", "bigmac"은 통과)
      *
-     * 알려진 한계: 토큰끼리 글자가 겹쳐 붙으면(예: "PlanTeam" = plant + team이 t를 같이 씀) 지운 뒤 글자가 남아 통과한다.
+     * 알려진 한계 (받아들임)
+     * - 토큰이 아닌 글자가 붙으면 통과한다. (예: "관리자다", "진짜관리자" — "공부관리자" 같은 정상 닉네임을 살리기 위한 대가)
+     * - 토큰끼리 글자가 겹쳐 붙으면(예: "PlanTeam" = plant + team이 t를 같이 씀) 지운 뒤 글자가 남아 통과한다.
+     * - 토큰마다 한 번씩만 지우므로, 짧은 토큰을 긴 토큰 사이에 끼워 넣으면(예: "pl팀ant", "플공식랜트") 통과한다.
      */
     fun consistsOfReservedTokens(nickname: String): Boolean =
         reservedTokenKeys.fold(nickname.toComparisonKey()) { acc, token -> acc.replace(token, "") }.isEmpty()
@@ -95,7 +98,8 @@ object NicknameRule {
      * 비교용 값: NFKC로 바꾸고, 소문자로 맞춘 뒤, 글자·숫자(한글 자모 포함)만 남긴다. 검사에만 쓰고 저장하지 않는다.
      * - NFKC: 전각("ｆ"), 수학용 굵은 글자("𝐟"), 원 문자("ⓕ"), 위 첨자("¹")를 보통 글자로 바꾼다.
      *   키보드 자모("ㅅ", U+3145)도 분리형 자모(U+1109)로 바뀌지만, 목록 단어도 같은 방식으로 바꿔 비교하므로 결과는 같다.
-     *   ([normalize]가 NFKC를 쓰지 않는 이유는 저장값이 바뀌기 때문이고, 이 값은 저장하지 않으므로 해당하지 않는다)
+     *   ([normalize]가 NFKC를 쓰지 않는 이유는 키보드 자모가 분리형 자모로 바뀌어 [hasLookAlikeChar]에 걸리기 때문인데,
+     *   이 값은 [hasLookAlikeChar]에 넘기지 않고 저장하지도 않으므로 해당하지 않는다)
      * - 소문자를 먼저 바꾼다. 거른 뒤 바꾸면 "İ"(U+0130)가 "i"+결합 점(U+0307)이 되어 "ADMİN"이 "admin"과 달라진다.
      */
     private fun String.toComparisonKey(): String =

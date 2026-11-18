@@ -209,6 +209,7 @@ class NicknameRuleTest {
             "Plant", "PLANT", "P.L.A.N.T", "플랜트", "공식", "GM", "g m", // 토큰 하나
             "플랜트공식", "공식플랜트", "Plant팀", "PlantTeam", "공식official", "공식계정", // 서비스명 + 공식 표시
             "Plant관리자", "관리자님", "관리자입니다", "teamplant", // 직책·호칭, 순서 바꿈
+            "Plant매니저", "플랜트스태프", "PlantStaff", "플랜트공지", "매니저", // 매니저·스태프·공지
         ).forEach { nickname ->
             assertEquals("거부되어야 함: $nickname", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
         }
@@ -221,6 +222,8 @@ class NicknameRuleTest {
             "bigmac", // "gm"이 들어 있음
             "시간관리자", "공부관리자", "자기관리자", "독서관리자", // 학습 앱에서 자연스러운 "OO관리자"
             "공부님", "팀장", "운영체제",
+            "공지영", "공지천", "매니저꿈나무", "스태프롤", // 토큰 + 이름·지명 등
+            "관리자다", "진짜관리자", // 토큰이 아닌 글자가 붙으면 통과 (받아들인 한계, consistsOfReservedTokens KDoc 참고)
         ).forEach { nickname ->
             assertNull("통과해야 함: $nickname", NicknameRule.validate(nickname))
         }
