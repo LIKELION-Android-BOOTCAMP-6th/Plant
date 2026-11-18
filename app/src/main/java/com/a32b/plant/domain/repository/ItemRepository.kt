@@ -2,7 +2,6 @@ package com.a32b.plant.domain.repository
 
 import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.type.ItemType
-import kotlinx.coroutines.flow.Flow
 
 interface ItemRepository {
     /**
@@ -10,5 +9,4 @@ interface ItemRepository {
      * 사용자는 서버가 로그인 토큰으로 확인하므로 uid를 받지 않는다. 같은 requestId는 서버에서 한 번만 처리된다
      */
     suspend fun openBonusBoxes(boxCount: Int, requestId: String) : Result<List<ItemType>>
-    fun getBoxCount(uid: String): Flow<Int>
 }
