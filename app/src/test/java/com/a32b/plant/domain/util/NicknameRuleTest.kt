@@ -176,7 +176,11 @@ class NicknameRuleTest {
 
     @Test
     fun `validate rejects banned word mixing jamo, syllables and digits`() {
-        listOf("ㅅ발", "시ㅂ", "시1발", "ㅅ1ㅂ", "병ㅅ").forEach { nickname ->
+        listOf(
+            "ㅅ발", "시ㅂ", "병ㅅ",
+            "시1발", "ㅅ1ㅂ", "씨2발", "개1새끼", // 숫자를 뺀 값으로도 찾음 (목록에 숫자 변형을 적지 않음)
+            "개①새끼", "시²발", // NFKC로 숫자가 되는 동그라미·위 첨자 숫자
+        ).forEach { nickname ->
             assertEquals("거부되어야 함: $nickname", NicknameRule.BANNED_WORD_MESSAGE, NicknameRule.validate(nickname))
         }
     }
@@ -237,6 +241,8 @@ class NicknameRuleTest {
         listOf(
             "시발점", "시발역", "십팔번", "팔등신", "등신대", "등신불", "짱깨끗", "badminton", // 예외 목록
             "공부씹어먹기", "영어씹어먹자", "수학씹어먹는중", // 예외 목록 "씹어먹"
+            "5개년계획", "공시발표", // 예외 목록 "개년계획", "공시발표"
+            "고3수험생", "수학1등급", "Plant_01", // 숫자를 뺀 값으로 찾아도 정상 닉네임은 통과
             "엄창호", // "엄창"은 실명과 겹쳐 넣지 않음
             "애미", "애비로드", "애비뉴", // 단독 "애미"·"애비"는 영어 이름 표기와 겹쳐 넣지 않음
             "ㅋㅋ", "❤️하트", // NFKC로 바꿔도 정상 닉네임은 그대로 통과

@@ -85,13 +85,18 @@ object NicknameRule {
      * [NicknameBannedWords.words]의 단어가 들어 있는지 확인한다.
      * - 닉네임과 금칙어를 둘 다 비교용 값([toComparisonKey])으로 바꿔, 공백·특수문자·이모지를 끼우거나
      *   대소문자·전각·수학용 굵은 글자·원 문자를 섞어도 걸리게 한다. (예: "씨.발", "FuCk", "ｆｕｃｋ", "𝐟𝐮𝐜𝐤", "ⓕⓤⓒⓚ")
-     * - [NicknameBannedWords.allowedWords]의 단어는 먼저 지운 뒤 찾는다 (오탐 예외).
+     * - 숫자를 뺀 비교용 값으로도 한 번 더 찾는다. 숫자를 끼운 변형("씨2발", "개1새끼", NFKC로 숫자가 되는 "개①새끼", "시²발")을
+     *   목록에 하나씩 적지 않고 막기 위해서다. (사칭 토큰 검사는 숫자를 빼지 않는다. 빼면 "Plant_01"이 "plant"만 남아 거부됨)
+     * - [NicknameBannedWords.allowedWords]의 단어는 두 값 모두에서 먼저 지운 뒤 찾는다 (오탐 예외).
      *
-     * 알려진 한계: 목록에 없는 변형(글자를 더 늘인 "씨이이발", 비슷한 글자로 바꾼 "^ㅂ" 등)은 통과한다.
+     * 알려진 한계: 목록에 없는 변형(글자를 더 늘인 "씨이이발", 비슷한 글자로 바꾼 "^ㅂ", 숫자로 글자를 대신한 "f4ck"·"s3x" 등)은 통과한다.
      */
     fun containsBannedWord(nickname: String): Boolean {
-        val key = allowedWordKeys.fold(nickname.toComparisonKey()) { acc, allowed -> acc.replace(allowed, "") }
-        return bannedWordKeys.any { it in key }
+        val key = nickname.toComparisonKey()
+        return listOf(key, key.filterNot { it.isDigit() }).any { candidate ->
+            val remaining = allowedWordKeys.fold(candidate) { acc, allowed -> acc.replace(allowed, "") }
+            bannedWordKeys.any { it in remaining }
+        }
     }
 
     /**
