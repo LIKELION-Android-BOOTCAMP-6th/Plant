@@ -134,6 +134,8 @@ class StudyingRepositoryImpl @Inject constructor(
             potCompleted -> StudySaveRejection.POT_COMPLETED
             log.studyingTime <= 0L || log.studyingTime > StudyLog.MAX_STUDYING_TIME_MS ->
                 StudySaveRejection.INVALID_TIME
+            // 앱 사전 검사(FinishStudyingUseCase)는 통과했지만 규칙 검사 시점에 허용 기간을 넘긴 경계 (#633)
+            StudyLog.isTooOldToSave(log.startedAt, System.currentTimeMillis()) -> StudySaveRejection.TOO_OLD
             (lastStudyEndedAt?.toDate()?.time ?: 0L) > log.startedAt -> StudySaveRejection.OVERLAPPED
             else -> return Result.Failure(AppError.Custom(UNRESOLVED_REJECTION_MESSAGE))
         }
