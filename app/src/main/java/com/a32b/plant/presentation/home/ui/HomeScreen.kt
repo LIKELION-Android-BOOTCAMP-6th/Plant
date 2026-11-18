@@ -1310,7 +1310,8 @@ private fun RecoveryDialog(
     onDiscard: () -> Unit
 ) {
     val studyTimeText = TimeFormatter.formatToDigitalClock(session.time)
-    val dateText = TimeFormatter.formatTimeToDate(session.startedAt)
+    // 시작 시각이 없으면(0) 1970년으로 보이지 않게 이전처럼 "-" 표시
+    val startedAtText = if (session.startedAt == 0L) "-" else TimeFormatter.formatTimeWithClock(session.startedAt)
 
     AlertDialog(
         onDismissRequest = {},
@@ -1335,7 +1336,7 @@ private fun RecoveryDialog(
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
-                    text = "날짜: $dateText",
+                    text = "시작 시각: $startedAtText",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
