@@ -6,7 +6,7 @@ import org.junit.Test
 import java.time.LocalDate
 
 /**
- * 출석판 표시용 판단 (#531). 서버 decideAttendance(functions/index.js)와 같은 기준인지 확인한다.
+ * 출석판 표시용 판단 (#531). 서버 decideAttendance(functions/calculations.js)와 같은 기준인지 확인한다.
  * 기준은 lastCheckedDate("yyyy-MM-dd")이고 lastCheckedAt(Timestamp)은 보지 않는다.
  */
 class DailyCheckThisMonthTest {

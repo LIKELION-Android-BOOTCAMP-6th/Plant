@@ -24,6 +24,16 @@ const {
   Timestamp,
   getFirestore,
 } = require("firebase-admin/firestore");
+// 값만 계산하는 함수·표는 테스트를 위해 calculations.js로 분리했다 (#620)
+const {
+  ATTENDANCE_STATUS,
+  computeBonusBoxDeltas,
+  computeStudyReward,
+  computeUnlockedProfileLevel,
+  decideAttendance,
+  isStaleStudying,
+  toKstDateKey,
+} = require("./calculations");
 
 // For cost control, you can set the maximum number of containers that can be
 // running at the same time. This helps mitigate the impact of unexpected
@@ -119,35 +129,7 @@ const STUDY_REWARD_TRIGGER_OPTIONS = {
   retry: true,
 };
 
-const HOUR_MS = 60 * 60 * 1000;
-
-// 보상 티어 표 (원본은 서버. 앱은 "1시간 이상이면 보상" 같은 표시용 기준만 가진다)
-// items: users.item의 필드 키, box: 보너스 박스 개수. 시간이 긴 티어부터 확인한다
-const STUDY_REWARD_TIERS = [
-  {
-    hours: 9,
-    items: ["heart", "sun", "water", "fertilizer", "nutrient"],
-    box: 5,
-  },
-  {hours: 7, items: ["heart", "sun", "water", "fertilizer"], box: 4},
-  {hours: 5, items: ["heart", "sun", "water"], box: 3},
-  {hours: 3, items: ["heart", "sun"], box: 2},
-  {hours: 1, items: ["heart"], box: 1},
-];
-
-/**
- * 학습 시간(ms)에 맞는 보상을 찾는다. 1시간 미만이면 null.
- * @param {*} studyingTime 기록의 studyingTime
- * @return {{items: string[], box: number} | null}
- */
-function computeStudyReward(studyingTime) {
-  if (typeof studyingTime !== "number" || !Number.isFinite(studyingTime)) {
-    return null;
-  }
-  const hours = Math.floor(studyingTime / HOUR_MS);
-  const tier = STUDY_REWARD_TIERS.find((t) => hours >= t.hours);
-  return tier ? {items: tier.items, box: tier.box} : null;
-}
+// 보상 티어 표(STUDY_REWARD_TIERS)와 computeStudyReward는 calculations.js에 있다
 
 /**
  * 학습 기록 하나의 보상을 지급한다. 여러 번 실행해도 1번만 지급된다.
@@ -252,26 +234,17 @@ function drawBonusBoxOnce() {
 
 /**
  * 뽑힌 목록으로 users/{uid} 갱신 값을 만든다. 연 박스 수만큼 item.box를 줄인다.
+ * 증감량 계산(순증감 0인 필드 제외 포함)은 calculations.js의 computeBonusBoxDeltas가 한다.
  * @param {Object[]} drops BONUS_BOX_DROP_TABLE의 항목 목록
  * @param {number} openedCount
  * @return {Object<string, FirebaseFirestore.FieldValue>}
  */
 function buildBonusBoxUpdates(drops, openedCount) {
-  const itemCounts = {box: -openedCount};
-  let gold = 0;
-  drops.forEach((drop) => {
-    if (drop.field) {
-      itemCounts[drop.field] = (itemCounts[drop.field] || 0) + 1;
-    }
-    if (drop.gold) gold += drop.gold;
-  });
-
   const updates = {};
-  Object.entries(itemCounts).forEach(([field, count]) => {
-    // 박스를 연 만큼 다시 뽑으면 순증감 0 → 쓰지 않는다
-    if (count !== 0) updates[`item.${field}`] = FieldValue.increment(count);
-  });
-  if (gold > 0) updates.gold = FieldValue.increment(gold);
+  Object.entries(computeBonusBoxDeltas(drops, openedCount))
+      .forEach(([path, delta]) => {
+        updates[path] = FieldValue.increment(delta);
+      });
   return updates;
 }
 
@@ -357,13 +330,8 @@ exports.openBonusBoxes = onCall(async (request) => {
 //   "같은 달인가"는 앞 7자리("yyyy-MM") 비교. lastCheckedAt(Timestamp)은 기록용으로 유지
 // - 한 트랜잭션에서 확인 → 갱신·지급을 한다 → 연타·재시도·응답 유실 후 재요청에도 1번만 지급
 // - 이미 출석했거나 이번 달을 모두 채운 경우는 오류가 아니라 결과(status)로 돌려준다
-const MONTHLY_ATTENDANCE_LIMIT = 28;
-const KST_OFFSET_MS = 9 * HOUR_MS;
-const ATTENDANCE_STATUS = {
-  SUCCESS: "SUCCESS",
-  ALREADY_CHECKED: "ALREADY_CHECKED",
-  MONTH_COMPLETED: "MONTH_COMPLETED",
-};
+// - 한 달 출석 상한(MONTHLY_ATTENDANCE_LIMIT), 결과 값(ATTENDANCE_STATUS),
+//   날짜 키 계산(toKstDateKey), 출석 판정(decideAttendance)은 calculations.js에 있다
 
 // 출석 보상 표 (원본은 서버). 키: 이번 달 몇 번째 출석인지
 // item: users.item의 필드 키, gold: users.gold에 더할 값
@@ -382,40 +350,6 @@ const ATTENDANCE_REWARD_TABLE = {
   25: {item: "nutrient", amount: 1},
   28: {gold: 500},
 };
-
-/**
- * 시각(ms)을 KST 날짜 키("yyyy-MM-dd")로 바꾼다. 실행 환경의 시간대와 무관하다.
- * @param {number} nowMs
- * @return {string}
- */
-function toKstDateKey(nowMs) {
-  return new Date(nowMs + KST_OFFSET_MS).toISOString().slice(0, 10);
-}
-
-/**
- * 저장된 출석 정보와 오늘 날짜 키로 이번 출석 결과를 정한다.
- * @param {*} monthCheck users.dailyCheckThisMonth 값
- * @param {string} todayKey toKstDateKey 결과
- * @return {Object} {status, newCount} (newCount는 SUCCESS일 때만)
- */
-function decideAttendance(monthCheck, todayKey) {
-  const saved = monthCheck || {};
-  const lastKey = typeof saved.lastCheckedDate === "string" ?
-    saved.lastCheckedDate : null;
-  const isSameMonth = lastKey !== null &&
-    lastKey.slice(0, 7) === todayKey.slice(0, 7);
-  const savedCount = Number.isInteger(saved.count) ? saved.count : 0;
-  // 달이 바뀌었으면 지난달 횟수는 보지 않는다 (이번 출석이 1회차)
-  const count = isSameMonth ? savedCount : 0;
-
-  if (count >= MONTHLY_ATTENDANCE_LIMIT) {
-    return {status: ATTENDANCE_STATUS.MONTH_COMPLETED};
-  }
-  if (lastKey === todayKey) {
-    return {status: ATTENDANCE_STATUS.ALREADY_CHECKED};
-  }
-  return {status: ATTENDANCE_STATUS.SUCCESS, newCount: count + 1};
-}
 
 /**
  * 출석을 처리한다. 하루에 여러 번 호출해도 1번만 반영·지급된다.
@@ -525,10 +459,8 @@ exports.onPotDeleted = onDocumentDeleted(
 //   위 두 경우는 오류로 끝내지 않으므로 재시도하지 않는다
 // - retry: 일시 오류(네트워크, 트랜잭션 경합 등)로 실패하면 다시 실행한다 (2세대 함수는 최대 24시간 재시도)
 const POT_UPDATED_TRIGGER_OPTIONS = {document: POT_DOCUMENT, retry: true};
-
-// 화분 최고 레벨. firestore.rules의 maxPotLevel()과
-// 앱 domain/model/LevelUpCondition.kt의 PotLevelConditions.MAX_LEVEL과 같은 값이어야 한다
-const MAX_POT_LEVEL = 6;
+// 화분 최고 레벨(MAX_POT_LEVEL)과 새 값 계산(computeUnlockedProfileLevel)은
+// calculations.js에 있다
 
 /**
  * 레벨업한 화분의 새 레벨로 유저의 unlockedProfileLevel을 올린다. 여러 번 실행해도 결과가 같다.
@@ -557,11 +489,11 @@ async function unlockProfileLevel(uid, potId, beforeLevel, afterLevel) {
       logger.info("유저 문서가 없어 해금 레벨 갱신을 건너뜀", {uid, potId});
       return;
     }
-    const stored = userSnapshot.get("unlockedProfileLevel");
-    // 필드가 없거나 정수가 아니면 0으로 본다
-    const current = Number.isInteger(stored) ? stored : 0;
-    const next = Math.min(Math.max(current, afterLevel), MAX_POT_LEVEL);
-    if (stored === next) return;
+    const next = computeUnlockedProfileLevel(
+        userSnapshot.get("unlockedProfileLevel"), afterLevel,
+    );
+    // 값이 그대로면 쓰지 않는다
+    if (next === null) return;
     transaction.update(userRef, {unlockedProfileLevel: next});
   });
 }
@@ -796,17 +728,7 @@ const STUDYING_CLEANUP_SCHEDULE = "every 10 minutes";
 // 조건부 삭제에서 "그 사이 다시 쓰였거나 이미 지워짐" — 실패가 아니라 건너뛸 대상
 const GRPC_FAILED_PRECONDITION = 9;
 const GRPC_NOT_FOUND = 5;
-
-/**
- * studying 문서가 오래됐는지 (updatedAt이 없거나 Timestamp가 아니어도 오래된 것으로 본다).
- * @param {*} updatedAt 문서의 updatedAt 값
- * @param {number} cutoffMs 이 시각(ms)보다 이전이면 오래된 것
- * @return {boolean}
- */
-function isStaleStudying(updatedAt, cutoffMs) {
-  if (!(updatedAt instanceof Timestamp)) return true;
-  return updatedAt.toMillis() < cutoffMs;
-}
+// 오래됨 판정(isStaleStudying)은 calculations.js에 있다
 
 /**
  * updatedAt이 기준 시간보다 오래된 studying 문서를 지운다.
