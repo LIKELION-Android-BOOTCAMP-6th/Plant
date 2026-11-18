@@ -6,7 +6,7 @@
 
 // Admin SDK(google-auth-library)가 Google 클라우드 안에서 실행 중인지 메타데이터 서버에 묻지 않게 한다.
 // 물으면 응답을 기다리느라 테스트 파일마다 첫 요청이 늦어지고 MetadataLookupWarning이 찍힌다
-// (Windows PC에서 파일별 첫 테스트 시간 측정: 넣기 전 9~23초 → 넣은 뒤 4~6초)
+// (Windows PC에서 파일별 첫 테스트 시간 측정: 넣기 전 9~23초 → 넣은 뒤 4~11초, 경고 없음)
 // firebase-admin을 require하기 전에 넣어야 한다
 if (!process.env.METADATA_SERVER_DETECTION) {
   process.env.METADATA_SERVER_DETECTION = "none";
@@ -80,8 +80,10 @@ const DEFAULT_WAIT_TIMEOUT_MS = 20000;
 const DEFAULT_WAIT_INTERVAL_MS = 200;
 
 /**
- * check()가 undefined·null·false가 아닌 값을 돌려줄 때까지 기다려 그 값을 돌려준다.
+ * check()가 참인 값(truthy)을 돌려줄 때까지 기다려 그 값을 돌려준다.
  * 제한 시간 안에 맞지 않으면 마지막으로 본 값을 담아 실패한다.
+ * 0·""도 "아직"으로 보므로, 개수·값 비교는 boolean으로 돌려준다
+ * (예: async () => (await query.get()).size === 2).
  * @template T
  * @param {function(): Promise<T>} check
  * @param {Object} [options]
@@ -101,7 +103,7 @@ async function waitFor(check, {
   let last;
   for (;;) {
     last = await check();
-    if (last !== undefined && last !== null && last !== false) return last;
+    if (last) return last;
     if (Date.now() >= deadline) {
       throw new Error(
           `${message}이(가) ${timeoutMs}ms 안에 맞지 않음 (${describe(last)})`,
@@ -182,6 +184,9 @@ class CallableError extends Error {
 
 /**
  * Callable 함수를 호출해 result를 돌려준다. 실패하면 CallableError를 던진다.
+ * ⚠️ uid로 부르면 호출할 때마다 signIn을 하고, Auth 에뮬레이터는 계정이 없으면 새로 만든다.
+ *    계정 삭제를 확인하거나 삭제 뒤 다시 부르는 테스트(deleteAccount 등)는
+ *    signIn으로 한 번 받은 idToken을 재사용한다 (uid로 다시 부르면 지운 계정이 되살아남).
  * @param {string} name index.js의 exports 이름 (예: "checkAttendance")
  * @param {*} [data] request.data로 받을 값
  * @param {Object} [options]

@@ -191,8 +191,8 @@ npm --prefix functions test
 | `uniqueId(prefix)` | 테스트마다 겹치지 않는 uid·문서 ID (앞 테스트의 늦은 트리거가 섞이지 않게) |
 | `clearFirestore()` / `clearAuth()` | 에뮬레이터 데이터 전체 삭제 (파일의 `before`에서 호출) |
 | `waitForDoc(ref, predicate)` | 트리거 결과가 반영될 때까지 기다림 (기본 20초, 0.2초 간격). 문서가 없으면 `undefined`를 넘긴다 |
-| `waitFor(check)` | 문서 하나가 아닌 조건(쿼리 결과 개수 등)을 기다릴 때 |
-| `callFunction(name, data, {uid})` | Callable 호출. `uid`를 주면 Auth 에뮬레이터에서 그 uid로 로그인한 토큰으로 호출, 빼면 로그인 안 한 호출 |
+| `waitFor(check)` | 문서 하나가 아닌 조건(쿼리 결과 개수 등)을 기다릴 때. `check`가 참인 값을 돌려줄 때까지 기다리며 `0`·`""`도 "아직"으로 보므로 boolean으로 돌려준다 (예: `async () => (await query.get()).size === 2`) |
+| `callFunction(name, data, {uid})` | Callable 호출. `uid`를 주면 Auth 에뮬레이터에서 그 uid로 로그인한 토큰으로 호출, 빼면 로그인 안 한 호출. ⚠️ `uid`로 부르면 **호출할 때마다 로그인하고 계정이 없으면 새로 만든다** → 계정 삭제 확인·삭제 뒤 재호출 테스트는 `signIn`으로 받은 토큰을 `{idToken}`으로 재사용 |
 | `signIn(uid)` | ID 토큰만 따로 받을 때 (`callFunction(..., {idToken})`에 넘김) |
 | `CallableError` | Callable 실패 시 던지는 오류. `code`는 HttpsError 코드 그대로(`"not-found"` 등), `details`도 담김 |
 
@@ -209,7 +209,7 @@ await assert.rejects(callFunction("checkAttendance"), (e) => e.code === "unauthe
 
 - ⚠️ 트리거는 문서를 쓴 뒤 따로(비동기로) 실행된다. 쓰고 바로 읽지 말고 `waitForDoc`으로 기다린다
 - ⚠️ "아무것도 바뀌지 않음"(두 번째 실행은 지급 안 함 등)은 기다려도 끝을 알 수 없다. 트리거가 끝났다는 표시(`rewardStatus` 등)를 먼저 기다린 뒤 값을 비교한다
-- 함수별 첫 실행은 에뮬레이터가 함수를 준비하느라 몇 초 걸린다 (이 PC 측정: 파일별 첫 테스트 4~6초)
+- 함수별 첫 실행은 에뮬레이터가 함수를 준비하느라 몇 초 걸린다 (파일별 첫 테스트 측정: Windows PC 4~11초, CI 1~2초)
 - 예약 함수(`cleanUpStaleStudying`)는 Pub/Sub 에뮬레이터를 켜지 않아 에뮬레이터에 등록되지 않는다 (실행 로그: `function ignored because the pubsub emulator does not exist or is not running`)
 - ⚠️ 모든 테스트가 `... does not exist, valid functions are:`(404)나 대기 시간 초과로 실패하고, 실행 로그에 `Failed to load function definition ... Timeout after 10000`이 있으면 코드 문제가 아니라 **함수 목록을 불러오는 시간(기본 10초)이 모자란 것**이다
   - PC가 바쁠 때(Gradle 빌드 동시 실행 등) 생긴다. 다른 작업이 끝난 뒤 다시 돌리거나, 제한 시간(초)을 늘려 실행한다: PowerShell `$env:FUNCTIONS_DISCOVERY_TIMEOUT=60; npm --prefix functions test`
