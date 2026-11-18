@@ -64,7 +64,7 @@ fun OpenSourceLicenseScreen(navController: NavController) {
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        // 라이브러리의 스타일 미지정 글자(전문 다이얼로그 본문·라이선스 칩·확인 버튼)는 LocalTextStyle을 따르는데,
+        // 라이브러리의 스타일 미지정 글자(전문 다이얼로그 본문·확인 버튼)는 LocalTextStyle을 따르는데,
         // 기본값인 bodyLarge는 앱에서 "스타일 미지정 걸러내기용" 기울임체라 기본 글씨(bodyMedium)로 바꾼다
         // ProvideTextStyle은 기존 스타일에 merge해서 기울임이 남으므로 LocalTextStyle 자체를 교체한다
         CompositionLocalProvider(LocalTextStyle provides MaterialTheme.typography.bodyMedium) {
