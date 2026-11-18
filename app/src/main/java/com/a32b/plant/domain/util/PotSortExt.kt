@@ -29,6 +29,7 @@ fun List<Pot>.sortedByType(sortType: PotSortType): List<Pot> {
         PotSortType.RECENT_STUDY -> this.sortedWith(
             compareByDescending<Pot> { it.lastStudiedAt != null }
                 .thenByDescending { it.lastStudiedAt }
+                .thenByDescending { it.createdAt }
         )
     }
 }

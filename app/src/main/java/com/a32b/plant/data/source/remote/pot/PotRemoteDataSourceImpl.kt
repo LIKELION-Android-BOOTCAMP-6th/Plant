@@ -41,7 +41,7 @@ class PotRemoteDataSourceImpl @Inject constructor(
 
             // Firebase -> PotDto 리스트 변환. 문서 ID는 doc.id로 직접 채운다
             // (필드 자체가 없거나 값이 어긋난 문서가 있어도 항상 올바른 ID를 보장한다).
-            // 서버 타임스탬프 확정 전 값으 -> 기기 시각 추정치로 사용 -> 최근 학습순/생성일 왜곡 방지
+            // 서버 타임스탬프 확정 전 값 -> 기기 시각 추정치로 사용 -> 최근 학습순/생성일 왜곡 방지
             val pots = snapshot?.documents?.mapNotNull { doc ->
                 doc.toObject(PotDto::class.java, DocumentSnapshot.ServerTimestampBehavior.ESTIMATE)
             } ?: emptyList()

@@ -101,7 +101,7 @@ fun PotListScreen(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    PlantSortDropdown(
+                    PotSortDropdown(
                         currentSort = currentSort,
                         onSortSelected = {
                             viewModel.setSortType(it)
@@ -191,7 +191,7 @@ fun PotGridItem(
 }
 
 @Composable
-fun PlantSortDropdown(
+fun PotSortDropdown(
     currentSort: PotSortType,
     onSortSelected: (PotSortType) -> Unit
 ) {

@@ -229,7 +229,7 @@ describe("보상·재화·학습 시간 잠금 (#532)", () => {
     /** 앱 PotRemoteDataSourceImpl.addPot이 보내는 화분 (id는 @DocumentId라 쓰지 않음) */
     const appNewPot = (overrides = {}) => ({
       tag_id: "t1", tag_name: "태그", name: "새 화분", potTotalStudyingTime: 0,
-      createdAt: null, completedAt: null, isCompleted: false, lastStudiedAt: null, potLevel: 0,
+      createdAt: serverTimestamp(), completedAt: null, isCompleted: false, lastStudiedAt: null, potLevel: 0,
       ...overrides,
     });
 
