@@ -34,6 +34,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.a32b.plant.R
+import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.pot.viewmodel.NewBornTreeViewModel
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
@@ -82,7 +83,8 @@ fun NewBornTreeScreen(navController: NavController,
                             viewModel.createPot(tag, potName) { notice ->
                                 // 오프라인이면 "연결되면 자동으로 처리됩니다" 안내 후 닫기 (#640)
                                 notice?.let { context.showToast(it) }
-                                navController.popBackStack()
+                                // 결과를 기다리는 중 뒤로가기로 이미 닫혔으면 아래 화면까지 닫지 않도록 이 화면만 대상으로 pop (#385와 같은 방식)
+                                navController.popBackStack<Routes.NewBornTree>(inclusive = true)
                             }
                         }
                     },
