@@ -113,16 +113,6 @@ describe("posts", () => {
       await assertSucceeds(batch.commit());
     });
 
-    it("권리 침해(copyright) 사유와 상세 내용으로 신고할 수 있다 (#638)", async () => {
-      const db = asBob();
-      const batch = writeBatch(db);
-      batch.set(doc(db, "reports", `${BOB}_post1`), {
-        ...reportDoc(BOB, "post1"), reason: "copyright", detail: "https://example.com/original",
-      });
-      batch.update(doc(db, "posts", "post1"), {reportCount: increment(1)});
-      await assertSucceeds(batch.commit());
-    });
-
     it("신고 문서 없이 reportCount만 올리면 거부", async () => {
       await assertFails(updateDoc(doc(asBob(), "posts", "post1"), {reportCount: increment(1)}));
     });

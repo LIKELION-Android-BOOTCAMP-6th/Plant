@@ -744,7 +744,7 @@ class CommunityDetailViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 selectedReportReason = reason,
-                reportDetailText = if (reason.allowsDetail) it.reportDetailText else ""
+                reportDetailText = if (reason == ReportReason.OTHER) it.reportDetailText else ""
             )
         }
     }
