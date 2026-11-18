@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -7,6 +9,34 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt.android)
+}
+
+// 릴리스 서명 값: local.properties를 먼저 보고, 없으면 같은 이름의 환경변수를 본다 (#621)
+// 값이 하나도 없으면(CI·팀원 PC) 서명을 생략해 디버그 빌드에는 영향이 없다
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+
+fun signingValue(key: String): String? =
+    (localProperties.getProperty(key) ?: System.getenv(key))?.takeIf { it.isNotBlank() }
+
+val releaseSigningKeys = listOf(
+    "RELEASE_STORE_FILE",
+    "RELEASE_STORE_PASSWORD",
+    "RELEASE_KEY_ALIAS",
+    "RELEASE_KEY_PASSWORD"
+)
+val releaseSigningValues = releaseSigningKeys.associateWith { signingValue(it) }
+// 상대 경로는 프로젝트 루트 기준
+val releaseStoreFile = releaseSigningValues["RELEASE_STORE_FILE"]?.let { rootProject.file(it) }
+val hasReleaseSigning = releaseSigningValues.values.all { it != null } && releaseStoreFile?.exists() == true
+
+if (!hasReleaseSigning && releaseSigningValues.values.any { it != null }) {
+    // 값은 출력하지 않고 빠진 키 이름만 알린다
+    val missing = releaseSigningValues.filterValues { it == null }.keys.toMutableList()
+    if (releaseStoreFile != null && !releaseStoreFile.exists()) missing += "RELEASE_STORE_FILE(파일 없음)"
+    logger.warn("릴리스 서명 설정이 불완전해 release 서명을 생략합니다. 확인할 항목: ${missing.joinToString()}")
 }
 
 android {
@@ -25,8 +55,20 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = releaseStoreFile
+                storePassword = releaseSigningValues["RELEASE_STORE_PASSWORD"]
+                keyAlias = releaseSigningValues["RELEASE_KEY_ALIAS"]
+                keyPassword = releaseSigningValues["RELEASE_KEY_PASSWORD"]
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (hasReleaseSigning) signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

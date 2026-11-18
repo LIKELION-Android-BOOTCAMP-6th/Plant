@@ -17,6 +17,10 @@ local.properties
 app/google-services.json
 /.idea
 
+# 릴리스 서명 키 (#621) — 비밀번호는 local.properties에만 둔다
+*.jks
+*.keystore
+
 # 로그 파일
 *.log
 crash_real.txt
