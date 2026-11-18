@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt.android)
+    alias(libs.plugins.aboutlibraries.android)
 }
 
 android {
@@ -43,6 +44,14 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+}
+
+// 오픈소스 라이선스 목록: 빌드할 때 의존성에서 res/raw/aboutlibraries.json을 자동 생성 (#637)
+aboutLibraries {
+    collect {
+        // 의존성이 아닌 항목(폰트)과 그 라이선스는 이 폴더의 libraries/, licenses/ JSON으로 직접 추가
+        configPath = file("aboutlibraries")
     }
 }
 
@@ -105,4 +114,5 @@ dependencies {
     ksp(libs.hilt.android.compiler)
     implementation(libs.hilt.navigation.compose)
     implementation(libs.konfetti.compose)
+    implementation(libs.aboutlibraries.compose.m3)
 }

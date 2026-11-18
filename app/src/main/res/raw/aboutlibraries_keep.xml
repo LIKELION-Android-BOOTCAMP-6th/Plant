@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 리소스 축소(AGP 9 기본 최적화 축소 포함)가 생성된 라이선스 목록을 지우지 않게 보존 (#637) -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/aboutlibraries" />

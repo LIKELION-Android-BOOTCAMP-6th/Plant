@@ -1,0 +1,19 @@
+{
+  "uniqueId": "font:gyeonggi-title",
+  "name": "경기천년제목체",
+  "artifactVersion": "1.100",
+  "description": "앱 화면 전체에 쓰는 글꼴이에요.",
+  "website": "http://www.typolab.co.kr",
+  "developers": [
+    {
+      "name": "PYJ&TYPOLAB Inc.",
+      "organisationUrl": "http://www.typolab.co.kr"
+    }
+  ],
+  "organization": {
+    "name": "경기도 (Gyeonggi)"
+  },
+  "licenses": [
+    "gyeonggi-title-font"
+  ]
+}
