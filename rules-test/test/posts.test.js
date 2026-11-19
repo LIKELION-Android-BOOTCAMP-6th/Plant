@@ -131,6 +131,42 @@ describe("posts", () => {
       await assertFails(setDoc(doc(asBob(), "reports", "random-id"), reportDoc(BOB, "post1")));
     });
 
+    // 입력값 검사 (#634) — 앱 기준: ReportReason.firestoreKey, 상세 200자(limitLength, String.length = UTF-16 단위)
+    const bobReport = () => doc(asBob(), "reports", `${BOB}_post1`);
+
+    it("앱의 신고 사유 값은 모두 허용", async () => {
+      for (const reason of ["abuse", "spam", "inappropriate", "copyright", "other"]) {
+        await testEnv.clearFirestore();
+        await assertSucceeds(setDoc(bobReport(), {...reportDoc(BOB, "post1"), reason}));
+      }
+    });
+
+    it("앱 목록에 없는 사유이거나 사유가 없으면 거부", async () => {
+      await assertFails(setDoc(bobReport(), {...reportDoc(BOB, "post1"), reason: "아무 값"}));
+      await assertFails(setDoc(bobReport(), {...reportDoc(BOB, "post1"), reason: 1}));
+      const {reason, ...withoutReason} = reportDoc(BOB, "post1");
+      await assertFails(setDoc(bobReport(), withoutReason));
+    });
+
+    it("상세 내용은 없거나(null, 키 생략) 200자 이하면 허용", async () => {
+      await assertSucceeds(setDoc(bobReport(), {...reportDoc(BOB, "post1"), detail: null}));
+      await testEnv.clearFirestore();
+      const {detail, ...withoutDetail} = reportDoc(BOB, "post1");
+      await assertSucceeds(setDoc(bobReport(), withoutDetail));
+      await testEnv.clearFirestore();
+      await assertSucceeds(setDoc(bobReport(), {...reportDoc(BOB, "post1"), reason: "other", detail: "가".repeat(200)}));
+      await testEnv.clearFirestore();
+      // 🌱(U+1F331)는 UTF-16 2자: 100개 = 200
+      await assertSucceeds(setDoc(bobReport(), {...reportDoc(BOB, "post1"), reason: "other", detail: "🌱".repeat(100)}));
+    });
+
+    it("상세 내용이 200자를 넘거나 문자열이 아니면 거부", async () => {
+      await assertFails(setDoc(bobReport(), {...reportDoc(BOB, "post1"), reason: "other", detail: "가".repeat(201)}));
+      await assertFails(setDoc(bobReport(), {...reportDoc(BOB, "post1"), reason: "other", detail: "가".repeat(199) + "🌱"}));
+      await assertFails(setDoc(bobReport(), {...reportDoc(BOB, "post1"), reason: "other", detail: 1}));
+      await assertFails(setDoc(bobReport(), {...reportDoc(BOB, "post1"), reason: "other", detail: ["상세"]}));
+    });
+
     it("다른 사람의 신고 문서는 읽을 수 없다", async () => {
       await seed(testEnv, async (db) => {
         await setDoc(doc(db, "reports", `${BOB}_post1`), {...reportDoc(BOB, "post1"), createdAt: new Date()});

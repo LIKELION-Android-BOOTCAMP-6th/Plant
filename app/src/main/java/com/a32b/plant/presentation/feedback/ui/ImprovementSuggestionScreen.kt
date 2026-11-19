@@ -149,4 +149,5 @@ fun ImprovementSuggestionScreen(
     }
 }
 
+// 보안 규칙(firestore.rules)의 maxFeedbackTextLength()와 같은 값. 바꾸면 규칙도 함께 바꾼다 (#634)
 private const val DESCRIPTION_MAX_LENGTH = 1000

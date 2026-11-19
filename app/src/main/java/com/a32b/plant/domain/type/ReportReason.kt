@@ -4,6 +4,7 @@ package com.a32b.plant.domain.type
  * 게시글·댓글 신고 사유. 선언 순서가 신고 시트의 표시 순서이며, "기타"는 항상 마지막에 둔다.
  *
  * @property firestoreKey `reports/{reportId}.reason`에 저장되는 값. 이미 저장된 신고가 있으므로 기존 값은 바꾸지 않는다.
+ *   보안 규칙(`firestore.rules`의 `match /reports/{reportId}`)이 이 값 목록만 허용하므로, 사유를 추가하면 규칙의 `reason` 목록에도 함께 추가한다 (#634)
  * @property allowsDetail 상세 내용 입력란을 여는 사유인지 여부
  */
 enum class ReportReason(
