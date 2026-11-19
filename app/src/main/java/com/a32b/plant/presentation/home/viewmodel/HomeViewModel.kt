@@ -197,6 +197,7 @@ class HomeViewModel @Inject constructor(
     val userItem = _userItem.asStateFlow()
 
     // 복구 세션 상태
+    // 세션을 넣을 때는 _isRecoverySessionTooOld도 먼저 계산할 것 (#697)
     private val _recoverySession = MutableStateFlow<StudyingSession?>(null)
     val recoverySession = _recoverySession.asStateFlow()
 
