@@ -19,7 +19,8 @@
 | 삭제 보호 | 꺼짐 (`DELETE_PROTECTION_DISABLED`) | `(default)` DB 자체를 지우는 명령이 막히지 않음 |
 
 - PITR을 켠 이유: 백업은 하루 1번이라 백업 직전에 생긴 실수는 최대 하루 치 데이터를 잃는다. PITR은 실수 직전 시점으로 돌아갈 수 있다. PITR을 켜기 전에는 최근 1시간(`3600s`)만 가능했다 (`Tags`를 지웠다가 `readTime`으로 복구한 일이 이 1시간 범위 덕분)
-- 백업 시각: 매일 백업이 하루 중 언제 만들어지는지는 일정에 지정하지 않으므로 백업 목록의 생성 시각으로 확인한다
+- 백업 시각: 공식 문서 기준으로 매일 다른 시각에 만들어지고 시각을 지정할 수 없다. 일정을 만든 뒤 첫 백업이 언제 생기는지도 문서에 없다. 실제 생성 시각은 백업 목록(`firebase firestore:backups:list --project plant-82b09`)에서 확인한다. 첫 백업은 일정 생성 약 23시간 뒤인 `2026-11-19T14:00:22Z`에 생겼다
+- 보관 기간 상한: 매일 일정은 최대 7일, 매주 일정은 최대 14주 (DB당 매일 1개 + 매주 1개까지). 7일보다 오래 남기려면 매주 일정을 따로 추가한다
 
 ## 비용
 
@@ -114,6 +115,7 @@ firebase firestore:databases:clone "projects/plant-82b09/databases/(default)" pr
   ```bash
   firebase firestore:operations:list --database restore-20261118 --project plant-82b09
   ```
+- `Done: YES` 직후 1~2분은 새 DB를 읽으면 `Cannot serve requests when the database is undergoing a restore.` 오류가 날 수 있다. 잠시 뒤 다시 시도한다 (2026-11-19 매일 백업 복원 때 겪음)
 - 새 DB의 보안 규칙은 **모두 막힌 상태**로 만들어진다. 앱은 `(default)`만 쓰므로 새 DB는 앱에 영향이 없다. 새 DB에 규칙을 배포하지 않는다
 - 새 DB에는 Cloud Functions 트리거가 붙지 않는다. 함수는 모두 `(default)` DB를 대상으로 배포되어 있다 (`functions/index.js`의 트리거 옵션에 `database` 지정 없음)
 
@@ -217,7 +219,7 @@ firebase firestore:databases:delete restore-20261118 --project plant-82b09
 | 날짜 | 방법 | 복원 DB | 문서 수 대조 | 삭제 | 비고 |
 |---|---|---|---|---|---|
 | 2026-11-18 | PITR 복제 (`--snapshot-time 2026-11-18T16:30:00Z`) | `restore-20261118` | 13개 컬렉션 모두 같음 (users 6, pots 8, logs 21, boxOpenings 4, posts 14, comments 25, likes 0, activities 38, studying 0, Tags 32, nicknames 6, reports 2, feedbacks 2) | 삭제함, 목록에 `(default)`만 남음 | 복제 시작부터 `Done: YES`까지 약 10분. 첫 시도는 503 오류로 DB가 생기지 않아 다시 실행함 |
-| (미실시) | 매일 백업 | | | | 2026-11-18 16:37Z 기준 백업이 아직 없음. 첫 백업이 생긴 뒤 진행 |
+| 2026-11-19 | 매일 백업 복원 (`databases:restore`, 백업 스냅샷 `2026-11-19T14:00:22Z`) | `restore-backup-test` | 13개 컬렉션 모두 같음 (users 7, pots 10, logs 23, boxOpenings 4, posts 14, comments 25, likes 0, activities 38, studying 0, Tags 32, nicknames 7, reports 3, feedbacks 5). 최상위 컬렉션 목록도 같음 | 삭제함, 목록에 `(default)`만 남음 | 일정 생성(`2026-11-18T14:59:15Z`) 후 첫 백업 스냅샷까지 약 23시간. 백업 `CREATING`→`READY` 약 7분, 복원 시작부터 `Done: YES`까지 약 10분. `Done: YES` 직후 1~2분은 "undergoing a restore" 오류로 읽기가 안 됨 → 잠시 뒤 다시 시도 |
 
-- 2026-11-18 테스트의 문서 수는 위 `count.js`와 같은 `collectionGroup` 집계를 Firestore REST API(`runAggregationQuery`)로 실행해 셌다 (PC에 `gcloud`·Admin SDK 인증이 없어서 Firebase CLI 로그인 토큰을 씀)
+- 두 테스트의 문서 수는 위 `count.js`와 같은 `collectionGroup` 집계를 Firestore REST API(`runAggregationQuery`)로 실행해 셌다 (PC에 `gcloud`·Admin SDK 인증이 없어서 Firebase CLI 로그인 토큰을 씀)
 - `count.js` 자체는 Firestore 에뮬레이터에서 두 DB에 다른 개수의 문서를 넣고 실행해 확인했다: 하위 컬렉션(`pots`·`logs`) 포함 개수, 개수가 다를 때 "다름" 표시, 목록에 없는 최상위 컬렉션 표시. Cloud Shell에서는 아직 실행하지 않았다 (**미확인**)
