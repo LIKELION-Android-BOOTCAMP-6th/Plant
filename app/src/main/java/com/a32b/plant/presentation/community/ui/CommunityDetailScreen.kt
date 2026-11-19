@@ -966,6 +966,7 @@ fun ReportBottomSheet(
                 TextField(
                     value = detailText,
                     // 긴 링크를 붙여 넣으면 잘린 URL이 저장되지 않도록 자르지 않고 거부한 뒤 안내한다 (#638)
+                    // 200은 보안 규칙(firestore.rules)의 maxReportDetailLength()와 같은 값. 바꾸면 규칙도 함께 바꾼다 (#634)
                     onValueChange = { limitLength(it, 200, context, onDetailChange) },
                     modifier = Modifier
                         .fillMaxWidth()
