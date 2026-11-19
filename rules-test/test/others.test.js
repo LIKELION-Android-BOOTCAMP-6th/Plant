@@ -210,6 +210,48 @@ describe("기타 컬렉션", () => {
       await assertFails(setDoc(doc(asAlice(), "feedbacks", "f1"), feedback(BOB)));
     });
 
+    // 입력값 검사 (#634) — 앱 기준: 설명·재현 경로 각 1000자 (DESCRIPTION_MAX_LENGTH, REPRODUCTION_STEPS_MAX_LENGTH),
+    // 자동 수집 정보(deviceModel·androidVersion·appVersion)는 100자 상한. 길이는 String.length처럼 UTF-16 단위
+    const aliceFeedback = () => doc(asAlice(), "feedbacks", "f1");
+    // 앱(Feedback.toFirestoreMap)이 버그 제보에 보내는 필드 전체
+    const bugReport = (overrides = {}) => ({
+      ...feedback(ALICE), reproductionSteps: "설정 > 버튼 누르기", deviceModel: "SM-S918N", androidVersion: "35",
+      ...overrides,
+    });
+
+    it("개선사항 제안(선택 필드 없음)은 만들 수 있다", async () => {
+      await assertSucceeds(setDoc(aliceFeedback(), {...feedback(ALICE), type: "improvement", category: "new_feature"}));
+    });
+
+    it("앱 상한 안의 값(설명·재현 경로 1000자, 자동 수집 정보 100자)은 허용", async () => {
+      await assertSucceeds(setDoc(aliceFeedback(), bugReport({
+        description: "가".repeat(1000), reproductionSteps: "가".repeat(999) + "a",
+        deviceModel: "a".repeat(100), androidVersion: "1".repeat(100), appVersion: "1".repeat(100),
+      })));
+      await testEnv.clearFirestore();
+      // 🌱(U+1F331)는 UTF-16 2자: 500개 = 1000
+      await assertSucceeds(setDoc(aliceFeedback(), bugReport({description: "🌱".repeat(500)})));
+    });
+
+    it("설명이 비었거나 1000자를 넘거나 문자열이 아니면 거부", async () => {
+      await assertFails(setDoc(aliceFeedback(), bugReport({description: ""})));
+      await assertFails(setDoc(aliceFeedback(), bugReport({description: "가".repeat(1001)})));
+      await assertFails(setDoc(aliceFeedback(), bugReport({description: "가".repeat(999) + "🌱"})));
+      await assertFails(setDoc(aliceFeedback(), bugReport({description: 1})));
+    });
+
+    it("재현 경로가 1000자를 넘거나 문자열이 아니면 거부", async () => {
+      await assertFails(setDoc(aliceFeedback(), bugReport({reproductionSteps: "가".repeat(1001)})));
+      await assertFails(setDoc(aliceFeedback(), bugReport({reproductionSteps: 1})));
+    });
+
+    it("자동 수집 정보가 100자를 넘거나 문자열이 아니면 거부", async () => {
+      for (const field of ["deviceModel", "androidVersion", "appVersion"]) {
+        await assertFails(setDoc(aliceFeedback(), bugReport({[field]: "a".repeat(101)})));
+        await assertFails(setDoc(aliceFeedback(), bugReport({[field]: 35})));
+      }
+    });
+
     it("제보는 아무도 읽을 수 없다 (운영진은 콘솔에서 확인)", async () => {
       await seed(testEnv, async (db) => {
         await setDoc(doc(db, "feedbacks", "f1"), {...feedback(ALICE), createdAt: new Date()});

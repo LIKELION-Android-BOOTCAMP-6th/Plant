@@ -719,22 +719,52 @@ service cloud.firestore {
       allow delete: if isUid(studyingId);
     }
 
+    // 신고·제보 입력값 상한 (#634) — 앱 입력 제한과 같은 값. 앱 상수를 바꾸면 여기도 함께 바꾼다
+    // size()는 앱의 String.length처럼 UTF-16 단위로 센다 (isValidPotName 주석, potName.test.js 참고)
+    // 신고 상세: CommunityDetailScreen의 limitLength(it, 200, ...)
+    function maxReportDetailLength() {
+      return 200;
+    }
+
+    // 제보 설명·재현 경로: DESCRIPTION_MAX_LENGTH(BugReportScreen·ImprovementSuggestionScreen),
+    // REPRODUCTION_STEPS_MAX_LENGTH(BugReportScreen)
+    function maxFeedbackTextLength() {
+      return 1000;
+    }
+
+    // 자동 수집 정보(deviceModel = Build.MODEL, androidVersion = SDK_INT, appVersion = versionName)는 앱 상수가 없어
+    // 정상 값보다 넉넉한 상한만 둔다
+    function maxFeedbackMetaLength() {
+      return 100;
+    }
+
+    // 선택 필드: 없거나 null이면 통과, 있으면 maxLength 이하 문자열
+    function isOptionalStringWithin(data, field, maxLength) {
+      let value = data.get(field, null);
+      return value == null || (value is string && value.size() <= maxLength);
+    }
+
     // 문서 ID는 {신고자uid}_{대상id}로 고정 → 같은 대상 중복 신고는 같은 문서라 생성 불가
     // 수정/삭제 규칙 없음 = 거부 (운영진은 콘솔에서 처리)
     match /reports/{reportId} {
       // 중복 신고 확인은 아직 없는 문서를 조회하므로 resource == null 허용
       allow read: if signedIn() && (resource == null || resource.data.reporterId == request.auth.uid);
+      // reason은 앱의 ReportReason.firestoreKey 값만 허용 (사유를 추가하면 여기도 함께 추가)
+      // detail은 앱이 null(입력 없음)이나 문자열로 보낸다
       allow create: if signedIn() &&
         reportId == request.auth.uid + '_' + request.resource.data.targetId &&
         request.resource.data.keys().hasOnly(['targetType', 'targetId', 'parentPostId', 'reporterId', 'reason', 'detail', 'createdAt', 'status']) &&
         request.resource.data.reporterId == request.auth.uid &&
         request.resource.data.targetType in ['post', 'comment'] &&
+        request.resource.data.get('reason', null) in ['abuse', 'spam', 'inappropriate', 'copyright', 'other'] &&
+        isOptionalStringWithin(request.resource.data, 'detail', maxReportDetailLength()) &&
         request.resource.data.status == 'pending' &&
         request.resource.data.createdAt == request.time;
     }
 
     // 버그 제보·개선사항 제안: 본인 명의 생성만 허용
     // 읽기/수정/삭제 규칙 없음 = 거부 (운영진은 콘솔에서 처리)
+    // 선택 필드(reproductionSteps, deviceModel, androidVersion)는 앱이 값이 없으면 키를 넣지 않는다 (Feedback.toFirestoreMap)
     match /feedbacks/{feedbackId} {
       allow create: if signedIn() &&
         request.resource.data.keys().hasOnly(['type', 'reporterId', 'category', 'description', 'reproductionSteps', 'deviceModel', 'androidVersion', 'appVersion', 'createdAt', 'status']) &&
@@ -746,6 +776,12 @@ service cloud.firestore {
         ) &&
         request.resource.data.description is string &&
         request.resource.data.description.size() > 0 &&
+        request.resource.data.description.size() <= maxFeedbackTextLength() &&
+        isOptionalStringWithin(request.resource.data, 'reproductionSteps', maxFeedbackTextLength()) &&
+        isOptionalStringWithin(request.resource.data, 'deviceModel', maxFeedbackMetaLength()) &&
+        isOptionalStringWithin(request.resource.data, 'androidVersion', maxFeedbackMetaLength()) &&
+        request.resource.data.appVersion is string &&
+        request.resource.data.appVersion.size() <= maxFeedbackMetaLength() &&
         request.resource.data.status == 'pending' &&
         request.resource.data.createdAt == request.time;
     }
