@@ -689,10 +689,14 @@ fun MainPlantCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                // 카드가 늘어난 만큼 채우고, 내용은 세로 가운데에 모은다 (#566)
+                // 카드가 늘어난 만큼 채운다 (#566)
                 .fillMaxHeight()
                 .padding(horizontal = 20.dp, vertical = 14.dp.compactIf(compact)),
-            verticalArrangement = Arrangement.Center,
+            // 위: 태그·이름 / 가운데: 이미지 영역(남는 높이를 모두 차지) / 아래: 학습 시간·진행 바·버튼 묶음 (#680)
+            // → 카드가 늘어나면 이미지 영역만 넓어지고, 버튼 묶음은 카드 바닥에 붙는다
+            // → 요소 사이 간격은 예전 값 그대로라 카드 최소 높이(minIntrinsicHeight)는 바뀌지 않는다
+            // → 단 아이템박스의 "아이템 : N개" 문구를 없애 아이템박스가 낮아진 만큼(420dpi 실기기·기본 글꼴 캡처에서 47px ≒ 18dp),
+            //   간격 모드가 되는 화면 높이도 낮아진다 (HomeBodyLayout 1번: 카드가 받을 높이 = 기준 높이 - 아이템박스 - 간격)
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             //상단 태그
@@ -721,34 +725,43 @@ fun MainPlantCard(
 
             // 이미지 칸은 간격 모드에서만 줄어든다 (최대 크기 → 최소 크기, #376)
             // 일반 모드는 최소 = 최대라 항상 최대 크기: HomeBodyLayout이 최대 크기로 다 들어갈 때만 일반 모드를 고르기 때문 (#579)
-            // weight(fill = false): 카드 안 다른 요소를 다 놓고 남은 높이까지만 차지
-            if(hasNoPot){
-                Box(
-                    // 로고는 원형 배경이 칸을 꽉 채워 100dp로도 화분 칸 170dp와 보이는 크기가 비슷하므로 100dp 유지 (#476)
-                    // 원형 배경이라 높이에 맞춰 정사각형 유지
-                    modifier = Modifier
-                        .weight(1f, fill = false)
-                        .shrinkableImageHeight(min = if (compact) 40.dp else 100.dp, max = 100.dp)
-                        .aspectRatio(1f, matchHeightConstraintsFirst = true),
-                    contentAlignment = Alignment.Center
-                ){
-                    getLogoImage()
+            // 이미지 영역: weight(1f)로 카드 안 다른 요소를 다 놓고 남은 높이를 모두 차지하고, 이미지는 그 안 가운데에 둔다 (#680)
+            // → 이미지 칸 자체는 영역 높이 안에서 최소~최대 크기 사이로 정해진다 (shrinkableImageHeight)
+            // → 영역의 최소 높이(minIntrinsicHeight)는 Box가 이미지 칸 최소 높이를 그대로 돌려줘 예전과 같다
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                if(hasNoPot){
+                    Box(
+                        // 로고는 원형 배경이 칸을 꽉 채워 100dp로도 화분 칸 170dp와 보이는 크기가 비슷하므로 100dp 유지 (#476)
+                        // 원형 배경이라 높이에 맞춰 정사각형 유지
+                        modifier = Modifier
+                            .shrinkableImageHeight(min = if (compact) 40.dp else 100.dp, max = 100.dp)
+                            .aspectRatio(1f, matchHeightConstraintsFirst = true),
+                        contentAlignment = Alignment.Center
+                    ){
+                        getLogoImage()
+                    }
+                } else {
+                    // 화분 이미지는 Lv6까지 같은 배율로 넣으려고 480x480 캔버스 가운데에 작게 그려져 있다 (화분 테두리 폭 196px = 캔버스의 약 41%, #474)
+                    // 그래서 칸을 170dp로 키워 화분 폭이 약 69dp로 보이게 한다 (#476, 420dpi 실기기 캡처에서 182px ÷ 2.625)
+                    // 간격 모드 최소 높이: 40dp면 화분 폭이 약 16dp밖에 안 돼 70dp(화분 폭 약 29dp)로 키운다 (#476)
+                    // → 예전 Lv0 이미지(화분 폭 = 이미지의 약 72%)를 40dp 칸에 그렸을 때와 같은 폭을 기준으로 삼음
+                    // → 대신 세로가 아주 짧은 화면에서는 그만큼(최대 30dp) 바깥 스크롤이 더 생긴다 (HomeBodyLayout 4번 참고)
+                    ProfileImage(
+                        level = "Lv.${displayPot.potLevel}",
+                        size = 170,
+                        modifier = Modifier
+                            .shrinkableImageHeight(min = if (compact) 70.dp else 170.dp, max = 170.dp)
+                    )
                 }
-            } else {
-                // 화분 이미지는 Lv6까지 같은 배율로 넣으려고 480x480 캔버스 가운데에 작게 그려져 있다 (화분 테두리 폭 196px = 캔버스의 약 41%, #474)
-                // 그래서 칸을 170dp로 키워 화분 폭이 약 69dp로 보이게 한다 (#476, 420dpi 실기기 캡처에서 182px ÷ 2.625)
-                // 간격 모드 최소 높이: 40dp면 화분 폭이 약 16dp밖에 안 돼 70dp(화분 폭 약 29dp)로 키운다 (#476)
-                // → 예전 Lv0 이미지(화분 폭 = 이미지의 약 72%)를 40dp 칸에 그렸을 때와 같은 폭을 기준으로 삼음
-                // → 대신 세로가 아주 짧은 화면에서는 그만큼(최대 30dp) 바깥 스크롤이 더 생긴다 (HomeBodyLayout 4번 참고)
-                ProfileImage(
-                    level = "Lv.${displayPot.potLevel}",
-                    size = 170,
-                    modifier = Modifier
-                        .weight(1f, fill = false)
-                        .shrinkableImageHeight(min = if (compact) 70.dp else 170.dp, max = 170.dp)
-                )
             }
             Spacer(modifier = Modifier.height(8.dp.compactIf(compact)))
+
+            // 여기부터 아래 묶음 (학습 시간·진행 바·버튼): 이미지 영역이 남는 높이를 가져가 카드 바닥에 붙는다 (#680)
 
             // 화분 하나의 오늘 총 학습 시간
             Text(
@@ -880,67 +893,54 @@ fun HomeItemBoxSection(
         ItemType.BOX to item.box
     )
 
-    val totalCount = displayItems.sumOf { it.second }
-
-    Column(
+    // 왼쪽 위 아이템 총 개수 문구("아이템 : N개")는 없앴다: 개수는 각 칸 배지로 보인다 (#680)
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp.compactIf(compact))
+        shape = RoundedCornerShape(16.dp),
+        // 상단 MainPlantCard와 같은 배경색으로 통일
+        color = MaterialTheme.colorScheme.secondary,
+        tonalElevation = 2.dp
     ) {
-        Text(
-            text = "아이템 : ${totalCount}개",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.tertiary,
-            modifier = Modifier.padding(start = 10.dp)
-        )
-
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            // 상단 MainPlantCard와 같은 배경색으로 통일
-            color = MaterialTheme.colorScheme.secondary,
-            tonalElevation = 2.dp
+        // 6개를 한 줄에 놓는다 (#387)
+        // 칸 폭은 화면 폭을 6등분하되, ITEM_MIN_WIDTH보다 좁아지는 화면에서는 최소 폭을 지키고 가로 스크롤로 넘긴다
+        // (BoxWithConstraints는 SubcomposeLayout이지만, HomeBodyLayout은 아이템박스를 intrinsic 없이 바로 measure하므로 괜찮다)
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp.compactIf(compact))
         ) {
-            // 6개를 한 줄에 놓는다 (#387)
-            // 칸 폭은 화면 폭을 6등분하되, ITEM_MIN_WIDTH보다 좁아지는 화면에서는 최소 폭을 지키고 가로 스크롤로 넘긴다
-            // (BoxWithConstraints는 SubcomposeLayout이지만, HomeBodyLayout은 아이템박스를 intrinsic 없이 바로 measure하므로 괜찮다)
-            BoxWithConstraints(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 10.dp.compactIf(compact))
-            ) {
-                val density = LocalDensity.current
-                val gapPx = with(density) { ITEM_GAP.roundToPx() }
-                // px 단위로 내림해서 6칸 + 간격 합이 폭을 넘지 않게 한다 (반올림 오차로 1px짜리 스크롤이 생기는 것 방지)
-                val fitWidthPx = (constraints.maxWidth - gapPx * (displayItems.size - 1)) / displayItems.size
-                val itemWidth = maxOf(with(density) { fitWidthPx.toDp() }, ITEM_MIN_WIDTH)
-                val scrollState = rememberScrollState()
+            val density = LocalDensity.current
+            val gapPx = with(density) { ITEM_GAP.roundToPx() }
+            // px 단위로 내림해서 6칸 + 간격 합이 폭을 넘지 않게 한다 (반올림 오차로 1px짜리 스크롤이 생기는 것 방지)
+            val fitWidthPx = (constraints.maxWidth - gapPx * (displayItems.size - 1)) / displayItems.size
+            val itemWidth = maxOf(with(density) { fitWidthPx.toDp() }, ITEM_MIN_WIDTH)
+            val scrollState = rememberScrollState()
 
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp.compactIf(compact))) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(scrollState),
-                        horizontalArrangement = Arrangement.spacedBy(ITEM_GAP)
-                    ) {
-                        displayItems.forEach { (type, count) ->
-                            HomeItemTile(
-                                type = type,
-                                count = count,
-                                compact = compact,
-                                // 박스만 클릭해서 개봉, 나머지 아이템은 클릭 동작 없음
-                                onClick = if (type == ItemType.BOX) {
-                                    { onItemClick(type) }
-                                } else {
-                                    null
-                                },
-                                modifier = Modifier.width(itemWidth)
-                            )
-                        }
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp.compactIf(compact))) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(scrollState),
+                    horizontalArrangement = Arrangement.spacedBy(ITEM_GAP)
+                ) {
+                    displayItems.forEach { (type, count) ->
+                        HomeItemTile(
+                            type = type,
+                            count = count,
+                            compact = compact,
+                            // 박스만 클릭해서 개봉, 나머지 아이템은 클릭 동작 없음
+                            onClick = if (type == ItemType.BOX) {
+                                { onItemClick(type) }
+                            } else {
+                                null
+                            },
+                            modifier = Modifier.width(itemWidth)
+                        )
                     }
-                    // 좁은 화면에서 스크롤이 생길 때만, 옆으로 더 있다는 걸 알려주는 스크롤바를 보여준다
-                    if (scrollState.maxValue > 0) {
-                        HorizontalScrollIndicator(scrollState = scrollState)
-                    }
+                }
+                // 좁은 화면에서 스크롤이 생길 때만, 옆으로 더 있다는 걸 알려주는 스크롤바를 보여준다
+                if (scrollState.maxValue > 0) {
+                    HorizontalScrollIndicator(scrollState = scrollState)
                 }
             }
         }
@@ -1496,7 +1496,7 @@ fun BonusBoxOpenDialog(
  *      넣으면 런타임 크래시가 난다 (MainPlantCard 주석 참고). 이 레이아웃 자체는 카드 바깥이라 괜찮다
  * 5. 카드는 맨 위(날짜 바로 아래)에 붙이고, 남는 세로 공간만큼 카드 자체를 늘린다 (#566)
  *    → 카드는 날짜 바로 아래, 아이템박스는 본문 아래쪽에 와서 두 박스가 본문을 고르게 채운다
- *    → 화분 유무로 카드 내용 높이가 달라도 빈 띠가 생기지 않고, 늘어난 공간은 카드 안 위아래 여백이 된다
+ *    → 화분 유무로 카드 내용 높이가 달라도 빈 띠가 생기지 않고, 늘어난 공간은 카드 안 이미지 영역이 된다 (버튼 묶음은 카드 바닥, #680)
  *    → 간격(18dp)은 그대로라 두 박스 사이가 벌어지지 않는다 (#376)
  *    → 단, 기준 높이는 최대 720dp라서 본문이 720dp보다 높으면(태블릿 등) 넘는 만큼은 아이템박스 아래 빈 공간으로 남는다
  */
