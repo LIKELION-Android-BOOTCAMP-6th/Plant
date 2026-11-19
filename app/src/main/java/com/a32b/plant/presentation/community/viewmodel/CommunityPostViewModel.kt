@@ -264,7 +264,7 @@ class CommunityPostViewModel @Inject constructor(
                     postCooldownManager.recordPost(uid)
                     postId = created.postId
                     // Pending이어도 상세 화면으로 이동한다 (#641). 이 화면에 남으면 다시 눌렀을 때 새 문서 ID로 글이 하나 더 생긴다.
-                    // 목록으로 돌아가면 목록은 새 글을 받는 경로가 없어 글이 보이지 않고, 사라진 줄 알고 다시 쓰면 연결될 때 글이 2개가 된다.
+                    // 목록으로 돌아가면 목록은 새 글을 받는 경로가 없어 글이 보이지 않을 수 있고, 사라진 줄 알고 다시 쓰면 연결될 때 글이 2개가 된다.
                     // 상세 화면은 기기에 반영된 새 글을 읽는다
                     val message = if (created.saveResult == SaveResult.Saved) "성공적으로 등록되었습니다!" else CommunityConstants.WRITE_PENDING_MESSAGE
                     _eventChannel.send(CommunityPostEvent.ShowToast(message))
