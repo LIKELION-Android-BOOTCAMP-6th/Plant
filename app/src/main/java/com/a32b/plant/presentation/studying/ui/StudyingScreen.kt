@@ -93,6 +93,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
 
     // 화면이 안 보이게 되면(홈 버튼·화면 끄기·최근 앱 목록에서 닫기) 일시정지 삭제 예약을 기다리지 않고 바로 지움 (#667)
     // 백그라운드에서는 몇 초 뒤 네트워크가 막혀 10초 뒤 삭제가 서버에 닿지 못함 (Android 16 에뮬레이터에서 확인)
+    // 로컬 백업도 이때 바로 저장 — 백그라운드에서 시스템이 앱을 꺼도 주기 저장(30초)을 기다린 만큼 잃지 않게 (#668)
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->

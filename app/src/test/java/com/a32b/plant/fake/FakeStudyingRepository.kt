@@ -49,6 +49,7 @@ class FakeStudyingRepository(
     override suspend fun markStudyRewardsSeen(uid: String, refs: List<StudyLogRef>): Result<Unit> = error("Unused")
     override suspend fun deleteStudyingUserInfo(): Result<Unit> = error("Unused")
     override suspend fun readLocalSession(): Result<StudyingSession?> = error("Unused")
+    override suspend fun updateLocalSessionTime(sessionId: String, time: Long): Result<Unit> = error("Unused")
     override suspend fun saveLocalGoalDraft(draft: StudyingGoalDraft): Result<Unit> = error("Unused")
     override suspend fun readLocalGoalDraft(): Result<StudyingGoalDraft?> = error("Unused")
     override suspend fun clearLocalGoalDraft(): Result<Unit> = error("Unused")

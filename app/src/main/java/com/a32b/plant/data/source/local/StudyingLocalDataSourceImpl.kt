@@ -63,6 +63,15 @@ class StudyingLocalDataSourceImpl @Inject constructor(
         }
     }
 
+    override suspend fun updateTime(sessionId: String, time: Long, studyingStatus: String) {
+        context.dataStore.edit { preferences ->
+            if (preferences[SESSION_ID] != sessionId) return@edit
+            if (preferences[STATUS] != studyingStatus) return@edit
+            if (preferences[IS_PAUSED] == true) return@edit
+            preferences[TIME] = time
+        }
+    }
+
     override suspend fun read(): StudyingSessionDto? {
         val preferences = context.dataStore.data
             .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }

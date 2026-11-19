@@ -10,27 +10,43 @@ import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import com.a32b.plant.R
 import com.a32b.plant.core.util.TimeFormatter
+import com.a32b.plant.domain.error.AppError
+import com.a32b.plant.domain.repository.StudyingRepository
+import com.a32b.plant.domain.result.onFailure
+import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.presentation.MainActivity
+import com.a32b.plant.presentation.studying.StudyingConstants.LOCAL_BACKUP_INTERVAL_MS
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class StudyingTimerService : Service() {
 
     companion object {
         private val _elapsed = MutableStateFlow(0L)
         val elapsed: StateFlow<Long> = _elapsed
 
+        // 주기 저장 결과 — 학습 화면이 살아 있으면 받아서 저장 실패 안내(isLocalSaved)를 갱신한다
+        // 지난 세션의 결과가 새 화면에 전달되지 않도록 다시 보내 주지 않는다(replay 0). 화면이 없으면 버려진다
+        private val _localSaveResult = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
+        val localSaveResult: SharedFlow<Boolean> = _localSaveResult
+
         const val ACTION_START = "ACTION_START"
         const val ACTION_PAUSE = "ACTION_PAUSE"
         const val ACTION_STOP = "ACTION_STOP"
         const val EXTRA_ACCUMULATED = "EXTRA_ACCUMULATED"
+        const val EXTRA_SESSION_ID = "EXTRA_SESSION_ID"
 
         private const val NOTIFICATION_ID = 9001
         const val CHANNEL_ID = "studying_timer_channel"
@@ -41,6 +57,12 @@ class StudyingTimerService : Service() {
     private var timerJob: Job? = null
     private var segmentStart = 0L
     private var accumulatedMs = 0L
+    // 주기 저장할 백업의 세션 ID — 시작할 때 학습 화면이 넘겨준다. 백업이 이 세션일 때만 시간을 갱신한다
+    private var sessionId = ""
+
+    // 주기 저장은 화면(ViewModel)이 아니라 서비스가 한다 — 화면이 먼저 정리되고 서비스만 남아도 저장이 이어지게 (#668)
+    // 단순 위임이라 UseCase를 두지 않고 Repository를 직접 부른다 (세션 ID로 대상 백업을 확인하므로 유저 확인 불필요)
+    @Inject lateinit var studyingRepository: StudyingRepository
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -53,6 +75,7 @@ class StudyingTimerService : Service() {
         when (intent?.action) {
             ACTION_START -> {
                 accumulatedMs = intent.getLongExtra(EXTRA_ACCUMULATED, 0L)
+                sessionId = intent.getStringExtra(EXTRA_SESSION_ID).orEmpty()
                 startTimer()
             }
             // 일시정지 중에는 실행할 작업이 없으므로 서비스를 멈춘다. 재개 시 ViewModel이 누적 시간을 다시 넘겨준다.
@@ -76,6 +99,8 @@ class StudyingTimerService : Service() {
         timerJob?.cancel()
         timerJob = scope.launch {
             var lastNotificationMs = accumulatedMs
+            // 시작·재개할 때는 학습 화면이 바로 저장하므로 첫 주기 저장은 지금부터 한 주기 뒤
+            var lastSaveMs = accumulatedMs
             while (true) {
                 delay(200)
                 val ms = accumulatedMs + (SystemClock.elapsedRealtime() - segmentStart)
@@ -84,7 +109,27 @@ class StudyingTimerService : Service() {
                     lastNotificationMs = ms
                     updateNotification(ms)
                 }
+                if (ms - lastSaveMs >= LOCAL_BACKUP_INTERVAL_MS) {
+                    lastSaveMs = ms
+                    saveTime(ms)
+                }
             }
+        }
+    }
+
+    /**
+     * 백업의 학습 시간만 갱신 — 타이머 루프를 막지 않도록 따로 실행한다
+     * 목표·일시정지 여부 등 나머지는 바뀔 때 학습 화면이 저장한다
+     * 일시정지·종료 직후 늦게 도착해도 백업이 일시정지·종료 상태면 쓰지 않는다 (Repository 조건)
+     */
+    private fun saveTime(ms: Long) {
+        val id = sessionId
+        if (id.isBlank()) return
+        scope.launch {
+            studyingRepository.updateLocalSessionTime(id, ms)
+                .onSuccess { _localSaveResult.tryEmit(true) }
+                // 학습 화면 저장(saveSession)과 같이 저장 공간 부족(Custom)일 때만 안내한다
+                .onFailure { e -> if (e is AppError.Custom) _localSaveResult.tryEmit(false) }
         }
     }
 

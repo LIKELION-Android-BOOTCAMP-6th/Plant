@@ -30,6 +30,7 @@ import com.a32b.plant.domain.usecase.studying.SaveStudyingUserUseCase
 import com.a32b.plant.domain.usecase.studying.StartStudyingSessionUseCase
 import com.a32b.plant.domain.usecase.studying.UpdateLocalStudyingSessionUseCase
 import com.a32b.plant.presentation.core.type.StudyingGoalCheckMode
+import com.a32b.plant.presentation.studying.StudyingConstants.LOCAL_BACKUP_INTERVAL_MS
 import com.a32b.plant.presentation.studying.StudyingConstants.MAX_STUDY_LOG_SIZE
 import com.a32b.plant.presentation.studying.StudyingConstants.STUDY_LOG_LIMIT_MESSAGE
 import com.a32b.plant.presentation.studying.StudyingConstants.STUDY_LOG_LIMIT_TOAST_INTERVAL_MS
@@ -126,7 +127,8 @@ class StudyingViewModel @Inject constructor(
     val uiState = _uiState.asStateFlow()
 
 
-    private var lastSaveMs = 0L
+    // 7일 경과 확인(stopIfSessionTooOld)을 마지막으로 한 학습 시간 — 주기 저장은 타이머 서비스가 한다 (#668)
+    private var lastTooOldCheckMs = 0L
     private var lastUpdateMs = 0L
     private var savedGoalCheckMode: StudyingGoalCheckMode? = null
     // 최대 개수 안내 토스트를 마지막으로 띄운 시각 (elapsedRealtime 기준, 아직 안 띄웠으면 null)
@@ -160,6 +162,7 @@ class StudyingViewModel @Inject constructor(
         }
         onStudyingUsersChange()
         observeTimer()
+        observeServiceSaveResult()
     }
 
     /**
@@ -190,7 +193,7 @@ class StudyingViewModel @Inject constructor(
             restoreGoalDraft()
             return
         }
-        lastSaveMs = session.time
+        lastTooOldCheckMs = session.time
         lastUpdateMs = session.time
         _uiState.update {
             it.copy(
@@ -267,17 +270,26 @@ class StudyingViewModel @Inject constructor(
             StudyingTimerService.elapsed.collect { elapsed ->
                 if (_uiState.value.isStudying) {
                     _uiState.update { it.copy(timer = elapsed) }
-                    if (elapsed - lastSaveMs >= 5_000L) {
-                        lastSaveMs = elapsed
+                    // 주기 저장은 타이머 서비스가 하고(#668), 여기서는 같은 주기로 7일 경과만 확인한다
+                    if (elapsed - lastTooOldCheckMs >= LOCAL_BACKUP_INTERVAL_MS) {
+                        lastTooOldCheckMs = elapsed
                         // 공부하는 동안 시작한 지 7일을 넘기면 더 쌓지 않고 멈춘다 (#633)
                         if (stopIfSessionTooOld()) return@collect
-                        saveSession()
                     }
                     if (elapsed - lastUpdateMs >= 60_000L) {
                         lastUpdateMs = elapsed
                         updateUser()
                     }
                 }
+            }
+        }
+    }
+
+    /** 타이머 서비스의 주기 저장 결과를 저장 실패 안내에 반영 — 화면 저장(saveSession)과 같은 기준 */
+    private fun observeServiceSaveResult() {
+        viewModelScope.launch {
+            StudyingTimerService.localSaveResult.collect { saved ->
+                _uiState.update { it.copy(isLocalSaved = saved) }
             }
         }
     }
@@ -354,10 +366,12 @@ class StudyingViewModel @Inject constructor(
      */
     fun addDebugTime() {
         val newTimer = _uiState.value.timer + 3_600_000L
-        lastSaveMs = newTimer
+        lastTooOldCheckMs = newTimer
         lastUpdateMs = newTimer
         if (_uiState.value.isStudying) {
-            _uiState.update { it.copy(startedAt = it.startedAt - 3_600_000L) }
+            _uiState.update { it.copy(startedAt = it.startedAt - 3_600_000L, timer = newTimer) }
+            // 서비스의 주기 저장은 시간만 쓰므로 앞당긴 시작 시각을 바로 백업한다 (#668)
+            viewModelScope.launch { saveSession() }
             sendServiceIntent(StudyingTimerService.ACTION_START) {
                 putExtra(StudyingTimerService.EXTRA_ACCUMULATED, newTimer)
             }
@@ -367,7 +381,7 @@ class StudyingViewModel @Inject constructor(
     private fun startStopwatch() {
         // 멈춘 타이머를 시작·재개하는 경로(복원, 재개 버튼, 목표·종료 확인 창 닫기)는 모두 여기를 지나므로,
         // 저장할 수 없는 세션이면 시작하지 않는다 (#633)
-        // addDebugTime은 공부 중일 때만 서비스를 다시 시작하므로 여기를 거치지 않고, 주기 저장(observeTimer)에서 걸린다
+        // addDebugTime은 공부 중일 때만 서비스를 다시 시작하므로 여기를 거치지 않고, 주기 확인(observeTimer)에서 걸린다
         if (stopIfSessionTooOld()) return
         // 재개 직후 앱이 종료돼도 일시정지 상태로 복원되지 않도록 바로 저장한다
         viewModelScope.launch { saveSession() }
@@ -390,9 +404,10 @@ class StudyingViewModel @Inject constructor(
      * 시작한 지 오프라인 동기화 허용 기간(StudyLog.MAX_OFFLINE_SYNC_DAYS)이 지나 더 공부해도 저장할 수 없는 세션이면
      * 멈추고 안내한다 — 멈췄으면 true (#633)
      * 일시정지 시간에는 상한이 없어서, 종료를 눌러서야 거부되면 이어서 공부한 시간까지 함께 잃는다.
-     * 그래서 타이머 시작·재개(startStopwatch), 복원(restoreFromLocalBackup), 공부 중 주기 저장(observeTimer)에서 미리 확인한다
+     * 그래서 타이머 시작·재개(startStopwatch), 복원(restoreFromLocalBackup), 공부 중 주기 확인(observeTimer)에서 미리 확인한다
      * - isStudying·isFinished를 먼저 바꿔 주기 저장·"공부 중" 갱신(updateUser)·재개가 멈춘 뒤에 백업을 지운다
      *   (stopStopwatch는 saveSession을 불러 백업을 다시 쓰므로 쓰지 않고 서비스만 멈춤)
+     *   (멈추기 직전 출발한 서비스 저장이 늦게 도착해도 백업이 없으면 새로 만들지 않는다 — updateLocalSessionTime)
      * - 시작 시각이 아직 없으면(0) 판단하지 않는다 — 종료 시 FinishStudyingUseCase가 다시 확인한다
      * - 기준은 FinishStudyingUseCase의 사전 검사와 같은 StudyLog.isTooOldToSave (기기 시계 기준)
      */
@@ -423,6 +438,8 @@ class StudyingViewModel @Inject constructor(
     private fun sendServiceIntent(action: String, extras: (Intent.() -> Unit)? = null) {
         val intent = Intent(context, StudyingTimerService::class.java).apply {
             this.action = action
+            // 서비스가 주기 저장할 때 이 세션의 백업인지 확인하는 기준 (#668)
+            if (action == StudyingTimerService.ACTION_START) putExtra(StudyingTimerService.EXTRA_SESSION_ID, sessionId)
             extras?.invoke(this)
         }
         if (action == StudyingTimerService.ACTION_START) {
@@ -592,8 +609,17 @@ class StudyingViewModel @Inject constructor(
         return true
     }
 
-    /** 목표 수정 함수 */
-    fun onStudyLogChanged(index: Int, completed: Boolean? = null, log: String? = null) = _uiState.update {
+    /**
+     * 목표 수정 함수
+     * 완료 체크(log = null)는 바로 백업한다 — 서비스의 주기 저장은 시간만 쓰기 때문 (#668)
+     * 내용 수정(log != null)은 이어서 부르는 onGoalInputDialogChange(false)가 저장하므로 여기서는 저장하지 않는다
+     */
+    fun onStudyLogChanged(index: Int, completed: Boolean? = null, log: String? = null) {
+        updateStudyLog(index, completed, log)
+        if (log == null) viewModelScope.launch { saveSession() }
+    }
+
+    private fun updateStudyLog(index: Int, completed: Boolean?, log: String?) = _uiState.update {
         it.copy(
             // 공백만 입력한 목표도 빈 입력과 같이 삭제 — 완료 체크는 log = null로 호출되므로 삭제 대상 아님
             studyLog = if (log != null && log.isBlank()) {
@@ -749,10 +775,16 @@ class StudyingViewModel @Inject constructor(
      * 백그라운드로 가면 몇 초 뒤 앱 네트워크가 막혀(Android 16 에뮬레이터에서 onStop 약 5초 뒤 차단 확인)
      * 10초 뒤 삭제가 대기열에만 남고 상대 화면에 계속 보이기 때문
      * - 예약한 삭제가 이미 실행된 Job도 변수에 남아 있으므로 null이 아닌 isActive로 확인 (끝난 뒤 매번 다시 지우지 않게)
-     * - 공부 중(예약 없음)·종료 후 결과 화면 이동(종료 때 이미 취소)은 아무 일도 하지 않음
+     * - 공부 중(예약 없음)·종료 후 결과 화면 이동(종료 때 이미 취소)은 삭제하지 않음
+     *
+     * 로컬 백업도 바로 저장한다 — 시스템이 앱을 끄는 건 대부분 백그라운드에서라, 주기(LOCAL_BACKUP_INTERVAL_MS)를 기다리지 않게 (#668)
+     * - 다른 화면으로 이동할 때도 ON_STOP이 오므로 저장하면 안 되는 경우를 거른다
+     *   - 초기 로딩 전(isLoading): 백업 복원 전이라 새 세션 값으로 덮게 됨. 종료 세션이라 홈으로 보낼 때도 loaded()를 부르지 않아 여기서 걸림
+     *   - 종료 확정 후(isFinished): saveSession이 STUDYING 저장을 건너뜀 (결과 화면 이동·에러 확인·저장할 수 없는 세션)
      */
     fun onScreenStopped() {
         if (studyingUserDeleteJob?.isActive == true) deleteStudyingUserInfo()
+        if (!isLoading.value) viewModelScope.launch { saveSession() }
     }
 
     /**
