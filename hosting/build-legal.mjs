@@ -185,9 +185,13 @@ function render(markdown) {
     }
 
     // 문단: 빈 줄 전까지 이어지는 줄
+    // 이어지는 줄도 첫 줄과 같은 기준으로 검사한다 (들여쓴 하위 목록 등이 문단 글자로 합쳐지지 않게)
     const paragraph = [];
     while (i < lines.length && lines[i].trim() !== "" &&
         !/^(#{1,3} |\||- |\d+\. )/.test(lines[i])) {
+      if (/^\s/.test(lines[i]) || /^[>`#*]/.test(lines[i])) {
+        throw new Error(`처리하지 않는 문법이 있습니다: ${lines[i]}`);
+      }
       paragraph.push(lines[i++]);
     }
     out.push(`<p>${inline(paragraph.join(" "))}</p>`);
