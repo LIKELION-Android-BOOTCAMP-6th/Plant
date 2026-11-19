@@ -237,7 +237,7 @@ gcloud storage rm --recursive gs://plant-82b09-restore-tmp
 | 게시글 `posts/{postId}` | 그 게시글의 `comments` 문서들. 게시글과 각 댓글의 `activities` 문서 (`activityId`로 연결) | `CommunityRemoteDataSourceImpl.deletePost`, `CommunityRepositoryImpl.deletePost` |
 | 댓글 `posts/{postId}/comments/{commentId}` | 그 댓글의 `activities` 문서 (`activityId`) | `CommunityRemoteDataSourceImpl.deleteComment` |
 
-- 합계 값(`totalStudyTime`·`potTotalStudyingTime`·`completedPotsCount`)은 복원 DB 값을 그대로 복사하지 않는다. 그 뒤에 쌓인 학습 시간이 사라진다 → **지금 값에 되살린 만큼 더해서** 적는다
+- 합계 값(`totalStudyTime`·`potTotalStudyingTime`·`completedPotsCount`)은 복원 DB 값을 그대로 복사하지 않는다. 그 뒤에 쌓인 학습 시간이 사라진다 → **지금 값에 되살린 만큼 더해서** 적는다 (통째로 되살린 화분 자체의 `potTotalStudyingTime`은 아래처럼 되살린 `logs` 합으로 둔다)
 - "되살린 만큼"은 되살린 `logs`의 `studyingTime` 합이다. 앱에서 화분의 `potTotalStudyingTime`은 만들 때 0이고, 학습 저장 때 더하고 기록 삭제 때 빼서 늘 그 화분 `logs`의 합과 같다 (`PotRemoteDataSourceImpl`·`StudyingRemoteDataSourceImpl.saveStudySession`·`StudyLogRemoteDataSourceImpl.deleteStudyLog`). 되살린 화분의 `potTotalStudyingTime`이 되살린 `logs` 합과 다르면 (예전 데이터) `logs` 합으로 맞춘다
 - 해당 사용자가 앱을 쓰지 않을 때 한다. 콘솔에서 고치는 동안 학습 저장이 들어오면 값이 엇갈릴 수 있다
 - 콘솔에서 쓰는 값은 보안 규칙을 거치지 않는다. 규칙이 쓰는 표시 필드(`lastDeletedPotId`·`lastDeletedLogId` 등)는 바꾸지 않아도 된다
