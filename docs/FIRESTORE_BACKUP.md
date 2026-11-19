@@ -221,6 +221,8 @@ gcloud storage rm --recursive gs://plant-82b09-restore-tmp
 
 예: 한 사용자의 화분 하나, 게시글 하나의 댓글 몇 개를 지웠다.
 
+복원 DB는 **지우기 직전 시각(분 단위)으로 PITR 복제**(방법 2)해서 만든다. 매일 백업으로 만든 DB는 지운 때보다 최대 하루 전 상태라, 백업 뒤에 생긴 학습 기록·댓글은 되살릴 수 없다. 지운 시각을 모르거나 7일이 지나 PITR을 쓸 수 없을 때만 매일 백업을 쓰고, 빠진 기록이 있을 수 있다는 것을 감안한다.
+
 1. Firebase 콘솔 → Firestore에서 데이터베이스를 복원 DB로 바꿔 되살릴 문서의 필드를 본다
 2. `(default)`에 같은 경로·같은 문서 ID로 같은 필드를 직접 만든다. 필드 타입(타임스탬프·숫자·문자열)도 원본과 같게 한다
 3. 아래 표의 "함께 되살릴 것"도 처리한다
@@ -231,11 +233,12 @@ gcloud storage rm --recursive gs://plant-82b09-restore-tmp
 | 지운 것 | 함께 되살릴 것 | 근거 |
 |---|---|---|
 | 화분 `users/{uid}/pots/{potId}` | 그 화분의 `logs` 문서들. `users/{uid}.totalStudyTime`에 화분의 `potTotalStudyingTime`을 더함. 완료된 화분(`isCompleted: true`)이면 `completedPotsCount`에 1을 더함 | `PotRemoteDataSourceImpl.deletePot`, `onPotDeleted`, `firestore.rules`의 화분 삭제 설명 |
-| 학습 기록 `.../pots/{potId}/logs/{logId}` | 그 화분의 `potTotalStudyingTime`과 `users/{uid}.totalStudyTime`에 기록의 `studyingTime`을 더함 | `firestore.rules`의 기록 삭제 설명 |
+| 학습 기록 `.../pots/{potId}/logs/{logId}` | 그 화분의 `potTotalStudyingTime`과 `users/{uid}.totalStudyTime`에 기록의 `studyingTime`을 더함 | `StudyLogRemoteDataSourceImpl.deleteStudyLog`, `firestore.rules`의 기록 삭제 설명 |
 | 게시글 `posts/{postId}` | 그 게시글의 `comments` 문서들. 게시글과 각 댓글의 `activities` 문서 (`activityId`로 연결) | `CommunityRemoteDataSourceImpl.deletePost`, `CommunityRepositoryImpl.deletePost` |
 | 댓글 `posts/{postId}/comments/{commentId}` | 그 댓글의 `activities` 문서 (`activityId`) | `CommunityRemoteDataSourceImpl.deleteComment` |
 
 - 합계 값(`totalStudyTime`·`potTotalStudyingTime`·`completedPotsCount`)은 복원 DB 값을 그대로 복사하지 않는다. 그 뒤에 쌓인 학습 시간이 사라진다 → **지금 값에 되살린 만큼 더해서** 적는다
+- "되살린 만큼"은 되살린 `logs`의 `studyingTime` 합이다. 앱에서 화분의 `potTotalStudyingTime`은 만들 때 0이고, 학습 저장 때 더하고 기록 삭제 때 빼서 늘 그 화분 `logs`의 합과 같다 (`PotRemoteDataSourceImpl`·`StudyingRemoteDataSourceImpl.saveStudySession`·`StudyLogRemoteDataSourceImpl.deleteStudyLog`). 되살린 화분의 `potTotalStudyingTime`이 되살린 `logs` 합과 다르면 (예전 데이터) `logs` 합으로 맞춘다
 - 해당 사용자가 앱을 쓰지 않을 때 한다. 콘솔에서 고치는 동안 학습 저장이 들어오면 값이 엇갈릴 수 있다
 - 콘솔에서 쓰는 값은 보안 규칙을 거치지 않는다. 규칙이 쓰는 표시 필드(`lastDeletedPotId`·`lastDeletedLogId` 등)는 바꾸지 않아도 된다
 
