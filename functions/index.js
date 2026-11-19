@@ -15,6 +15,9 @@ const {
 } = require("firebase-functions/firestore");
 const {onCall, HttpsError} = require("firebase-functions/https");
 const {onSchedule} = require("firebase-functions/scheduler");
+// 오류는 logger.error("메시지", error, {uid})처럼 별도 인자로 넘긴다.
+// {uid, error}처럼 객체 안에 넣으면 JSON으로 바뀔 때 Error의 message·stack이 빠져
+// 로그에 원인이 남지 않는다. 마지막 인자(plain object)는 jsonPayload 필드로 남는다
 const logger = require("firebase-functions/logger");
 const {randomInt} = require("crypto");
 const {initializeApp} = require("firebase-admin/app");
@@ -317,7 +320,7 @@ exports.openBonusBoxes = onCall(async (request) => {
   } catch (error) {
     if (error instanceof HttpsError) throw error;
     // 원인은 로그로만 남긴다 (내부 정보 노출 방지)
-    logger.error("보너스 박스 열기 실패", {uid: request.auth.uid, error});
+    logger.error("보너스 박스 열기 실패", error, {uid: request.auth.uid});
     throw new HttpsError("internal", "보너스 박스 열기 실패");
   }
 });
@@ -410,7 +413,7 @@ exports.checkAttendance = onCall(async (request) => {
   } catch (error) {
     if (error instanceof HttpsError) throw error;
     // 원인은 로그로만 남긴다 (내부 정보 노출 방지)
-    logger.error("출석 처리 실패", {uid: request.auth.uid, error});
+    logger.error("출석 처리 실패", error, {uid: request.auth.uid});
     throw new HttpsError("internal", "출석 처리 실패");
   }
 });
@@ -730,7 +733,7 @@ exports.deleteAccount = onCall(DELETE_ACCOUNT_OPTIONS, async (request) => {
     await deleteAuthUser(uid);
   } catch (error) {
     // 원인은 로그로만 남기고, 앱에는 재시도 안내만 보낸다 (내부 정보 노출 방지)
-    logger.error("회원탈퇴 처리 실패", {uid, error});
+    logger.error("회원탈퇴 처리 실패", error, {uid});
     throw new HttpsError("internal", "회원탈퇴 처리 실패");
   }
 
@@ -793,10 +796,11 @@ async function cleanUpStaleStudying(nowMs) {
   await writer.close();
   const failures = (await results).filter((r) => r.status === "rejected");
   if (failures.length > 0) {
-    logger.error("오래된 studying 문서 일부 삭제 실패 (다음 실행에서 다시 처리)", {
-      deleted, skipped, failed: failures.length,
-      error: failures[0].reason,
-    });
+    logger.error(
+        "오래된 studying 문서 일부 삭제 실패 (다음 실행에서 다시 처리)",
+        failures[0].reason,
+        {deleted, skipped, failed: failures.length},
+    );
     throw failures[0].reason;
   }
   return {deleted, skipped};
