@@ -91,7 +91,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
         viewModel.onChangeGoalCheckMode(StudyingGoalCheckMode.FINISH)
     }
 
-    // 화면이 안 보이게 되면(홈 버튼·화면 끄기) 일시정지 삭제 예약을 기다리지 않고 바로 지움 (#667)
+    // 화면이 안 보이게 되면(홈 버튼·화면 끄기·최근 앱 목록에서 닫기) 일시정지 삭제 예약을 기다리지 않고 바로 지움 (#667)
     // 백그라운드에서는 몇 초 뒤 네트워크가 막혀 10초 뒤 삭제가 서버에 닿지 못함 (Android 16 에뮬레이터에서 확인)
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
