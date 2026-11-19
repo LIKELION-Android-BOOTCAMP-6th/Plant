@@ -3,6 +3,7 @@ package com.a32b.plant.domain.usecase.community
 import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.domain.model.Post
 import com.a32b.plant.domain.model.PostAuthor
+import com.a32b.plant.domain.model.PostCreateResult
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.CommunityRepository
@@ -20,7 +21,7 @@ class CreatePostUseCase @Inject constructor(
         content: String?,
         studyLogs: List<StudyLog>?,
         tag: Tag
-    ): Result<String> {
+    ): Result<PostCreateResult> {
         val user = when (val result = ensureCurrentUserUseCase()) {
             is Result.Success -> result.data
             is Result.Failure -> return Result.Failure(result.error)

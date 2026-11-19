@@ -11,6 +11,7 @@ import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.domain.type.ActivityType
+import com.google.android.gms.tasks.Task
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
@@ -114,29 +115,28 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
             .sortedBy { order.indexOf(it.id) }
     }
 
-    override suspend fun savePost(post: PostDto, activity: CommunityActivityDto): String {
+    override fun savePost(post: PostDto, activity: CommunityActivityDto): PostCreateWrite {
         val postRef = db.collection("posts").document()
         val activityRef = db.collection("activities").document()
 
         val postWithAct = post.copy(activityId = activityRef.id)
         val activityWithPost = activity.copy(targetId = postRef.id)
 
-        db.runBatch { batch ->
+        val write = db.runBatch { batch ->
             batch.set(postRef, postWithAct)
             batch.set(activityRef, activityWithPost)
-        }.await()
+        }
 
-        return postRef.id
+        return PostCreateWrite(postId = postRef.id, write = write)
     }
 
-    override suspend fun updatePost(isShared: Boolean, postId: String, title: String, content: String?, tag: TagDto?) {
+    override fun updatePost(isShared: Boolean, postId: String, title: String, content: String?, tag: TagDto?): Task<Void> =
         if (isShared) {
             db.collection("posts").document(postId)
                 .update(
                     "title", title,
                     "updatedAt", Timestamp.now()
                 )
-                .await()
         } else {
             db.collection("posts").document(postId)
                 .update(
@@ -145,9 +145,7 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
                     "tag", tag,
                     "updatedAt", Timestamp.now() // createdAt은 최초 작성 시점 그대로 유지
                 )
-                .await()
         }
-    }
 
     override suspend fun deletePost(postId: String): List<String> {
         val postRef = db.collection("posts").document(postId)
@@ -205,23 +203,22 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         }.await()
     }
 
-    override suspend fun updateComment(postId: String, commentId: String, newContent: String, activityId: String?) {
+    override fun updateComment(postId: String, commentId: String, newContent: String, activityId: String?): Task<Void> {
         val commentRef = db.collection("posts").document(postId)
             .collection("comments").document(commentId)
 
         if (activityId == null) {
-            commentRef.update("content", newContent).await()
-            return
+            return commentRef.update("content", newContent)
         }
 
         // 본문과 activity를 한 번의 batch로 묶음 — commit 시점에 SDK 로컬 큐에 원자적으로 적재되므로
-        // await() 도중 코루틴이 취소되거나(화면 이탈) 프로세스가 종료돼도 두 문서가 함께 반영된다
-        // 주의: 이 함수는 runBatch 호출 전에 suspend 지점이 없다는 전제 위에서 이탈에 안전하다.
+        // 기다리는 도중 코루틴이 취소되거나(화면 이탈) 프로세스가 종료돼도 두 문서가 함께 반영된다
+        // 주의: 호출부(Repository·ViewModel)는 이 함수 호출 전에 suspend 지점이 없다는 전제 위에서 이탈에 안전하다.
         //       앞에 withContext/조회/ensureCurrentUser 같은 중단점을 추가하면 이탈 시 쓰기가 통째로 누락될 수 있다
-        db.runBatch { batch ->
+        return db.runBatch { batch ->
             batch.update(commentRef, "content", newContent)
             batch.update(db.collection("activities").document(activityId), "comment", newContent)
-        }.await()
+        }
     }
 
     override suspend fun deleteComment(postId: String, commentId: String, deleteActivity: Boolean): Boolean {
@@ -245,13 +242,28 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
     }
 
     override suspend fun updateActivityTitle(postId: String, title: String) {
-        db.collection("activities")
-            .whereEqualTo("targetId", postId)
-            .whereEqualTo("type", ActivityType.POST)
-            .get()
-            .await()
-            .documents
-            .firstOrNull()?.reference?.update("title", title)?.await()
+        // 게시글 문서에 저장된 activityId로 바로 수정한다 (#641)
+        // 다시 연결된 직후에는 게시글 쓰기 응답이 먼저 오고 아직 오프라인 판정일 수 있어, activities 조회는 기기 캐시만 본다.
+        // 캐시에 activity가 없으면 빈 결과로 끝나 제목이 바뀌지 않으므로 조회 대신 문서 ID를 쓴다.
+        // 게시글 문서는 방금 수정해 기기에 있으므로 이 읽기는 오프라인 판정이어도 결과가 나온다
+        val postSnapshot = db.collection("posts").document(postId).get().await()
+        val activityId = postSnapshot.getString("activityId")
+        // 제목도 넘겨받은 값보다 문서 값을 쓴다. 응답 지연 중 연달아 수정하면 이 함수가 수정마다 따로 실행되고
+        // 실행 순서가 뒤바뀔 수 있는데, 문서 값(아직 보내지 않은 내 쓰기 포함)을 쓰면 어느 쪽이 나중에 끝나도 최신 제목으로 맞춰진다
+        val latestTitle = postSnapshot.getString("title") ?: title
+        val activityRef = if (!activityId.isNullOrEmpty()) {
+            db.collection("activities").document(activityId)
+        } else {
+            // activityId가 없는 예전 게시글
+            db.collection("activities")
+                .whereEqualTo("targetId", postId)
+                .whereEqualTo("type", ActivityType.POST)
+                .get()
+                .await()
+                .documents
+                .firstOrNull()?.reference
+        }
+        activityRef?.update("title", latestTitle)?.await()
     }
 
     override fun observeActivity(uid: String, selected: String): Flow<List<CommunityActivityDto>> = callbackFlow {

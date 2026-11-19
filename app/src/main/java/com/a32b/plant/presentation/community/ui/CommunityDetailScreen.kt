@@ -80,6 +80,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -122,6 +123,7 @@ fun CommunityDetailScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     val postState by viewModel.post.collectAsStateWithLifecycle()
+    val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
     val showDeleteDialog = viewModel.showDeleteDialog.value
 
 
@@ -485,6 +487,7 @@ fun CommunityDetailScreen(
                                     text = uiState.comment,
                                     // 블라인드 게시글은 새 댓글 차단 — item 자체는 남겨 COMMENT_INPUT_ITEM_INDEX를 고정값으로 유지
                                     isBlocked = isPostBlind,
+                                    isOffline = !isOnline,
                                     onTextChange = { viewModel.onCommentChange(it) },
                                     onSend = { viewModel.addComment() },
                                     onBlockedClick = { viewModel.onBlockedCommentInputClick() },
@@ -506,6 +509,7 @@ fun CommunityDetailScreen(
                                     isEditing = uiState.editingCommentId == commentData.commentId,
                                     editingText = uiState.editingCommentText,
                                     isEditSubmitting = commentData.commentId in uiState.editingSubmittingCommentIds,
+                                    isOffline = !isOnline,
                                     onEditTextChange = { viewModel.onEditCommentTextChange(it) },
                                     onEditStart = { viewModel.startEditComment(commentData) },
                                     onEditSubmit = { viewModel.submitEditComment() },
@@ -533,6 +537,8 @@ fun CommentRow(
     isEditing: Boolean,
     editingText: String,
     isEditSubmitting: Boolean = false,
+    // 오프라인: 저장을 누르면 ViewModel이 안내 토스트를 띄우므로 클릭은 막지 않고 alpha로만 비활성처럼 표시 (#641)
+    isOffline: Boolean = false,
     onEditTextChange: (String) -> Unit,
     onEditStart: () -> Unit,
     onEditSubmit: () -> Unit,
@@ -674,9 +680,13 @@ fun CommentRow(
                             // labelMedium에 지정된 색(onSecondary)이 TextButton의 contentColor보다 우선하므로
                             // 아래 contentColor 분기는 글자 색에 반영되지 않는다. 글자 색은 Text의 color로 지정
                             // (ripple 색에는 반영되므로 분기는 유지)
+                            val isSaveOfflineLooking = isOffline && !isEditSubmitting
                             TextButton(
                                 onClick = onEditSubmit,
                                 enabled = !isEditSubmitting,
+                                modifier = Modifier
+                                    .alpha(if (isSaveOfflineLooking) CommunityConstants.OFFLINE_BUTTON_ALPHA else 1f)
+                                    .semantics { if (isSaveOfflineLooking) stateDescription = CommunityConstants.OFFLINE_STATE_DESCRIPTION },
                                 colors = ButtonDefaults.textButtonColors(
                                     contentColor = if (editingText.isBlank())
                                         MaterialTheme.colorScheme.onSurface
@@ -747,6 +757,8 @@ fun CommentInputSection(
     modifier: Modifier = Modifier,
     // true면 비활성처럼 보이게 하고 탭·전송 시 onBlockedClick만 호출 (블라인드 게시글)
     isBlocked: Boolean = false,
+    // 오프라인: 등록을 누르면 ViewModel이 안내 토스트를 띄우므로 클릭은 막지 않고 alpha로만 비활성처럼 표시 (#641)
+    isOffline: Boolean = false,
     onTextChange: (String) -> Unit,
     onSend: () -> Unit,
     onBlockedClick: () -> Unit = {},
@@ -839,13 +851,16 @@ fun CommentInputSection(
                     Button(
                         onClick = {
                             onSend()
-                            // blank 제출 시에는 Toast 안내만 띄우고 포커스는 유지해 바로 이어서 입력 가능하게 함
-                            if (text.isNotBlank()) focus.clearFocus()
+                            // blank 제출·오프라인일 때는 Toast 안내만 띄우고 포커스는 유지해 입력 내용을 바로 이어서 고칠 수 있게 함
+                            if (text.isNotBlank() && !isOffline) focus.clearFocus()
                         },
                         // 낙관적 UI로 등록 즉시 입력창이 비워지므로 등록 중 비활성 상태가 없음
                         modifier = Modifier
                             .height(28.dp)
-                            .padding(top = 4.dp),
+                            .padding(top = 4.dp)
+                            // 블라인드 차단은 카드 전체 alpha로 이미 표시하므로 겹치지 않게 제외
+                            .alpha(if (isOffline && !isBlocked) CommunityConstants.OFFLINE_BUTTON_ALPHA else 1f)
+                            .semantics { if (isOffline && !isBlocked) stateDescription = CommunityConstants.OFFLINE_STATE_DESCRIPTION },
                         colors = ButtonDefaults.buttonColors(
                             // 차단 시에는 입력해 둔 텍스트가 남아 있어도 비활성 색으로 표시 (활성 버튼처럼 보이지 않게)
                             containerColor = if (text.isBlank() || isBlocked)

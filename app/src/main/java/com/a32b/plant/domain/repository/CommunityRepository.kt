@@ -3,7 +3,9 @@ package com.a32b.plant.domain.repository
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.domain.model.Post
+import com.a32b.plant.domain.model.PostCreateResult
 import com.a32b.plant.domain.model.PostPage
+import com.a32b.plant.domain.model.SaveResult
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.result.Result
 import kotlinx.coroutines.flow.Flow
@@ -30,8 +32,9 @@ interface CommunityRepository {
 
     suspend fun getTags(): Result<List<Tag>>
 
-    suspend fun savePost(post: Post, activity: CommunityActivity): Result<String>
-    suspend fun updatePost(isShared: Boolean, postId: String, title: String, content: String?, tag: Tag?): Result<Unit>
+    // 등록·수정은 서버 응답을 제한 시간만큼만 기다린다. 시간 안에 응답이 없으면 SaveResult.Pending (#641)
+    suspend fun savePost(post: Post, activity: CommunityActivity): Result<PostCreateResult>
+    suspend fun updatePost(isShared: Boolean, postId: String, title: String, content: String?, tag: Tag?): Result<SaveResult>
     suspend fun deletePost(postId: String, activityId: String): Result<Unit>
 
     suspend fun toggleLike(postId: String, uid: String, title: String): Result<Boolean>
@@ -41,7 +44,7 @@ interface CommunityRepository {
     suspend fun removeBookmark(postId: String, uid: String): Result<Unit>
 
     suspend fun addComment(postId: String, comment: Comment, activity: CommunityActivity): Result<Unit>
-    suspend fun updateComment(postId: String, commentId: String, newContent: String, activityId: String): Result<Unit>
+    suspend fun updateComment(postId: String, commentId: String, newContent: String, activityId: String): Result<SaveResult>
     /** 성공 시 이번 호출이 실제로 댓글을 지웠으면 true, 이미 없던 댓글(다른 곳에서 먼저 삭제)이면 false */
     suspend fun deleteComment(postId: String, commentId: String): Result<Boolean>
 

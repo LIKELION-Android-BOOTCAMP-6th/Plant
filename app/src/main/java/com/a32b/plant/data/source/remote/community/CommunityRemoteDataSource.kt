@@ -6,8 +6,12 @@ import com.a32b.plant.data.model.PostDto
 import com.a32b.plant.data.model.TagDto
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.CommunityActivity
+import com.google.android.gms.tasks.Task
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
+
+/** 게시글 등록 쓰기 — 문서 ID는 쓰기 전에 정해지므로 서버 응답과 상관없이 바로 알 수 있다 (#641) */
+data class PostCreateWrite(val postId: String, val write: Task<Void>)
 
 interface CommunityRemoteDataSource {
 
@@ -28,8 +32,10 @@ interface CommunityRemoteDataSource {
     suspend fun getComments(postId: String): List<CommentDto>
     suspend fun getTags(): List<TagDto>
 
-    suspend fun savePost(post: PostDto, activity: CommunityActivityDto): String
-    suspend fun updatePost(isShared: Boolean, postId: String, title: String, content: String?, tag: TagDto?)
+    // 등록·수정 쓰기는 기다리지 않고 Task를 그대로 돌려준다 (기다리는 시간은 Repository가 정함, #641)
+    fun savePost(post: PostDto, activity: CommunityActivityDto): PostCreateWrite
+    fun updatePost(isShared: Boolean, postId: String, title: String, content: String?, tag: TagDto?): Task<Void>
+    /** 게시글 activity의 제목을 게시글 문서의 현재 제목으로 맞춘다. [title]은 문서에서 제목을 읽지 못했을 때만 쓴다 */
     suspend fun updateActivityTitle(postId: String, title: String)
     suspend fun deletePost(postId: String): List<String>
 
@@ -43,8 +49,8 @@ interface CommunityRemoteDataSource {
     suspend fun removeBookmark(postId: String, uid: String): Boolean
 
     suspend fun addComment(postId : String, comment: Comment, activity: CommunityActivity)
-    /** activityId가 있으면 댓글 본문과 activity 문구를 batch 한 번으로 함께 수정, null이면 본문만 수정 */
-    suspend fun updateComment(postId: String, commentId: String, newContent: String, activityId: String?)
+    /** activityId가 있으면 댓글 본문과 activity 문구를 batch 한 번으로 함께 수정, null이면 본문만 수정. 기다리지 않고 Task를 돌려준다 */
+    fun updateComment(postId: String, commentId: String, newContent: String, activityId: String?): Task<Void>
     /**
      * 댓글 삭제 + 댓글 수 감소를 하나의 트랜잭션으로 처리. deleteActivity가 true면 연결된 activity 삭제도 같은 트랜잭션에 포함
      * @return 이번 호출이 실제로 댓글을 지웠으면 true, 이미 없던 댓글이면 false
