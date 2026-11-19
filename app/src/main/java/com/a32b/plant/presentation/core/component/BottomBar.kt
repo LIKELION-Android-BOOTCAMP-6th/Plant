@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -17,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -25,7 +27,7 @@ import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
-import com.a32b.plant.presentation.theme.sub_green2
+import com.a32b.plant.presentation.theme.LocalIsDarkTheme
 
 @Composable
 fun BottomBar(navController: NavController, enabled: Boolean = true) {
@@ -137,7 +139,7 @@ private fun BottomBarItem(
     enabled: Boolean,
     onClick: () -> Unit
 ) {
-    val tintColor = if (selected) sub_green2 else MaterialTheme.colorScheme.onSurfaceVariant
+    val tintColor = bottomBarItemTint(MaterialTheme.colorScheme, LocalIsDarkTheme.current, selected)
     Column(
         modifier = modifier
             .clickable(enabled = enabled) { onClick() }
@@ -157,4 +159,14 @@ private fun BottomBarItem(
             color = tintColor
         )
     }
+}
+
+// 하단바 탭 아이콘·글자 색 (#643)
+// 선택: tertiary (라이트는 기존 sub_green2와 같은 값, 다크는 EBF7E4)
+// 비선택: 라이트는 서브 폰트 색(onSurfaceVariant). 다크 하단바(surface 8E9872)는 중간 밝기라
+// 밝은 서브 폰트 색(B8B8B8)은 배경 대비 약 1.5:1, 선택 색과도 약 1.8:1로 구분이 약해 화면 배경색(2D2D2D, 대비 약 4.5:1)을 쓴다
+internal fun bottomBarItemTint(colorScheme: ColorScheme, isDark: Boolean, selected: Boolean): Color = when {
+    selected -> colorScheme.tertiary
+    isDark -> colorScheme.background
+    else -> colorScheme.onSurfaceVariant
 }

@@ -32,7 +32,6 @@ import com.a32b.plant.presentation.core.component.StudyGoalItem
 import com.a32b.plant.core.extension.isCompletedAt
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.util.PotNameRule
-import com.a32b.plant.presentation.theme.fontColorSub
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.a32b.plant.presentation.core.extension.showToast
@@ -175,7 +174,7 @@ fun StudyPlanDetailScreen(
                         } }) {
                             if (isShareMode) {
                                 // 공유 모드면 확인 아이콘(누르면 선택한 기록으로 글쓰기 화면 이동), 아니면 공유 아이콘
-                                Icon(painterResource(id = R.drawable.ic_check), contentDescription = "확인", modifier = Modifier.size(19.dp), tint = fontColorSub)
+                                Icon(painterResource(id = R.drawable.ic_check), contentDescription = "확인", modifier = Modifier.size(19.dp), tint = MaterialTheme.colorScheme.onSurface)
                             } else {
                                 Icon(painterResource(id = R.drawable.ic_share), contentDescription = "공유", modifier = Modifier.size(19.dp))
                             }

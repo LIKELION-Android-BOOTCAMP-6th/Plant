@@ -32,7 +32,6 @@ import com.a32b.plant.core.extension.isCompletedAt
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.presentation.core.component.StudyGoalItem
-import com.a32b.plant.presentation.theme.fontColorSub
 
 @Composable
 fun StudyLogDetailDialog(
@@ -75,7 +74,7 @@ fun StudyLogDetailDialog(
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                Divider(color = fontColorSub, thickness = 1.dp)
+                Divider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
                 Spacer(modifier = Modifier.height(16.dp))
 
                 //정보
