@@ -15,6 +15,7 @@ import com.a32b.plant.domain.model.Item
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.model.SaveResult
 import com.a32b.plant.domain.model.PotLevelConditions
+import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.StudyReward
 import com.a32b.plant.domain.model.StudySaveResult
 import com.a32b.plant.domain.model.UnseenStudyReward
@@ -196,8 +197,14 @@ class HomeViewModel @Inject constructor(
     val userItem = _userItem.asStateFlow()
 
     // 복구 세션 상태
+    // 세션을 넣을 때는 _isRecoverySessionTooOld도 먼저 계산할 것 (#697)
     private val _recoverySession = MutableStateFlow<StudyingSession?>(null)
     val recoverySession = _recoverySession.asStateFlow()
+
+    // 복구 대상 백업이 시작한 지 오프라인 동기화 허용 기간이 지나 저장할 수 없는 백업인지 (#697)
+    // 백업을 읽을 때(onHomeResumed)만 계산한다 — 창이 열린 채로 경계를 넘기면 저장 시 FinishStudyingUseCase 사전 검사가 거부한다
+    private val _isRecoverySessionTooOld = MutableStateFlow(false)
+    val isRecoverySessionTooOld = _isRecoverySessionTooOld.asStateFlow()
 
     // 복구 처리 중 로딩
     private val _isRecovering = MutableStateFlow(false)
@@ -319,7 +326,13 @@ class HomeViewModel @Inject constructor(
         recoveryCheckJob?.cancel()
         recoveryCheckJob = viewModelScope.launch {
             getRecoverySessionUseCase()
-                .onSuccess { session -> _recoverySession.value = session }
+                .onSuccess { session ->
+                    // 창이 저장/폐기 모드로 먼저 그려지지 않도록 세션보다 먼저 바꾼다
+                    // 기준은 FinishStudyingUseCase의 사전 검사와 같은 StudyLog.isTooOldToSave (기기 시계 기준, 시작 시각 0도 true)
+                    _isRecoverySessionTooOld.value =
+                        session != null && StudyLog.isTooOldToSave(session.startedAt, System.currentTimeMillis())
+                    _recoverySession.value = session
+                }
             // 조회가 실패해도 판단을 진행한다. 실패 종류는 UnknownUser(아래 decideAutomaticAttendance가 currentUser null로 조용히 반환)
             // 와 로컬 읽기 실패(이번 복귀에는 복구 창을 못 띄우며, 이후 백업이 발견되면 HomeScreen의 recoverySession == null 조건이 출석 창을 숨김)
             // 초기 로딩이 끝난 뒤(첫 화분 반영 후) 출석을 판단해, 로딩 화면 위에 출석 창이 먼저 뜨지 않게 한다 (#487)
