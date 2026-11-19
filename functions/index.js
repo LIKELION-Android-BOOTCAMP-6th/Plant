@@ -34,6 +34,11 @@ const {
   isStaleStudying,
   toKstDateKey,
 } = require("./calculations");
+// 탈퇴 시 신고 익명화는 경쟁 상황을 테스트에서 직접 확인하려고 따로 뺐다 (#606)
+const {
+  ANONYMOUS_REPORTER_ID,
+  moveReportsAnonymously,
+} = require("./reportAnonymizer");
 
 // For cost control, you can set the maximum number of containers that can be
 // running at the same time. This helps mitigate the impact of unexpected
@@ -532,12 +537,6 @@ const REAUTH_MAX_AGE_SECONDS = 5 * 60;
 const DELETED_COMMENT_CONTENT = "- 삭제된 댓글입니다. -";
 const ANONYMOUS_COMMENT_USER = {uid: "", nickname: "(알 수 없음)", profileImg: ""};
 
-// 신고·버그 제보·개선 제안은 지우지 않고 작성자를 비운다 (#606)
-const ANONYMOUS_REPORTER_ID = "";
-
-// batch 하나는 쓰기 500건까지. 신고 1건을 옮길 때 create + delete 2건을 쓴다
-const REPORT_MOVE_BATCH_SIZE = 250;
-
 // 게시글별 트랜잭션을 한꺼번에 너무 많이 보내지 않도록 나눠서 실행한다
 const TRANSACTION_CHUNK_SIZE = 20;
 
@@ -566,31 +565,6 @@ async function deleteRefs(writer, refs) {
 async function runInChunks(items, size, task) {
   for (let i = 0; i < items.length; i += size) {
     await Promise.all(items.slice(i, i + size).map(task));
-  }
-}
-
-/**
- * 신고 문서를 자동 생성 ID의 새 문서로 옮기고 reporterId를 비운다 (#606).
- * - 문서 ID {uid}_{대상ID}에 uid가 들어 있어 필드만 비울 수 없으므로 새 ID로 옮긴다
- * - 사본 생성과 원본 삭제를 같은 batch에 넣는다 → 둘 중 하나만 반영되지 않아,
- *   재시도해도 사본이 두 개 생기지 않는다 (운영진이 기각할 때 reportCount가 두 번 줄지 않게)
- * - 원본 삭제는 조회한 시점의 문서일 때만 한다(lastUpdateTime 조건) → 그 사이 운영진이
- *   status를 바꿨으면 batch가 실패하고, 다시 호출할 때 바뀐 값으로 옮긴다
- * @param {FirebaseFirestore.QueryDocumentSnapshot[]} reportDocs
- * @return {Promise<void>}
- */
-async function moveReportsAnonymously(reportDocs) {
-  const reports = db.collection("reports");
-  for (let i = 0; i < reportDocs.length; i += REPORT_MOVE_BATCH_SIZE) {
-    const batch = db.batch();
-    for (const doc of reportDocs.slice(i, i + REPORT_MOVE_BATCH_SIZE)) {
-      batch.create(reports.doc(), {
-        ...doc.data(),
-        reporterId: ANONYMOUS_REPORTER_ID,
-      });
-      batch.delete(doc.ref, {lastUpdateTime: doc.updateTime});
-    }
-    await batch.commit();
   }
 }
 
@@ -687,7 +661,7 @@ async function deleteUserData(uid) {
     //    옮긴 사본은 reporterId가 ""라 재시도 때 다시 조회되지 않는다
     const myReports = await db.collection("reports")
         .where("reporterId", "==", uid).get();
-    await moveReportsAnonymously(myReports.docs);
+    await moveReportsAnonymously(db, myReports.docs);
 
     // 9. 내 버그 제보·개선 제안 익명화 (#606)
     //    내용·category·appVersion은 버그 분석용으로 남기고 작성자와 기기 정보만 지운다
