@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -42,6 +43,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
@@ -85,6 +89,17 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
     // 홈이 보이면 타이머 서비스를 중지하므로(#514), 타이머를 유지한 채 홈으로 보내는 경로를 만들면 HomeViewModel.onHomeResumed를 함께 확인할 것
     BackHandler {
         viewModel.onChangeGoalCheckMode(StudyingGoalCheckMode.FINISH)
+    }
+
+    // 화면이 안 보이게 되면(홈 버튼·화면 끄기·최근 앱 목록에서 닫기) 일시정지 삭제 예약을 기다리지 않고 바로 지움 (#667)
+    // 백그라운드에서는 몇 초 뒤 네트워크가 막혀 10초 뒤 삭제가 서버에 닿지 못함 (Android 16 에뮬레이터에서 확인)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) viewModel.onScreenStopped()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     LaunchedEffect(Unit) {

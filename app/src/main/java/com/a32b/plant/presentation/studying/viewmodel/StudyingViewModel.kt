@@ -136,6 +136,11 @@ class StudyingViewModel @Inject constructor(
     // 이 학습 세션의 ID — 학습 기록 문서 ID로 쓰여 같은 세션이 여러 번 저장 요청돼도 한 번만 반영된다 (#453)
     // 이어서 공부하는 세션이면 백업의 값으로 바꾸고, 백업마다 함께 저장한다
     private var sessionId: String = StudyingSession.newSessionId()
+    // 일시정지 후 "공부 중" 표시 삭제 예약 (#667)
+    // 메인 스레드에서만 읽고 쓴다 — 예약은 viewModelScope, 취소는 메인에서 불리는 startStopwatch와
+    // deleteStudyingUserInfo의 viewModelScope 안에서 한다 (IO에서 부르는 종료 저장 경로 포함)
+    // 대기 중인지 확인은 메인에서 불리는 onScreenStopped(화면 ON_STOP)에서 한다
+    private var studyingUserDeleteJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -366,6 +371,8 @@ class StudyingViewModel @Inject constructor(
         if (stopIfSessionTooOld()) return
         // 재개 직후 앱이 종료돼도 일시정지 상태로 복원되지 않도록 바로 저장한다
         viewModelScope.launch { saveSession() }
+        // 일시정지 때 걸어 둔 삭제 예약을 쓰기보다 먼저 취소한다 — 같은 메인 스레드에서 취소 → 쓰기 순서 (#667)
+        cancelScheduledStudyingUserDelete()
         // "공부 중" 표시를 바로 등록하고(일시정지로 지웠거나 처음 시작) 1분 주기도 지금부터 센다 (#525)
         lastUpdateMs = _uiState.value.timer
         updateUser()
@@ -436,13 +443,14 @@ class StudyingViewModel @Inject constructor(
         else stopStopwatch()
         // 일시정지 중에는 "공부 중" 상위 3명에 표시하지 않는다 → 공부 중이다가 멈출 때만 삭제 (#525)
         // (이미 멈춘 상태에서 다이얼로그를 열고 닫을 때도 false로 호출되므로 상태가 바뀔 때만)
-        if (wasStudying && !studying) deleteStudyingUserInfo()
+        // 바로 지우면 일시정지·학습하기를 연타할 때 상대 화면 목록이 깜빡이므로 일정 시간 뒤에 지운다 (#667)
+        if (wasStudying && !studying) scheduleStudyingUserDelete()
     }
 
     /**
      * "공부 중" 표시 등록·갱신 — 공부 중일 때만 (일시정지·종료 후 늦게 실행돼 지운 문서를 되살리지 않게)
      * Dispatchers.IO로 옮기지 않는다: 메인 스레드에서 상태 확인과 쓰기 요청이 끊김 없이 이어져야
-     * 일시정지 삭제(deleteStudyingUserInfo)와 순서가 뒤바뀌지 않는다 (쓰기 요청 자체는 메인을 막지 않음)
+     * 일시정지 삭제(scheduleStudyingUserDelete의 예약 삭제·deleteStudyingUserInfo)와 순서가 뒤바뀌지 않는다 (쓰기 요청 자체는 메인을 막지 않음)
      * 이 보장은 set() 호출 전에 코루틴이 멈추는 지점이 없다는 전제 위에 있다 — SaveStudyingUserUseCase의
      * ensureCurrentUserUseCase()는 suspend가 아니고 Repository의 safeRunCatching은 inline이다.
      * 이 경로(UseCase·Repository·RemoteDataSource)에 withContext·delay 등을 넣으면 순서가 깨질 수 있다
@@ -697,12 +705,54 @@ class StudyingViewModel @Inject constructor(
     }
 
     /**
-     * "공부 중" 표시(studying/{uid}) 삭제 — 오프라인이면 연결 후 반영되므로 완료를 기다리지 않음 (HomeViewModel과 같은 방식)
-     * 삭제 요청은 호출 즉시 대기열에 들어가므로 화면을 떠나 코루틴이 취소돼도 전송된다
+     * "공부 중" 표시(studying/{uid}) 즉시 삭제 — 오프라인이면 연결 후 반영되므로 완료를 기다리지 않음 (HomeViewModel과 같은 방식)
+     * 삭제 요청은 대기열에 들어간 뒤에는 화면을 떠나 코루틴이 취소돼도 전송된다
+     * 일시정지로 걸어 둔 예약이 있으면 취소한다 — 종료·에러 확인·저장할 수 없는 세션은 기다리지 않고 바로 지움 (#667)
+     * 종료 저장(onFinishStudyingClick)은 IO 스레드에서 부르므로, 예약 취소도 삭제 요청과 함께 viewModelScope(메인) 안에서 한다
+     * — 메인에서 부르면 Main.immediate라 바로 실행되고, IO에서 부르면 메인으로 넘어간 뒤 실행된다
      * 실패해도 저장 결과에는 영향이 없어 별도 처리 없음 (에러 로그는 레포지토리에서 찍고 있음)
      */
     private fun deleteStudyingUserInfo() {
-        viewModelScope.launch { repository.deleteStudyingUserInfo() }
+        viewModelScope.launch {
+            cancelScheduledStudyingUserDelete()
+            repository.deleteStudyingUserInfo()
+        }
+    }
+
+    /**
+     * 일시정지 후 STUDYING_USER_DELETE_DELAY_MS 뒤에 "공부 중" 표시 삭제 (#667)
+     * 그 안에 재개하면 startStopwatch가 취소해 문서를 지우지 않고 갱신만 한다
+     * 연타로 다시 예약되면 이전 예약을 취소해 예약이 하나만 남게 한다
+     * 대기 중에 학습 화면이 안 보이게 되면(홈 버튼·화면 끄기·최근 앱 목록에서 닫기) onScreenStopped가 바로 지운다
+     * 대기 중에 ON_STOP 없이 학습 화면이 사라지거나(화면이 보이는 채로 프로세스가 끝남(충돌 등)),
+     * 세션 만료로 로그인 화면으로 이동하면(로그아웃 뒤라 ON_STOP의 삭제가 uid가 없어 실패) 예약도 함께 취소되어
+     * 서버의 오래된 문서 정리(cleanUpStaleStudying)가 지운다
+     * - onCleared에서 따로 지우지 않는다: 앱 종료는 onCleared 직후 프로세스가 끝나 요청이 서버에 닿지 못하고
+     *   (에뮬레이터에서 0.05~0.12초 뒤 종료, 2회 모두 상대 화면에 남음), 세션 만료는 로그아웃(MainActivity) 뒤에
+     *   화면이 정리돼 uid가 없어 요청이 실패한다
+     */
+    private fun scheduleStudyingUserDelete() {
+        studyingUserDeleteJob?.cancel()
+        studyingUserDeleteJob = viewModelScope.launch {
+            delay(STUDYING_USER_DELETE_DELAY_MS)
+            repository.deleteStudyingUserInfo()
+        }
+    }
+
+    private fun cancelScheduledStudyingUserDelete() {
+        studyingUserDeleteJob?.cancel()
+        studyingUserDeleteJob = null
+    }
+
+    /**
+     * 학습 화면이 안 보이게 됨(ON_STOP) — 일시정지 삭제 예약이 대기 중이면 기다리지 않고 바로 지운다 (#667)
+     * 백그라운드로 가면 몇 초 뒤 앱 네트워크가 막혀(Android 16 에뮬레이터에서 onStop 약 5초 뒤 차단 확인)
+     * 10초 뒤 삭제가 대기열에만 남고 상대 화면에 계속 보이기 때문
+     * - 예약한 삭제가 이미 실행된 Job도 변수에 남아 있으므로 null이 아닌 isActive로 확인 (끝난 뒤 매번 다시 지우지 않게)
+     * - 공부 중(예약 없음)·종료 후 결과 화면 이동(종료 때 이미 취소)은 아무 일도 하지 않음
+     */
+    fun onScreenStopped() {
+        if (studyingUserDeleteJob?.isActive == true) deleteStudyingUserInfo()
     }
 
     /**
@@ -724,6 +774,8 @@ class StudyingViewModel @Inject constructor(
     companion object {
         // 마지막 입력 후 임시 저장까지 기다리는 시간
         private const val GOAL_DRAFT_SAVE_DELAY_MS = 500L
+        // 일시정지 후 "공부 중" 표시를 지우기까지 기다리는 시간 (#667)
+        private const val STUDYING_USER_DELETE_DELAY_MS = 10_000L
         private const val SAVE_PENDING_MESSAGE = "네트워크에 연결되면 학습 기록이 자동으로 저장돼요."
     }
 
