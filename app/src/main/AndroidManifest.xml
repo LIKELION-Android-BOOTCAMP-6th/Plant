@@ -18,7 +18,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Plant">
-        <!-- Crashlytics 수집 여부: debug=false, release=true (app/build.gradle.kts buildTypes, #622) -->
+        <!-- Crashlytics 수집 여부: 기본 false, release만 true (app/build.gradle.kts defaultConfig·release, #622) -->
         <meta-data
             android:name="firebase_crashlytics_collection_enabled"
             android:value="${crashlyticsCollectionEnabled}" />
