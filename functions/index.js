@@ -532,8 +532,11 @@ const REAUTH_MAX_AGE_SECONDS = 5 * 60;
 const DELETED_COMMENT_CONTENT = "- 삭제된 댓글입니다. -";
 const ANONYMOUS_COMMENT_USER = {uid: "", nickname: "(알 수 없음)", profileImg: ""};
 
-// 버그 제보·개선 제안은 지우지 않고 작성자를 비운다 (#606)
-const ANONYMOUS_FEEDBACK_REPORTER_ID = "";
+// 신고·버그 제보·개선 제안은 지우지 않고 작성자를 비운다 (#606)
+const ANONYMOUS_REPORTER_ID = "";
+
+// batch 하나는 쓰기 500건까지. 신고 1건을 옮길 때 create + delete 2건을 쓴다
+const REPORT_MOVE_BATCH_SIZE = 250;
 
 // 게시글별 트랜잭션을 한꺼번에 너무 많이 보내지 않도록 나눠서 실행한다
 const TRANSACTION_CHUNK_SIZE = 20;
@@ -563,6 +566,31 @@ async function deleteRefs(writer, refs) {
 async function runInChunks(items, size, task) {
   for (let i = 0; i < items.length; i += size) {
     await Promise.all(items.slice(i, i + size).map(task));
+  }
+}
+
+/**
+ * 신고 문서를 자동 생성 ID의 새 문서로 옮기고 reporterId를 비운다 (#606).
+ * - 문서 ID {uid}_{대상ID}에 uid가 들어 있어 필드만 비울 수 없으므로 새 ID로 옮긴다
+ * - 사본 생성과 원본 삭제를 같은 batch에 넣는다 → 둘 중 하나만 반영되지 않아,
+ *   재시도해도 사본이 두 개 생기지 않는다 (운영진이 기각할 때 reportCount가 두 번 줄지 않게)
+ * - 원본 삭제는 조회한 시점의 문서일 때만 한다(lastUpdateTime 조건) → 그 사이 운영진이
+ *   status를 바꿨으면 batch가 실패하고, 다시 호출할 때 바뀐 값으로 옮긴다
+ * @param {FirebaseFirestore.QueryDocumentSnapshot[]} reportDocs
+ * @return {Promise<void>}
+ */
+async function moveReportsAnonymously(reportDocs) {
+  const reports = db.collection("reports");
+  for (let i = 0; i < reportDocs.length; i += REPORT_MOVE_BATCH_SIZE) {
+    const batch = db.batch();
+    for (const doc of reportDocs.slice(i, i + REPORT_MOVE_BATCH_SIZE)) {
+      batch.create(reports.doc(), {
+        ...doc.data(),
+        reporterId: ANONYMOUS_REPORTER_ID,
+      });
+      batch.delete(doc.ref, {lastUpdateTime: doc.updateTime});
+    }
+    await batch.commit();
   }
 }
 
@@ -652,12 +680,14 @@ async function deleteUserData(uid) {
     // 7. 실시간 학습 현황 (학습 중 비정상 종료 후 탈퇴해도 남지 않게)
     await deleteRefs(writer, [db.collection("studying").doc(uid)]);
 
-    // 8. 내가 한 신고 삭제 (#606)
-    //    문서 ID가 {uid}_{대상ID}라 필드만 비워도 uid가 남으므로 익명화하지 않고 지운다
+    // 8. 내가 한 신고 익명화 (#606)
+    //    지우지 않고 새 ID로 옮겨 reporterId만 비운다 → 운영진의 pending 검토와
+    //    허위 신고 기각(status → dismissed, reportCount - 1)을 탈퇴 뒤에도 할 수 있다
     //    대상 게시글·댓글의 reportCount는 그대로 둔다 (탈퇴로 블라인드가 풀리지 않게)
+    //    옮긴 사본은 reporterId가 ""라 재시도 때 다시 조회되지 않는다
     const myReports = await db.collection("reports")
         .where("reporterId", "==", uid).get();
-    await deleteRefs(writer, myReports.docs.map((doc) => doc.ref));
+    await moveReportsAnonymously(myReports.docs);
 
     // 9. 내 버그 제보·개선 제안 익명화 (#606)
     //    내용·category·appVersion은 버그 분석용으로 남기고 작성자와 기기 정보만 지운다
@@ -666,7 +696,7 @@ async function deleteUserData(uid) {
         .where("reporterId", "==", uid).get();
     const anonymizedFeedbacks = Promise.all(myFeedbacks.docs.map((doc) =>
       writer.update(doc.ref, {
-        reporterId: ANONYMOUS_FEEDBACK_REPORTER_ID,
+        reporterId: ANONYMOUS_REPORTER_ID,
         deviceModel: FieldValue.delete(),
         androidVersion: FieldValue.delete(),
       }),
