@@ -102,6 +102,7 @@ import com.a32b.plant.presentation.core.component.ConfettiOverlay
 import com.a32b.plant.presentation.core.component.festiveConfettiParties
 import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.theme.LocalIsDarkTheme
+import com.a32b.plant.presentation.theme.deleteAccountButtonContentDark
 import androidx.compose.ui.graphics.Color
 import java.time.LocalDate
 import java.time.format.TextStyle
@@ -1363,7 +1364,9 @@ private fun RecoveryDialog(
                             StudySaveRejection.TOO_OLD.message
                         },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error
+                        // 다크 다이얼로그 배경(primaryContainer 414141) 위 error(CF6262)는 대비 약 2.71:1이라
+                        // 계정 탈퇴 버튼과 같은 다크 전용 글자색(EC928E, 약 4.41:1)을 쓴다 (#643)
+                        color = if (LocalIsDarkTheme.current) deleteAccountButtonContentDark else MaterialTheme.colorScheme.error
                     )
                 }
                 if (isLoading) {
@@ -1459,10 +1462,11 @@ fun BonusBoxOpenDialog(
 
                     Spacer(modifier = Modifier.width(20.dp))
 
+                    // 다크 다이얼로그 배경(primaryContainer 414141) 위 primary(627347)는 대비 약 1.97:1이라 진한 초록(tertiary) (#643)
                     Text(
                         text = "${count}개",
                         style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.tertiary
                     )
 
                     Spacer(modifier = Modifier.width(20.dp))
@@ -1481,7 +1485,7 @@ fun BonusBoxOpenDialog(
                     onClick = { count = maxCount },
                     enabled = count < maxCount && !isOpening
                 ) {
-                    Text("전체 선택 (MAX)", color = MaterialTheme.colorScheme.primary)
+                    Text("전체 선택 (MAX)", color = MaterialTheme.colorScheme.tertiary)
                 }
             }
         },

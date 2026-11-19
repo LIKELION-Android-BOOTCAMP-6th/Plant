@@ -19,8 +19,8 @@ import org.junit.Test
 class PlantColorSchemeTest {
 
     private val schemes = listOf(
-        "light" to (LightColorScheme to lightColorScheme()),
-        "dark" to (DarkColorScheme to darkColorScheme())
+        "light" to LightColorScheme,
+        "dark" to DarkColorScheme
     )
 
     private fun contrast(a: Color, b: Color): Double {
@@ -99,8 +99,7 @@ class PlantColorSchemeTest {
 
     @Test
     fun `사용하는 역할에 보라 계열 색이 없다`() {
-        for ((mode, pair) in schemes) {
-            val app = pair.first
+        for ((mode, app) in schemes) {
             for ((role, get) in usedRoles) {
                 assertTrue("$mode $role = ${get(app)} 가 보라 계열", !isPurple(get(app)))
             }
@@ -128,8 +127,7 @@ class PlantColorSchemeTest {
 
     @Test
     fun `글자와 배경 조합은 본문 대비 4_5 대 1 이상`() {
-        for ((mode, pair) in schemes) {
-            val s = pair.first
+        for ((mode, s) in schemes) {
             assertContrast("$mode 카드·다이얼로그 글자", s.onPrimaryContainer, s.primaryContainer, 4.5)
             // 사각형 버튼·카드(secondaryContainer) 위 기본 글자색은 메인 폰트 색과 같게.
             // 다크 F1F1F1 on 757575는 약 4.08:1로 4.5:1에 못 미치지만 #643 이전부터의 카드 색이라 이 이슈 범위 밖 (대비 검사 제외)
@@ -148,10 +146,27 @@ class PlantColorSchemeTest {
     }
 
     @Test
+    fun `강조 글자 tertiary는 다이얼로그·메뉴 배경 위에서 3 대 1 이상`() {
+        // 박스 개봉 창 개수·MAX(primaryContainer 위), 정렬 메뉴 선택 항목(surfaceContainer 위)
+        // primary는 다크 414141 위에서 약 1.97:1이라 tertiary로 바꿈 — 같은 문제가 다시 생기지 않게 확인
+        for ((mode, s) in schemes) {
+            assertContrast("$mode tertiary on primaryContainer", s.tertiary, s.primaryContainer, 3.0)
+            assertContrast("$mode tertiary on surfaceContainer", s.tertiary, s.surfaceContainer, 3.0)
+        }
+    }
+
+    @Test
+    fun `다크 다이얼로그 위 에러 글자는 error보다 대비가 높다`() {
+        // 복구 창 7일 지남 안내: 다크는 deleteAccountButtonContentDark(EC928E)
+        val bg = DarkColorScheme.primaryContainer
+        assertContrast("dark 다이얼로그 에러 글자", deleteAccountButtonContentDark, bg, 4.4)
+        assertTrue(contrast(deleteAccountButtonContentDark, bg) > contrast(DarkColorScheme.error, bg))
+    }
+
+    @Test
     fun `비활성 버튼 배경은 화면 배경과 구분된다`() {
         // 수정 전 라이트 F8F6F6 on FFFFFD는 약 1.08:1로 거의 같았음. 비활성 요소는 WCAG 대비 기준 예외라 구분 가능한 정도만 확인
-        for ((mode, pair) in schemes) {
-            val s = pair.first
+        for ((mode, s) in schemes) {
             assertContrast("$mode 비활성 버튼 배경", s.tertiaryContainer, s.background, 1.3)
         }
     }
