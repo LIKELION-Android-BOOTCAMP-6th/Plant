@@ -28,7 +28,6 @@ const {
 const {
   ATTENDANCE_STATUS,
   computeBonusBoxDeltas,
-  computeStudyReward,
   computeUnlockedProfileLevel,
   decideAttendance,
   isStaleStudying,
@@ -39,6 +38,11 @@ const {
   ANONYMOUS_REPORTER_ID,
   moveReportsAnonymously,
 } = require("./reportAnonymizer");
+// 학습 보상 지급·보정은 기준 시각을 넣어 테스트하려고 따로 뺐다 (#609)
+const {
+  grantStudyReward,
+  retryPendingStudyRewards,
+} = require("./studyReward");
 
 // For cost control, you can set the maximum number of containers that can be
 // running at the same time. This helps mitigate the impact of unexpected
@@ -134,57 +138,40 @@ const STUDY_REWARD_TRIGGER_OPTIONS = {
   retry: true,
 };
 
-// 보상 티어 표(STUDY_REWARD_TIERS)와 computeStudyReward는 calculations.js에 있다
-
-/**
- * 학습 기록 하나의 보상을 지급한다. 여러 번 실행해도 1번만 지급된다.
- * @param {string} uid
- * @param {string} potId
- * @param {string} logId
- * @return {Promise<void>}
- */
-async function grantStudyReward(uid, potId, logId) {
-  const userRef = db.collection("users").doc(uid);
-  const logRef = userRef.collection("pots").doc(potId)
-      .collection("logs").doc(logId);
-
-  await db.runTransaction(async (transaction) => {
-    // 트랜잭션은 읽기를 모두 마친 뒤 쓴다
-    const [logSnapshot, userSnapshot] = await Promise.all([
-      transaction.get(logRef),
-      transaction.get(userRef),
-    ]);
-    if (!logSnapshot.exists) {
-      logger.info("학습 기록이 없어 보상 지급을 건너뜀", {uid, potId, logId});
-      return;
-    }
-    // 이미 처리됐거나(granted/none) 이 기능 이전에 만들어진 기록(값 없음)은 지급하지 않는다
-    if (logSnapshot.get("rewardStatus") !== "pending") return;
-    if (!userSnapshot.exists) {
-      logger.info("유저 문서가 없어 보상 지급을 건너뜀", {uid, potId, logId});
-      return;
-    }
-
-    const reward = computeStudyReward(logSnapshot.get("studyingTime"));
-    if (!reward) {
-      transaction.update(logRef, {rewardStatus: "none"});
-      return;
-    }
-
-    const itemUpdates = {"item.box": FieldValue.increment(reward.box)};
-    reward.items.forEach((item) => {
-      itemUpdates[`item.${item}`] = FieldValue.increment(1);
-    });
-    transaction.update(userRef, itemUpdates);
-    transaction.update(logRef, {rewardStatus: "granted", reward});
-  });
-}
+// 보상 티어 표(STUDY_REWARD_TIERS)와 computeStudyReward는 calculations.js에,
+// 지급 함수(grantStudyReward)는 studyReward.js에 있다
 
 exports.grantStudyReward = onDocumentCreated(
     STUDY_REWARD_TRIGGER_OPTIONS,
     (event) => grantStudyReward(
-        event.params.uid, event.params.potId, event.params.logId,
+        db, event.params.uid, event.params.potId, event.params.logId,
     ),
+);
+
+// ---------------------------------------------------------------------------
+// 지급 실패로 남은 학습 보상(pending) 보정 (#609)
+// ---------------------------------------------------------------------------
+// 위 트리거가 재시도 기간(24시간)이 지나도 실패해 pending으로 남은 기록을 하루 1번 다시 지급한다.
+// - 서버 생성 시각이 25시간보다 오래된 기록만 처리 → 트리거 재시도와 겹치지 않는다.
+//   겹쳐 실행돼도 grantStudyReward의 pending 확인으로 1번만 지급된다
+// - 정상이라면 매번 0건. 처리 결과를 매번 로그로 남겨 functions:log로 보정 여부를 확인한다
+// - 기준 시간·상한·실패 격리는 studyReward.js의 retryPendingStudyRewards에 있다
+// - 실패한 기록은 다음 날 실행에서 다시 처리하므로 예약 함수 자체의 재시도는 두지 않는다
+const PENDING_REWARD_RETRY_OPTIONS = {
+  // 사용자가 적은 새벽에 실행 (KST)
+  schedule: "every day 04:00",
+  timeZone: "Asia/Seoul",
+  // 한 번에 최대 500건 지급 + 5000건 훑기. 기본 60초보다 넉넉하게 둔다
+  timeoutSeconds: 300,
+};
+
+exports.retryPendingStudyRewards = onSchedule(
+    PENDING_REWARD_RETRY_OPTIONS,
+    async () => {
+      const result = await retryPendingStudyRewards(db, Date.now());
+      // 0건이 정상. 0건도 남겨 함수가 실제로 실행됐는지 확인할 수 있게 한다
+      logger.info("pending 학습 보상 보정", result);
+    },
 );
 
 // ---------------------------------------------------------------------------

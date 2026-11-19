@@ -9,7 +9,8 @@ import com.a32b.plant.domain.model.StudyReward
 import com.a32b.plant.domain.model.StudyRewardStatus
 import com.a32b.plant.domain.type.ItemType
 
-// 서버 트리거(functions/index.js grantStudyReward)가 쓰는 rewardStatus 값
+// 서버 지급 함수(functions/studyReward.js grantStudyReward)가 쓰는 rewardStatus 값
+// (기록 생성 트리거와 지급 실패 보정 예약 함수가 함께 쓴다)
 private const val REWARD_STATUS_PENDING = "pending"
 private const val REWARD_STATUS_GRANTED = "granted"
 

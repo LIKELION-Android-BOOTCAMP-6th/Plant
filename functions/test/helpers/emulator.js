@@ -43,13 +43,31 @@ function uniqueId(prefix) {
   return `${prefix}-${randomUUID().slice(0, 8)}`;
 }
 
+// 함수의 트리거가 붙지 않는 DB (#609)
+// index.js의 Firestore 트리거는 (default) DB에만 붙는다 → 이 DB에 쓴 문서로는 트리거가 실행되지 않는다.
+// 트리거가 바로 처리해 버리면 만들 수 없는 상태(지급 실패로 남은 pending 기록 등)를 만들 때 쓴다.
+// 대상 함수는 db를 인자로 받아야 한다 (studyReward.js 등)
+// 함수 에뮬레이터의 트리거 끄기·켜기(허브 API)는 쓰지 않는다: 켤 때 함수 코드를 다시 읽는데,
+// Windows PC에서 그 순간 firebase CLI가 오류 메시지 없이 종료되는 일이 있었다
+// (2026-11-20 Windows PC, 끄고 켜는 테스트 파일을 4번 실행해 2번 종료 → 남은 에뮬레이터가 포트를 막음)
+const TRIGGER_FREE_DATABASE_ID = "trigger-free";
+
+/**
+ * 트리거가 붙지 않는 테스트용 DB를 돌려준다.
+ * @return {FirebaseFirestore.Firestore}
+ */
+function getTriggerFreeDb() {
+  return getFirestore(app, TRIGGER_FREE_DATABASE_ID);
+}
+
 /**
  * Firestore 에뮬레이터의 모든 문서를 지운다.
+ * @param {string} [databaseId] 지울 DB. 기본은 (default)
  * @return {Promise<void>}
  */
-async function clearFirestore() {
+async function clearFirestore(databaseId = "(default)") {
   const url = `http://${FIRESTORE_HOST}/emulator/v1/projects/${PROJECT_ID}` +
-    "/databases/(default)/documents";
+    `/databases/${databaseId}/documents`;
   const response = await fetch(url, {method: "DELETE"});
   if (!response.ok) {
     throw new Error(`Firestore 초기화 실패: ${response.status}`);
@@ -223,11 +241,13 @@ async function callFunction(name, data = {}, {uid, idToken} = {}) {
 
 module.exports = {
   PROJECT_ID,
+  TRIGGER_FREE_DATABASE_ID,
   db,
   auth,
   uniqueId,
   clearFirestore,
   clearAuth,
+  getTriggerFreeDb,
   waitFor,
   waitForDoc,
   signIn,

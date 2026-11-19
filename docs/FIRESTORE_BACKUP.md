@@ -243,7 +243,7 @@ gcloud storage rm --recursive gs://plant-82b09-restore-tmp
 - 콘솔에서 쓰는 값은 보안 규칙을 거치지 않는다. 규칙이 쓰는 표시 필드(`lastDeletedPotId`·`lastDeletedLogId` 등)는 바꾸지 않아도 된다
 
 - 직접 쓰면 가져오기와 달리 트리거가 실행된다 (`functions/index.js` 기준):
-  - `logs` 생성 → `grantStudyReward`: 보상은 `rewardStatus`가 `"pending"`일 때만 지급된다 (`functions/index.js`의 `grantStudyReward`). 이미 처리된 기록(`"granted"`·`"none"`)은 다시 주지 않고 끝난다. 원본이 `"pending"`이었다면 그때 지급된다
+  - `logs` 생성 → `grantStudyReward`: 보상은 `rewardStatus`가 `"pending"`일 때만 지급된다 (`functions/studyReward.js`의 `grantStudyReward`). 이미 처리된 기록(`"granted"`·`"none"`)은 다시 주지 않고 끝난다. 원본이 `"pending"`이었다면 그때 지급된다
   - 댓글 생성 → `syncCommentCountOnCreate`: 실제 댓글 수를 다시 세어 게시글 `commentCount`를 맞춘다
   - 화분 생성, `users` 수정에 붙은 트리거는 없다. 화분 수정 트리거(`unlockProfileLevelOnPotLevelUp`)는 화분을 고칠 때마다 실행되지만, `potLevel`이 그대로면 아무것도 쓰지 않고 끝난다. 그래서 `potTotalStudyingTime`만 고치면 영향이 없다
 - 문서가 많으면 콘솔로 옮기기 어렵다. 그때는 복원 DB에서 해당 문서만 읽어 `(default)`에 쓰는 Admin SDK 스크립트가 필요하다 (아직 만들지 않음)
