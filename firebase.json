@@ -22,6 +22,16 @@
       "source": "functions"
     }
   ],
+  "hosting": {
+    "public": "hosting/public",
+    "ignore": [
+      "firebase.json",
+      "**/.*"
+    ],
+    "predeploy": [
+      "node \"$PROJECT_DIR/hosting/build-legal.mjs\""
+    ]
+  },
   "emulators": {
     "auth": {
       "port": 9099
