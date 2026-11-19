@@ -35,6 +35,7 @@ interface CommunityRemoteDataSource {
     // 등록·수정 쓰기는 기다리지 않고 Task를 그대로 돌려준다 (기다리는 시간은 Repository가 정함, #641)
     fun savePost(post: PostDto, activity: CommunityActivityDto): PostCreateWrite
     fun updatePost(isShared: Boolean, postId: String, title: String, content: String?, tag: TagDto?): Task<Void>
+    /** 게시글 activity의 제목을 게시글 문서의 현재 제목으로 맞춘다. [title]은 문서에서 제목을 읽지 못했을 때만 쓴다 */
     suspend fun updateActivityTitle(postId: String, title: String)
     suspend fun deletePost(postId: String): List<String>
 

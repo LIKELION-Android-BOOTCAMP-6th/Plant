@@ -246,7 +246,11 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
         // 다시 연결된 직후에는 게시글 쓰기 응답이 먼저 오고 아직 오프라인 판정일 수 있어, activities 조회는 기기 캐시만 본다.
         // 캐시에 activity가 없으면 빈 결과로 끝나 제목이 바뀌지 않으므로 조회 대신 문서 ID를 쓴다.
         // 게시글 문서는 방금 수정해 기기에 있으므로 이 읽기는 오프라인 판정이어도 결과가 나온다
-        val activityId = db.collection("posts").document(postId).get().await().getString("activityId")
+        val postSnapshot = db.collection("posts").document(postId).get().await()
+        val activityId = postSnapshot.getString("activityId")
+        // 제목도 넘겨받은 값보다 문서 값을 쓴다. 응답 지연 중 연달아 수정하면 이 함수가 수정마다 따로 실행되고
+        // 실행 순서가 뒤바뀔 수 있는데, 문서 값(아직 보내지 않은 내 쓰기 포함)을 쓰면 어느 쪽이 나중에 끝나도 최신 제목으로 맞춰진다
+        val latestTitle = postSnapshot.getString("title") ?: title
         val activityRef = if (!activityId.isNullOrEmpty()) {
             db.collection("activities").document(activityId)
         } else {
@@ -259,7 +263,7 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
                 .documents
                 .firstOrNull()?.reference
         }
-        activityRef?.update("title", title)?.await()
+        activityRef?.update("title", latestTitle)?.await()
     }
 
     override fun observeActivity(uid: String, selected: String): Flow<List<CommunityActivityDto>> = callbackFlow {

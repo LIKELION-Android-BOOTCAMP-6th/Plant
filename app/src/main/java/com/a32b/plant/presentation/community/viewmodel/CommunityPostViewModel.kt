@@ -263,17 +263,12 @@ class CommunityPostViewModel @Inject constructor(
                     // Pending이어도 글은 대기열에 있어 연결되면 등록되므로 쿨다운을 기록한다
                     postCooldownManager.recordPost(uid)
                     postId = created.postId
-                    when (created.saveResult) {
-                        SaveResult.Saved -> {
-                            _eventChannel.send(CommunityPostEvent.ShowToast("성공적으로 등록되었습니다!"))
-                            _eventChannel.send(CommunityPostEvent.NavigateToDetail(created.postId))
-                        }
-                        // 다시 누르면 새 문서 ID로 글이 하나 더 생기므로 화면을 나간다 (#641)
-                        SaveResult.Pending -> {
-                            _eventChannel.send(CommunityPostEvent.ShowToast(CommunityConstants.WRITE_PENDING_MESSAGE))
-                            _eventChannel.send(CommunityPostEvent.NavigateBack)
-                        }
-                    }
+                    // Pending이어도 상세 화면으로 이동한다 (#641). 이 화면에 남으면 다시 눌렀을 때 새 문서 ID로 글이 하나 더 생긴다.
+                    // 목록으로 돌아가면 목록은 새 글을 받는 경로가 없어 글이 보이지 않고, 사라진 줄 알고 다시 쓰면 연결될 때 글이 2개가 된다.
+                    // 상세 화면은 기기에 반영된 새 글을 읽는다
+                    val message = if (created.saveResult == SaveResult.Saved) "성공적으로 등록되었습니다!" else CommunityConstants.WRITE_PENDING_MESSAGE
+                    _eventChannel.send(CommunityPostEvent.ShowToast(message))
+                    _eventChannel.send(CommunityPostEvent.NavigateToDetail(created.postId))
                 }.onFailure { e ->
                     Log.e("CommunityPostVM", "게시글 등록 실패: ${e.message}")
                     _eventChannel.send(CommunityPostEvent.ShowToast("등록에 실패했습니다."))
