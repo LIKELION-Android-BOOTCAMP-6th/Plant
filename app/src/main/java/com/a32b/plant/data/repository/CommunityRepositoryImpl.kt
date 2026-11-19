@@ -2,6 +2,8 @@ package com.a32b.plant.data.repository
 
 import android.util.Log
 import com.a32b.plant.core.util.safeRunCatching
+import com.a32b.plant.data.firestore.WriteResult
+import com.a32b.plant.data.firestore.awaitServerWrite
 import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.mapper.toDto
 import com.a32b.plant.data.source.remote.community.CommunityRemoteDataSource
@@ -10,7 +12,9 @@ import com.a32b.plant.domain.error.COMMENT_ALREADY_DELETED_MESSAGE
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.domain.model.Post
+import com.a32b.plant.domain.model.PostCreateResult
 import com.a32b.plant.domain.model.PostPage
+import com.a32b.plant.domain.model.SaveResult
 import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.CommunityRepository
 import com.a32b.plant.domain.repository.UserRepository
@@ -18,18 +22,26 @@ import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.type.ActivityType
 import com.a32b.plant.core.extension.toLong
 import com.a32b.plant.core.extension.toTimestamp
+import com.a32b.plant.di.qualifier.ApplicationScope
+import com.google.android.gms.tasks.Task
 import com.google.firebase.firestore.FirebaseFirestoreException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.seconds
 
 @Singleton
 class CommunityRepositoryImpl @Inject constructor(
     private val communityRemoteDataSource: CommunityRemoteDataSource,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    // 화면을 나가도 이어서 해야 하는 후속 쓰기용 (게시글 수정 뒤 activity 제목 수정, #641)
+    @ApplicationScope private val applicationScope: CoroutineScope
 ): CommunityRepository {
 
     private val currentUid: String get() = userRepository.currentUser.value?.uid ?: ""
@@ -99,28 +111,58 @@ class CommunityRepositoryImpl @Inject constructor(
         }
     )
 
-    override suspend fun savePost(post: Post, activity: CommunityActivity): Result<String> = safeRunCatching {
-        communityRemoteDataSource.savePost(post.toDto(), activity.toDto())
-    }.fold(
-        onSuccess = { Result.Success(it) },
-        onFailure = { e ->
+    override suspend fun savePost(post: Post, activity: CommunityActivity): Result<PostCreateResult> {
+        val creation = safeRunCatching {
+            communityRemoteDataSource.savePost(post.toDto(), activity.toDto())
+        }.getOrElse { e ->
             Log.e("Community", "게시글 등록 실패", e)
-            Result.Failure(handleError(e, "게시글 등록에 실패했습니다.", isWrite = true))
+            return Result.Failure(handleError(e, SAVE_POST_ERROR_MESSAGE, isWrite = true))
         }
-    )
 
-    override suspend fun updatePost(isShared: Boolean, postId: String, title: String, content: String?, tag: Tag?): Result<Unit> {
-        safeRunCatching {
+        // 쓰기는 이미 대기열에 올라갔다. 시간 안에 응답이 없어도(Pending) 연결되면 전송되므로 다시 보내지 않는다 (#641)
+        return when (val write = creation.write.awaitServerWrite(WRITE_TIMEOUT)) {
+            WriteResult.Confirmed -> Result.Success(PostCreateResult(creation.postId, SaveResult.Saved))
+            WriteResult.Pending -> Result.Success(PostCreateResult(creation.postId, SaveResult.Pending))
+            is WriteResult.Rejected -> {
+                Log.e("Community", "게시글 등록 거부", write.error)
+                Result.Failure(handleError(write.error, SAVE_POST_ERROR_MESSAGE, isWrite = true))
+            }
+        }
+    }
+
+    override suspend fun updatePost(isShared: Boolean, postId: String, title: String, content: String?, tag: Tag?): Result<SaveResult> {
+        val write = safeRunCatching {
             communityRemoteDataSource.updatePost(isShared, postId, title, content, tag?.toDto())
-        }.onFailure { e ->
+        }.getOrElse { e ->
             Log.e("Community", "게시글 수정 실패", e)
-            return Result.Failure(handleError(e, "게시글 수정에 실패했습니다.", isWrite = true))
+            return Result.Failure(handleError(e, UPDATE_POST_ERROR_MESSAGE, isWrite = true))
         }
 
-        safeRunCatching { communityRemoteDataSource.updateActivityTitle(postId, title) }
-            .onFailure { Log.e("Community", "activity title 업데이트 실패 (게시글은 수정됨): postId=$postId", it) }
+        // 응답을 기다린 결과(Pending 포함)와 상관없이 activity 제목도 바뀌어야 하므로, 게시글 쓰기가 서버에 반영된 뒤 앱 범위에서 이어서 수정한다
+        updateActivityTitleAfter(write, postId, title)
 
-        return Result.Success(Unit)
+        return when (val result = write.awaitServerWrite(WRITE_TIMEOUT)) {
+            WriteResult.Confirmed -> Result.Success(SaveResult.Saved)
+            WriteResult.Pending -> Result.Success(SaveResult.Pending)
+            is WriteResult.Rejected -> {
+                Log.e("Community", "게시글 수정 거부", result.error)
+                Result.Failure(handleError(result.error, UPDATE_POST_ERROR_MESSAGE, isWrite = true))
+            }
+        }
+    }
+
+    /**
+     * [postWrite]가 서버에 반영되면 게시글 activity의 제목을 바꾼다.
+     * 화면 코루틴이 아니라 앱 범위에서 기다리므로 Pending으로 화면을 나가도 연결되면 이어서 실행된다.
+     * 게시글 수정이 거부되면 실행하지 않는다. 연결 전에 앱 프로세스가 종료되면 실행되지 않는다 (게시글 수정은 대기열에 남아 반영됨).
+     */
+    private fun updateActivityTitleAfter(postWrite: Task<Void>, postId: String, title: String) {
+        applicationScope.launch {
+            safeRunCatching { postWrite.await() }
+                .onFailure { return@launch }
+            safeRunCatching { communityRemoteDataSource.updateActivityTitle(postId, title) }
+                .onFailure { Log.e("Community", "activity title 업데이트 실패 (게시글은 수정됨): postId=$postId", it) }
+        }
     }
 
     override suspend fun deletePost(postId: String, activityId: String): Result<Unit> {
@@ -251,44 +293,53 @@ class CommunityRepositoryImpl @Inject constructor(
         }
     )
 
-    override suspend fun updateComment(postId: String, commentId: String, newContent: String, activityId: String): Result<Unit> {
+    override suspend fun updateComment(postId: String, commentId: String, newContent: String, activityId: String): Result<SaveResult> {
         val hasActivityId = activityId.isNotBlank()
         // 모든 댓글은 activityId를 가진다는 전제 — 깨지면 '내 활동' 문구가 갱신되지 않으므로 원인 추적용으로 남김
         if (!hasActivityId) Log.w("Community", "activityId가 비어 있어 댓글 본문만 수정: commentId=$commentId")
 
         // 주의: 아래 호출 전에 suspend 지점을 추가하면 화면 이탈(코루틴 취소) 시 batch가 SDK에 적재되지 못한다
-        var result = safeRunCatching {
-            communityRemoteDataSource.updateComment(postId, commentId, newContent, activityId.takeIf { hasActivityId })
-        }
+        var write = sendCommentUpdate(postId, commentId, newContent, activityId.takeIf { hasActivityId })
         // 재시도 전에 이미 댓글이 존재함을 확인했다면 실패 후 같은 확인을 반복하지 않기 위한 표시
         var commentExistenceChecked = false
 
         // activity 문서가 이미 없으면 batch 전체가 실패한다. 보안 규칙이 resource.data를 참조하므로
         // NOT_FOUND가 아니라 PERMISSION_DENIED로 거절될 수 있어 둘 다 보정 대상 — 댓글 본문만이라도 수정되도록 재시도
         // (진짜 권한 없음이면 재시도도 같은 이유로 실패해 그대로 에러가 반환됨)
-        // 한계: 오프라인에서 저장하고 화면을 이탈한 뒤 연결이 복구되면 서버가 batch를 거절하는데,
-        //       이때는 코루틴이 이미 사라져 이 재시도가 실행되지 않아 수정이 반영되지 않는다 (activity 문서가 없는 댓글에 한함)
-        if (hasActivityId && result.exceptionOrNull().isMissingOrDenied()) {
+        // 한계: 재시도는 서버의 거절 응답을 받아야 실행된다. 제한 시간 안에 응답이 없어(Pending) 그대로 끝났거나
+        //       저장 후 화면을 이탈한 뒤 연결이 복구되어 서버가 batch를 거절하면 재시도가 실행되지 않아
+        //       수정이 반영되지 않는다 (activity 문서가 없는 댓글에 한함)
+        if (hasActivityId && (write as? WriteResult.Rejected)?.error.isMissingOrDenied()) {
             // 댓글 자체가 이미 지워진 경우에도 같은 코드로 거절되므로, 재시도 전에 구분 (읽기는 규칙상 문서가 없어도 허용됨)
             if (isCommentGone(postId, commentId)) return commentGoneFailure(commentId)
             commentExistenceChecked = true
 
             Log.w("Community", "수정할 activity가 없어 댓글 본문만 수정: commentId=$commentId, activityId=$activityId")
-            result = safeRunCatching {
-                communityRemoteDataSource.updateComment(postId, commentId, newContent, null)
-            }
+            write = sendCommentUpdate(postId, commentId, newContent, null)
         }
 
-        result.onFailure { e ->
-            if (!commentExistenceChecked && e.isMissingOrDenied() && isCommentGone(postId, commentId)) {
-                return commentGoneFailure(commentId)
+        return when (write) {
+            WriteResult.Confirmed -> Result.Success(SaveResult.Saved)
+            WriteResult.Pending -> Result.Success(SaveResult.Pending)
+            is WriteResult.Rejected -> {
+                val e = write.error
+                if (!commentExistenceChecked && e.isMissingOrDenied() && isCommentGone(postId, commentId)) {
+                    return commentGoneFailure(commentId)
+                }
+                Log.e("Community", "댓글 수정 실패", e)
+                Result.Failure(handleError(e, "댓글 수정에 실패했습니다.", isWrite = true))
             }
-            Log.e("Community", "댓글 수정 실패", e)
-            return Result.Failure(handleError(e, "댓글 수정에 실패했습니다.", isWrite = true))
         }
-
-        return Result.Success(Unit)
     }
+
+    // 쓰기를 대기열에 올린 뒤 서버 응답을 제한 시간만큼만 기다린다. 쓰기를 만드는 중 바로 실패하면 거절과 같이 처리
+    private suspend fun sendCommentUpdate(postId: String, commentId: String, newContent: String, activityId: String?): WriteResult =
+        safeRunCatching {
+            communityRemoteDataSource.updateComment(postId, commentId, newContent, activityId)
+        }.fold(
+            onSuccess = { it.awaitServerWrite(WRITE_TIMEOUT) },
+            onFailure = { WriteResult.Rejected(it) }
+        )
 
     // 존재 여부 확인 자체가 실패하면(네트워크 등) "사라졌다"고 단정하지 않고 false로 둠
     private suspend fun isCommentGone(postId: String, commentId: String): Boolean =
@@ -398,5 +449,12 @@ class CommunityRepositoryImpl @Inject constructor(
         }
         is IllegalArgumentException -> AppError.Unknown()
         else -> if (isWrite) AppError.Upload() else AppError.Custom(defaultMessage)
+    }
+
+    companion object {
+        /** 게시글 등록·수정, 댓글 수정 제한 시간 — 화분 쓰기(PotRepositoryImpl.WRITE_TIMEOUT)와 같은 5초 (#641) */
+        private val WRITE_TIMEOUT = 5.seconds
+        private const val SAVE_POST_ERROR_MESSAGE = "게시글 등록에 실패했습니다."
+        private const val UPDATE_POST_ERROR_MESSAGE = "게시글 수정에 실패했습니다."
     }
 }

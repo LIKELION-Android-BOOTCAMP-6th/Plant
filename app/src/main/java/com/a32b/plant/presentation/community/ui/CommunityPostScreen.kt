@@ -35,16 +35,20 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.toRoute
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.presentation.community.CommunityConstants
 import com.a32b.plant.presentation.community.viewmodel.CommunityPostEvent
 import com.a32b.plant.presentation.community.viewmodel.CommunityPostViewModel
 import com.a32b.plant.presentation.core.component.ConfirmDialog
@@ -66,6 +70,7 @@ fun CommunityPostScreen(
     val studyLogIds = args?.studyLogIds
 
     val uiState by viewModel.uiState.collectAsState()
+    val isOnline by viewModel.isOnline.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.event.collect { event ->
@@ -101,6 +106,7 @@ fun CommunityPostScreen(
                 PostTopBar(
                     isEditMode = postId != null,
                     isSubmitting = uiState.isSubmitting,
+                    isOffline = !isOnline,
                     onBackClick = {
                         viewModel.onIsDismissDialogShowChange()
                     },
@@ -256,9 +262,12 @@ fun CommunityPostScreen(
 fun PostTopBar(
     isEditMode: Boolean,
     isSubmitting: Boolean = false,
+    // 오프라인: 누르면 ViewModel이 안내 토스트를 띄우므로 클릭은 막지 않고 alpha로만 비활성처럼 표시 (#641)
+    isOffline: Boolean = false,
     onBackClick: () -> Unit,
     onRegisterClick: () -> Unit
 ) {
+    val isOfflineLooking = isOffline && !isSubmitting
     CenterAlignedTopAppBar(
         title = {
             Text(
@@ -279,6 +288,8 @@ fun PostTopBar(
             Surface(
                 modifier = Modifier
                     .padding(end = 12.dp)
+                    .alpha(if (isOfflineLooking) CommunityConstants.OFFLINE_BUTTON_ALPHA else 1f)
+                    .semantics { if (isOfflineLooking) stateDescription = CommunityConstants.OFFLINE_STATE_DESCRIPTION }
                     .clickable(enabled = !isSubmitting) { onRegisterClick() },
                 shape = RoundedCornerShape(4.dp),
                 color = if (isSubmitting) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.primary

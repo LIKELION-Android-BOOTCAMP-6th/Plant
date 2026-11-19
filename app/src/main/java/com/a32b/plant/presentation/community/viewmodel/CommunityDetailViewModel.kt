@@ -14,7 +14,9 @@ import com.a32b.plant.domain.error.COMMENT_ALREADY_DELETED_MESSAGE
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.CommentUser
 import com.a32b.plant.domain.model.Post
+import com.a32b.plant.domain.model.SaveResult
 import com.a32b.plant.domain.model.StudyLog
+import com.a32b.plant.domain.network.NetworkMonitor
 import com.a32b.plant.domain.repository.CommunityRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
@@ -36,9 +38,11 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -91,6 +95,7 @@ class CommunityDetailViewModel @Inject constructor(
     private val createCommunityReportUseCase: CreateCommunityReportUseCase,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     private val postUpdateNotifier: PostUpdateNotifier,
+    private val networkMonitor: NetworkMonitor,
     savedStateHandle: SavedStateHandle
 ) : BaseViewModel() {
 
@@ -108,6 +113,10 @@ class CommunityDetailViewModel @Inject constructor(
 
     private val _eventChannel = Channel<CommunityDetailEvent>(Channel.BUFFERED)
     val event = _eventChannel.receiveAsFlow()
+
+    // 커뮤니티 쓰기는 온라인 전용 (#641). 오프라인이면 댓글 등록·수정 저장 버튼을 비활성처럼 표시한다
+    val isOnline: StateFlow<Boolean> = networkMonitor.observeIsOnline()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), networkMonitor.isOnline())
 
     val postId: String = savedStateHandle.get<String>("postId") ?: ""
     private val _showDeleteDialog = mutableStateOf(false)
@@ -299,6 +308,11 @@ class CommunityDetailViewModel @Inject constructor(
         val state = _uiState.value
         if (state.comment.isBlank()) {
             commentBlankToastJob = sendDebouncedToast(commentBlankToastJob, BLANK_COMMENT_MESSAGE)
+            return
+        }
+        // 오프라인이면 쓰기를 보내지 않고 입력 내용을 그대로 둔다 (#641)
+        if (!networkMonitor.isOnline()) {
+            sendToast(CommunityConstants.OFFLINE_WRITE_MESSAGE)
             return
         }
 
@@ -592,6 +606,11 @@ class CommunityDetailViewModel @Inject constructor(
             editBlankToastJob = sendDebouncedToast(editBlankToastJob, BLANK_COMMENT_MESSAGE)
             return
         }
+        // 오프라인이면 쓰기를 보내지 않고 수정 모드·입력 내용을 그대로 둔다 (#641)
+        if (!networkMonitor.isOnline()) {
+            sendToast(CommunityConstants.OFFLINE_WRITE_MESSAGE)
+            return
+        }
 
         // 수정 중 다른 곳에서 삭제돼 목록에서 사라진 댓글 — 저장해도 실패하므로 수정 모드를 닫고 목록을 갱신
         val comment = state.commentList.firstOrNull { it.commentId == commentId }
@@ -610,9 +629,16 @@ class CommunityDetailViewModel @Inject constructor(
             // updateComment()가 safeRunCatching으로 감싸져 항상 Result를 반환한다는 전제로,
             // 아래 editingSubmittingCommentIds 제거가 항상 실행됨. 이 함수가 예외를 던지도록 바뀌면
             // commentId가 Set에 영구히 남아 해당 댓글의 저장/취소 버튼이 계속 비활성 상태로 고정됨
-            withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
-                repository.updateComment(postId, commentId, state.editingCommentText, comment.activityId)
-            }
+            // 서버 응답은 제한 시간만큼만 기다린다 — 시간이 지나면 Pending으로 끝나 버튼이 풀린다 (#641)
+            val newContent = state.editingCommentText
+            repository.updateComment(postId, commentId, newContent, comment.activityId)
+                .onSuccess { saveResult ->
+                    // 기기에는 이미 반영됐으므로 아래 refresh() 응답을 기다리지 않고 목록의 내용을 먼저 바꾼다
+                    _uiState.update {
+                        it.copy(commentList = it.commentList.map { c -> if (c.commentId == commentId) c.copy(content = newContent) else c })
+                    }
+                    if (saveResult == SaveResult.Pending) sendToast(CommunityConstants.WRITE_PENDING_MESSAGE)
+                }
                 .onFailure { e ->
                     when (e) {
                         is AppError.UnknownUser -> ensureCurrentUserUseCase()

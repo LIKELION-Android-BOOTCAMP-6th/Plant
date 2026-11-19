@@ -4,12 +4,12 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
-import com.a32b.plant.core.util.NETWORK_SLOW_MESSAGE
-import com.a32b.plant.core.util.withSlowNotice
 import com.a32b.plant.domain.community.PostUpdate
 import com.a32b.plant.domain.community.PostUpdateNotifier
+import com.a32b.plant.domain.model.SaveResult
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.model.Tag
+import com.a32b.plant.domain.network.NetworkMonitor
 import com.a32b.plant.domain.repository.CommunityRepository
 import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.result.onFailure
@@ -18,12 +18,16 @@ import com.a32b.plant.domain.usecase.community.CreatePostUseCase
 import com.a32b.plant.domain.service.PostCooldownManager
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import com.a32b.plant.domain.usecase.studyLog.GetSelectedStudyLogUseCase
+import com.a32b.plant.presentation.community.CommunityConstants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -56,6 +60,7 @@ class CommunityPostViewModel @Inject constructor(
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     private val getSelectedStudyLogUseCase: GetSelectedStudyLogUseCase,
     private val postUpdateNotifier: PostUpdateNotifier,
+    private val networkMonitor: NetworkMonitor,
     savedStateHandle: SavedStateHandle,
 ) : BaseViewModel() {
 
@@ -64,6 +69,10 @@ class CommunityPostViewModel @Inject constructor(
 
     private val _eventChannel = Channel<CommunityPostEvent>(Channel.BUFFERED)
     val event = _eventChannel.receiveAsFlow()
+
+    // 커뮤니티 쓰기는 온라인 전용 (#641). 오프라인이면 등록·수정 버튼을 비활성처럼 표시한다
+    val isOnline: StateFlow<Boolean> = networkMonitor.observeIsOnline()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), networkMonitor.isOnline())
 
     private var postId: String? = savedStateHandle["postId"]
     private val potId: String? = savedStateHandle["potId"]
@@ -182,6 +191,11 @@ class CommunityPostViewModel @Inject constructor(
 
     fun savePost() {
         if (_uiState.value.isSubmitting) return
+        // 오프라인이면 쓰기를 보내지 않는다 — 대기열에 남은 쓰기는 화면을 나가도 연결되면 반영돼 사용자가 결과를 알 수 없음 (#641)
+        if (!networkMonitor.isOnline()) {
+            sendToast(CommunityConstants.OFFLINE_WRITE_MESSAGE)
+            return
+        }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true) }
@@ -193,16 +207,15 @@ class CommunityPostViewModel @Inject constructor(
             }
 
             if (postId != null) {
-                withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
-                    repository.updatePost(
-                        isShared = isShared,
-                        postId = postId!!,
-                        title = _uiState.value.title,
-                        content = if (isShared) _uiState.value.extraContent else _uiState.value.content,
-                        tag = if (isShared) null else selectedTag
-                    )
-                }.onSuccess {
+                repository.updatePost(
+                    isShared = isShared,
+                    postId = postId!!,
+                    title = _uiState.value.title,
+                    content = if (isShared) _uiState.value.extraContent else _uiState.value.content,
+                    tag = if (isShared) null else selectedTag
+                ).onSuccess { saveResult ->
                     // 목록 화면 복귀 시 서버 재조회 없이 변경된 제목/내용/태그가 즉시 반영되도록 알림
+                    // Pending이어도 기기에는 이미 반영됐고 연결되면 전송되므로 똑같이 알린다
                     postUpdateNotifier.notifyPostUpdated(
                         PostUpdate(
                             postId = postId!!,
@@ -212,7 +225,11 @@ class CommunityPostViewModel @Inject constructor(
                             updatedAt = System.currentTimeMillis()
                         )
                     )
-                    _eventChannel.send(CommunityPostEvent.ShowToast("수정되었습니다!"))
+                    // Pending이어도 상세 화면으로 이동한다 (#641). 화면에 남겨 두면 뒤로가기 시 "작성된 게시글은 저장되지 않습니다"
+                    // 다이얼로그가 뜨고, 이전 상세 화면은 수정 전 제목을 보여 줘 수정이 사라진 것처럼 보인다.
+                    // 새로 여는 상세 화면은 기기에 반영된 수정 내용을 읽는다
+                    val message = if (saveResult == SaveResult.Saved) "수정되었습니다!" else CommunityConstants.WRITE_PENDING_MESSAGE
+                    _eventChannel.send(CommunityPostEvent.ShowToast(message))
                     _eventChannel.send(CommunityPostEvent.NavigateToDetail(postId!!))
                 }.onFailure { e ->
                     Log.e("CommunityPostVM", "게시글 수정 실패: ${e.message}")
@@ -236,19 +253,27 @@ class CommunityPostViewModel @Inject constructor(
                     return@launch
                 }
 
-                withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
-                    createPostUseCase(
-                        isShared = isShared,
-                        title = _uiState.value.title,
-                        content = if (isShared) _uiState.value.extraContent else _uiState.value.content,
-                        studyLogs = _uiState.value.studyLogs,
-                        tag = selectedTag
-                    )
-                }.onSuccess { newPostId ->
+                createPostUseCase(
+                    isShared = isShared,
+                    title = _uiState.value.title,
+                    content = if (isShared) _uiState.value.extraContent else _uiState.value.content,
+                    studyLogs = _uiState.value.studyLogs,
+                    tag = selectedTag
+                ).onSuccess { created ->
+                    // Pending이어도 글은 대기열에 있어 연결되면 등록되므로 쿨다운을 기록한다
                     postCooldownManager.recordPost(uid)
-                    postId = newPostId
-                    _eventChannel.send(CommunityPostEvent.ShowToast("성공적으로 등록되었습니다!"))
-                    _eventChannel.send(CommunityPostEvent.NavigateToDetail(newPostId))
+                    postId = created.postId
+                    when (created.saveResult) {
+                        SaveResult.Saved -> {
+                            _eventChannel.send(CommunityPostEvent.ShowToast("성공적으로 등록되었습니다!"))
+                            _eventChannel.send(CommunityPostEvent.NavigateToDetail(created.postId))
+                        }
+                        // 다시 누르면 새 문서 ID로 글이 하나 더 생기므로 화면을 나간다 (#641)
+                        SaveResult.Pending -> {
+                            _eventChannel.send(CommunityPostEvent.ShowToast(CommunityConstants.WRITE_PENDING_MESSAGE))
+                            _eventChannel.send(CommunityPostEvent.NavigateBack)
+                        }
+                    }
                 }.onFailure { e ->
                     Log.e("CommunityPostVM", "게시글 등록 실패: ${e.message}")
                     _eventChannel.send(CommunityPostEvent.ShowToast("등록에 실패했습니다."))
