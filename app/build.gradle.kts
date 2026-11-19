@@ -55,6 +55,10 @@ android {
         versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Crashlytics 수집 기본값은 끔. release에서만 켠다 (#622). 값은 AndroidManifest의 meta-data로 들어간다
+        // 빌드 타입마다 값이 있어야 매니페스트 병합이 되므로, 새 빌드 타입이 생겨도 깨지지 않게 기본값을 여기에 둔다
+        manifestPlaceholders["crashlyticsCollectionEnabled"] = false
     }
 
     signingConfigs {
@@ -69,10 +73,6 @@ android {
     }
 
     buildTypes {
-        // Crashlytics 수집은 릴리스에서만 켠다 (#622). 값은 AndroidManifest의 meta-data로 들어간다
-        debug {
-            manifestPlaceholders["crashlyticsCollectionEnabled"] = false
-        }
         release {
             manifestPlaceholders["crashlyticsCollectionEnabled"] = true
             if (hasReleaseSigning) signingConfig = signingConfigs.getByName("release")
