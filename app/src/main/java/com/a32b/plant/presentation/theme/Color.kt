@@ -40,4 +40,5 @@ val googleButtonBorderDark = Color(0xFF8E918F)
 val googleButtonContentDark = Color(0xFFE3E3E3)
 
 // 다크 error(CF6262)가 secondaryContainer(757575) 위에서 대비 1.22:1이라 다크 전용 글자색
+// 다크 다이얼로그 배경(primaryContainer 414141) 위 에러 글자에도 사용 (CF6262 약 2.71:1 → 약 4.41:1, #643)
 val deleteAccountButtonContentDark = Color(0xFFEC928E)

@@ -8,7 +8,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 
-private val DarkColorScheme = darkColorScheme(
+// 색 역할 값 테스트(PlantColorSchemeTest)에서 읽을 수 있게 internal (#643)
+internal val DarkColorScheme = darkColorScheme(
     primary = Color(0xFF627347),
     onPrimary = Color.Black,
 
@@ -48,11 +49,35 @@ private val DarkColorScheme = darkColorScheme(
     onSecondary = Color(0xFFB8B8B8),
 
     //테두리, 3순위 극소부위 힌트용
-    outline = Color(0xFF707070)
+    outline = Color(0xFF707070),
 
+    // 아래는 Material 기본값(보라 계열)이 섞이지 않도록 정의하는 역할 (#643). 새 색 없이 위 값을 재사용
+    //카드/다이얼로그(primaryContainer)·사각형 버튼(secondaryContainer) 위 글자 = 메인 폰트 색
+    onPrimaryContainer = Color(0xFFF1F1F1),
+    onSecondaryContainer = Color(0xFFF1F1F1),
+
+    //서브 폰트 색 (텍스트필드 placeholder, 라디오 비선택, 시트 손잡이 등 M3 기본 사용처 포함)
+    onSurfaceVariant = Color(0xFFB8B8B8),
+
+    //error 위 글자: 흰색은 대비 약 3.8:1이라 검정(약 5.6:1)
+    onError = Color.Black,
+    errorContainer = Color(0xFFCF6262),
+    onErrorContainer = Color.Black,
+
+    //M3 컴포넌트 기본 배경 (DropdownMenu=surfaceContainer, ModalBottomSheet=surfaceContainerLow, Card·Switch=surfaceContainerHighest)
+    surfaceContainerLowest = Color(0xFF2D2D2D),
+    surfaceContainerLow = Color(0xFF2D2D2D),
+    surfaceContainer = Color(0xFF414141),
+    surfaceContainerHighest = Color(0xFF414141),
+
+    //구분선(M3 Divider 기본값)
+    outlineVariant = Color(0xFF707070),
+
+    //다이얼로그·시트 뒤 어두운 막
+    scrim = Color.Black
 )
 
-private val LightColorScheme = lightColorScheme(
+internal val LightColorScheme = lightColorScheme(
     primary = primary,
     onPrimary = Color.White,
 
@@ -80,8 +105,8 @@ private val LightColorScheme = lightColorScheme(
     //진한 초록색
     tertiary = sub_green2,
 
-    //비활성화
-    tertiaryContainer = Color(0xFFF8F6F6),
+    //비활성화 — F8F6F6은 배경(FFFFFD)과 거의 같아 비활성 버튼이 안 보여 sub3(D9D9D9)로 변경 (#643)
+    tertiaryContainer = sub3,
 
     error = Color(0xFFB3261E),
 
@@ -92,7 +117,31 @@ private val LightColorScheme = lightColorScheme(
     onSecondary = fontColorSub,
 
     //테두리, 3순위 극소부위 힌트용
-    outline = Color.LightGray
+    outline = Color.LightGray,
+
+    // 아래는 Material 기본값(보라 계열)이 섞이지 않도록 정의하는 역할 (#643). 새 색 없이 위 값을 재사용
+    //카드/다이얼로그(primaryContainer)·사각형 버튼(secondaryContainer) 위 글자 = 메인 폰트 색
+    onPrimaryContainer = fontColor,
+    onSecondaryContainer = fontColor,
+
+    //서브 폰트 색 (텍스트필드 placeholder, 라디오 비선택, 시트 손잡이 등 M3 기본 사용처 포함)
+    onSurfaceVariant = fontColorSub,
+
+    onError = Color.White,
+    errorContainer = Color(0xFFB3261E),
+    onErrorContainer = Color.White,
+
+    //M3 컴포넌트 기본 배경 (DropdownMenu=surfaceContainer, ModalBottomSheet=surfaceContainerLow, Card·Switch=surfaceContainerHighest)
+    surfaceContainerLowest = Color.White,
+    surfaceContainerLow = background,
+    surfaceContainer = Color.White,
+    surfaceContainerHighest = sub2,
+
+    //구분선(M3 Divider 기본값)
+    outlineVariant = Color.LightGray,
+
+    //다이얼로그·시트 뒤 어두운 막
+    scrim = Color.Black
 )
 
 @Composable

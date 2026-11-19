@@ -102,7 +102,7 @@ import com.a32b.plant.presentation.core.component.ConfettiOverlay
 import com.a32b.plant.presentation.core.component.festiveConfettiParties
 import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.theme.LocalIsDarkTheme
-import com.a32b.plant.presentation.theme.primary
+import com.a32b.plant.presentation.theme.deleteAccountButtonContentDark
 import androidx.compose.ui.graphics.Color
 import java.time.LocalDate
 import java.time.format.TextStyle
@@ -389,7 +389,8 @@ fun PotChangeDialog(
 ){
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.background,
+        // 다이얼로그 배경은 ConfirmDialog와 같은 primaryContainer로 통일 (#643)
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
         title = {
             Text(
                 text = "화분 변경",
@@ -500,11 +501,12 @@ fun PotChangeDialog(
 
 // 화분 변경 다이얼로그의 칸 배경색 (화분 칸, 새 화분 만들기 칸 공용)
 // 라이트는 surfaceVariant(sub2)·secondary(sub_green1)로 기존과 같고,
-// 다크의 surfaceVariant는 밝은 색이라 onSurface 글자 대비가 약 2.3:1로 낮아 카드 색(primaryContainer)을 쓴다
+// 다크의 surfaceVariant는 밝은 색이라 onSurface 글자 대비가 약 2.3:1로 낮아 화면 배경색(background)을 쓴다
+// (다이얼로그 배경이 primaryContainer라 같은 색을 쓰면 칸이 보이지 않음, #643)
 @Composable
 private fun potSlotContainerColor(isSelected: Boolean): Color = when {
     isSelected -> MaterialTheme.colorScheme.secondary
-    LocalIsDarkTheme.current -> MaterialTheme.colorScheme.primaryContainer
+    LocalIsDarkTheme.current -> MaterialTheme.colorScheme.background
     else -> MaterialTheme.colorScheme.surfaceVariant
 }
 
@@ -1260,6 +1262,8 @@ fun BonusBoxResultDialog(
     Box(modifier = Modifier.fillMaxSize()){
         AlertDialog(
             onDismissRequest = onDismiss,
+            // 기본값 surfaceContainerHigh는 입력창 배경색이라 ConfirmDialog와 같은 primaryContainer로 지정 (#643)
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
             title = {
                 Text(
                     text = title,
@@ -1319,6 +1323,8 @@ private fun RecoveryDialog(
 
     AlertDialog(
         onDismissRequest = {},
+        // 기본값 surfaceContainerHigh는 입력창 배경색이라 ConfirmDialog와 같은 primaryContainer로 지정 (#643)
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
         title = {
             Text(
                 text = "이전 학습 기록 발견",
@@ -1358,7 +1364,9 @@ private fun RecoveryDialog(
                             StudySaveRejection.TOO_OLD.message
                         },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error
+                        // 다크 다이얼로그 배경(primaryContainer 414141) 위 error(CF6262)는 대비 약 2.71:1이라
+                        // 계정 탈퇴 버튼과 같은 다크 전용 글자색(EC928E, 약 4.41:1)을 쓴다 (#643)
+                        color = if (LocalIsDarkTheme.current) deleteAccountButtonContentDark else MaterialTheme.colorScheme.error
                     )
                 }
                 if (isLoading) {
@@ -1416,6 +1424,8 @@ fun BonusBoxOpenDialog(
 
     AlertDialog(
         onDismissRequest = { if (!isOpening) onDismiss() },
+        // 기본값 surfaceContainerHigh는 입력창 배경색이라 ConfirmDialog와 같은 primaryContainer로 지정 (#643)
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
         title = { Text("보너스 박스 개봉", style = MaterialTheme.typography.titleMedium) },
         text = {
             Column(
@@ -1452,10 +1462,11 @@ fun BonusBoxOpenDialog(
 
                     Spacer(modifier = Modifier.width(20.dp))
 
+                    // 다크 다이얼로그 배경(primaryContainer 414141) 위 primary(627347)는 대비 약 1.97:1이라 진한 초록(tertiary) (#643)
                     Text(
                         text = "${count}개",
                         style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.tertiary
                     )
 
                     Spacer(modifier = Modifier.width(20.dp))
@@ -1474,7 +1485,7 @@ fun BonusBoxOpenDialog(
                     onClick = { count = maxCount },
                     enabled = count < maxCount && !isOpening
                 ) {
-                    Text("전체 선택 (MAX)", color = MaterialTheme.colorScheme.primary)
+                    Text("전체 선택 (MAX)", color = MaterialTheme.colorScheme.tertiary)
                 }
             }
         },
@@ -1482,7 +1493,7 @@ fun BonusBoxOpenDialog(
             Button(
                 onClick = { onConfirm(count) },
                 enabled = !isOpening,
-                colors = ButtonDefaults.buttonColors(containerColor = primary)
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
                 Text(if (isOpening) "개봉 중..." else "${count}개 개봉하기")
             }

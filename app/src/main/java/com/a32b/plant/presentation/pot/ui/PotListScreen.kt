@@ -184,7 +184,8 @@ fun PotGridItem(
         Text(
             text = TimeFormatter.formatToDigitalClock(totalStudyingTime),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.outline
+            // outline(LightGray)은 테두리용이라 화면 배경 위 글자 대비가 약 1.5:1 → 서브 폰트 색 (#643)
+            color = MaterialTheme.colorScheme.onSecondary
         )
     }
 }
@@ -224,14 +225,27 @@ fun PotSortDropdown(
             onDismissRequest = { expanded = false }
         ) {
             PotSortType.entries.forEach { sortType ->
+                val isSelected = sortType == currentSort
                 DropdownMenuItem(
                     text = {
                         Text(
                             text = sortType.displayName,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = if (sortType == currentSort) MaterialTheme.colorScheme.primary else Color.Unspecified
+                            // 다크 메뉴 배경(surfaceContainer 414141) 위 primary(627347)는 대비 약 1.97:1이라 진한 초록(tertiary) (#643)
+                            color = if (isSelected) MaterialTheme.colorScheme.tertiary else Color.Unspecified
                         )
                     },
+                    // 다크 tertiary(EBF7E4)는 다른 항목 글자(F1F1F1)와 거의 같아 색만으로는 선택 항목이 구분되지 않아 체크 표시를 함께 둔다 (#643)
+                    trailingIcon = if (isSelected) {
+                        {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_check),
+                                contentDescription = "선택됨",
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
+                    } else null,
                     onClick = {
                         onSortSelected(sortType) // 뷰모델에 선택된 정렬 타입 전달
                         expanded = false         // 메뉴 닫기
