@@ -18,6 +18,11 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Plant">
+        <!-- Crashlytics 수집 여부: debug=false, release=true (app/build.gradle.kts buildTypes, #622) -->
+        <meta-data
+            android:name="firebase_crashlytics_collection_enabled"
+            android:value="${crashlyticsCollectionEnabled}" />
+
         <activity
             android:name=".presentation.MainActivity"
             android:exported="true"

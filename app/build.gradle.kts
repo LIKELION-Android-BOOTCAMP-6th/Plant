@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
 
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
@@ -68,7 +69,12 @@ android {
     }
 
     buildTypes {
+        // Crashlytics 수집은 릴리스에서만 켠다 (#622). 값은 AndroidManifest의 meta-data로 들어간다
+        debug {
+            manifestPlaceholders["crashlyticsCollectionEnabled"] = false
+        }
         release {
+            manifestPlaceholders["crashlyticsCollectionEnabled"] = true
             if (hasReleaseSigning) signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
@@ -119,6 +125,8 @@ dependencies {
     //파이어베이스 버전 관리자 bom
     implementation (platform("com.google.firebase:firebase-bom:34.10.0"))
     implementation("com.google.firebase:firebase-analytics")
+    //크래시 수집 (#622)
+    implementation("com.google.firebase:firebase-crashlytics")
 
     //파이어베이스 인증(이메일/구글)
     implementation("com.google.firebase:firebase-auth")
