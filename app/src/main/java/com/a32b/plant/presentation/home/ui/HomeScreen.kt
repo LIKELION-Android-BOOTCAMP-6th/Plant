@@ -694,7 +694,9 @@ fun MainPlantCard(
                 .padding(horizontal = 20.dp, vertical = 14.dp.compactIf(compact)),
             // 위: 태그·이름 / 가운데: 이미지 영역(남는 높이를 모두 차지) / 아래: 학습 시간·진행 바·버튼 묶음 (#680)
             // → 카드가 늘어나면 이미지 영역만 넓어지고, 버튼 묶음은 카드 바닥에 붙는다
-            // → 요소 사이 간격은 예전 값 그대로라 카드 최소 높이(minIntrinsicHeight)와 간격 모드 판단은 바뀌지 않는다
+            // → 요소 사이 간격은 예전 값 그대로라 카드 최소 높이(minIntrinsicHeight)는 바뀌지 않는다
+            // → 단 아이템박스의 "아이템 : N개" 문구를 없애 아이템박스가 낮아진 만큼(420dpi 실기기·기본 글꼴 캡처에서 47px ≒ 18dp),
+            //   간격 모드가 되는 화면 높이도 낮아진다 (HomeBodyLayout 1번: 카드가 받을 높이 = 기준 높이 - 아이템박스 - 간격)
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             //상단 태그
