@@ -82,6 +82,7 @@ import com.a32b.plant.domain.model.AttendanceReward
 import com.a32b.plant.domain.model.Item
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.type.ItemType
+import com.a32b.plant.domain.type.StudySaveRejection
 import com.a32b.plant.domain.type.StudyingSessionStatus
 import com.a32b.plant.domain.usecase.item.OpenBonusBoxUseCase
 import com.a32b.plant.presentation.core.component.ConfirmDialog
@@ -123,6 +124,7 @@ fun HomeScreen(
     val showAttendanceDialog by viewModel.showAttendanceDialog.collectAsState()
     val userItem by viewModel.userItem.collectAsState()
     val recoverySession by viewModel.recoverySession.collectAsState()
+    val isRecoverySessionTooOld by viewModel.isRecoverySessionTooOld.collectAsState()
     val isRecovering by viewModel.isRecovering.collectAsState()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -150,6 +152,7 @@ fun HomeScreen(
     recoverySession?.let { session ->
         RecoveryDialog(
             session = session,
+            isTooOldToSave = isRecoverySessionTooOld,
             isLoading = isRecovering,
             onRecover = { viewModel.recoverSession() },
             onDiscard = { viewModel.discardSession() }
@@ -1305,6 +1308,7 @@ fun BonusBoxResultDialog(
 @Composable
 private fun RecoveryDialog(
     session: StudyingSession,
+    isTooOldToSave: Boolean,
     isLoading: Boolean,
     onRecover: () -> Unit,
     onDiscard: () -> Unit
@@ -1343,6 +1347,20 @@ private fun RecoveryDialog(
                     text = "학습 시간: $studyTimeText",
                     style = MaterialTheme.typography.bodyMedium
                 )
+                // 저장해도 사전 검사에서 거부되는 백업이면 저장 버튼 대신 미리 안내한다 (#697)
+                if (isTooOldToSave) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        // 시작 시각이 없으면(0) "시작 시각: -"와 맞지 않으므로 기간 대신 시작 시각이 없다고 안내
+                        text = if (session.startedAt == 0L) {
+                            "시작 시각이 남아 있지 않아 기록을 저장할 수 없어요."
+                        } else {
+                            StudySaveRejection.TOO_OLD.message
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
                 if (isLoading) {
                     Spacer(modifier = Modifier.height(8.dp))
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
@@ -1350,19 +1368,31 @@ private fun RecoveryDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = onRecover,
-                enabled = !isLoading
-            ) {
-                Text("저장")
+            if (isTooOldToSave) {
+                // 확인은 폐기와 같다 — 백업을 지워 다음 홈 복귀에 창이 다시 뜨지 않게 함
+                Button(
+                    onClick = onDiscard,
+                    enabled = !isLoading
+                ) {
+                    Text("확인")
+                }
+            } else {
+                Button(
+                    onClick = onRecover,
+                    enabled = !isLoading
+                ) {
+                    Text("저장")
+                }
             }
         },
-        dismissButton = {
-            TextButton(
-                onClick = onDiscard,
-                enabled = !isLoading
-            ) {
-                Text("폐기")
+        dismissButton = if (isTooOldToSave) null else {
+            {
+                TextButton(
+                    onClick = onDiscard,
+                    enabled = !isLoading
+                ) {
+                    Text("폐기")
+                }
             }
         }
     )
