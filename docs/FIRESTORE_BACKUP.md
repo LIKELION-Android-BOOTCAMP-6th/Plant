@@ -3,7 +3,7 @@
 > 운영 Firestore(`plant-82b09`의 `(default)` 데이터베이스)를 실수로 지우거나 잘못 바꿨을 때 되살리는 방법 (#663).
 > Firebase 프로젝트가 `plant-82b09` 하나뿐이라 **이 프로젝트가 곧 운영 환경**이다. 아래 명령은 모두 실제 데이터에 적용된다.
 >
-> ⚠️ 복원은 **기존 DB를 덮어쓰지 않고 새 데이터베이스를 만든다.** 되살린 데이터는 새 DB에서 필요한 컬렉션만 `(default)`로 다시 옮긴다.
+> ⚠️ 복원은 **기존 DB를 덮어쓰지 않고 새 데이터베이스를 만든다.** 되살린 데이터는 새 DB에서 필요한 컬렉션이나 문서만 `(default)`로 다시 옮긴다.
 
 ## 현재 설정
 
@@ -58,7 +58,7 @@ DB 크기별 월 추정 (백업 + PITR만, 원래 저장 요금 제외):
 |---|---|---|
 | Firebase CLI (`firebase --version`) | 설정 확인, 백업 목록, 새 DB로 복원, 복원 DB 삭제 | `firebase login` 필요. 프로젝트 소유자 계정 |
 | `gcloud` (Google Cloud CLI) | 컬렉션 옮기기 (내보내기·가져오기) | PC에 설치하지 않아도 [Cloud Shell](https://shell.cloud.google.com/?project=plant-82b09)(브라우저)에 들어 있음 |
-| Node.js + `firebase-admin` | 문서 수 대조 | Cloud Shell에 Node.js가 들어 있고, Cloud Shell에서는 로그인한 계정 권한으로 Admin SDK가 동작 |
+| Node.js + `firebase-admin` | 문서 수 대조, 데이터 초기화 직전 `Tags` 개수 | Cloud Shell에 Node.js가 들어 있고, Cloud Shell에서는 로그인한 계정 권한으로 Admin SDK가 동작 |
 
 모든 명령에 `--project plant-82b09`를 붙인다. `.firebaserc`의 기본값도 `plant-82b09`이지만, 다른 폴더에서 실행할 때를 대비해 명시한다.
 
@@ -211,7 +211,7 @@ gcloud storage rm --recursive gs://plant-82b09-restore-tmp
 
 - 가져오기는 **같은 문서 ID를 덮어쓰고**, `(default)`에만 있는 문서는 그대로 둔다. 지운 뒤 새로 생긴 문서가 있어도 지워지지 않는다
 - `--collection-ids`는 컬렉션 ID 기준이다. 하위 컬렉션까지 옮기려면 ID를 함께 적는다 (예: 모든 사용자의 화분이 통째로 지워졌다면 `--collection-ids=pots,logs`). 특정 컬렉션만 가져오려면 내보낼 때도 `--collection-ids`를 적어야 한다 (전체 내보내기에서 일부만 가져올 수 없음)
-- 화분을 지운 경우 `onPotDeleted` 트리거가 그 화분의 `logs`도 이미 지웠다. 그래서 화분을 되살릴 때는 그 화분의 `logs`도 함께 옮긴다
+- `pots`를 가져올 때는 `logs`도 함께 가져온다. 화분이 지워질 때 `onPotDeleted` 트리거가 그 화분의 `logs`도 이미 지웠기 때문이다
 - [공식 문서](https://firebase.google.com/docs/firestore/manage-data/export-import) 기준으로 **가져오기는 Cloud Functions 트리거를 실행하지 않는다.** 그래서:
   - `logs`를 가져와도 `grantStudyReward`가 돌지 않아 보상이 다시 지급되지 않는다
   - 다른 문서에 저장된 집계 값은 자동으로 다시 맞춰지지 않는다 (가져오기를 썼을 때만 해당). 예: 댓글을 지우면 `syncCommentCountOnDelete`가 게시글의 `commentCount`를 이미 줄여 놨는데, 댓글만 가져오면 `commentCount`는 낮은 값으로 남는다 → 가져온 뒤 해당 게시글의 `commentCount`와 실제 댓글 수를 비교해서 맞춘다
@@ -222,13 +222,27 @@ gcloud storage rm --recursive gs://plant-82b09-restore-tmp
 예: 한 사용자의 화분 하나, 게시글 하나의 댓글 몇 개를 지웠다.
 
 1. Firebase 콘솔 → Firestore에서 데이터베이스를 복원 DB로 바꿔 되살릴 문서의 필드를 본다
-2. `(default)`에 같은 경로·같은 문서 ID로 같은 필드를 직접 만든다. 필드 타입(타임스탬프·숫자·문자열)도 원본과 같게 한다. 화분이면 그 화분 아래 `logs` 문서도 함께 만든다
-3. 되살린 뒤 앱에서 해당 화면이 정상으로 보이는지 확인한다
+2. `(default)`에 같은 경로·같은 문서 ID로 같은 필드를 직접 만든다. 필드 타입(타임스탬프·숫자·문자열)도 원본과 같게 한다
+3. 아래 표의 "함께 되살릴 것"도 처리한다
+4. 되살린 뒤 앱에서 해당 화면이 정상으로 보이는지 확인한다
+
+앱은 지울 때 다른 문서도 함께 지우거나 값을 뺀다. 지운 문서만 다시 만들면 이 값들이 어긋난 채 남는다 (develop 코드 기준):
+
+| 지운 것 | 함께 되살릴 것 | 근거 |
+|---|---|---|
+| 화분 `users/{uid}/pots/{potId}` | 그 화분의 `logs` 문서들. `users/{uid}.totalStudyTime`에 화분의 `potTotalStudyingTime`을 더함. 완료된 화분(`isCompleted: true`)이면 `completedPotsCount`에 1을 더함 | `PotRemoteDataSourceImpl.deletePot`, `onPotDeleted`, `firestore.rules`의 화분 삭제 설명 |
+| 학습 기록 `.../pots/{potId}/logs/{logId}` | 그 화분의 `potTotalStudyingTime`과 `users/{uid}.totalStudyTime`에 기록의 `studyingTime`을 더함 | `firestore.rules`의 기록 삭제 설명 |
+| 게시글 `posts/{postId}` | 그 게시글의 `comments` 문서들. 게시글과 각 댓글의 `activities` 문서 (`activityId`로 연결) | `CommunityRemoteDataSourceImpl.deletePost`, `CommunityRepositoryImpl.deletePost` |
+| 댓글 `posts/{postId}/comments/{commentId}` | 그 댓글의 `activities` 문서 (`activityId`) | `CommunityRemoteDataSourceImpl.deleteComment` |
+
+- 합계 값(`totalStudyTime`·`potTotalStudyingTime`·`completedPotsCount`)은 복원 DB 값을 그대로 복사하지 않는다. 그 뒤에 쌓인 학습 시간이 사라진다 → **지금 값에 되살린 만큼 더해서** 적는다
+- 해당 사용자가 앱을 쓰지 않을 때 한다. 콘솔에서 고치는 동안 학습 저장이 들어오면 값이 엇갈릴 수 있다
+- 콘솔에서 쓰는 값은 보안 규칙을 거치지 않는다. 규칙이 쓰는 표시 필드(`lastDeletedPotId`·`lastDeletedLogId` 등)는 바꾸지 않아도 된다
 
 - 직접 쓰면 가져오기와 달리 트리거가 실행된다 (`functions/index.js` 기준):
   - `logs` 생성 → `grantStudyReward`: 보상은 `rewardStatus`가 `"pending"`일 때만 지급된다 (`functions/index.js`의 `grantStudyReward`). 이미 처리된 기록(`"granted"`·`"none"`)은 다시 주지 않고 끝난다. 원본이 `"pending"`이었다면 그때 지급된다
   - 댓글 생성 → `syncCommentCountOnCreate`: 실제 댓글 수를 다시 세어 게시글 `commentCount`를 맞춘다
-  - 화분 생성에 붙은 트리거는 없다
+  - 화분 생성, `users` 수정에 붙은 트리거는 없다. 화분 수정 트리거(`unlockProfileLevelOnPotLevelUp`)는 화분을 고칠 때마다 실행되지만, `potLevel`이 그대로면 아무것도 쓰지 않고 끝난다. 그래서 `potTotalStudyingTime`만 고치면 영향이 없다
 - 문서가 많으면 콘솔로 옮기기 어렵다. 그때는 복원 DB에서 해당 문서만 읽어 `(default)`에 쓰는 Admin SDK 스크립트가 필요하다 (아직 만들지 않음)
 - 이 방법도 아직 실제로 해 보지 않았다 (**미확인**)
 
