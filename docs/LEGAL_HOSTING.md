@@ -21,14 +21,14 @@
 | 개인정보처리방침 | https://plant-82b09.web.app/privacy-policy.html | `MyPageViewModel.PRIVACY_POLICY_URL` |
 | 서비스 이용약관 | https://plant-82b09.web.app/terms.html | `MyPageViewModel.TERMS_OF_SERVICE_URL` |
 
-파일 이름(주소)을 바꾸면 `hosting/build-legal.mjs`의 `PAGES`와 앱의 주소 상수를 함께 고친다.
+파일 이름(주소)을 바꾸거나 페이지를 추가하면 `hosting/build-legal.mjs`의 `PAGES`, 앱의 주소 상수, `.gitignore`(변환 결과 HTML)를 함께 고친다. `.gitignore`에 넣지 않으면 변환 결과가 커밋되어, 커밋된 HTML을 손으로 고쳐도 배포 때 md 내용으로 덮어써진다.
 
 ## 문서 수정 절차
 
 1. `docs/legal/*.md`를 고친다. 변환 스크립트가 처리하는 문법만 쓴다: 제목(`#`, `##`, `###`), 문단, 목록(`-`, `1.`), 표, `**굵게**`, `[링크](주소)`. 다른 문법을 쓰면 스크립트가 오류로 멈춘다
 2. 내용을 바꾸면 맨 위 시행일을 바꾸고, 개인정보처리방침은 "11. 개인정보처리방침의 변경"의 개정 이력에 한 줄 추가한다. 시행일은 실제 배포하는 날로 맞춘다
 3. 이용약관을 바꾸면 제3조에 따라 시행일 7일 전(이용자에게 불리한 변경은 30일 전)부터 알린다
-4. 앱 동작이 바뀌는 PR(수집 항목, 탈퇴 처리, 커뮤니티 공개 범위 등)은 같은 PR에서 두 문서를 함께 고친다
+4. 앱 동작이 바뀌는 PR(수집 항목, 탈퇴 처리, 커뮤니티 공개 범위, 신고 사유·블라인드 기준, 아이템 이름 등)은 같은 PR에서 두 문서를 함께 고친다
 5. 로컬에서 미리 보기: `node hosting/build-legal.mjs` 실행 후 `hosting/public/*.html`을 브라우저로 연다
 
 ## 배포
@@ -41,6 +41,7 @@ firebase deploy --only hosting --project plant-82b09
 
 - `predeploy`가 `node hosting/build-legal.mjs`를 먼저 실행하므로, 배포되는 HTML은 항상 그 시점의 md 파일과 같다
 - 배포 후 확인: 브라우저에서 두 주소를 열어 시행일·내용 확인 → 앱 마이페이지의 "개인정보처리방침", "서비스 이용약관"을 눌러 같은 페이지가 열리는지 확인
+  - 운영 응답 헤더가 `Cache-Control: max-age=3600`이라, 전에 연 적이 있는 브라우저는 배포 후 최대 1시간 동안 이전 페이지를 보여 줄 수 있다. 이전 내용이 보이면 새로고침한다
 - 되돌리기: Firebase 콘솔 > Hosting의 출시 기록에서 이전 버전으로 롤백할 수 있다
 
 ### 기존 파일 보존
