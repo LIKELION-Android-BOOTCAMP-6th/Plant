@@ -232,7 +232,7 @@ gcloud storage rm --recursive gs://plant-82b09-restore-tmp
 
 | 지운 것 | 함께 되살릴 것 | 근거 |
 |---|---|---|
-| 화분 `users/{uid}/pots/{potId}` | 그 화분의 `logs` 문서들. `users/{uid}.totalStudyTime`에 화분의 `potTotalStudyingTime`을 더함. 완료된 화분(`isCompleted: true`)이면 `completedPotsCount`에 1을 더함 | `PotRemoteDataSourceImpl.deletePot`, `onPotDeleted`, `firestore.rules`의 화분 삭제 설명 |
+| 화분 `users/{uid}/pots/{potId}` | 그 화분의 `logs` 문서들. `users/{uid}.totalStudyTime`에 되살린 `logs`의 `studyingTime` 합을 더함 (아래 "되살린 만큼" 참고). 완료된 화분(`isCompleted: true`)이면 `completedPotsCount`에 1을 더함 | `PotRemoteDataSourceImpl.deletePot`, `onPotDeleted`, `firestore.rules`의 화분 삭제 설명 |
 | 학습 기록 `.../pots/{potId}/logs/{logId}` | 그 화분의 `potTotalStudyingTime`과 `users/{uid}.totalStudyTime`에 기록의 `studyingTime`을 더함 | `StudyLogRemoteDataSourceImpl.deleteStudyLog`, `firestore.rules`의 기록 삭제 설명 |
 | 게시글 `posts/{postId}` | 그 게시글의 `comments` 문서들. 게시글과 각 댓글의 `activities` 문서 (`activityId`로 연결) | `CommunityRemoteDataSourceImpl.deletePost`, `CommunityRepositoryImpl.deletePost` |
 | 댓글 `posts/{postId}/comments/{commentId}` | 그 댓글의 `activities` 문서 (`activityId`) | `CommunityRemoteDataSourceImpl.deleteComment` |
