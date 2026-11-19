@@ -25,3 +25,6 @@ app/google-services.json
 *.log
 crash_real.txt
 logcat.txt
+
+# Kotlin 컴파일러 로그·캐시 (#651)
+.kotlin/

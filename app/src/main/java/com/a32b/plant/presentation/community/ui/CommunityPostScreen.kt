@@ -16,8 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -269,7 +267,7 @@ fun PostTopBar(
         navigationIcon = {
             IconButton(onClick = onBackClick) {
                 Icon(
-                    Icons.Default.ArrowBack,
+                    painterResource(id = R.drawable.ic_arrow_back),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurface
                 )

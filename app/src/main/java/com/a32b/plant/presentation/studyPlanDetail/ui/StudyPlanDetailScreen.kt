@@ -20,8 +20,6 @@ import com.a32b.plant.presentation.studyPlanDetail.viewmodel.StudyPlanDetailView
 import com.a32b.plant.R
 import com.a32b.plant.domain.model.StudyLog
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -176,8 +174,8 @@ fun StudyPlanDetailScreen(
                             viewModel.navigateToCommunityShare(navController)
                         } }) {
                             if (isShareMode) {
-                                // 아이콘 벡터와 리소스 처리 분기
-                                Icon(Icons.Default.Check, contentDescription = "확인", modifier = Modifier.size(19.dp), tint = fontColorSub)
+                                // 공유 모드면 확인(전송) 아이콘, 아니면 공유 아이콘
+                                Icon(painterResource(id = R.drawable.ic_check), contentDescription = "확인", modifier = Modifier.size(19.dp), tint = fontColorSub)
                             } else {
                                 Icon(painterResource(id = R.drawable.ic_share), contentDescription = "공유", modifier = Modifier.size(19.dp))
                             }
