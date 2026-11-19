@@ -1,8 +1,6 @@
 package com.a32b.plant.presentation.core.component
 
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -13,8 +11,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import com.a32b.plant.R
 import com.a32b.plant.presentation.theme.PlantTheme
 
 // 하단바 탭 화면(커뮤니티, 화분, 리포트, 마이페이지) 공통 앱바. 홈은 HomeTopBar를 사용한다.
@@ -74,7 +74,7 @@ private fun TabTopBarIconActionPreview() {
     PlantTheme(darkTheme = false) {
         TabTopBar(title = "내 화분") {
             IconButton(onClick = {}) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "화분 추가")
+                Icon(painter = painterResource(R.drawable.ic_add), contentDescription = "화분 추가")
             }
         }
     }

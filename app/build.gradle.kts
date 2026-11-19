@@ -122,7 +122,6 @@ dependencies {
 
     //파이어베이스 인증(이메일/구글)
     implementation("com.google.firebase:firebase-auth")
-    implementation("com.google.android.gms:play-services-auth:21.2.0")
 
     //구글 로그인 최신 버전 후순위 개발로 미뤄둘 것 -> '주석 해제'
     implementation("androidx.credentials:credentials:1.3.0")
@@ -140,11 +139,6 @@ dependencies {
     implementation(libs.serialization)
 
     implementation(libs.splashscreen)
-
-    implementation("androidx.compose.material:material-icons-extended")
-
-    //coil, AsyniImage
-    implementation("io.coil-kt:coil-compose:2.4.0")
 
     implementation(libs.datastore.preference)
 

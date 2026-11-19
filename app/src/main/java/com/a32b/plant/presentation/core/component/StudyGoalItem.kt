@@ -6,9 +6,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Circle
-import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -16,12 +13,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.a32b.plant.R
 
 // 글꼴 크기를 작게 설정해도 빈 원 테두리가 보이도록 하는 아이콘 최소 크기
 private val MinIconSize = 6.dp
@@ -61,7 +60,7 @@ fun StudyGoalItem(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = if (isCompleted) Icons.Filled.Circle else Icons.Outlined.RadioButtonUnchecked,
+                painter = painterResource(if (isCompleted) R.drawable.ic_circle_filled else R.drawable.ic_radio_button_unchecked),
                 contentDescription = if (isCompleted) "완료" else "미완료",
                 tint = color,
                 modifier = Modifier.size(iconSizeDp)
