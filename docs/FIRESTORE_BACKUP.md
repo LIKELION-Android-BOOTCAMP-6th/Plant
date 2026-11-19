@@ -7,7 +7,7 @@
 
 ## 현재 설정
 
-2026-11-18 설정, 아래 "설정 확인" 명령으로 조회한 값이다. 이 문서의 날짜·시각은 CLI 출력과 같은 **UTC 기준**이다 (한국 시간은 +9시간).
+2026-11-18~19 설정, 아래 "설정 확인" 명령으로 조회한 값이다. 이 문서의 날짜·시각은 CLI 출력과 같은 **UTC 기준**이다 (한국 시간은 +9시간).
 
 | 항목 | 값 | 의미 |
 |---|---|---|
@@ -68,10 +68,10 @@ DB 크기별 월 추정 (백업 + PITR만, 원래 저장 요금 제외):
 # 백업 일정
 firebase firestore:backups:schedules:list --database "(default)" --project plant-82b09
 
-# PITR 켜짐 여부·시작 시점 (Point In Time Recovery, Earliest Version Time)
+# PITR 켜짐 여부·시작 시점·삭제 보호 (Point In Time Recovery, Earliest Version Time, Delete Protection State)
 firebase firestore:databases:get "(default)" --project plant-82b09
 
-# 지금 남아 있는 백업 목록 (이름·생성 시각)
+# 지금 남아 있는 백업 목록 (이름·스냅샷 시각·상태)
 firebase firestore:backups:list --location asia-northeast3 --project plant-82b09
 ```
 
@@ -102,7 +102,7 @@ firebase firestore:databases:restore --database restore-20261118 --backup "proje
 ### 방법 2. PITR로 특정 시점 복제 (실수 직전 시각을 알 때)
 
 ```bash
-firebase firestore:databases:clone "projects/plant-82b09/databases/(default)" projects/plant-82b09/databases/restore-20261118 --snapshot-time 2026-11-18T05:30:00Z --project plant-82b09
+firebase firestore:databases:clone "projects/plant-82b09/databases/(default)" projects/plant-82b09/databases/restore-20261118 --snapshot-time 2026-11-20T05:30:00Z --project plant-82b09
 ```
 
 - 원본·대상 DB를 **전체 경로**(`projects/plant-82b09/databases/...`)로 적는다. `"(default)" restore-20261118`처럼 ID만 적으면 `Error parsing database name` 오류가 난다
@@ -117,7 +117,7 @@ firebase firestore:databases:clone "projects/plant-82b09/databases/(default)" pr
   ```bash
   firebase firestore:operations:list --database restore-20261118 --project plant-82b09
   ```
-- `Done: YES` 직후 1~2분은 새 DB를 읽으면 `Cannot serve requests when the database is undergoing a restore.` 오류가 날 수 있다. 같은 때 DB 삭제도 `is in the middle of restore`(복제는 `clone`) 오류로 거부된다. 잠시 뒤 다시 시도한다 (2026-11-19 복원·복제 때 겪음)
+- `Done: YES` 직후 1~2분은 새 DB를 읽으면 `Cannot serve requests when the database is undergoing a restore.` 오류가 날 수 있다. 같은 때 DB 삭제와 설정 변경(`databases:update`)도 `is in the middle of restore`(복제는 `clone`) 오류로 거부된다. 잠시 뒤 다시 시도한다 (2026-11-19 복원·복제 때 겪음)
 - 새 DB의 PITR은 꺼진 상태로 만들어진다. **삭제 보호는 복제한 시점의 설정을 이어받을 수 있다** (2026-11-19 확인):
 
   | 만든 방법 | 원본 시점의 `(default)` 삭제 보호 | 새 DB 삭제 보호 |
@@ -191,6 +191,8 @@ node count.js restore-20261118
 
 ## 지운 컬렉션만 다시 옮기기
 
+> ⚠️ 가져오기는 **컬렉션이 통째로 지워졌을 때만** 쓴다. `--collection-ids`는 경로와 관계없이 같은 ID의 컬렉션을 모두 가져오고 같은 ID의 문서를 덮어쓴다. 예를 들어 한 사용자의 화분을 되살리려고 `pots,logs`를 가져오면 **모든 사용자**의 화분·학습 기록이 스냅샷 시점 값으로 돌아가고, 그 뒤에 쌓인 학습 시간·레벨이 사라진다. 일부 문서만 되살릴 때는 아래 "일부 문서만 되살리기"를 따른다
+
 예: `Tags`를 실수로 지웠다. 복원 DB에서 `Tags`만 내보낸 뒤 `(default)`로 가져온다. Cloud Shell에서:
 
 ```bash
@@ -208,12 +210,27 @@ gcloud storage rm --recursive gs://plant-82b09-restore-tmp
 ```
 
 - 가져오기는 **같은 문서 ID를 덮어쓰고**, `(default)`에만 있는 문서는 그대로 둔다. 지운 뒤 새로 생긴 문서가 있어도 지워지지 않는다
-- `--collection-ids`는 컬렉션 ID 기준이다. 하위 컬렉션까지 옮기려면 ID를 함께 적는다 (예: 화분과 학습 기록 → `--collection-ids=pots,logs`). 특정 컬렉션만 가져오려면 내보낼 때도 `--collection-ids`를 적어야 한다 (전체 내보내기에서 일부만 가져올 수 없음)
-- 화분을 지운 경우 `onPotDeleted` 트리거가 그 화분의 `logs`도 이미 지웠다. 그래서 `pots`만 옮기면 학습 기록이 빠진다 → `pots,logs`를 함께 옮긴다
+- `--collection-ids`는 컬렉션 ID 기준이다. 하위 컬렉션까지 옮기려면 ID를 함께 적는다 (예: 모든 사용자의 화분이 통째로 지워졌다면 `--collection-ids=pots,logs`). 특정 컬렉션만 가져오려면 내보낼 때도 `--collection-ids`를 적어야 한다 (전체 내보내기에서 일부만 가져올 수 없음)
+- 화분을 지운 경우 `onPotDeleted` 트리거가 그 화분의 `logs`도 이미 지웠다. 그래서 화분을 되살릴 때는 그 화분의 `logs`도 함께 옮긴다
 - [공식 문서](https://firebase.google.com/docs/firestore/manage-data/export-import) 기준으로 **가져오기는 Cloud Functions 트리거를 실행하지 않는다.** 그래서:
   - `logs`를 가져와도 `grantStudyReward`가 돌지 않아 보상이 다시 지급되지 않는다
-  - 다른 문서에 저장된 집계 값은 자동으로 다시 맞춰지지 않는다. 예: 댓글을 지우면 `syncCommentCountOnDelete`가 게시글의 `commentCount`를 이미 줄여 놨는데, 댓글만 가져오면 `commentCount`는 낮은 값으로 남는다 → 가져온 뒤 해당 게시글의 `commentCount`와 실제 댓글 수를 비교해서 맞춘다
+  - 다른 문서에 저장된 집계 값은 자동으로 다시 맞춰지지 않는다 (가져오기를 썼을 때만 해당). 예: 댓글을 지우면 `syncCommentCountOnDelete`가 게시글의 `commentCount`를 이미 줄여 놨는데, 댓글만 가져오면 `commentCount`는 낮은 값으로 남는다 → 가져온 뒤 해당 게시글의 `commentCount`와 실제 댓글 수를 비교해서 맞춘다
 - 위 명령은 아직 실제로 실행해 보지 않았다 (**미확인**). 처음 쓸 때 결과를 이 문서에 적는다
+
+### 일부 문서만 되살리기
+
+예: 한 사용자의 화분 하나, 게시글 하나의 댓글 몇 개를 지웠다.
+
+1. Firebase 콘솔 → Firestore에서 데이터베이스를 복원 DB로 바꿔 되살릴 문서의 필드를 본다
+2. `(default)`에 같은 경로·같은 문서 ID로 같은 필드를 직접 만든다. 필드 타입(타임스탬프·숫자·문자열)도 원본과 같게 한다. 화분이면 그 화분 아래 `logs` 문서도 함께 만든다
+3. 되살린 뒤 앱에서 해당 화면이 정상으로 보이는지 확인한다
+
+- 직접 쓰면 가져오기와 달리 트리거가 실행된다 (`functions/index.js` 기준):
+  - `logs` 생성 → `grantStudyReward`: 보상은 `rewardStatus`가 `"pending"`일 때만 지급된다 (`functions/index.js`의 `grantStudyReward`). 이미 처리된 기록(`"granted"`·`"none"`)은 다시 주지 않고 끝난다. 원본이 `"pending"`이었다면 그때 지급된다
+  - 댓글 생성 → `syncCommentCountOnCreate`: 실제 댓글 수를 다시 세어 게시글 `commentCount`를 맞춘다
+  - 화분 생성에 붙은 트리거는 없다
+- 문서가 많으면 콘솔로 옮기기 어렵다. 그때는 복원 DB에서 해당 문서만 읽어 `(default)`에 쓰는 Admin SDK 스크립트가 필요하다 (아직 만들지 않음)
+- 이 방법도 아직 실제로 해 보지 않았다 (**미확인**)
 
 ## 복원 DB 삭제 (꼭 할 것)
 
@@ -239,9 +256,17 @@ firebase firestore:databases:delete restore-20261118 --project plant-82b09
 
 비공개 테스트 전 데이터 초기화(`Tags`만 남김)처럼 큰 삭제를 하기 전에:
 
-1. `firebase firestore:backups:list --location asia-northeast3 --project plant-82b09`로 가장 최근 백업이 `READY`인지와 그 스냅샷 시각을 확인한다 (백업 시각이 매일 달라서 간격이 24시간을 넘을 수 있다. 실제 안전장치는 2단계의 PITR이다)
-2. 초기화를 시작하기 직전 시각을 UTC로 적어 둔다 (예: `2026-11-20T03:00:00Z`). 문제가 생기면 이 시각으로 "방법 2. PITR로 특정 시점 복제"를 한다
-3. 초기화가 끝나면 `Tags` 문서 수가 그대로인지 확인한다
+1. `firebase firestore:backups:list --location asia-northeast3 --project plant-82b09`로 가장 최근 백업이 `READY`인지와 그 스냅샷 시각을 확인한다 (백업 시각이 매일 달라서 간격이 24시간을 넘을 수 있다. 실제 안전장치는 3단계의 PITR이다)
+2. 아래 명령으로 `Tags` 문서 수를 세어 적어 둔다 (2026-11-19 기준 32개). Cloud Shell의 `~/plant-restore-check` 폴더("문서 수 대조"에서 `firebase-admin`을 설치한 곳)에서 실행한다
+
+   ```bash
+   cd ~/plant-restore-check
+   node -e 'const {initializeApp} = require("firebase-admin/app"); const {getFirestore} = require("firebase-admin/firestore"); initializeApp({projectId: "plant-82b09"}); getFirestore().collection("Tags").count().get().then((s) => console.log("Tags", s.data().count));'
+   ```
+3. 초기화를 시작하기 직전 시각을 UTC로 적어 둔다 (예: `2026-11-20T03:00:00Z`). 문제가 생기면 이 시각으로 "방법 2. PITR로 특정 시점 복제"를 한다
+4. 초기화가 끝나면 2단계 명령을 다시 실행해 `Tags` 문서 수가 적어 둔 값과 같은지 확인한다
+
+- `count.js`는 복원 DB와 비교하는 용도라 `(default)`만 세지 못한다 (DB 이름을 빠뜨리거나 `(default)`를 적으면 종료). 그래서 `Tags`는 위 명령으로 센다
 
 ## 복원 테스트 기록
 
@@ -253,3 +278,4 @@ firebase firestore:databases:delete restore-20261118 --project plant-82b09
 - 2026-11-19 삭제 보호를 켠 뒤 임시 DB 3개(`restore-protect-test`, `clone-protect-test`, `clone-protect-test2`)로 "두 방법 공통"의 삭제 보호 표를 확인했다. 삭제 보호가 켜진 `clone-protect-test2`는 바로 지우면 거부되고, "복원 DB 삭제" 1~3단계대로 끈 뒤 지워졌다. 3개 모두 지우고 목록에 `(default)`만 남음 (문서 수 대조는 하지 않음)
 - 표의 두 테스트에서 문서 수는 위 `count.js`와 같은 `collectionGroup` 집계를 Firestore REST API(`runAggregationQuery`)로 실행해 셌다 (PC에 `gcloud`·Admin SDK 인증이 없어서 Firebase CLI 로그인 토큰을 씀)
 - `count.js` 자체는 Firestore 에뮬레이터에서 두 DB에 다른 개수의 문서를 넣고 실행해 확인했다: 하위 컬렉션(`pots`·`logs`) 포함 개수, 개수가 다를 때 "다름" 표시, 목록에 없는 최상위 컬렉션 표시, DB 이름을 빠뜨리거나 `(default)`를 적으면 안내 문구와 함께 종료 코드 1로 끝남. Cloud Shell에서는 아직 실행하지 않았다 (**미확인**)
+- "데이터 초기화 직전" 2단계의 `Tags` 개수 명령은 Firestore 에뮬레이터에서 실행해 개수 출력과 종료 코드 0을 확인했다. Cloud Shell에서는 아직 실행하지 않았다 (**미확인**)
