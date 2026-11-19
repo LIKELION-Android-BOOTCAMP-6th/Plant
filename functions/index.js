@@ -532,6 +532,9 @@ const REAUTH_MAX_AGE_SECONDS = 5 * 60;
 const DELETED_COMMENT_CONTENT = "- 삭제된 댓글입니다. -";
 const ANONYMOUS_COMMENT_USER = {uid: "", nickname: "(알 수 없음)", profileImg: ""};
 
+// 버그 제보·개선 제안은 지우지 않고 작성자를 비운다 (#606)
+const ANONYMOUS_FEEDBACK_REPORTER_ID = "";
+
 // 게시글별 트랜잭션을 한꺼번에 너무 많이 보내지 않도록 나눠서 실행한다
 const TRANSACTION_CHUNK_SIZE = 20;
 
@@ -649,13 +652,35 @@ async function deleteUserData(uid) {
     // 7. 실시간 학습 현황 (학습 중 비정상 종료 후 탈퇴해도 남지 않게)
     await deleteRefs(writer, [db.collection("studying").doc(uid)]);
 
-    // 8. 닉네임 선점 문서: users의 nickname 대신 uid로 찾는다
+    // 8. 내가 한 신고 삭제 (#606)
+    //    문서 ID가 {uid}_{대상ID}라 필드만 비워도 uid가 남으므로 익명화하지 않고 지운다
+    //    대상 게시글·댓글의 reportCount는 그대로 둔다 (탈퇴로 블라인드가 풀리지 않게)
+    const myReports = await db.collection("reports")
+        .where("reporterId", "==", uid).get();
+    await deleteRefs(writer, myReports.docs.map((doc) => doc.ref));
+
+    // 9. 내 버그 제보·개선 제안 익명화 (#606)
+    //    내용·category·appVersion은 버그 분석용으로 남기고 작성자와 기기 정보만 지운다
+    //    익명화하면 reporterId가 ""가 되어 재시도 때 다시 조회되지 않는다
+    const myFeedbacks = await db.collection("feedbacks")
+        .where("reporterId", "==", uid).get();
+    const anonymizedFeedbacks = Promise.all(myFeedbacks.docs.map((doc) =>
+      writer.update(doc.ref, {
+        reporterId: ANONYMOUS_FEEDBACK_REPORTER_ID,
+        deviceModel: FieldValue.delete(),
+        androidVersion: FieldValue.delete(),
+      }),
+    ));
+    await writer.flush();
+    await anonymizedFeedbacks;
+
+    // 10. 닉네임 선점 문서: users의 nickname 대신 uid로 찾는다
     //    → users를 이미 지운 뒤 재시도해도, 예전에 남은 닉네임 문서가 있어도 모두 지워진다
     const myNicknames = await db.collection("nicknames")
         .where("uid", "==", uid).get();
     await deleteRefs(writer, myNicknames.docs.map((doc) => doc.ref));
 
-    // 9. users/{uid}는 데이터 중 마지막 (남은 하위 컬렉션이 있으면 함께 삭제)
+    // 11. users/{uid}는 데이터 중 마지막 (남은 하위 컬렉션이 있으면 함께 삭제)
     await db.recursiveDelete(userRef, writer);
   } finally {
     await writer.close();
