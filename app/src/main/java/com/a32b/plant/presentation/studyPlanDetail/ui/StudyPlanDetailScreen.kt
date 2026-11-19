@@ -174,7 +174,7 @@ fun StudyPlanDetailScreen(
                             viewModel.navigateToCommunityShare(navController)
                         } }) {
                             if (isShareMode) {
-                                // 공유 모드면 확인(전송) 아이콘, 아니면 공유 아이콘
+                                // 공유 모드면 확인 아이콘(누르면 선택한 기록으로 글쓰기 화면 이동), 아니면 공유 아이콘
                                 Icon(painterResource(id = R.drawable.ic_check), contentDescription = "확인", modifier = Modifier.size(19.dp), tint = fontColorSub)
                             } else {
                                 Icon(painterResource(id = R.drawable.ic_share), contentDescription = "공유", modifier = Modifier.size(19.dp))
