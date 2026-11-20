@@ -157,9 +157,7 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                 onGuideClick = {
                     context.showToast("준비 중입니다.")
                 },
-                onTermsClick = {
-                    context.showToast("준비 중입니다.")
-                },
+                onTermsClick = { viewModel.onTermsOfServiceClick() },
                 onPrivacyClick = { viewModel.onPrivacyPolicyClick() },
                 onOpenSourceLicenseClick = { navController.navigate(Routes.OpenSourceLicense) },
                 onBugReportClick = { navController.navigate(Routes.BugReport) },

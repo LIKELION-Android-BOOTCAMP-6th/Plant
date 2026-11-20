@@ -56,7 +56,9 @@ class MyPageViewModel @Inject constructor(
     private val observeDarkModeUseCase: ObserveDarkModeUseCase
 ) : BaseViewModel() {
     companion object {
+        // 두 페이지의 원본은 docs/legal/*.md (배포 절차: docs/LEGAL_HOSTING.md)
         private const val PRIVACY_POLICY_URL = "https://plant-82b09.web.app/privacy-policy.html"
+        private const val TERMS_OF_SERVICE_URL = "https://plant-82b09.web.app/terms.html"
     }
 
     private val _uiState = MutableStateFlow(MyPageUiState())
@@ -191,6 +193,12 @@ class MyPageViewModel @Inject constructor(
     fun onPrivacyPolicyClick() {
         viewModelScope.launch {
             _eventChannel.send(MyPageEvent.OpenUrl(PRIVACY_POLICY_URL))
+        }
+    }
+
+    fun onTermsOfServiceClick() {
+        viewModelScope.launch {
+            _eventChannel.send(MyPageEvent.OpenUrl(TERMS_OF_SERVICE_URL))
         }
     }
 }

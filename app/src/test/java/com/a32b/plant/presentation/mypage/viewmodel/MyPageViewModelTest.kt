@@ -253,6 +253,31 @@ class MyPageViewModelTest {
         }
     }
 
+    // 주소는 hosting/build-legal.mjs의 PAGES 출력 파일 이름과 같아야 한다 (#607)
+    @Test
+    fun `privacy policy and terms buttons open their web pages`() = runTest {
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        try {
+            Dispatchers.setMain(dispatcher)
+            val viewModel = createViewModel(FakeUserRepository(testUser()))
+            val events = collectEvents(viewModel, dispatcher)
+
+            viewModel.onPrivacyPolicyClick()
+            viewModel.onTermsOfServiceClick()
+            runCurrent()
+
+            assertEquals(
+                listOf(
+                    MyPageEvent.OpenUrl("https://plant-82b09.web.app/privacy-policy.html"),
+                    MyPageEvent.OpenUrl("https://plant-82b09.web.app/terms.html")
+                ),
+                events
+            )
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     private fun createViewModel(users: FakeUserRepository): MyPageViewModel {
         val notifier = NoopSessionExpiredNotifier
         // 끝나는 Flow면 ObserveDarkModeUseCase가 5초 뒤 재구독을 예약해, 테스트 종료 후 Main이 복원된 뒤 남은 지연이 실행된다.
