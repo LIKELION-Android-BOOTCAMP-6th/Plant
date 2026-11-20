@@ -16,8 +16,9 @@ const {
 const {onCall, HttpsError} = require("firebase-functions/https");
 const {onSchedule} = require("firebase-functions/scheduler");
 // 오류는 logger.error("메시지", error, {uid})처럼 별도 인자로 넘긴다.
-// {uid, error}처럼 객체 안에 넣으면 JSON으로 바뀔 때 Error의 message·stack이 빠져
-// 로그에 원인이 남지 않는다. 마지막 인자(plain object)는 jsonPayload 필드로 남는다
+// {uid, error}처럼 객체 안에 넣으면 JSON으로 바뀔 때 stack이 빠지고, 일반 Error는
+// message까지 빠져 {}만 남는다 (오류 종류마다 남는 값이 다르다).
+// 마지막 인자(plain object)는 jsonPayload 필드로 남는다
 const logger = require("firebase-functions/logger");
 const {randomInt} = require("crypto");
 const {initializeApp} = require("firebase-admin/app");
