@@ -7,6 +7,7 @@ import com.a32b.plant.data.firestore.awaitServerWrite
 import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.mapper.toDto
 import com.a32b.plant.data.source.remote.community.CommunityRemoteDataSource
+import com.a32b.plant.data.source.remote.community.ReactionRemoval
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.error.COMMENT_ALREADY_DELETED_MESSAGE
 import com.a32b.plant.domain.model.Comment
@@ -243,12 +244,12 @@ class CommunityRepositoryImpl @Inject constructor(
         communityRemoteDataSource.createActivity(activity)
     }
 
-    override suspend fun removeLike(postId: String, uid: String): Result<Unit> =
+    override suspend fun removeLike(postId: String, uid: String): Result<Int?> =
         removeReaction(postId, uid, ActivityType.LIKE, label = "좋아요") {
             communityRemoteDataSource.removeLike(postId, uid)
         }
 
-    override suspend fun removeBookmark(postId: String, uid: String): Result<Unit> =
+    override suspend fun removeBookmark(postId: String, uid: String): Result<Int?> =
         removeReaction(postId, uid, ActivityType.BOOKMARK, label = "북마크") {
             communityRemoteDataSource.removeBookmark(postId, uid)
         }
@@ -259,12 +260,13 @@ class CommunityRepositoryImpl @Inject constructor(
         uid: String,
         type: String,
         label: String,
-        remove: suspend () -> Boolean
-    ): Result<Unit> {
-        safeRunCatching { remove() }
+        remove: suspend () -> ReactionRemoval
+    ): Result<Int?> {
+        val removal = safeRunCatching { remove() }
             .fold(
-                onSuccess = { removed ->
-                    if (!removed) Log.w("Community", "이미 ${label}가 해제된 상태라 activity만 정리: postId=$postId")
+                onSuccess = { removal ->
+                    if (!removal.removed) Log.w("Community", "이미 ${label}가 해제된 상태라 activity만 정리: postId=$postId")
+                    removal
                 },
                 onFailure = { e ->
                     Log.e("Community", "$label 취소 실패", e)
@@ -275,7 +277,7 @@ class CommunityRepositoryImpl @Inject constructor(
         // 해제가 멱등이므로 activity 삭제 실패는 실패로 돌려 재시도하게 함 (재시도해도 다시 좋아요/북마크되지 않음)
         return safeRunCatching { communityRemoteDataSource.deleteActivityByType(uid, postId, type) }
             .fold(
-                onSuccess = { Result.Success(Unit) },
+                onSuccess = { Result.Success(removal.countAfter) },
                 onFailure = { e ->
                     Log.e("Community", "$label activity 삭제 실패 (${label}는 해제됨): postId=$postId", e)
                     Result.Failure(handleError(e, "$label 취소에 실패했습니다.", isWrite = true))

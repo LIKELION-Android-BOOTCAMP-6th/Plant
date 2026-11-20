@@ -13,6 +13,13 @@ import kotlinx.coroutines.flow.Flow
 /** 게시글 등록 쓰기 — 문서 ID는 쓰기 전에 정해지므로 서버 응답과 상관없이 바로 알 수 있다 (#641) */
 data class PostCreateWrite(val postId: String, val write: Task<Void>)
 
+/**
+ * 좋아요/북마크 해제 결과.
+ * @property removed 이번 호출이 실제로 해제했으면 true, 이미 해제된 상태(또는 게시글 없음)라 쓰기를 하지 않았으면 false
+ * @property countAfter 해제 후 카운트 (해제하지 않았으면 지금 값). 게시글 문서가 없으면 null
+ */
+data class ReactionRemoval(val removed: Boolean, val countAfter: Int?)
+
 interface CommunityRemoteDataSource {
 
     suspend fun loadPostPage(
@@ -43,10 +50,10 @@ interface CommunityRemoteDataSource {
     suspend fun toggleBookmark(postId: String, uid: String): Boolean
     /**
      * 좋아요/북마크 "해제" 전용 — 토글과 달리 없으면 추가하지 않아 여러 번 호출해도 결과가 같음
-     * @return 이번 호출이 실제로 해제했으면 true, 이미 해제된 상태(또는 게시글 없음)라 쓰기를 하지 않았으면 false
+     * @return [ReactionRemoval] — 실제로 해제했는지와, 트랜잭션에서 읽은 값 기준의 해제 후 카운트
      */
-    suspend fun removeLike(postId: String, uid: String): Boolean
-    suspend fun removeBookmark(postId: String, uid: String): Boolean
+    suspend fun removeLike(postId: String, uid: String): ReactionRemoval
+    suspend fun removeBookmark(postId: String, uid: String): ReactionRemoval
 
     suspend fun addComment(postId : String, comment: Comment, activity: CommunityActivity)
     /** activityId가 있으면 댓글 본문과 activity 문구를 batch 한 번으로 함께 수정, null이면 본문만 수정. 기다리지 않고 Task를 돌려준다 */

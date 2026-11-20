@@ -6,6 +6,7 @@ import com.a32b.plant.data.model.PostDto
 import com.a32b.plant.data.model.TagDto
 import com.a32b.plant.data.source.remote.community.CommunityRemoteDataSource
 import com.a32b.plant.data.source.remote.community.PostCreateWrite
+import com.a32b.plant.data.source.remote.community.ReactionRemoval
 import com.a32b.plant.domain.model.Comment
 import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.domain.model.Post
@@ -188,8 +189,8 @@ private class FakeCommunityRemoteDataSource : CommunityRemoteDataSource {
     override suspend fun deletePost(postId: String): List<String> = unused()
     override suspend fun toggleLike(postId: String, uid: String): Boolean = unused()
     override suspend fun toggleBookmark(postId: String, uid: String): Boolean = unused()
-    override suspend fun removeLike(postId: String, uid: String): Boolean = unused()
-    override suspend fun removeBookmark(postId: String, uid: String): Boolean = unused()
+    override suspend fun removeLike(postId: String, uid: String): ReactionRemoval = unused()
+    override suspend fun removeBookmark(postId: String, uid: String): ReactionRemoval = unused()
     override suspend fun addComment(postId: String, comment: Comment, activity: CommunityActivity) = unused()
     override suspend fun deleteComment(postId: String, commentId: String, deleteActivity: Boolean): Boolean = unused()
     override fun observeActivity(uid: String, selected: String): Flow<List<CommunityActivityDto>> = unused()

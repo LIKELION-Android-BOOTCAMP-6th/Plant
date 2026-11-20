@@ -1,9 +1,13 @@
 package com.a32b.plant.domain.usecase.community
 
+import com.a32b.plant.domain.community.PostUpdate
+import com.a32b.plant.domain.community.PostUpdateNotifier
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.domain.repository.CommunityRepository
 import com.a32b.plant.domain.result.Result
+import com.a32b.plant.domain.result.map
+import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.type.ActivityType
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import kotlinx.coroutines.async
@@ -13,7 +17,9 @@ import javax.inject.Inject
 
 class DeleteActivitiesUseCase @Inject constructor(
     private val repository: CommunityRepository,
-    private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase
+    private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
+    // 커뮤니티 목록은 상호작용이 없으면 60초 안의 복귀에서 다시 불러오지 않으므로, 성공한 결과를 묶음마다 바로 알린다 (#712)
+    private val postUpdateNotifier: PostUpdateNotifier
 ) {
     suspend operator fun invoke(activities: List<CommunityActivity>): Result<Unit> = coroutineScope{
         // 좋아요/북마크는 (유형, 게시글) 단위로 묶어 한 번만 해제 — removeXXX 한 번이 그 게시글의 같은 유형 activity를 모두 지우므로,
@@ -51,12 +57,17 @@ class DeleteActivitiesUseCase @Inject constructor(
             is Result.Failure -> return group.map { existsResult }
         }
         // 게시글이 없으면 activity id로 각각 지움 — 서로 다른 문서라 충돌이 없고, 하나만 지우면 나머지가 목록에 남음
-        if (!exists) return group.map { repository.deleteActivity(it.id) }
+        // 서버 기준으로 없는 글이므로 목록에서도 뺀다 (activity 정리 성공 여부와 무관)
+        if (!exists) {
+            postUpdateNotifier.notifyPostDeleted(activity.targetId)
+            return group.map { repository.deleteActivity(it.id) }
+        }
 
         // 모든 분기가 Result를 반환해야 결과에서 실패가 집계됨
         // (when에 else가 없으면 문장으로 취급되어 값이 Unit이 되고, 실패가 "삭제되었습니다."로 묻힘)
         val result = when (activity.type) {
             ActivityType.POST -> repository.deletePost(activity.targetId, activity.id)
+                .onSuccess { postUpdateNotifier.notifyPostDeleted(activity.targetId) }
             ActivityType.COMMENT -> deleteComment(activity)
 
             // 사용자 없음(null)도 실패로 집계 — 세션 만료 알림은 ensureCurrentUserUseCase 내부에서 이미 발송됨
@@ -64,17 +75,34 @@ class DeleteActivitiesUseCase @Inject constructor(
             ActivityType.LIKE ->
                 ensureCurrentUserUseCase { user ->
                     repository.removeLike(activity.targetId, user.uid)
-                } ?: Result.Failure(AppError.UnknownUser())
+                }?.onSuccess { likeCount ->
+                    notifyReactionRemoved(activity.targetId, likeCount) { count ->
+                        PostUpdate(postId = activity.targetId, isLiked = false, likeCount = count)
+                    }
+                }?.map { } ?: Result.Failure(AppError.UnknownUser())
 
             ActivityType.BOOKMARK ->
                 ensureCurrentUserUseCase { user ->
                     repository.removeBookmark(activity.targetId, user.uid)
-                } ?: Result.Failure(AppError.UnknownUser())
+                }?.onSuccess { bookmarkCount ->
+                    notifyReactionRemoved(activity.targetId, bookmarkCount) { count ->
+                        PostUpdate(postId = activity.targetId, isBookmarked = false, bookmarkCount = count)
+                    }
+                }?.map { } ?: Result.Failure(AppError.UnknownUser())
 
             else -> Result.Failure(AppError.Unknown("알 수 없는 활동 유형입니다: ${activity.type}"))
         }
         // 여러 개로 묶이는 건 좋아요/북마크뿐 — 한 번의 해제 결과가 묶음 안 activity 전부에 해당
         return group.map { result }
+    }
+
+    // 해제 후 카운트가 null이면 해제 시점에 게시글 문서가 없던 것 — 목록에서 뺀다
+    private fun notifyReactionRemoved(postId: String, countAfter: Int?, update: (Int) -> PostUpdate) {
+        if (countAfter == null) {
+            postUpdateNotifier.notifyPostDeleted(postId)
+        } else {
+            postUpdateNotifier.notifyPostUpdated(update(countAfter))
+        }
     }
 
     private suspend fun deleteComment(activity: CommunityActivity): Result<Unit> {
