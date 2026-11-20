@@ -11,6 +11,7 @@ import com.a32b.plant.domain.session.SessionExpiredReason
 import com.a32b.plant.domain.type.ActivityType
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import com.a32b.plant.fake.FakeCommunityRepository
+import com.a32b.plant.fake.RecordingPostUpdateNotifier
 import com.a32b.plant.fake.FakeUserRepository
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -28,7 +29,7 @@ class DeleteActivitiesUseCaseTest {
     @Test
     fun 게시글_삭제_성공_시_목록에_삭제를_알린다() = runBlocking {
         val repository = FakeCommunityRepository()
-        val notifier = RecordingNotifier()
+        val notifier = RecordingPostUpdateNotifier()
 
         val result = useCase(repository, notifier)(listOf(activity("a1", ActivityType.POST, "post-1")))
 
@@ -40,7 +41,7 @@ class DeleteActivitiesUseCaseTest {
     @Test
     fun 게시글_삭제_실패_시_목록에_알리지_않는다() = runBlocking {
         val repository = FakeCommunityRepository(deletePostResult = Result.Failure(AppError.Network()))
-        val notifier = RecordingNotifier()
+        val notifier = RecordingPostUpdateNotifier()
 
         val result = useCase(repository, notifier)(listOf(activity("a1", ActivityType.POST, "post-1")))
 
@@ -53,7 +54,7 @@ class DeleteActivitiesUseCaseTest {
     @Test
     fun 게시글이_이미_없으면_activity를_정리하고_목록에_삭제를_알린다() = runBlocking {
         val repository = FakeCommunityRepository(isPostExistResult = Result.Success(false))
-        val notifier = RecordingNotifier()
+        val notifier = RecordingPostUpdateNotifier()
 
         val result = useCase(repository, notifier)(listOf(activity("a1", ActivityType.LIKE, "post-1")))
 
@@ -67,7 +68,7 @@ class DeleteActivitiesUseCaseTest {
     @Test
     fun 게시글_존재_조회_실패_시_목록에_알리지_않는다() = runBlocking {
         val repository = FakeCommunityRepository(isPostExistResult = Result.Failure(AppError.Network()))
-        val notifier = RecordingNotifier()
+        val notifier = RecordingPostUpdateNotifier()
 
         val result = useCase(repository, notifier)(listOf(activity("a1", ActivityType.POST, "post-1")))
 
@@ -81,7 +82,7 @@ class DeleteActivitiesUseCaseTest {
     @Test
     fun 좋아요_해제_성공_시_해제_상태와_해제_후_좋아요_수를_알린다() = runBlocking {
         val repository = FakeCommunityRepository(removeLikeResult = Result.Success(4))
-        val notifier = RecordingNotifier()
+        val notifier = RecordingPostUpdateNotifier()
 
         val result = useCase(repository, notifier)(listOf(activity("a1", ActivityType.LIKE, "post-1")))
 
@@ -93,7 +94,7 @@ class DeleteActivitiesUseCaseTest {
     @Test
     fun 북마크_해제_성공_시_해제_상태와_해제_후_북마크_수를_알린다() = runBlocking {
         val repository = FakeCommunityRepository(removeBookmarkResult = Result.Success(2))
-        val notifier = RecordingNotifier()
+        val notifier = RecordingPostUpdateNotifier()
 
         val result = useCase(repository, notifier)(listOf(activity("a1", ActivityType.BOOKMARK, "post-1")))
 
@@ -105,7 +106,7 @@ class DeleteActivitiesUseCaseTest {
     @Test
     fun 좋아요_해제_실패_시_목록에_알리지_않는다() = runBlocking {
         val repository = FakeCommunityRepository(removeLikeResult = Result.Failure(AppError.Network()))
-        val notifier = RecordingNotifier()
+        val notifier = RecordingPostUpdateNotifier()
 
         val result = useCase(repository, notifier)(listOf(activity("a1", ActivityType.LIKE, "post-1")))
 
@@ -118,7 +119,7 @@ class DeleteActivitiesUseCaseTest {
     @Test
     fun 해제_후_카운트가_null이면_목록에_삭제를_알린다() = runBlocking {
         val repository = FakeCommunityRepository(removeLikeResult = Result.Success(null))
-        val notifier = RecordingNotifier()
+        val notifier = RecordingPostUpdateNotifier()
 
         val result = useCase(repository, notifier)(listOf(activity("a1", ActivityType.LIKE, "post-1")))
 
@@ -130,7 +131,7 @@ class DeleteActivitiesUseCaseTest {
     @Test
     fun 같은_글의_좋아요_activity가_여러_개여도_한_번만_해제하고_한_번만_알린다() = runBlocking {
         val repository = FakeCommunityRepository(removeLikeResult = Result.Success(0))
-        val notifier = RecordingNotifier()
+        val notifier = RecordingPostUpdateNotifier()
 
         val result = useCase(repository, notifier)(
             listOf(activity("a1", ActivityType.LIKE, "post-1"), activity("a2", ActivityType.LIKE, "post-1"))
@@ -144,7 +145,7 @@ class DeleteActivitiesUseCaseTest {
     @Test
     fun 세션이_만료되면_해제하지_않고_목록에_알리지_않는다() = runBlocking {
         val repository = FakeCommunityRepository()
-        val notifier = RecordingNotifier()
+        val notifier = RecordingPostUpdateNotifier()
 
         val result = useCase(repository, notifier, user = null)(listOf(activity("a1", ActivityType.LIKE, "post-1")))
 
@@ -162,7 +163,7 @@ class DeleteActivitiesUseCaseTest {
             deletePostResult = Result.Success(Unit),
             removeBookmarkResult = Result.Failure(AppError.Network())
         )
-        val notifier = RecordingNotifier()
+        val notifier = RecordingPostUpdateNotifier()
 
         val result = useCase(repository, notifier)(
             listOf(activity("a1", ActivityType.POST, "post-1"), activity("a2", ActivityType.BOOKMARK, "post-2"))
@@ -174,15 +175,6 @@ class DeleteActivitiesUseCaseTest {
     }
 
     // ---------- 도우미 ----------
-
-    private class RecordingNotifier : PostUpdateNotifier {
-        val updates = mutableListOf<PostUpdate>()
-        val created = mutableListOf<String>()
-        val deleted = mutableListOf<String>()
-        override fun notifyPostUpdated(update: PostUpdate) { updates += update }
-        override fun notifyPostCreated(postId: String) { created += postId }
-        override fun notifyPostDeleted(postId: String) { deleted += postId }
-    }
 
     private fun useCase(
         repository: FakeCommunityRepository,

@@ -75,7 +75,7 @@ class CommunityListViewModel @Inject constructor(
     private val recentLocalPatches = mutableMapOf<String, Long>()
     // 마지막으로 서버와 완전히 동기화된(= posts를 서버 응답으로 통째로 교체한) 시각
     private var lastSyncedAt = 0L
-    // 마지막 동기화 이후 상세 화면에서의 상호작용(PostUpdate)이나 새 글 등록·글 삭제가 있었는지 — 없으면 ON_RESUME 시 불필요한 재조회를 생략
+    // 마지막 동기화 이후 상세·글 수정·내 활동 화면에서의 상호작용(PostUpdate)이나 새 글 등록·글 삭제가 있었는지 — 없으면 ON_RESUME 시 불필요한 재조회를 생략
     private var hasPendingInteractionSinceLastSync = false
     // 마지막 동기화 이후 새 글을 등록했는지 — silentRefresh()가 성공하면 맨 위로 스크롤해 새 글을 보여 준다 (#669).
     // 목록은 postId를 key로 스크롤 위치를 유지하므로, 스크롤하지 않으면 새 글이 기존 첫 글 위(화면 밖)에 들어간다
@@ -125,7 +125,7 @@ class CommunityListViewModel @Inject constructor(
         }
     }
 
-    // 상세 화면에서의 상호작용 결과를 목록 화면에 즉시 반영 (서버 재조회 없이 로컬 패치)
+    // 상세·글 수정·내 활동 화면에서의 상호작용 결과를 목록 화면에 즉시 반영 (서버 재조회 없이 로컬 패치)
     private fun observePostUpdates() {
         viewModelScope.launch {
             postUpdateObserver.event.collect { update ->

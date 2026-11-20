@@ -423,14 +423,17 @@ class CommunityDetailViewModel @Inject constructor(
 
     fun deletePost() {
         viewModelScope.launch {
-            withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
-                repository.deletePost(postId, _post.value?.activityId ?: "")
-            }
-                .onSuccess {
-                    // 목록은 상호작용이 없으면 60초 안의 복귀에서 다시 불러오지 않으므로, 삭제를 알려 바로 빼게 한다 (#712)
-                    postUpdateNotifier.notifyPostDeleted(postId)
-                    _eventChannel.send(CommunityDetailEvent.NavigateBack)
+            // NonCancellable: 응답 전에 화면을 나가도(느림 안내를 보고 뒤로가기) 삭제 성공 시 목록에 알리기 위함 (#712)
+            // withContext는 종료 시 바깥 취소를 확인해 결과를 버리므로 알림은 반드시 블록 안에 둘 것
+            // (이탈 후에는 블록 밖의 화면 이동·Toast·다이얼로그 닫기가 실행되지 않음)
+            withContext(NonCancellable) {
+                withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
+                    repository.deletePost(postId, _post.value?.activityId ?: "")
                 }
+                    // 목록은 상호작용이 없으면 60초 안의 복귀에서 다시 불러오지 않으므로, 삭제를 알려 바로 빼게 한다
+                    .onSuccess { postUpdateNotifier.notifyPostDeleted(postId) }
+            }
+                .onSuccess { _eventChannel.send(CommunityDetailEvent.NavigateBack) }
                 .onFailure { e ->
                     when (e) {
                         is AppError.UnknownUser -> ensureCurrentUserUseCase()
