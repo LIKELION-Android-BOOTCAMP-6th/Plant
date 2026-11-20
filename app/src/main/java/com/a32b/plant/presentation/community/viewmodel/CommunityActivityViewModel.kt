@@ -12,12 +12,14 @@ import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.usecase.community.DeleteActivitiesUseCase
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class CommunityActivityUiState(
     val isLoading: Boolean = false,
@@ -103,7 +105,11 @@ class CommunityActivityViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            deleteActivitiesUseCase(toDelete)
+            // NonCancellable: 응답 전에 화면을 나가도 남은 항목을 끝까지 처리하고, 성공한 묶음마다 목록에 알리기 위함 (#712)
+            // 목록 알림은 UseCase 안에서 보낸다. 이탈 후에도 블록 밖 상태 갱신은 실행되지만(NonCancellable은 dispatcher를 바꾸지 않고
+            // UseCase가 자식 코루틴을 모두 끝낸 뒤 돌아오므로, withContext가 끝날 때 바깥 취소를 확인하지 않음)
+            // 화면이 없어 영향이 없고, Toast는 취소된 viewModelScope의 launch라 나가지 않는다
+            withContext(NonCancellable) { deleteActivitiesUseCase(toDelete) }
                 .onSuccess {
                     _uiState.update { it.copy(isLoading = false, isSelectionMode = false, selectedIds = emptySet()) }
                     sendToast("삭제되었습니다.")

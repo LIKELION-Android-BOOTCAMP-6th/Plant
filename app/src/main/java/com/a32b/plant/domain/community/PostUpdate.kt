@@ -3,7 +3,7 @@ package com.a32b.plant.domain.community
 import com.a32b.plant.domain.model.Post
 import com.a32b.plant.domain.model.Tag
 
-// 상세 화면에서의 변경을 목록 화면에 즉시 반영하기 위한 부분 패치. null 필드는 "변경 없음"을 의미
+// 상세·글 수정·내 활동 화면에서의 변경을 목록 화면에 즉시 반영하기 위한 부분 패치. null 필드는 "변경 없음"을 의미
 data class PostUpdate(
     val postId: String,
     val isLiked: Boolean? = null,

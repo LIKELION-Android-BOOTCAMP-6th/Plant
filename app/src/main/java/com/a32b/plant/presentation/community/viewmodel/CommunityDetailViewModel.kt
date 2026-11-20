@@ -335,7 +335,8 @@ class CommunityDetailViewModel @Inject constructor(
 
         viewModelScope.launch {
             // NonCancellable: 화면 이탈 후에도 등록 요청과 결과 처리(실패 시 댓글 수 롤백 알림)를 끝까지 수행
-            // withContext는 종료 시 바깥 취소를 확인해 결과를 버리므로 결과 처리도 반드시 블록 안에 둘 것
+            // NonCancellable은 dispatcher를 바꾸지 않아, 블록 안에 끝나지 않은 자식 코루틴이 없으면 withContext는 끝날 때
+            // 바깥 취소를 확인하지 않고 이어진다(블록 밖 코드도 이탈 후 실행됨). 이 동작에 기대지 않도록 결과 처리는 블록 안에 둔다
             // (이탈 후에는 viewModelScope가 취소돼 sendToast/refresh는 no-op)
             withContext(NonCancellable) {
                 // 오프라인이면 쓰기는 로컬 큐에 남아 재연결 시 반영되므로 임시 댓글을 유지한 채 안내만 표시
@@ -423,8 +424,17 @@ class CommunityDetailViewModel @Inject constructor(
 
     fun deletePost() {
         viewModelScope.launch {
-            withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
-                repository.deletePost(postId, _post.value?.activityId ?: "")
+            // NonCancellable: 응답 전에 화면을 나가도(느림 안내를 보고 뒤로가기) 삭제 성공 시 목록에 알리기 위함 (#712)
+            // 알림은 블록 안에 둔다. NonCancellable은 dispatcher를 바꾸지 않아, 블록 안에 끝나지 않은 자식 코루틴이 없으면
+            // withContext는 끝날 때 바깥 취소를 확인하지 않고 이어지지만(블록 밖 코드도 이탈 후 실행됨) 이 동작에 기대지 않기 위함.
+            // 이탈 후 블록 밖에서는 Toast가 취소된 viewModelScope의 launch라 나가지 않고,
+            // 화면 이동 이벤트는 받을 화면이 없어 아무 일도 일어나지 않는다
+            withContext(NonCancellable) {
+                withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
+                    repository.deletePost(postId, _post.value?.activityId ?: "")
+                }
+                    // 목록은 상호작용이 없으면 60초 안의 복귀에서 다시 불러오지 않으므로, 삭제를 알려 바로 빼게 한다
+                    .onSuccess { postUpdateNotifier.notifyPostDeleted(postId) }
             }
                 .onSuccess { _eventChannel.send(CommunityDetailEvent.NavigateBack) }
                 .onFailure { e ->
