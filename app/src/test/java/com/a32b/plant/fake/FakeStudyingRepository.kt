@@ -40,6 +40,14 @@ class FakeStudyingRepository(
         return saveLocalSessionResult
     }
 
+    /** updateLocalSessionTime으로 보낸 (세션 ID, 학습 시간) (보낸 순서대로) */
+    val updatedLocalSessionTimes = mutableListOf<Pair<String, Long>>()
+
+    override suspend fun updateLocalSessionTime(sessionId: String, time: Long): Result<Unit> {
+        updatedLocalSessionTimes += sessionId to time
+        return Result.Success(Unit)
+    }
+
     override fun observeStudyingUser(tag: String): Flow<List<StudyingUser>> = error("Unused")
     override suspend fun saveStudyingUser(user: StudyingUser): Result<Unit> = error("Unused")
     override suspend fun awaitPendingWrites(): Boolean = error("Unused")

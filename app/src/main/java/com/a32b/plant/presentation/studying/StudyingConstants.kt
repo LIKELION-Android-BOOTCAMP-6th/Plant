@@ -12,4 +12,7 @@ object StudyingConstants {
     const val REWARD_MIN_STUDY_TIME_MS = 60 * 60 * 1000L
     // 결과 화면에서 보상이 이 시간 넘게 오지 않으면 "늦어지고 있어요" 안내 (함수 콜드 스타트는 수 초, 재시도는 더 걸릴 수 있음)
     const val REWARD_DELAY_NOTICE_MS = 15_000L
+    // 공부 중 로컬 백업 주기 (#668) — 타이머 서비스가 이 주기로 학습 시간을 저장하고, 학습 화면은 같은 주기로 7일 경과를 확인한다
+    // 앱이 강제 종료되면 마지막 저장 뒤의 시간(최대 이 주기)을 잃는다. 백그라운드로 갈 때(ON_STOP)는 화면이 바로 저장한다
+    const val LOCAL_BACKUP_INTERVAL_MS = 30_000L
 }

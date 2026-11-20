@@ -62,6 +62,12 @@ interface StudyingRepository {
 
     suspend fun readLocalSession(): Result<StudyingSession?>
 
+    /**
+     * 공부 중인 세션 백업의 학습 시간만 갱신 (타이머 서비스의 주기 저장, #668)
+     * 같은 세션(sessionId)·공부 중(STUDYING)·일시정지 아님일 때만 쓰고, 아니면 아무것도 하지 않고 성공을 돌려준다
+     */
+    suspend fun updateLocalSessionTime(sessionId: String, time: Long): Result<Unit>
+
     suspend fun clearLocalSession(): Result<Unit>
 
     /** 목표 입력 창 임시 글 로컬 저장/읽기/삭제 */

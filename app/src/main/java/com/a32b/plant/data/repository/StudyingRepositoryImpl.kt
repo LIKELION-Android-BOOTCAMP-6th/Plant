@@ -23,6 +23,7 @@ import com.a32b.plant.domain.model.UnseenStudyReward
 import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.type.StudySaveRejection
+import com.a32b.plant.domain.type.StudyingSessionStatus
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.flow.Flow
@@ -227,6 +228,21 @@ class StudyingRepositoryImpl @Inject constructor(
         onFailure = { e ->
             Log.e("studying", "학습 세션 로컬 저장", e)
             val error = when(e){
+                is IOException -> AppError.Custom("저장 공간이 부족하여 비정상 종료 시 데이터를 소실할 수 있습니다.")
+                else -> AppError.Local()
+            }
+            Result.Failure(error)
+        }
+    )
+
+    override suspend fun updateLocalSessionTime(sessionId: String, time: Long): Result<Unit> = safeRunCatching {
+        local.updateTime(sessionId, time, StudyingSessionStatus.STUDYING.name)
+    }.fold(
+        onSuccess = { Result.Success(Unit) },
+        onFailure = { e ->
+            Log.e("studying", "학습 시간 로컬 저장", e)
+            // 실패 안내 문구는 전체 저장(saveLocalSession)과 같게 — 학습 화면이 같은 안내를 띄운다
+            val error = when (e) {
                 is IOException -> AppError.Custom("저장 공간이 부족하여 비정상 종료 시 데이터를 소실할 수 있습니다.")
                 else -> AppError.Local()
             }
