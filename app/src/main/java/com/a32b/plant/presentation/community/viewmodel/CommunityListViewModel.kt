@@ -99,7 +99,8 @@ class CommunityListViewModel @Inject constructor(
     }
 
     // 삭제한 글을 바로 빼서, 재조회를 건너뛰는 60초 안의 복귀에서도 남지 않게 한다 (#712).
-    // 검색·필터 조건은 건드리지 않고 그 글만 뺀다. 다음 복귀 때 silentRefresh()로 빈자리도 서버 값으로 다시 채운다
+    // 검색·필터 조건은 건드리지 않고 그 글만 뺀다. 다음 복귀 때 silentRefresh()로 커서·hasMore를 서버 값으로 맞춘다
+    // (silentRefresh()는 남은 글 수만큼 다시 받으므로, 빈자리는 남은 글이 한 페이지 미만일 때만 채워지고 그 밖에는 loadMore()가 이어 받는다)
     private fun observePostDeleted() {
         viewModelScope.launch {
             postUpdateObserver.postDeleted.collect { postId ->
