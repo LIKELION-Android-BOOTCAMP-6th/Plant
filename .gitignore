@@ -35,3 +35,6 @@ hosting/public/terms.html
 
 # Firebase CLI 배포 캐시: 배포한 PC에서만 쓰는 파일 해시 캐시라 레포에 올리지 않는다 (#715)
 .firebase/
+
+# Android Studio가 만드는 Gradle 데몬 JDK 설정: CI JDK와 맞추기 전까지 올리지 않는다 (#722)
+/gradle/gradle-daemon-jvm.properties
