@@ -7,4 +7,7 @@ import kotlinx.coroutines.flow.Flow
 // 그 외 다른 사용자의 변경은 이 버스를 타지 않으며, 각 화면 자체의 refresh/silentRefresh로만 보정된다.
 interface PostUpdateObserver {
     val event: Flow<PostUpdate>
+
+    // 현재 로그인한 사용자가 새로 등록한 게시글의 ID (#669)
+    val postCreated: Flow<String>
 }
