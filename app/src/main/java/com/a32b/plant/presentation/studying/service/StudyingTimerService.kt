@@ -11,9 +11,9 @@ import androidx.core.app.NotificationCompat
 import com.a32b.plant.R
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.error.AppError
-import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
+import com.a32b.plant.domain.usecase.studying.UpdateLocalStudyingTimeUseCase
 import com.a32b.plant.presentation.MainActivity
 import com.a32b.plant.presentation.studying.StudyingConstants.LOCAL_BACKUP_INTERVAL_MS
 import dagger.hilt.android.AndroidEntryPoint
@@ -61,8 +61,8 @@ class StudyingTimerService : Service() {
     private var sessionId = ""
 
     // 주기 저장은 화면(ViewModel)이 아니라 서비스가 한다 — 화면이 먼저 정리되고 서비스만 남아도 저장이 이어지게 (#668)
-    // 단순 위임이라 UseCase를 두지 않고 Repository를 직접 부른다 (세션 ID로 대상 백업을 확인하므로 유저 확인 불필요)
-    @Inject lateinit var studyingRepository: StudyingRepository
+    // 로그인한 유저가 없으면 쓰지 않는다 — 백그라운드에서 세션이 만료돼도 앱으로 돌아올 때까지 서비스가 돌기 때문
+    @Inject lateinit var updateLocalStudyingTimeUseCase: UpdateLocalStudyingTimeUseCase
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -120,15 +120,16 @@ class StudyingTimerService : Service() {
     /**
      * 백업의 학습 시간만 갱신 — 타이머 루프를 막지 않도록 따로 실행한다
      * 목표·일시정지 여부 등 나머지는 바뀔 때 학습 화면이 저장한다
-     * 일시정지·종료 직후 늦게 도착해도 백업이 일시정지·종료 상태면 쓰지 않는다 (Repository 조건)
+     * 일시정지·종료 직후 늦게 도착해도 백업이 일시정지·종료 상태면 쓰지 않는다 (StudyingRepository.updateLocalSessionTime 조건)
      */
     private fun saveTime(ms: Long) {
         val id = sessionId
         if (id.isBlank()) return
         scope.launch {
-            studyingRepository.updateLocalSessionTime(id, ms)
+            updateLocalStudyingTimeUseCase(id, ms)
                 .onSuccess { _localSaveResult.tryEmit(true) }
                 // 학습 화면 저장(saveSession)과 같이 저장 공간 부족(Custom)일 때만 안내한다
+                // 유저 없음(UnknownUser)은 UseCase가 세션 만료를 알려 MainActivity가 처리한다
                 .onFailure { e -> if (e is AppError.Custom) _localSaveResult.tryEmit(false) }
         }
     }
