@@ -75,7 +75,7 @@ async function grantStudyReward(db, uid, potId, logId) {
 // - 같은 유저의 기록은 차례로, 다른 유저끼리는 동시에 지급한다
 //   → 지급 트랜잭션은 users/{uid} 문서를 함께 읽고 쓰므로 같은 유저 기록을 동시에 보내면
 //     서로 잠금을 기다리고 다시 시도하느라 크게 느려진다
-//     (에뮬레이터 측정: 같은 유저 60건 동시 약 50초, 유저 60명 약 0.5초)
+//     (에뮬레이터 측정, 기록 20건씩 동시에 보낼 때: 같은 유저 60건 약 50초, 유저 60명 약 0.5초)
 const PENDING_REWARD_MIN_AGE_MS = 25 * 60 * 60 * 1000;
 const PENDING_REWARD_PAGE_SIZE = 500;
 const PENDING_REWARD_MAX_PER_RUN = 500;

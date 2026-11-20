@@ -4,7 +4,10 @@
 // - 문서의 서버 생성 시각(createTime)은 과거 값으로 만들 수 없어 기준 시각(nowMs)을 미래로 넣는다
 // - (default) DB에 쓰면 트리거가 바로 지급해 "pending으로 남은 기록"을 만들 수 없다
 //   → 트리거가 붙지 않는 DB(getTriggerFreeDb)에서 확인한다
-//   트리거와 겹치는 경우만 (default) DB에서 실제 트리거와 함께 실행한다
+// - 트리거와 겹치는 경우는 실제 트리거로 확인하지 않는다
+//   트리거는 pending이 아닌 기록을 만나면 아무것도 남기지 않고 끝나 실행이 끝났는지 알 수 없고,
+//   에뮬레이터에서는 트리거가 테스트보다 늦게 시작돼 확인 전에 실행되지 않았다
+//   → 트리거와 보정은 같은 grantStudyReward를 부르므로 "보정이 동시에 두 번" 테스트로 확인한다
 const {describe, it, beforeEach} = require("node:test");
 const assert = require("node:assert");
 const logger = require("firebase-functions/logger");
@@ -12,8 +15,7 @@ const {
   PENDING_REWARD_MIN_AGE_MS, grantStudyReward, retryPendingStudyRewards,
 } = require("../../studyReward");
 const {
-  TRIGGER_FREE_DATABASE_ID, clearFirestore, db, getTriggerFreeDb, uniqueId,
-  waitForDoc,
+  TRIGGER_FREE_DATABASE_ID, clearFirestore, getTriggerFreeDb, uniqueId,
 } = require("../helpers/emulator");
 
 const retryDb = getTriggerFreeDb();
@@ -25,7 +27,6 @@ const futureNowMs = () => Date.now() + PENDING_REWARD_MIN_AGE_MS + HOUR_MS;
 /**
  * 유저 문서와 pending 학습 기록을 만든다.
  * @param {Object} [options]
- * @param {FirebaseFirestore.Firestore} [options.database] 기본은 트리거가 붙지 않는 DB
  * @param {number} [options.studyingTime] 학습 시간(ms). 기본 1시간(하트 1 + 박스 1)
  * @param {boolean} [options.withUser] false면 유저 문서를 만들지 않는다 (탈퇴 상태)
  * @param {FirebaseFirestore.DocumentReference} [options.userRef]
@@ -34,11 +35,11 @@ const futureNowMs = () => Date.now() + PENDING_REWARD_MIN_AGE_MS + HOUR_MS;
  *     logRef: FirebaseFirestore.DocumentReference, createTimeMs: number}>}
  */
 async function seedPendingLog({
-  database = retryDb, studyingTime = HOUR_MS, withUser = true,
+  studyingTime = HOUR_MS, withUser = true,
   userRef: existingUserRef,
 } = {}) {
   const userRef = existingUserRef ||
-    database.collection("users").doc(uniqueId("user"));
+    retryDb.collection("users").doc(uniqueId("user"));
   if (withUser && !existingUserRef) {
     await userRef.set({item: {heart: 0, box: 0}});
   }
@@ -108,6 +109,7 @@ describe("retryPendingStudyRewards", () => {
     assert.strictEqual((await read(logRef)).rewardStatus, "granted");
   });
 
+  // 트리거와 보정이 같은 기록을 동시에 처리하는 경우도 이 테스트로 본다 (둘 다 grantStudyReward)
   it("보정이 동시에 두 번 실행돼도 1번만 지급한다", async () => {
     const {userRef, logRef} = await seedPendingLog();
     const nowMs = futureNowMs();
@@ -118,19 +120,6 @@ describe("retryPendingStudyRewards", () => {
     ]);
 
     assert.strictEqual((await read(logRef)).rewardStatus, "granted");
-    assert.deepStrictEqual((await read(userRef)).item, {heart: 1, box: 1});
-  });
-
-  it("트리거와 겹쳐 실행돼도 1번만 지급한다", async () => {
-    // (default) DB에 기록을 만들고 바로 보정을 실행해, 트리거와 보정이 같은 기록을 처리하게 한다
-    const {userRef, logRef} = await seedPendingLog({database: db});
-    const result = await retryPendingStudyRewards(db, futureNowMs());
-    assert.strictEqual(result.failed, 0);
-    await waitForDoc(
-        logRef, (data) => data && data.rewardStatus === "granted",
-    );
-    // 지급과 granted 변경은 한 트랜잭션이고, 둘 다 pending일 때만 쓴다 → granted가 보인 뒤에는
-    // 늦게 끝나는 쪽이 있어도 pending이 아니라서 더 지급하지 않는다
     assert.deepStrictEqual((await read(userRef)).item, {heart: 1, box: 1});
   });
 
