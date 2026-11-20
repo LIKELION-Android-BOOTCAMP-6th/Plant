@@ -214,6 +214,9 @@ gcloud storage rm --recursive gs://plant-82b09-restore-tmp
 - `pots`를 가져올 때는 `logs`도 함께 가져온다. 화분이 지워질 때 `onPotDeleted` 트리거가 그 화분의 `logs`도 이미 지웠기 때문이다
 - [공식 문서](https://firebase.google.com/docs/firestore/manage-data/export-import) 기준으로 **가져오기는 Cloud Functions 트리거를 실행하지 않는다.** 그래서:
   - `logs`를 가져와도 `grantStudyReward`가 돌지 않아 보상이 다시 지급되지 않는다
+    - 단, 가져온 `logs` 중 `rewardStatus`가 `"pending"`인 기록은 보정 예약 함수(`functions/index.js`의 `retryPendingStudyRewards`, 매일 04:00 KST)가 지급한다. 서버 생성 시각이 25시간 지난 뒤의 첫 실행에서 지급된다 (#609). 가져온 문서의 서버 생성 시각이 원본 값인지 가져온 시각인지는 **미확인**
+    - 스냅샷 뒤에 이미 지급된 기록(스냅샷 순간에 트리거가 처리 중이던 기록 등)이면 유저 아이템은 이미 늘어 있으므로 **두 번 지급된다** → 가져온 뒤 다음 04:00 실행 전에 가져온 `pending` 기록을 확인하고, 지급하면 안 되는 기록은 `rewardStatus`를 `"none"`으로 바꾼다
+    - 보정 함수는 `(default)` DB만 본다. 복원용 새 DB의 `pending` 기록은 지급되지 않는다
   - 다른 문서에 저장된 집계 값은 자동으로 다시 맞춰지지 않는다 (가져오기를 썼을 때만 해당). 예: 댓글을 지우면 `syncCommentCountOnDelete`가 게시글의 `commentCount`를 이미 줄여 놨는데, 댓글만 가져오면 `commentCount`는 낮은 값으로 남는다 → 가져온 뒤 해당 게시글의 `commentCount`와 실제 댓글 수를 비교해서 맞춘다
 - 위 명령은 아직 실제로 실행해 보지 않았다 (**미확인**). 처음 쓸 때 결과를 이 문서에 적는다
 
@@ -243,7 +246,7 @@ gcloud storage rm --recursive gs://plant-82b09-restore-tmp
 - 콘솔에서 쓰는 값은 보안 규칙을 거치지 않는다. 규칙이 쓰는 표시 필드(`lastDeletedPotId`·`lastDeletedLogId` 등)는 바꾸지 않아도 된다
 
 - 직접 쓰면 가져오기와 달리 트리거가 실행된다 (`functions/index.js` 기준):
-  - `logs` 생성 → `grantStudyReward`: 보상은 `rewardStatus`가 `"pending"`일 때만 지급된다 (`functions/index.js`의 `grantStudyReward`). 이미 처리된 기록(`"granted"`·`"none"`)은 다시 주지 않고 끝난다. 원본이 `"pending"`이었다면 그때 지급된다
+  - `logs` 생성 → `grantStudyReward`: 보상은 `rewardStatus`가 `"pending"`일 때만 지급된다 (`functions/studyReward.js`의 `grantStudyReward`). 이미 처리된 기록(`"granted"`·`"none"`)은 다시 주지 않고 끝난다. 원본이 `"pending"`이었다면 그때 지급된다
   - 댓글 생성 → `syncCommentCountOnCreate`: 실제 댓글 수를 다시 세어 게시글 `commentCount`를 맞춘다
   - 화분 생성, `users` 수정에 붙은 트리거는 없다. 화분 수정 트리거(`unlockProfileLevelOnPotLevelUp`)는 화분을 고칠 때마다 실행되지만, `potLevel`이 그대로면 아무것도 쓰지 않고 끝난다. 그래서 `potTotalStudyingTime`만 고치면 영향이 없다
 - 문서가 많으면 콘솔로 옮기기 어렵다. 그때는 복원 DB에서 해당 문서만 읽어 `(default)`에 쓰는 Admin SDK 스크립트가 필요하다 (아직 만들지 않음)
