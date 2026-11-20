@@ -10,4 +10,6 @@ plugins {
     alias(libs.plugins.aboutlibraries.android) apply false
     //firebase sdk
     id("com.google.gms.google-services") version "4.4.4" apply false
+    // 크래시 수집 (#622)
+    id("com.google.firebase.crashlytics") version "3.0.8" apply false
 }
