@@ -20,7 +20,7 @@ import org.junit.Test
 
 /**
  * '내 활동' 삭제 결과가 커뮤니티 목록에 신호로 전달되는지 확인한다 (#712).
- * 성공한 묶음만 알리고, 실패한 묶음은 알리지 않아야 목록이 서버와 다른 상태로 바뀌지 않는다.
+ * 성공했거나 서버에 없다고 확인된 묶음만 알리고, 그 밖의 실패한 묶음은 알리지 않아야 목록이 서버와 다른 상태로 바뀌지 않는다.
  */
 class DeleteActivitiesUseCaseTest {
 
@@ -63,6 +63,23 @@ class DeleteActivitiesUseCaseTest {
         assertTrue(repository.removedLikePostIds.isEmpty())
         assertEquals(listOf("post-1"), notifier.deleted)
         assertTrue(notifier.updates.isEmpty())
+    }
+
+    // 서버에 없는 글은 목록에서 빼야 하므로, activity 정리가 실패해 결과가 실패로 집계돼도 신호는 보낸다
+    @Test
+    fun `게시글이 없으면 activity 정리가 실패해도 목록에 삭제를 알리고 결과는 실패로 돌려준다`() = runBlocking {
+        val repository = FakeCommunityRepository(
+            isPostExistResult = Result.Success(false),
+            deleteActivityResult = Result.Failure(AppError.Network())
+        )
+        val notifier = RecordingPostUpdateNotifier()
+
+        val result = useCase(repository, notifier)(listOf(activity("a1", ActivityType.POST, "post-1")))
+
+        assertTrue(result is Result.Failure)
+        assertEquals(listOf("a1"), repository.deletedActivityIds)
+        assertTrue(repository.deletedPostIds.isEmpty())
+        assertEquals(listOf("post-1"), notifier.deleted)
     }
 
     @Test

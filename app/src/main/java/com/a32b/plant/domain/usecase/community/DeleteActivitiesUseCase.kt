@@ -18,7 +18,7 @@ import javax.inject.Inject
 class DeleteActivitiesUseCase @Inject constructor(
     private val repository: CommunityRepository,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
-    // 커뮤니티 목록은 상호작용이 없으면 60초 안의 복귀에서 다시 불러오지 않으므로, 성공한 결과를 묶음마다 바로 알린다 (#712)
+    // 커뮤니티 목록은 상호작용이 없으면 60초 안의 복귀에서 다시 불러오지 않으므로, 성공했거나 서버에 없다고 확인된 묶음마다 바로 알린다 (#712)
     private val postUpdateNotifier: PostUpdateNotifier
 ) {
     suspend operator fun invoke(activities: List<CommunityActivity>): Result<Unit> = coroutineScope{
