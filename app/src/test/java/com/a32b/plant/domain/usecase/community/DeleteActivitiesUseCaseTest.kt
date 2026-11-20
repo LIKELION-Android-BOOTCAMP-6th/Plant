@@ -27,7 +27,7 @@ class DeleteActivitiesUseCaseTest {
     // ---------- 게시글 ----------
 
     @Test
-    fun 게시글_삭제_성공_시_목록에_삭제를_알린다() = runBlocking {
+    fun `게시글 삭제 성공 시 목록에 삭제를 알린다`() = runBlocking {
         val repository = FakeCommunityRepository()
         val notifier = RecordingPostUpdateNotifier()
 
@@ -39,7 +39,7 @@ class DeleteActivitiesUseCaseTest {
     }
 
     @Test
-    fun 게시글_삭제_실패_시_목록에_알리지_않는다() = runBlocking {
+    fun `게시글 삭제 실패 시 목록에 알리지 않는다`() = runBlocking {
         val repository = FakeCommunityRepository(deletePostResult = Result.Failure(AppError.Network()))
         val notifier = RecordingPostUpdateNotifier()
 
@@ -52,7 +52,7 @@ class DeleteActivitiesUseCaseTest {
 
     // 서버(Source.SERVER) 조회로 없다고 확인된 글 — 목록에 남아 있으면 빼야 한다
     @Test
-    fun 게시글이_이미_없으면_activity를_정리하고_목록에_삭제를_알린다() = runBlocking {
+    fun `게시글이 이미 없으면 activity를 정리하고 목록에 삭제를 알린다`() = runBlocking {
         val repository = FakeCommunityRepository(isPostExistResult = Result.Success(false))
         val notifier = RecordingPostUpdateNotifier()
 
@@ -66,7 +66,7 @@ class DeleteActivitiesUseCaseTest {
     }
 
     @Test
-    fun 게시글_존재_조회_실패_시_목록에_알리지_않는다() = runBlocking {
+    fun `게시글 존재 조회 실패 시 목록에 알리지 않는다`() = runBlocking {
         val repository = FakeCommunityRepository(isPostExistResult = Result.Failure(AppError.Network()))
         val notifier = RecordingPostUpdateNotifier()
 
@@ -80,7 +80,7 @@ class DeleteActivitiesUseCaseTest {
     // ---------- 좋아요·북마크 ----------
 
     @Test
-    fun 좋아요_해제_성공_시_해제_상태와_해제_후_좋아요_수를_알린다() = runBlocking {
+    fun `좋아요 해제 성공 시 해제 상태와 해제 후 좋아요 수를 알린다`() = runBlocking {
         val repository = FakeCommunityRepository(removeLikeResult = Result.Success(4))
         val notifier = RecordingPostUpdateNotifier()
 
@@ -92,7 +92,7 @@ class DeleteActivitiesUseCaseTest {
     }
 
     @Test
-    fun 북마크_해제_성공_시_해제_상태와_해제_후_북마크_수를_알린다() = runBlocking {
+    fun `북마크 해제 성공 시 해제 상태와 해제 후 북마크 수를 알린다`() = runBlocking {
         val repository = FakeCommunityRepository(removeBookmarkResult = Result.Success(2))
         val notifier = RecordingPostUpdateNotifier()
 
@@ -104,7 +104,7 @@ class DeleteActivitiesUseCaseTest {
     }
 
     @Test
-    fun 좋아요_해제_실패_시_목록에_알리지_않는다() = runBlocking {
+    fun `좋아요 해제 실패 시 목록에 알리지 않는다`() = runBlocking {
         val repository = FakeCommunityRepository(removeLikeResult = Result.Failure(AppError.Network()))
         val notifier = RecordingPostUpdateNotifier()
 
@@ -117,7 +117,7 @@ class DeleteActivitiesUseCaseTest {
 
     // 해제 트랜잭션 시점에 게시글 문서가 없던 경우 (존재 확인과 해제 사이에 삭제됨)
     @Test
-    fun 해제_후_카운트가_null이면_목록에_삭제를_알린다() = runBlocking {
+    fun `좋아요 해제 후 카운트가 null이면 목록에 삭제를 알린다`() = runBlocking {
         val repository = FakeCommunityRepository(removeLikeResult = Result.Success(null))
         val notifier = RecordingPostUpdateNotifier()
 
@@ -129,7 +129,19 @@ class DeleteActivitiesUseCaseTest {
     }
 
     @Test
-    fun 같은_글의_좋아요_activity가_여러_개여도_한_번만_해제하고_한_번만_알린다() = runBlocking {
+    fun `북마크 해제 후 카운트가 null이면 목록에 삭제를 알린다`() = runBlocking {
+        val repository = FakeCommunityRepository(removeBookmarkResult = Result.Success(null))
+        val notifier = RecordingPostUpdateNotifier()
+
+        val result = useCase(repository, notifier)(listOf(activity("a1", ActivityType.BOOKMARK, "post-1")))
+
+        assertTrue(result is Result.Success)
+        assertEquals(listOf("post-1"), notifier.deleted)
+        assertTrue(notifier.updates.isEmpty())
+    }
+
+    @Test
+    fun `같은 글의 좋아요 activity가 여러 개여도 한 번만 해제하고 한 번만 알린다`() = runBlocking {
         val repository = FakeCommunityRepository(removeLikeResult = Result.Success(0))
         val notifier = RecordingPostUpdateNotifier()
 
@@ -143,7 +155,7 @@ class DeleteActivitiesUseCaseTest {
     }
 
     @Test
-    fun 세션이_만료되면_해제하지_않고_목록에_알리지_않는다() = runBlocking {
+    fun `세션이 만료되면 해제하지 않고 목록에 알리지 않는다`() = runBlocking {
         val repository = FakeCommunityRepository()
         val notifier = RecordingPostUpdateNotifier()
 
@@ -158,7 +170,7 @@ class DeleteActivitiesUseCaseTest {
     // ---------- 묶음별 독립 ----------
 
     @Test
-    fun 일부만_실패하면_성공한_묶음만_알린다() = runBlocking {
+    fun `일부만 실패하면 성공한 묶음만 알린다`() = runBlocking {
         val repository = FakeCommunityRepository(
             deletePostResult = Result.Success(Unit),
             removeBookmarkResult = Result.Failure(AppError.Network())

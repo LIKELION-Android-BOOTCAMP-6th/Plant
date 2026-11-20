@@ -345,7 +345,7 @@ class CommunityListViewModel @Inject constructor(
     }
 
     // 화면 복귀(Resume) 시 호출 — 초기 로딩 전에는 무시
-    // 마지막 동기화 이후 상호작용이 없었다면(= 상세 화면에서 아무것도 바뀌지 않았고 새 글 등록·글 삭제도 없었다면) 불필요한 재조회를 생략.
+    // 마지막 동기화 이후 상호작용이 없었다면(= 상세·글 수정·내 활동 화면에서 아무것도 바뀌지 않았고 새 글 등록·글 삭제도 없었다면) 불필요한 재조회를 생략.
     // 단, 다른 사용자의 변경사항을 영원히 놓치지 않도록 일정 주기(BACKGROUND_RESYNC_INTERVAL_MS)마다는 강제로 재동기화
     fun refreshOnResume() {
         if (!_uiState.value.hasLoadedOnce) return

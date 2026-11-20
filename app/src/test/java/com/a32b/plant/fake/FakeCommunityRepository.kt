@@ -15,8 +15,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 
 /**
- * 테스트 공용 [CommunityRepository]. '내 활동' 조회·삭제에 쓰는 함수만 결과를 바꿀 수 있고,
- * 나머지 함수는 호출되면 실패한다.
+ * 테스트 공용 [CommunityRepository]. '내 활동'의 조회와 게시글·좋아요·북마크 삭제에 쓰는 함수만 결과를 바꿀 수 있고,
+ * 나머지 함수(내 활동의 댓글 삭제에 쓰는 함수 포함)는 호출되면 실패한다.
  * [deletePostGate]를 넣으면 게시글 삭제는 게이트가 완료될 때까지 끝나지 않는다 (응답 대기 재현).
  */
 class FakeCommunityRepository(

@@ -35,7 +35,7 @@ import org.junit.Test
 class CommunityActivityViewModelTest {
 
     @Test
-    fun 삭제_응답_전에_화면을_나가도_삭제가_끝나면_목록에_알린다() = runActivityTest { repository, notifier, viewModel, _ ->
+    fun `삭제 응답 전에 화면을 나가도 삭제가 끝나면 목록에 알린다`() = runActivityTest { repository, notifier, viewModel, events ->
         val gate = CompletableDeferred<Unit>()
         repository.deletePostGate = gate
         selectAndDelete(viewModel, "a1")
@@ -47,15 +47,18 @@ class CommunityActivityViewModelTest {
         runCurrent()
 
         assertEquals(listOf("post-1"), notifier.deleted)
+        // 이탈 후 블록 밖 결과 처리 중 Toast는 취소된 viewModelScope의 launch라 나가지 않는다
+        assertTrue(events.isEmpty())
     }
 
     @Test
-    fun 화면에_머문_채_삭제가_끝나면_목록에_알리고_선택을_해제하고_안내한다() = runActivityTest { _, notifier, viewModel, events ->
+    fun `화면에 머문 채 삭제가 끝나면 목록에 알리고 선택을 해제하고 안내한다`() = runActivityTest { _, notifier, viewModel, events ->
         selectAndDelete(viewModel, "a1")
 
         assertEquals(listOf("post-1"), notifier.deleted)
         assertFalse(viewModel.uiState.value.isLoading)
         assertFalse(viewModel.uiState.value.isSelectionMode)
+        assertTrue(viewModel.uiState.value.selectedIds.isEmpty())
         assertEquals(listOf<CommunityActivityEvent>(CommunityActivityEvent.ShowToast("삭제되었습니다.")), events)
     }
 
