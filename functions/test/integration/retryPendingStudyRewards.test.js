@@ -7,6 +7,7 @@
 //   트리거와 겹치는 경우만 (default) DB에서 실제 트리거와 함께 실행한다
 const {describe, it, beforeEach} = require("node:test");
 const assert = require("node:assert");
+const logger = require("firebase-functions/logger");
 const {
   PENDING_REWARD_MIN_AGE_MS, grantStudyReward, retryPendingStudyRewards,
 } = require("../../studyReward");
@@ -27,14 +28,20 @@ const futureNowMs = () => Date.now() + PENDING_REWARD_MIN_AGE_MS + HOUR_MS;
  * @param {FirebaseFirestore.Firestore} [options.database] 기본은 트리거가 붙지 않는 DB
  * @param {number} [options.studyingTime] 학습 시간(ms). 기본 1시간(하트 1 + 박스 1)
  * @param {boolean} [options.withUser] false면 유저 문서를 만들지 않는다 (탈퇴 상태)
+ * @param {FirebaseFirestore.DocumentReference} [options.userRef]
+ *     이미 만든 유저에 기록을 더할 때 넘긴다 (유저 문서는 다시 쓰지 않음)
  * @return {Promise<{userRef: FirebaseFirestore.DocumentReference,
  *     logRef: FirebaseFirestore.DocumentReference, createTimeMs: number}>}
  */
 async function seedPendingLog({
   database = retryDb, studyingTime = HOUR_MS, withUser = true,
+  userRef: existingUserRef,
 } = {}) {
-  const userRef = database.collection("users").doc(uniqueId("user"));
-  if (withUser) await userRef.set({item: {heart: 0, box: 0}});
+  const userRef = existingUserRef ||
+    database.collection("users").doc(uniqueId("user"));
+  if (withUser && !existingUserRef) {
+    await userRef.set({item: {heart: 0, box: 0}});
+  }
   const logRef = userRef.collection("pots").doc(uniqueId("pot"))
       .collection("logs").doc(uniqueId("log"));
   await logRef.set({studyingTime, rewardStatus: "pending"});
@@ -184,6 +191,97 @@ describe("retryPendingStudyRewards", () => {
     assert.strictEqual(second.scanned, 1);
     assert.strictEqual(second.failed, 1);
     assert.strictEqual(brokenCalls, 2);
+  });
+
+  it("실패 원인(오류)을 로그의 별도 인자로 남긴다", async () => {
+    const broken = await seedPendingLog();
+    const failure = new Error("테스트용 지급 실패");
+    const grant = async () => {
+      throw failure;
+    };
+    // 객체 안에 넣으면 JSON으로 바뀌며 message·stack이 빠진다 (#711)
+    const calls = [];
+    const originalError = logger.error;
+    logger.error = (...args) => calls.push(args);
+    try {
+      await retryPendingStudyRewards(retryDb, futureNowMs(), {grant});
+    } finally {
+      logger.error = originalError;
+    }
+
+    assert.strictEqual(calls.length, 1);
+    const [message, error, context] = calls[0];
+    assert.strictEqual(typeof message, "string");
+    assert.strictEqual(error, failure);
+    // 마지막 인자(plain object)가 로그의 구조화 필드가 된다
+    assert.deepStrictEqual(context, {path: broken.logRef.path});
+  });
+
+  it("같은 유저의 한 기록이 실패해도 그 유저의 나머지 기록은 지급한다", async () => {
+    const broken = await seedPendingLog();
+    const {userRef} = broken;
+    const okLogs = [];
+    for (let i = 0; i < 2; i++) okLogs.push(await seedPendingLog({userRef}));
+    const brokenLogId = broken.logRef.id;
+    const grant = async (database, uid, potId, logId) => {
+      if (logId === brokenLogId) throw new Error("테스트용 지급 실패");
+      return grantStudyReward(database, uid, potId, logId);
+    };
+
+    const result = await retryPendingStudyRewards(
+        retryDb, futureNowMs(), {grant},
+    );
+
+    assert.strictEqual(result.retried, 2);
+    assert.strictEqual(result.failed, 1);
+    assert.strictEqual((await read(broken.logRef)).rewardStatus, "pending");
+    for (const {logRef} of okLogs) {
+      assert.strictEqual((await read(logRef)).rewardStatus, "granted");
+    }
+    assert.deepStrictEqual((await read(userRef)).item, {heart: 2, box: 2});
+  });
+
+  it("같은 유저의 기록은 차례로, 다른 유저끼리는 동시에 지급한다", async () => {
+    const USERS = 3;
+    const LOGS_PER_USER = 3;
+    const userRefs = [];
+    for (let u = 0; u < USERS; u++) {
+      const {userRef} = await seedPendingLog();
+      for (let i = 1; i < LOGS_PER_USER; i++) await seedPendingLog({userRef});
+      userRefs.push(userRef);
+    }
+    // 시간이 아니라 "지금 실행 중인 지급 수"를 세어 확인한다
+    const activeByUid = new Map();
+    let active = 0;
+    let maxActive = 0;
+    let maxActiveSameUid = 0;
+    const grant = async (database, uid, potId, logId) => {
+      const sameUid = (activeByUid.get(uid) || 0) + 1;
+      activeByUid.set(uid, sameUid);
+      active++;
+      maxActive = Math.max(maxActive, active);
+      maxActiveSameUid = Math.max(maxActiveSameUid, sameUid);
+      try {
+        return await grantStudyReward(database, uid, potId, logId);
+      } finally {
+        activeByUid.set(uid, activeByUid.get(uid) - 1);
+        active--;
+      }
+    };
+
+    const result = await retryPendingStudyRewards(
+        retryDb, futureNowMs(), {grant},
+    );
+
+    assert.strictEqual(result.retried, USERS * LOGS_PER_USER);
+    assert.strictEqual(maxActiveSameUid, 1);
+    assert.strictEqual(maxActive, USERS);
+    for (const userRef of userRefs) {
+      assert.deepStrictEqual(
+          (await read(userRef)).item,
+          {heart: LOGS_PER_USER, box: LOGS_PER_USER},
+      );
+    }
   });
 
   it("한 번에 maxPerRun개까지만 지급하고 남은 기록은 다음 실행에서 처리한다", async () => {

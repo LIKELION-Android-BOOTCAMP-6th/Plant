@@ -72,11 +72,16 @@ async function grantStudyReward(db, uid, potId, logId) {
 // - 한 번에 지급할 개수(maxPerRun)와 훑을 개수(maxScan)에 상한을 둔다 → 장애 직후 pending이
 //   아주 많아도 함수 제한 시간 안에 끝나고, 남은 기록은 다음 실행에서 처리한다
 // - 기록 하나가 실패해도 나머지는 계속 처리한다 (실패한 기록은 경로와 함께 로그로 남긴다)
+// - 같은 유저의 기록은 차례로, 다른 유저끼리는 동시에 지급한다
+//   → 지급 트랜잭션은 users/{uid} 문서를 함께 읽고 쓰므로 같은 유저 기록을 동시에 보내면
+//     서로 잠금을 기다리고 다시 시도하느라 크게 느려진다
+//     (에뮬레이터 측정: 같은 유저 60건 동시 약 50초, 유저 60명 약 0.5초)
 const PENDING_REWARD_MIN_AGE_MS = 25 * 60 * 60 * 1000;
 const PENDING_REWARD_PAGE_SIZE = 500;
 const PENDING_REWARD_MAX_PER_RUN = 500;
 const PENDING_REWARD_MAX_SCAN = 5000;
-// 트랜잭션을 한꺼번에 너무 많이 보내지 않도록 이 개수씩 동시에 실행한다
+// 트랜잭션을 한꺼번에 너무 많이 보내지 않도록 동시에 처리하는 유저 수를 이만큼으로 제한한다
+// (한 유저의 기록은 차례로 지급하므로 동시에 실행되는 트랜잭션도 최대 이 개수)
 const PENDING_REWARD_CONCURRENCY = 20;
 
 /**
@@ -92,6 +97,20 @@ function parseStudyLogPath(path) {
     return null;
   }
   return {uid: parts[1], potId: parts[3], logId: parts[5]};
+}
+
+/**
+ * 지급 대상을 uid별로 묶는다. 묶음 순서와 묶음 안의 순서는 조회 순서를 따른다.
+ * @param {Array<{uid: string}>} targets
+ * @return {Map<string, Array<Object>>}
+ */
+function groupTargetsByUid(targets) {
+  const groups = new Map();
+  for (const target of targets) {
+    if (!groups.has(target.uid)) groups.set(target.uid, []);
+    groups.get(target.uid).push(target);
+  }
+  return groups;
 }
 
 /**
@@ -151,24 +170,29 @@ async function retryPendingStudyRewards(db, nowMs, {
     lastDoc = snapshot.docs[snapshot.docs.length - 1];
   }
 
-  // 2. 모은 기록을 나눠서 지급한다. 실패한 기록만 로그로 남기고 계속한다
-  for (let i = 0; i < targets.length; i += PENDING_REWARD_CONCURRENCY) {
-    const chunk = targets.slice(i, i + PENDING_REWARD_CONCURRENCY);
-    const settled = await Promise.allSettled(chunk.map((target) =>
-      grant(db, target.uid, target.potId, target.logId),
-    ));
-    settled.forEach((outcome, index) => {
-      if (outcome.status === "fulfilled") {
-        result.retried++;
-        return;
+  // 2. 유저별로 묶어 지급한다. 실패한 기록만 로그로 남기고 계속한다
+  //    한 유저의 기록이 실패해도 그 유저의 나머지 기록은 계속 지급한다
+  const groups = [...groupTargetsByUid(targets).values()];
+  let nextGroup = 0;
+  const worker = async () => {
+    // 자바스크립트는 한 번에 한 줄씩 실행하므로 nextGroup++가 겹치지 않는다
+    while (nextGroup < groups.length) {
+      const group = groups[nextGroup++];
+      for (const target of group) {
+        try {
+          await grant(db, target.uid, target.potId, target.logId);
+          result.retried++;
+        } catch (error) {
+          result.failed++;
+          // 오류는 별도 인자로 넘겨야 message·stack이 로그에 남는다 (#711)
+          logger.error("pending 학습 보상 보정 실패 (다음 실행에서 다시 시도)",
+              error, {path: target.path});
+        }
       }
-      result.failed++;
-      logger.error("pending 학습 보상 보정 실패 (다음 실행에서 다시 시도)", {
-        path: chunk[index].path,
-        error: outcome.reason,
-      });
-    });
-  }
+    }
+  };
+  const workerCount = Math.min(PENDING_REWARD_CONCURRENCY, groups.length);
+  await Promise.all(Array.from({length: workerCount}, () => worker()));
   return result;
 }
 

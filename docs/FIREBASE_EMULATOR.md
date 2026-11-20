@@ -189,7 +189,7 @@ npm --prefix functions test
 |---|---|
 | `db` | 테스트용 Admin SDK Firestore (규칙 무시). 시드 데이터 쓰기·결과 읽기 |
 | `uniqueId(prefix)` | 테스트마다 겹치지 않는 uid·문서 ID (앞 테스트의 늦은 트리거가 섞이지 않게) |
-| `clearFirestore()` / `clearAuth()` | 에뮬레이터 데이터 전체 삭제 (파일의 `before`에서 호출). `clearFirestore(TRIGGER_FREE_DATABASE_ID)`처럼 DB를 지정할 수 있다 |
+| `clearFirestore()` / `clearAuth()` | 에뮬레이터 데이터 전체 삭제 (파일의 `before`·`beforeEach`에서 호출). `clearFirestore(TRIGGER_FREE_DATABASE_ID)`처럼 DB를 지정할 수 있다 |
 | `getTriggerFreeDb()` | 트리거가 붙지 않는 테스트용 DB(`TRIGGER_FREE_DATABASE_ID`). 트리거가 바로 처리해 버려 만들 수 없는 상태(지급 실패로 남은 `pending` 기록 등)를 만들 때 쓴다. 대상 함수가 `db`를 인자로 받아야 한다 (예: `studyReward.js`) (#609) |
 | `waitForDoc(ref, predicate)` | 트리거 결과가 반영될 때까지 기다림 (기본 20초, 0.2초 간격). 문서가 없으면 `undefined`를 넘긴다 |
 | `waitFor(check)` | 문서 하나가 아닌 조건(쿼리 결과 개수 등)을 기다릴 때. `check`가 참인 값을 돌려줄 때까지 기다리며 `0`·`""`도 "아직"으로 보므로 boolean으로 돌려준다 (예: `async () => (await query.get()).size === 2`) |
