@@ -42,4 +42,18 @@ class PostUpdateEvent @Inject constructor() : PostUpdateNotifier, PostUpdateObse
             Log.e("PostUpdateEvent", "게시글 생성 이벤트 전송 실패: $postId")
         }
     }
+
+    // event와 같은 설정 — 구독 전에 삭제된 글은 목록의 loadInitial()이 처음부터 불러올 때 빠져 있으므로 replay가 필요 없다
+    private val _postDeleted = MutableSharedFlow<String>(
+        replay = 0,
+        extraBufferCapacity = 64,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    override val postDeleted: Flow<String> = _postDeleted.asSharedFlow()
+    override fun notifyPostDeleted(postId: String) {
+        val emitted = _postDeleted.tryEmit(postId)
+        if (!emitted) {
+            Log.e("PostUpdateEvent", "게시글 삭제 이벤트 전송 실패: $postId")
+        }
+    }
 }

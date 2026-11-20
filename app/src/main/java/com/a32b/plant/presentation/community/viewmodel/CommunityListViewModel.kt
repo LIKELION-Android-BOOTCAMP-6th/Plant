@@ -75,7 +75,7 @@ class CommunityListViewModel @Inject constructor(
     private val recentLocalPatches = mutableMapOf<String, Long>()
     // 마지막으로 서버와 완전히 동기화된(= posts를 서버 응답으로 통째로 교체한) 시각
     private var lastSyncedAt = 0L
-    // 마지막 동기화 이후 상세 화면에서의 상호작용(PostUpdate)이나 새 글 등록이 있었는지 — 없으면 ON_RESUME 시 불필요한 재조회를 생략
+    // 마지막 동기화 이후 상세 화면에서의 상호작용(PostUpdate)이나 새 글 등록·글 삭제가 있었는지 — 없으면 ON_RESUME 시 불필요한 재조회를 생략
     private var hasPendingInteractionSinceLastSync = false
     // 마지막 동기화 이후 새 글을 등록했는지 — silentRefresh()가 성공하면 맨 위로 스크롤해 새 글을 보여 준다 (#669).
     // 목록은 postId를 key로 스크롤 위치를 유지하므로, 스크롤하지 않으면 새 글이 기존 첫 글 위(화면 밖)에 들어간다
@@ -95,6 +95,24 @@ class CommunityListViewModel @Inject constructor(
         loadInitial()
         observePostUpdates()
         observePostCreated()
+        observePostDeleted()
+    }
+
+    // 삭제한 글을 바로 빼서, 재조회를 건너뛰는 60초 안의 복귀에서도 남지 않게 한다 (#712).
+    // 검색·필터 조건은 건드리지 않고 그 글만 뺀다. 다음 복귀 때 silentRefresh()로 빈자리도 서버 값으로 다시 채운다
+    private fun observePostDeleted() {
+        viewModelScope.launch {
+            postUpdateObserver.postDeleted.collect { postId ->
+                recentLocalPatches.remove(postId)
+                hasPendingInteractionSinceLastSync = true
+                _uiState.update { state ->
+                    state.copy(
+                        posts = state.posts.filterNot { it.postId == postId },
+                        searchResults = state.searchResults.filterNot { it.postId == postId }
+                    )
+                }
+            }
+        }
     }
 
     // 새 글은 목록에 없어 로컬 패치할 수 없으므로, 다음 화면 복귀 때 silentRefresh()로 다시 불러오게 한다 (#669)
@@ -327,7 +345,7 @@ class CommunityListViewModel @Inject constructor(
     }
 
     // 화면 복귀(Resume) 시 호출 — 초기 로딩 전에는 무시
-    // 마지막 동기화 이후 상호작용이 없었다면(= 상세 화면에서 아무것도 바뀌지 않았고 새 글도 등록하지 않았다면) 불필요한 재조회를 생략.
+    // 마지막 동기화 이후 상호작용이 없었다면(= 상세 화면에서 아무것도 바뀌지 않았고 새 글 등록·글 삭제도 없었다면) 불필요한 재조회를 생략.
     // 단, 다른 사용자의 변경사항을 영원히 놓치지 않도록 일정 주기(BACKGROUND_RESYNC_INTERVAL_MS)마다는 강제로 재동기화
     fun refreshOnResume() {
         if (!_uiState.value.hasLoadedOnce) return

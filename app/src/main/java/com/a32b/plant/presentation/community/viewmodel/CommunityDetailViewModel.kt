@@ -426,7 +426,11 @@ class CommunityDetailViewModel @Inject constructor(
             withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
                 repository.deletePost(postId, _post.value?.activityId ?: "")
             }
-                .onSuccess { _eventChannel.send(CommunityDetailEvent.NavigateBack) }
+                .onSuccess {
+                    // 목록은 상호작용이 없으면 60초 안의 복귀에서 다시 불러오지 않으므로, 삭제를 알려 바로 빼게 한다 (#712)
+                    postUpdateNotifier.notifyPostDeleted(postId)
+                    _eventChannel.send(CommunityDetailEvent.NavigateBack)
+                }
                 .onFailure { e ->
                     when (e) {
                         is AppError.UnknownUser -> ensureCurrentUserUseCase()

@@ -10,4 +10,7 @@ interface PostUpdateObserver {
 
     // 현재 로그인한 사용자가 새로 등록한 게시글의 ID (#669)
     val postCreated: Flow<String>
+
+    // 현재 로그인한 사용자가 상세 화면에서 삭제에 성공한 게시글의 ID (#712)
+    val postDeleted: Flow<String>
 }
