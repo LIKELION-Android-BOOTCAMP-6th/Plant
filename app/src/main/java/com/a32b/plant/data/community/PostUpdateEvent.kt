@@ -28,4 +28,18 @@ class PostUpdateEvent @Inject constructor() : PostUpdateNotifier, PostUpdateObse
             Log.e("PostUpdateEvent", "게시글 변경 이벤트 전송 실패: $update")
         }
     }
+
+    // event와 같은 설정 — 구독 전에 생성된 글은 목록의 loadInitial()이 처음부터 불러오므로 replay가 필요 없다
+    private val _postCreated = MutableSharedFlow<String>(
+        replay = 0,
+        extraBufferCapacity = 64,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    override val postCreated: Flow<String> = _postCreated.asSharedFlow()
+    override fun notifyPostCreated(postId: String) {
+        val emitted = _postCreated.tryEmit(postId)
+        if (!emitted) {
+            Log.e("PostUpdateEvent", "게시글 생성 이벤트 전송 실패: $postId")
+        }
+    }
 }

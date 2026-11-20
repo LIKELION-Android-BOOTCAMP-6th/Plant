@@ -75,8 +75,11 @@ class CommunityListViewModel @Inject constructor(
     private val recentLocalPatches = mutableMapOf<String, Long>()
     // 마지막으로 서버와 완전히 동기화된(= posts를 서버 응답으로 통째로 교체한) 시각
     private var lastSyncedAt = 0L
-    // 마지막 동기화 이후 상세 화면에서의 상호작용(PostUpdate)이 있었는지 — 없으면 ON_RESUME 시 불필요한 재조회를 생략
+    // 마지막 동기화 이후 상세 화면에서의 상호작용(PostUpdate)이나 새 글 등록이 있었는지 — 없으면 ON_RESUME 시 불필요한 재조회를 생략
     private var hasPendingInteractionSinceLastSync = false
+    // 마지막 동기화 이후 새 글을 등록했는지 — silentRefresh()가 성공하면 맨 위로 스크롤해 새 글을 보여 준다 (#669).
+    // 목록은 postId를 key로 스크롤 위치를 유지하므로, 스크롤하지 않으면 새 글이 기존 첫 글 위(화면 밖)에 들어간다
+    private var hasCreatedPostSinceLastSync = false
 
     companion object {
         private const val PAGE_SIZE = CommunityConstants.POST_PAGE_SIZE
@@ -91,6 +94,17 @@ class CommunityListViewModel @Inject constructor(
         fetchTags()
         loadInitial()
         observePostUpdates()
+        observePostCreated()
+    }
+
+    // 새 글은 목록에 없어 로컬 패치할 수 없으므로, 다음 화면 복귀 때 silentRefresh()로 다시 불러오게 한다 (#669)
+    private fun observePostCreated() {
+        viewModelScope.launch {
+            postUpdateObserver.postCreated.collect {
+                hasPendingInteractionSinceLastSync = true
+                hasCreatedPostSinceLastSync = true
+            }
+        }
     }
 
     // 상세 화면에서의 상호작용 결과를 목록 화면에 즉시 반영 (서버 재조회 없이 로컬 패치)
@@ -162,6 +176,7 @@ class CommunityListViewModel @Inject constructor(
                 Log.d("CommunityListVM", "loadInitial 성공: ${page.items.size}개 로드, hasMore=${page.hasMore}, nextCursor=${page.nextCursor}")
                 lastSyncedAt = System.currentTimeMillis()
                 hasPendingInteractionSinceLastSync = false
+                hasCreatedPostSinceLastSync = false
                 _uiState.update {
                     it.copy(
                         posts = page.items,
@@ -240,6 +255,7 @@ class CommunityListViewModel @Inject constructor(
             pageResult.onSuccess { page ->
                 lastSyncedAt = System.currentTimeMillis()
                 hasPendingInteractionSinceLastSync = false
+                hasCreatedPostSinceLastSync = false  // 아래 ScrollToTop으로 새 글도 함께 보인다
                 // suppressLoadMore=true 먼저 세팅 → recomposition 타이밍에 loadMore 끼어들기 원천 차단
                 _uiState.update {
                     it.copy(
@@ -311,7 +327,7 @@ class CommunityListViewModel @Inject constructor(
     }
 
     // 화면 복귀(Resume) 시 호출 — 초기 로딩 전에는 무시
-    // 마지막 동기화 이후 상호작용이 없었다면(= 상세 화면에서 아무것도 바뀌지 않았다면) 불필요한 재조회를 생략.
+    // 마지막 동기화 이후 상호작용이 없었다면(= 상세 화면에서 아무것도 바뀌지 않았고 새 글도 등록하지 않았다면) 불필요한 재조회를 생략.
     // 단, 다른 사용자의 변경사항을 영원히 놓치지 않도록 일정 주기(BACKGROUND_RESYNC_INTERVAL_MS)마다는 강제로 재동기화
     fun refreshOnResume() {
         if (!_uiState.value.hasLoadedOnce) return
@@ -330,6 +346,9 @@ class CommunityListViewModel @Inject constructor(
         // → isLoadingMore=true가 고착될 수 있으므로 명시적으로 초기화
         _uiState.update { it.copy(isLoadingMore = false) }
         hasPendingInteractionSinceLastSync = false
+        // 시작 시점에 꺼내 둔다 — 실패하면 다시 켜서 다음 복귀 때 재시도한다
+        val scrollToTopAfterSync = hasCreatedPostSinceLastSync
+        hasCreatedPostSinceLastSync = false
         loadJob = viewModelScope.launch(Dispatchers.IO) {
             val state = _uiState.value
             // 현재 로드된 게시글 수만큼 재로드해 스크롤 위치와 목록을 보존
@@ -346,6 +365,7 @@ class CommunityListViewModel @Inject constructor(
             if (pageResult == null) {
                 // 타임아웃 → 이번 동기화는 실패한 것이므로 다음 ON_RESUME에서 재시도할 수 있도록 플래그 복구
                 hasPendingInteractionSinceLastSync = true
+                if (scrollToTopAfterSync) hasCreatedPostSinceLastSync = true
                 return@launch
             }
 
@@ -358,9 +378,11 @@ class CommunityListViewModel @Inject constructor(
                         hasMore = page.hasMore
                     )
                 }
+                if (scrollToTopAfterSync) _events.trySend(CommunityListEvent.ScrollToTop)
             }.onFailure {
                 // 네트워크 실패 → 다음 ON_RESUME에서 재시도할 수 있도록 플래그 복구
                 hasPendingInteractionSinceLastSync = true
+                if (scrollToTopAfterSync) hasCreatedPostSinceLastSync = true
             }
         }
     }
