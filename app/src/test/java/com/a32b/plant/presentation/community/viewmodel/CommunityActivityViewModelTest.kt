@@ -47,7 +47,7 @@ class CommunityActivityViewModelTest {
         runCurrent()
 
         assertEquals(listOf("post-1"), notifier.deleted)
-        // 이탈 후 블록 밖 결과 처리 중 Toast는 취소된 viewModelScope의 launch라 나가지 않는다
+        // 블록 밖 결과 처리가 실행되더라도 Toast는 취소된 viewModelScope의 launch라 나가지 않는다
         assertTrue(events.isEmpty())
     }
 
