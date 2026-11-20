@@ -214,6 +214,9 @@ gcloud storage rm --recursive gs://plant-82b09-restore-tmp
 - `pots`를 가져올 때는 `logs`도 함께 가져온다. 화분이 지워질 때 `onPotDeleted` 트리거가 그 화분의 `logs`도 이미 지웠기 때문이다
 - [공식 문서](https://firebase.google.com/docs/firestore/manage-data/export-import) 기준으로 **가져오기는 Cloud Functions 트리거를 실행하지 않는다.** 그래서:
   - `logs`를 가져와도 `grantStudyReward`가 돌지 않아 보상이 다시 지급되지 않는다
+    - 단, 가져온 `logs` 중 `rewardStatus`가 `"pending"`인 기록은 보정 예약 함수(`functions/index.js`의 `retryPendingStudyRewards`, 매일 04:00 KST)가 지급한다. 서버 생성 시각이 25시간 지난 뒤의 첫 실행에서 지급된다 (#609). 가져온 문서의 서버 생성 시각이 원본 값인지 가져온 시각인지는 **미확인**
+    - 스냅샷 뒤에 이미 지급된 기록(스냅샷 순간에 트리거가 처리 중이던 기록 등)이면 유저 아이템은 이미 늘어 있으므로 **두 번 지급된다** → 가져온 뒤 다음 04:00 실행 전에 가져온 `pending` 기록을 확인하고, 지급하면 안 되는 기록은 `rewardStatus`를 `"none"`으로 바꾼다
+    - 보정 함수는 `(default)` DB만 본다. 복원용 새 DB의 `pending` 기록은 지급되지 않는다
   - 다른 문서에 저장된 집계 값은 자동으로 다시 맞춰지지 않는다 (가져오기를 썼을 때만 해당). 예: 댓글을 지우면 `syncCommentCountOnDelete`가 게시글의 `commentCount`를 이미 줄여 놨는데, 댓글만 가져오면 `commentCount`는 낮은 값으로 남는다 → 가져온 뒤 해당 게시글의 `commentCount`와 실제 댓글 수를 비교해서 맞춘다
 - 위 명령은 아직 실제로 실행해 보지 않았다 (**미확인**). 처음 쓸 때 결과를 이 문서에 적는다
 
