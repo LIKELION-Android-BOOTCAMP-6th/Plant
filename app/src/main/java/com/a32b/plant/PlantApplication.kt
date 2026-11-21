@@ -20,7 +20,7 @@ class PlantApplication : Application(){
     }
 
     // Firestore·Functions 요청에 App Check 토큰을 붙인다 (#608)
-    // 첫 요청 전에 설치해야 하므로 onCreate 맨 앞에서 한다. FirebaseApp은 이보다 먼저 FirebaseInitProvider가 초기화한다
+    // 첫 요청 전에 설치해야 하므로 super.onCreate() 바로 다음에 한다. FirebaseApp은 이보다 먼저 FirebaseInitProvider가 초기화한다
     // 제공자는 빌드 타입별로 다르다 (src/release: Play Integrity, src/debug: 디버그 제공자)
     private fun installAppCheckProvider() {
         FirebaseAppCheck.getInstance().installAppCheckProviderFactory(appCheckProviderFactory())
