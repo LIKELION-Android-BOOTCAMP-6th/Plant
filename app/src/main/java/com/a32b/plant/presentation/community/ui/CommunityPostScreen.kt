@@ -60,6 +60,7 @@ import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.TagSheet
 import com.a32b.plant.presentation.core.extension.showToast
+import kotlinx.coroutines.flow.drop
 
 @Composable
 fun CommunityPostScreen(
@@ -325,17 +326,16 @@ fun PostInputField(
 ) {
     val context = LocalContext.current
 
-    // value(String)를 받는 TextField는 포커스를 얻을 때만 커서를 화면 안으로 스크롤하고, 입력 중에는 하지 않아
-    // 긴 본문을 쓰면 커서가 키보드 아래로 내려간다 (#671). TextFieldState를 쓰는 TextField는 커서가 움직일 때마다
-    // 바깥 스크롤(LazyColumn·verticalScroll)에 커서를 보이게 해 달라고 요청하므로 이쪽을 쓴다.
+    // 긴 본문을 입력할 때 바깥 스크롤이 커서를 따라가도록 TextFieldState 방식을 쓴다 (#671).
+    // value(String) 방식은 포커스를 얻을 때만 바깥 스크롤에 커서를 보이게 요청해, 입력 중에는 커서가 키보드에 가려졌다.
     //
-    // 처음 값만 value에서 가져오고, 이후에는 입력란이 원본이 되어 바뀔 때마다 onValueChange로 알린다.
-    // 지금 호출하는 화면들은 바깥에서 값을 바꾸는 경우가 없다 (수정·공유 모드의 기존 값은 LoadableScreen이
-    // 풀리기 전에 채워짐). LazyColumn에서 화면 밖으로 나갔다 돌아오면 그때의 value로 다시 만들어진다.
+    // 처음 값만 value에서 가져오고, 이후에는 사용자가 바꿀 때만 onValueChange로 알린다.
+    // 입력란이 그려진 뒤 value가 바뀌어도 반영되지 않는다 (지금 호출하는 화면들은 그 뒤에 바깥에서 값을 바꾸지 않음).
     val state = remember { TextFieldState(value ?: "") }
     val currentOnValueChange by rememberUpdatedState(onValueChange)
     LaunchedEffect(state) {
-        snapshotFlow { state.text.toString() }.collect { currentOnValueChange(it) }
+        // 첫 방출은 처음 값 그대로라 건너뛴다 (알리면 비어 있는 공유 글 추가 내용이 null에서 ""로 바뀜)
+        snapshotFlow { state.text.toString() }.drop(1).collect { currentOnValueChange(it) }
     }
     // 글자 수를 넘는 입력은 통째로 되돌리고 안내 (붙여넣기 포함, 이전 동작과 같음)
     val limitTransformation = remember(maxLength, context) {

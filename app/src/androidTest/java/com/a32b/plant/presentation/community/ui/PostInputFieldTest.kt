@@ -23,10 +23,10 @@ import org.junit.runner.RunWith
 
 /**
  * 글쓰기·버그 제보·개선 제안 공통 입력란 PostInputField 확인 (#671)
- * - 처음 값(수정·공유 모드에서 ViewModel이 채운 값)을 보여 준다
+ * - 처음 값(수정·공유 모드에서 ViewModel이 채운 값)을 보여 주고, 입력 전에는 onValueChange를 부르지 않는다
  * - 입력하면 바뀐 전체 문자열을 onValueChange로 알린다
  * - 글자 수를 넘는 입력은 통째로 되돌리고 onValueChange도 부르지 않는다
- * - 바깥 세로 스크롤 안에서 줄을 계속 추가하면 커서를 따라 바깥이 스크롤된다
+ * - 바깥 세로 스크롤 안에서 줄을 계속 추가하면 바깥 스크롤 값이 0에서 움직인다 (커서를 따라 스크롤됨)
  *   (value: String 방식 TextField로 되돌리면 이 테스트가 실패한다)
  */
 @RunWith(AndroidJUnit4::class)
@@ -66,6 +66,8 @@ class PostInputFieldTest {
 
         composeRule.onNodeWithText("기존 본문").assertExists()
         composeRule.onNodeWithText("5 / 1000").assertExists()
+        composeRule.waitForIdle()
+        assertTrue("입력 전에 알림이 감: $changes", changes.isEmpty())
     }
 
     @Test
@@ -74,6 +76,9 @@ class PostInputFieldTest {
 
         composeRule.onNodeWithText(PLACEHOLDER).assertExists()
         composeRule.onNodeWithText("0 / 1000").assertExists()
+        // 알리면 ViewModel의 null이 ""로 바뀐다 (공유 글 추가 내용을 비워 둔 채 등록하면 저장 값이 달라짐)
+        composeRule.waitForIdle()
+        assertTrue("입력 전에 알림이 감: $changes", changes.isEmpty())
     }
 
     @Test
