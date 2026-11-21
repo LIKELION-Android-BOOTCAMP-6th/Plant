@@ -171,6 +171,7 @@ class SignInViewModel @Inject constructor(
     /**
      * 닉네임 설정 다이얼로그에서 로그아웃 (만 14세 미만 등 동의하지 않고 나가는 경우)
      * users 문서는 isFirstLogin = true로 남아, 다음 로그인 때 다시 닉네임 설정·동의를 받는다
+     * (앞서 시간 초과로 실패 안내된 저장이 서버에 늦게 반영된 경우는 제외: 그때는 첫 로그인이 완료돼 다음 로그인 때 바로 홈으로 간다)
      */
     fun signOutFromNicknameDialog() {
         if (_uiState.value.isNicknameLoading || isSigningOut) return
