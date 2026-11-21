@@ -25,6 +25,7 @@ import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import com.a32b.plant.domain.usecase.studying.FinishStudyingUseCase
 import com.a32b.plant.domain.usecase.studying.GetRecoverySessionUseCase
 import com.a32b.plant.domain.usecase.studying.GetStudyingGoalDraftUseCase
+import com.a32b.plant.domain.usecase.studying.ObserveStudyingUsersUseCase
 import com.a32b.plant.domain.usecase.studying.SaveStudyingGoalDraftUseCase
 import com.a32b.plant.domain.usecase.studying.SaveStudyingUserUseCase
 import com.a32b.plant.domain.usecase.studying.StartStudyingSessionUseCase
@@ -111,6 +112,7 @@ class StudyingViewModel @Inject constructor(
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     private val saveStudyingGoalDraftUseCase: SaveStudyingGoalDraftUseCase,
     private val getStudyingGoalDraftUseCase: GetStudyingGoalDraftUseCase,
+    private val observeStudyingUsersUseCase: ObserveStudyingUsersUseCase,
     savedStateHandle: SavedStateHandle
 ) : BaseViewModel() {
     private val _eventChannel = Channel<StudyingEvent>(Channel.BUFFERED)
@@ -349,10 +351,10 @@ class StudyingViewModel @Inject constructor(
         }
     }
 
-    /** db에서 같은 태그로 공부중인 사용자 데이터 가져오기 */
+    /** db에서 같은 태그로 공부중인 사용자 데이터 가져오기 — 유령(강제 종료로 남은 문서)은 유즈케이스가 뺀다 (#618) */
     fun onStudyingUsersChange(){
         viewModelScope.launch(Dispatchers.IO) {
-            repository.observeStudyingUser(_uiState.value.tag)
+            observeStudyingUsersUseCase(_uiState.value.tag)
                 .collect { users ->
                     _uiState.update { it.copy(studyingUsers = users) }
                 }
