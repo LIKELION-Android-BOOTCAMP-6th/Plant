@@ -27,6 +27,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.intl.LocaleList
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -463,7 +465,7 @@ private fun ConsentSection(
             onViewClick = onTermsOfServiceClick
         )
         ConsentRow(
-            text = "[필수] 개인정보처리방침에 동의해요",
+            text = "[필수] 개인정보 처리방침에 동의해요",
             checked = SignUpConsent.PRIVACY_POLICY in agreedConsents,
             enabled = enabled,
             onCheckedChange = { onConsentChange(SignUpConsent.PRIVACY_POLICY, it) },
@@ -505,7 +507,17 @@ private fun ConsentRow(
                 colors = plantCheckboxColors(),
                 modifier = Modifier.minimumInteractiveComponentSize()
             )
-            Text(text = text, style = textStyle)
+            // 세로 여백: 한 줄이면 체크박스 높이(48dp) 안에 들어가 그대로이고, 두 줄로 넘어가면 위아래 항목과 붙지 않게 한다
+            // WordBreak.Phrase: "개인정보처 / 리방침"처럼 단어 중간에서 줄이 바뀌지 않게 띄어쓰기 단위로 바꾼다 (Android 13 이상, 그 아래는 글자 단위)
+            // 문구 언어(localeList)가 한국어일 때만 적용되므로, 기기 언어가 한국어가 아니어도 같게 보이도록 ko-KR로 지정한다
+            Text(
+                text = text,
+                style = textStyle.copy(
+                    lineBreak = LineBreak.Paragraph.copy(wordBreak = LineBreak.WordBreak.Phrase),
+                    localeList = LocaleList("ko-KR")
+                ),
+                modifier = Modifier.padding(vertical = 6.dp)
+            )
         }
 
         if (onViewClick != null) {
