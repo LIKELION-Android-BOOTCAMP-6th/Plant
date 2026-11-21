@@ -21,7 +21,8 @@ class SaveStudyingUserUseCase @Inject constructor(
             is Result.Failure -> return Result.Failure(result.error)
         }
         return repository.saveStudyingUser(
-            StudyingUser(user.uid, user.nickname, user.profileImg, tag, time)
+            // updatedAt은 RemoteDataSource가 서버 시각으로 넣으므로 비워 보낸다
+            StudyingUser(user.uid, user.nickname, user.profileImg, tag, time, updatedAt = null)
         )
     }
 }
