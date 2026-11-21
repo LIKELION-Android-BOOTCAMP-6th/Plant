@@ -10,7 +10,7 @@ import {fileURLToPath} from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-// 앱(MyPageViewModel)이 여는 주소와 파일 이름이 같아야 한다
+// 앱의 주소 상수(core/util/LegalUrls.kt)와 파일 이름이 같아야 한다
 const PAGES = [
   {source: "docs/legal/privacy.md", output: "hosting/public/privacy-policy.html", title: "Plant - 개인정보처리방침"},
   {source: "docs/legal/terms.md", output: "hosting/public/terms.html", title: "Plant - 서비스 이용약관"},

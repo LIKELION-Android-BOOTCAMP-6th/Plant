@@ -233,18 +233,20 @@ class UserRepositoryImpl @Inject constructor(
         onFailure = { e -> Result.Failure(handleError(e, "유저 생성 실패")) }
     )
 
-    override suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit> =
+    override suspend fun completeFirstLogin(uid: String, nickname: String): Result<String> =
         safeRunCatching {
             // 연결이 불안정하면 트랜잭션이 재시도하며 길어질 수 있어 상한을 둔다.
-            // 시간 초과(null)는 네트워크 에러로 취급하며, 서버에 뒤늦게 반영돼도 재시도 시 AlreadyCompleted로 성공 처리된다.
+            // 시간 초과(null)는 네트워크 에러로 취급한다. 서버에 뒤늦게 반영된 뒤 재시도하면 입력한 닉네임과 상관없이
+            // AlreadyCompleted로 성공 처리되고, 먼저 반영된 서버의 닉네임을 돌려준다 (#661).
             withTimeoutOrNull(COMPLETE_FIRST_LOGIN_TIMEOUT_MS) {
                 userRemoteDataSource.completeFirstLogin(uid, nickname)
             }
         }.fold(
             onSuccess = { completion ->
                 when (completion) {
-                    CompleteFirstLoginResult.Completed,
-                    CompleteFirstLoginResult.AlreadyCompleted -> Result.Success(Unit)
+                    CompleteFirstLoginResult.Completed -> Result.Success(nickname)
+
+                    is CompleteFirstLoginResult.AlreadyCompleted -> Result.Success(completion.nickname)
 
                     CompleteFirstLoginResult.NicknameTaken -> Result.Failure(AppError.NicknameTaken())
 

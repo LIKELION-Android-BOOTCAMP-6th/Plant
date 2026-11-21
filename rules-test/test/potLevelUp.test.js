@@ -296,8 +296,8 @@ describe("화분 레벨업 (#456)", () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {
         await deleteDoc(doc(context.firestore(), "users", BOB));
       });
-      await assertFails(setDoc(doc(asBob(), "users", BOB), {nickname: "", lastLevelUpPotId: "p"}));
-      await assertSucceeds(setDoc(doc(asBob(), "users", BOB), {nickname: ""}));
+      await assertFails(setDoc(doc(asBob(), "users", BOB), {nickname: "", isFirstLogin: true, lastLevelUpPotId: "p"}));
+      await assertSucceeds(setDoc(doc(asBob(), "users", BOB), {nickname: "", isFirstLogin: true}));
     });
   });
 });

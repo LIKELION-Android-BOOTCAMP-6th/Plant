@@ -254,9 +254,9 @@ describe("studyLogs", () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {
         await deleteDoc(doc(context.firestore(), "users", BOB));
       });
-      await assertFails(setDoc(doc(asBob(), "users", BOB), {nickname: "", totalStudyTime: HOUR}));
-      await assertFails(setDoc(doc(asBob(), "users", BOB), {nickname: "", lastStudyEndedAt: Timestamp.now()}));
-      await assertSucceeds(setDoc(doc(asBob(), "users", BOB), {nickname: "", totalStudyTime: 0}));
+      await assertFails(setDoc(doc(asBob(), "users", BOB), {nickname: "", isFirstLogin: true, totalStudyTime: HOUR}));
+      await assertFails(setDoc(doc(asBob(), "users", BOB), {nickname: "", isFirstLogin: true, lastStudyEndedAt: Timestamp.now()}));
+      await assertSucceeds(setDoc(doc(asBob(), "users", BOB), {nickname: "", isFirstLogin: true, totalStudyTime: 0}));
     });
   });
 

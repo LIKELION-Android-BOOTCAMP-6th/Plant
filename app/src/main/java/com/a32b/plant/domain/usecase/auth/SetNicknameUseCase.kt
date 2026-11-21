@@ -16,8 +16,22 @@ class SetNicknameUseCase @Inject constructor(
      *
      * 닉네임은 [NicknameRule.normalize]로 정규화한 값(앞뒤 공백 제거 + 분리된 한글 자모 합치기)으로 검사·저장한다.
      * 형식이 맞지 않으면 저장 요청 없이 [AppError.NicknameInvalid]를 반환한다.
+     *
+     * 필수 항목(만 14세 이상·이용약관·개인정보처리방침)에 모두 동의하지 않았으면([hasAgreedToRequiredTerms] = false)
+     * 닉네임 검사·저장 없이 [AppError.RequiredConsentMissing]을 반환한다 (#661).
+     * 동의했으면 첫 로그인 완료와 함께 동의 시각(consentedAt)이 저장된다.
+     * 서버에서 이미 첫 로그인이 완료된 상태(이전 시도가 시간 초과 뒤 반영됨 등)면 아무것도 저장하지 않고,
+     * 입력한 닉네임이 아니라 서버에 저장돼 있는 닉네임을 돌려준다.
      */
-    suspend operator fun invoke(uid: String, nickname: String): Result<String> {
+    suspend operator fun invoke(
+        uid: String,
+        nickname: String,
+        hasAgreedToRequiredTerms: Boolean
+    ): Result<String> {
+        if (!hasAgreedToRequiredTerms) {
+            return Result.Failure(AppError.RequiredConsentMissing())
+        }
+
         val normalizedNickname = NicknameRule.normalize(nickname)
         val nicknameError = NicknameRule.validate(normalizedNickname)
         if (nicknameError != null) {
@@ -28,14 +42,16 @@ class SetNicknameUseCase @Inject constructor(
         // (등록만 성공하고 완료가 실패해 닉네임이 선점된 채 남는 상태, 오프라인 write 대기를 방지)
         val completeResult = userRepository.completeFirstLogin(uid, normalizedNickname)
         if (completeResult is Result.Failure) return completeResult
+        // 이미 완료된 상태였으면 입력한 닉네임이 아니라 서버에 저장돼 있는 닉네임이 온다 (#661)
+        val savedNickname = (completeResult as Result.Success).data
 
         // users 문서가 갱신되면 UserRepository의 실시간 구독이 currentUser를 자동으로 최신화한다.
         // TODO: CurrentUser 전역 싱글톤 제거 대상.
         //  아직 CurrentUser를 직접 읽는 화면이 남아 있어 과도기 동안 함께 세팅한다.
         //  모든 화면이 UserRepository로 전환되면 이 줄과 di/CurrentUser.kt를 함께 삭제할 것.
         val profileImg = userRepository.currentUser.value?.profileImg.orEmpty()
-        CurrentUser.set(UserModel(uid, normalizedNickname, profileImg))
+        CurrentUser.set(UserModel(uid, savedNickname, profileImg))
 
-        return Result.Success(normalizedNickname)
+        return Result.Success(savedNickname)
     }
 }

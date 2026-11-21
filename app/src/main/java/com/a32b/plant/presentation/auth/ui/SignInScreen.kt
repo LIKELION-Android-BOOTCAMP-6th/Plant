@@ -11,21 +11,27 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.intl.LocaleList
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.credentials.CredentialManager
@@ -40,8 +46,11 @@ import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.domain.util.NicknameRule
 import com.a32b.plant.presentation.auth.viewmodel.SignInEvent
 import com.a32b.plant.presentation.auth.viewmodel.SignInViewModel
+import com.a32b.plant.presentation.auth.viewmodel.SignUpConsent
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.LoadingBox
+import com.a32b.plant.presentation.core.component.plantCheckboxColors
+import com.a32b.plant.presentation.core.extension.openUrl
 import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.theme.LocalIsDarkTheme
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
@@ -68,6 +77,8 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                         event.message,
                         if (event.isLong) Toast.LENGTH_LONG else Toast.LENGTH_SHORT
                     )
+
+                is SignInEvent.OpenUrl -> context.openUrl(event.url)
 
                 is SignInEvent.NavigateToHome ->
                     navController.navigate(Routes.HomeMain) {
@@ -97,6 +108,8 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        // 동의 항목이 추가돼 작은 화면·큰 글씨에서 다이얼로그가 화면을 넘을 수 있어 스크롤
+                        .verticalScroll(rememberScrollState())
                         .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -153,13 +166,29 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                         }
                     )
 
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 필수 동의 (#661)
+                    ConsentSection(
+                        agreedConsents = uiState.agreedConsents,
+                        isAllConsented = uiState.isAllConsented,
+                        enabled = !uiState.isNicknameLoading,
+                        onAllConsentChange = viewModel::onAllConsentChange,
+                        onConsentChange = viewModel::onConsentChange,
+                        onTermsOfServiceClick = viewModel::onTermsOfServiceClick,
+                        onPrivacyPolicyClick = viewModel::onPrivacyPolicyClick
+                    )
+
                     Spacer(modifier = Modifier.height(24.dp))
 
+                    // 동의가 덜 됐으면 흐리게만 표시하고 누를 수는 있게 둔다 (누르면 ViewModel이 토스트로 안내)
+                    // enabled = false로 막으면 onClick이 호출되지 않아 토스트를 띄울 수 없다
                     Button(
                         onClick = viewModel::confirmNickname,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp),
+                            .height(48.dp)
+                            .alpha(if (uiState.isAllConsented) 1f else DISABLED_LOOK_ALPHA),
                         enabled = !uiState.isNicknameLoading,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
@@ -185,6 +214,19 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                                 color = MaterialTheme.colorScheme.background,
                             )
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // 동의하지 않고 나가는 경로 (만 14세 미만 등). 다음 로그인 때 다시 닉네임 설정·동의를 받는다
+                    TextButton(
+                        onClick = viewModel::signOutFromNicknameDialog,
+                        enabled = !uiState.isNicknameLoading
+                    ) {
+                        Text(
+                            text = "로그아웃",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                 }
             }
@@ -376,18 +418,123 @@ private fun SignInCard(
                     LoadingBox(modifier = Modifier.matchParentSize())
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "로그인 시 서비스 이용약관 및 개인정보처리방침에\n동의하는 것으로 간주됩니다.",
-                // 가장 작은 타이포(12sp)보다 작게 표시하기 위해 labelMedium(힌트용)을 축소해서 사용
-                style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp, lineHeight = 16.sp),
-                textAlign = TextAlign.Center
-            )
+            // 약관·개인정보처리방침 동의는 첫 로그인 닉네임 설정 다이얼로그에서 직접 체크받는다 (#661)
         }
     }
 }
+
+/**
+ * 첫 로그인 필수 동의 영역 (#661)
+ * "전체 동의"는 세 항목을 함께 체크/해제하고, 세 항목이 모두 체크되면 함께 체크 상태로 보인다 ([isAllConsented])
+ */
+@Composable
+private fun ConsentSection(
+    agreedConsents: Set<SignUpConsent>,
+    isAllConsented: Boolean,
+    enabled: Boolean,
+    onAllConsentChange: (Boolean) -> Unit,
+    onConsentChange: (SignUpConsent, Boolean) -> Unit,
+    onTermsOfServiceClick: () -> Unit,
+    onPrivacyPolicyClick: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        ConsentRow(
+            text = "전체 동의",
+            checked = isAllConsented,
+            enabled = enabled,
+            onCheckedChange = onAllConsentChange,
+            textStyle = MaterialTheme.typography.titleSmall
+        )
+
+        HorizontalDivider(
+            modifier = Modifier.padding(vertical = 4.dp),
+            color = MaterialTheme.colorScheme.outline
+        )
+
+        ConsentRow(
+            text = "[필수] 만 14세 이상이에요",
+            checked = SignUpConsent.AGE_14_OR_OVER in agreedConsents,
+            enabled = enabled,
+            onCheckedChange = { onConsentChange(SignUpConsent.AGE_14_OR_OVER, it) }
+        )
+        ConsentRow(
+            text = "[필수] 서비스 이용약관에 동의해요",
+            checked = SignUpConsent.TERMS_OF_SERVICE in agreedConsents,
+            enabled = enabled,
+            onCheckedChange = { onConsentChange(SignUpConsent.TERMS_OF_SERVICE, it) },
+            onViewClick = onTermsOfServiceClick
+        )
+        ConsentRow(
+            text = "[필수] 개인정보 처리방침에 동의해요",
+            checked = SignUpConsent.PRIVACY_POLICY in agreedConsents,
+            enabled = enabled,
+            onCheckedChange = { onConsentChange(SignUpConsent.PRIVACY_POLICY, it) },
+            onViewClick = onPrivacyPolicyClick
+        )
+    }
+}
+
+/** 체크박스 + 문구 한 줄. 문구를 눌러도 체크가 바뀌고, [onViewClick]이 있으면 오른쪽에 "보기"를 둔다 */
+@Composable
+private fun ConsentRow(
+    text: String,
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    textStyle: TextStyle = MaterialTheme.typography.bodyMedium,
+    onViewClick: (() -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .toggleable(
+                    value = checked,
+                    enabled = enabled,
+                    role = Role.Checkbox,
+                    onValueChange = onCheckedChange
+                ),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 줄 전체(toggleable)가 체크를 처리하므로 체크박스 자체는 클릭을 받지 않는다
+            Checkbox(
+                checked = checked,
+                onCheckedChange = null,
+                enabled = enabled,
+                colors = plantCheckboxColors(),
+                modifier = Modifier.minimumInteractiveComponentSize()
+            )
+            // 세로 여백: 한 줄이면 체크박스 높이(48dp) 안에 들어가 그대로이고, 두 줄로 넘어가면 위아래 항목과 붙지 않게 한다
+            // WordBreak.Phrase: 단어 중간에서 줄이 바뀌지 않게 띄어쓰기 단위로 바꾼다 (지원하지 않는 Android 버전에서는 글자 단위)
+            // 적용 여부가 문구 언어(지정하지 않으면 기기 언어)에 따라 달라, 기기 언어와 상관없이 적용되게 ko-KR로 지정한다
+            // (기기 언어가 영어인 에뮬레이터에서 지정하기 전에는 글자 단위로 바뀌었음)
+            Text(
+                text = text,
+                style = textStyle.copy(
+                    lineBreak = LineBreak.Paragraph.copy(wordBreak = LineBreak.WordBreak.Phrase),
+                    localeList = LocaleList("ko-KR")
+                ),
+                modifier = Modifier.padding(vertical = 6.dp)
+            )
+        }
+
+        if (onViewClick != null) {
+            TextButton(onClick = onViewClick) {
+                Text(
+                    text = "보기",
+                    style = MaterialTheme.typography.bodySmall,
+                    textDecoration = TextDecoration.Underline
+                )
+            }
+        }
+    }
+}
+
+// 필수 동의가 덜 된 확인 버튼을 흐리게 보이는 정도 (누를 수는 있음)
+private const val DISABLED_LOOK_ALPHA = 0.4f
 
 private const val POT_STEP_DURATION_MS = 700L
 private const val POT_LAST_STEP_DURATION_MS = 1600L

@@ -16,10 +16,12 @@
 
 웹 주소와 앱 연결:
 
-| 문서 | 주소 | 앱에서 여는 곳 |
+| 문서 | 주소 | 앱의 주소 상수 |
 |------|------|---------------|
-| 개인정보처리방침 | https://plant-82b09.web.app/privacy-policy.html | `MyPageViewModel.PRIVACY_POLICY_URL` |
-| 서비스 이용약관 | https://plant-82b09.web.app/terms.html | `MyPageViewModel.TERMS_OF_SERVICE_URL` |
+| 개인정보처리방침 | https://plant-82b09.web.app/privacy-policy.html | `LegalUrls.PRIVACY_POLICY` |
+| 서비스 이용약관 | https://plant-82b09.web.app/terms.html | `LegalUrls.TERMS_OF_SERVICE` |
+
+앱에서 여는 곳: 마이페이지(`MyPageViewModel`), 첫 로그인 닉네임 설정 다이얼로그의 "보기"(`SignInViewModel`, #661). 두 곳 모두 `core/util/LegalUrls.kt`의 상수를 쓴다.
 
 파일 이름(주소)을 바꾸거나 페이지를 추가하면 `hosting/build-legal.mjs`의 `PAGES`, 앱의 주소 상수, `.gitignore`(변환 결과 HTML)를 함께 고친다. `.gitignore`에 넣지 않으면 변환 결과가 커밋되어, 커밋된 HTML을 손으로 고쳐도 배포 때 md 내용으로 덮어써진다.
 
