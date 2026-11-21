@@ -36,6 +36,7 @@ interface UserRepository {
     suspend fun createUser(uid: String): Result<User>
     /**
      * 닉네임 중복 검사 + 닉네임 등록 + 첫 로그인 완료를 한 번에(원자적으로) 처리한다.
+     * 첫 로그인 완료와 함께 필수 동의 시각(consentedAt, 서버 시각)을 저장하므로, 필수 항목 동의를 확인한 뒤에만 호출한다 (#661).
      * 이미 같은 설정이 완료된 상태에서 다시 호출하면 성공으로 처리한다.
      *
      * 실패 시 [AppError.NicknameTaken] (다른 사용자가 사용 중), [AppError.Network] (오프라인·시간 초과),

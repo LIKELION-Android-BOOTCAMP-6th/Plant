@@ -5,7 +5,7 @@
 const {describe, it, before, after, beforeEach} = require("node:test");
 const assert = require("node:assert");
 const {assertFails, assertSucceeds} = require("@firebase/rules-unit-testing");
-const {deleteField, doc, getDoc, runTransaction, setDoc, updateDoc} = require("firebase/firestore");
+const {deleteField, doc, getDoc, runTransaction, serverTimestamp, setDoc, updateDoc} = require("firebase/firestore");
 const {ALICE, BOB, createTestEnv, seed} = require("../helpers");
 
 describe("프로필 이미지 해금 레벨 검사 (#602)", () => {
@@ -123,7 +123,8 @@ describe("프로필 이미지 해금 레벨 검사 (#602)", () => {
         await seedAlice({profileImg: stored, unlockedProfileLevel: 0, isFirstLogin: true});
         await assertSucceeds(updateDoc(aliceRef(), {activeSessionToken: "token"}));
         await assertSucceeds(updateDoc(aliceRef(), {lastSelectedPotId: "pot1"}));
-        await assertSucceeds(updateDoc(aliceRef(), {isFirstLogin: false}));
+        // 첫 로그인 완료는 필수 동의 시각(consentedAt)과 함께 써야 한다 (#661, users.test.js)
+        await assertSucceeds(updateDoc(aliceRef(), {isFirstLogin: false, consentedAt: serverTimestamp()}));
         // 같은 값을 다시 써도 바뀐 필드가 아니므로 검사하지 않는다
         await assertSucceeds(updateDoc(aliceRef(), {profileImg: stored}));
         assert.strictEqual(await readProfileImg(), stored);
@@ -147,7 +148,7 @@ describe("프로필 이미지 해금 레벨 검사 (#602)", () => {
         await txn.get(userRef);
         await txn.get(nicknameRef);
         txn.set(nicknameRef, {nickname: "밥", uid: BOB});
-        txn.update(userRef, {nickname: "밥", isFirstLogin: false});
+        txn.update(userRef, {nickname: "밥", isFirstLogin: false, consentedAt: serverTimestamp()});
       }));
     });
   });

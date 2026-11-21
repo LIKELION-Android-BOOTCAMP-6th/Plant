@@ -2,6 +2,7 @@ package com.a32b.plant.presentation.mypage.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
+import com.a32b.plant.core.util.LegalUrls
 import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.result.onFailure
@@ -55,11 +56,6 @@ class MyPageViewModel @Inject constructor(
     private val updateProfileUseCase: UpdateProfileUseCase,
     private val observeDarkModeUseCase: ObserveDarkModeUseCase
 ) : BaseViewModel() {
-    companion object {
-        // 두 페이지의 원본은 docs/legal/*.md (배포 절차: docs/LEGAL_HOSTING.md)
-        private const val PRIVACY_POLICY_URL = "https://plant-82b09.web.app/privacy-policy.html"
-        private const val TERMS_OF_SERVICE_URL = "https://plant-82b09.web.app/terms.html"
-    }
 
     private val _uiState = MutableStateFlow(MyPageUiState())
     val uiState = _uiState.asStateFlow()
@@ -192,13 +188,13 @@ class MyPageViewModel @Inject constructor(
 
     fun onPrivacyPolicyClick() {
         viewModelScope.launch {
-            _eventChannel.send(MyPageEvent.OpenUrl(PRIVACY_POLICY_URL))
+            _eventChannel.send(MyPageEvent.OpenUrl(LegalUrls.PRIVACY_POLICY))
         }
     }
 
     fun onTermsOfServiceClick() {
         viewModelScope.launch {
-            _eventChannel.send(MyPageEvent.OpenUrl(TERMS_OF_SERVICE_URL))
+            _eventChannel.send(MyPageEvent.OpenUrl(LegalUrls.TERMS_OF_SERVICE))
         }
     }
 }

@@ -287,11 +287,11 @@ describe("화분 완료·기록 삭제·화분 삭제 (#455)", () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {
         await deleteDoc(doc(context.firestore(), "users", BOB));
       });
-      await assertFails(setDoc(doc(asBob(), "users", BOB), {nickname: "", completedPotsCount: 1}));
-      await assertFails(setDoc(doc(asBob(), "users", BOB), {nickname: "", lastCompletedPotId: "p"}));
-      await assertFails(setDoc(doc(asBob(), "users", BOB), {nickname: "", lastDeletedPotId: "p"}));
-      await assertFails(setDoc(doc(asBob(), "users", BOB), {nickname: "", lastDeletedLogId: "l"}));
-      await assertSucceeds(setDoc(doc(asBob(), "users", BOB), {nickname: "", totalStudyTime: 0}));
+      await assertFails(setDoc(doc(asBob(), "users", BOB), {nickname: "", isFirstLogin: true, completedPotsCount: 1}));
+      await assertFails(setDoc(doc(asBob(), "users", BOB), {nickname: "", isFirstLogin: true, lastCompletedPotId: "p"}));
+      await assertFails(setDoc(doc(asBob(), "users", BOB), {nickname: "", isFirstLogin: true, lastDeletedPotId: "p"}));
+      await assertFails(setDoc(doc(asBob(), "users", BOB), {nickname: "", isFirstLogin: true, lastDeletedLogId: "l"}));
+      await assertSucceeds(setDoc(doc(asBob(), "users", BOB), {nickname: "", isFirstLogin: true, totalStudyTime: 0}));
     });
   });
 });

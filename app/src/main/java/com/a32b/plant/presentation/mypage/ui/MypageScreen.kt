@@ -1,7 +1,5 @@
 package com.a32b.plant.presentation.mypage.ui
 
-import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -65,6 +63,7 @@ import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.component.TabTopBar
+import com.a32b.plant.presentation.core.extension.openUrl
 import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageEvent
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageUiState
@@ -102,13 +101,7 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                         event.message,
                         if (event.isLong) Toast.LENGTH_LONG else Toast.LENGTH_SHORT
                     )
-                is MyPageEvent.OpenUrl -> {
-                    try {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(event.url)))
-                    } catch (error: Exception) {
-                        context.showToast("브라우저 앱을 찾을 수 없습니다.")
-                    }
-                }
+                is MyPageEvent.OpenUrl -> context.openUrl(event.url)
             }
         }
     }

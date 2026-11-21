@@ -16,8 +16,20 @@ class SetNicknameUseCase @Inject constructor(
      *
      * 닉네임은 [NicknameRule.normalize]로 정규화한 값(앞뒤 공백 제거 + 분리된 한글 자모 합치기)으로 검사·저장한다.
      * 형식이 맞지 않으면 저장 요청 없이 [AppError.NicknameInvalid]를 반환한다.
+     *
+     * 필수 항목(만 14세 이상·이용약관·개인정보처리방침)에 모두 동의하지 않았으면([hasAgreedToRequiredTerms] = false)
+     * 닉네임 검사·저장 없이 [AppError.RequiredConsentMissing]을 반환한다 (#661).
+     * 동의했으면 첫 로그인 완료와 함께 동의 시각(consentedAt)이 저장된다.
      */
-    suspend operator fun invoke(uid: String, nickname: String): Result<String> {
+    suspend operator fun invoke(
+        uid: String,
+        nickname: String,
+        hasAgreedToRequiredTerms: Boolean
+    ): Result<String> {
+        if (!hasAgreedToRequiredTerms) {
+            return Result.Failure(AppError.RequiredConsentMissing())
+        }
+
         val normalizedNickname = NicknameRule.normalize(nickname)
         val nicknameError = NicknameRule.validate(normalizedNickname)
         if (nicknameError != null) {

@@ -3,6 +3,7 @@ package com.a32b.plant.data.source.remote.user
 import com.a32b.plant.data.model.AttendanceResultDto
 import com.a32b.plant.data.model.AttendanceRewardDto
 import com.a32b.plant.data.model.UserDto
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Source
 import com.google.firebase.functions.FirebaseFunctions
@@ -86,7 +87,10 @@ class UserRemoteDataSourceImpl @Inject constructor(
             txn.update(
                 userRef,
                 "nickname", nickname,
-                "isFirstLogin", false
+                "isFirstLogin", false,
+                // 필수 동의(만 14세 이상·이용약관·개인정보처리방침) 시각 (#661). 동의 확인은 SetNicknameUseCase가 하고,
+                // 보안 규칙은 첫 로그인 완료(isFirstLogin true → false) 쓰기에 이 값(서버 시각)을 요구하고 이후 수정을 막는다
+                "consentedAt", FieldValue.serverTimestamp()
             )
             CompleteFirstLoginResult.Completed
         }.await()

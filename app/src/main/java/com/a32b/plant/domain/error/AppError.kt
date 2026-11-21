@@ -15,6 +15,8 @@ sealed class AppError : Throwable() {
     data class Permission(override val message: String = "권한이 없습니다.") : AppError()
     data class NicknameTaken(override val message: String = "사용 중인 닉네임입니다.") : AppError()
     data class NicknameInvalid(override val message: String) : AppError()
+    // 첫 로그인 닉네임 설정에서 필수 항목(만 14세 이상·이용약관·개인정보처리방침)에 모두 동의하지 않음 (#661)
+    data class RequiredConsentMissing(override val message: String = "필수 항목에 동의해 주세요.") : AppError()
     data class Custom(override val message: String) : AppError()
     data class Debug(override val message: String) : AppError() //외부로 노출하지 않고 조용히 처리하는 오류일 경우
     data class InsufficientItems(override val message: String = "아이템이 부족합니다."): AppError()

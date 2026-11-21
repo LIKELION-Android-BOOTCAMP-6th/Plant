@@ -2,7 +2,9 @@
 const {describe, it, before, after, beforeEach} = require("node:test");
 const assert = require("node:assert");
 const {assertFails, assertSucceeds} = require("@firebase/rules-unit-testing");
-const {deleteDoc, deleteField, doc, getDoc, runTransaction, setDoc, updateDoc} = require("firebase/firestore");
+const {
+  Timestamp, deleteDoc, deleteField, doc, getDoc, runTransaction, serverTimestamp, setDoc, updateDoc,
+} = require("firebase/firestore");
 const {ALICE, BOB, createTestEnv, deletePotBatch, deleteStudyLogBatch, seed} = require("../helpers");
 
 describe("users", () => {
@@ -80,7 +82,7 @@ describe("users", () => {
         await txn.get(userRef);
         await txn.get(nicknameRef);
         txn.set(nicknameRef, {nickname: "밥", uid: BOB});
-        txn.update(userRef, {nickname: "밥", isFirstLogin: false});
+        txn.update(userRef, {nickname: "밥", isFirstLogin: false, consentedAt: serverTimestamp()});
       }));
     });
 
@@ -151,7 +153,7 @@ describe("users", () => {
       await seed(testEnv, async (db) => {
         await setDoc(doc(db, "users", BOB), {nickname: "", isFirstLogin: true});
       });
-      await assertFails(updateDoc(doc(asBob(), "users", BOB), {nickname: "밥", isFirstLogin: false}));
+      await assertFails(updateDoc(doc(asBob(), "users", BOB), {nickname: "밥", isFirstLogin: false, consentedAt: serverTimestamp()}));
     });
 
     it("빈 닉네임으로 문서를 만들 수 있다 (createUser)", async () => {
@@ -162,7 +164,7 @@ describe("users", () => {
       await seed(testEnv, async (db) => {
         await setDoc(doc(db, "nicknames", "밥"), {nickname: "밥", uid: BOB});
       });
-      await assertSucceeds(setDoc(doc(asBob(), "users", BOB), {nickname: "밥"}));
+      await assertSucceeds(setDoc(doc(asBob(), "users", BOB), {nickname: "밥", isFirstLogin: true}));
     });
 
     it("문서가 없을 때 다른 사람 닉네임으로 만들 수 없다", async () => {
@@ -170,7 +172,89 @@ describe("users", () => {
         await setDoc(doc(db, "nicknames", "밥"), {nickname: "밥", uid: BOB});
         await deleteDoc(doc(db, "users", ALICE));
       });
-      await assertFails(setDoc(doc(asAlice(), "users", ALICE), {nickname: "밥"}));
+      await assertFails(setDoc(doc(asAlice(), "users", ALICE), {nickname: "밥", isFirstLogin: true}));
+    });
+  });
+
+  // 첫 로그인 필수 동의 (#661): 만 14세 이상·이용약관·개인정보처리방침에 동의해야 앱이 completeFirstLogin을 호출하고,
+  // 그 트랜잭션에서 isFirstLogin을 false로 바꾸며 consentedAt에 서버 시각을 쓴다
+  describe("첫 로그인 필수 동의 (consentedAt)", () => {
+    beforeEach(async () => {
+      await seed(testEnv, async (db) => {
+        await setDoc(doc(db, "users", BOB), {nickname: "", profileImg: "", isFirstLogin: true});
+      });
+    });
+
+    const bobRef = () => doc(asBob(), "users", BOB);
+
+    // 앱의 completeFirstLogin과 같은 트랜잭션. userFields로 users에 쓰는 값을 바꾼다
+    function completeFirstLoginTxn(userFields) {
+      const db = asBob();
+      return runTransaction(db, async (txn) => {
+        const userRef = doc(db, "users", BOB);
+        const nicknameRef = doc(db, "nicknames", "밥");
+        await txn.get(userRef);
+        await txn.get(nicknameRef);
+        txn.set(nicknameRef, {nickname: "밥", uid: BOB});
+        txn.update(userRef, {nickname: "밥", ...userFields});
+      });
+    }
+
+    async function readBob() {
+      let data;
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        data = (await getDoc(doc(context.firestore(), "users", BOB))).data();
+      });
+      return data;
+    }
+
+    it("동의 시각(서버 시각)과 함께 첫 로그인을 완료하면 허용하고 consentedAt이 저장된다", async () => {
+      await assertSucceeds(completeFirstLoginTxn({isFirstLogin: false, consentedAt: serverTimestamp()}));
+      const bob = await readBob();
+      assert.strictEqual(bob.isFirstLogin, false);
+      assert.ok(bob.consentedAt instanceof Timestamp);
+    });
+
+    it("consentedAt 없이 첫 로그인을 완료할 수 없다", async () => {
+      await assertFails(completeFirstLoginTxn({isFirstLogin: false}));
+    });
+
+    it("consentedAt이 서버 시각이 아니면(기기 시각·다른 타입) 거부", async () => {
+      await assertFails(completeFirstLoginTxn({isFirstLogin: false, consentedAt: Timestamp.now()}));
+      await assertFails(completeFirstLoginTxn({isFirstLogin: false, consentedAt: true}));
+    });
+
+    it("첫 로그인 완료 없이 consentedAt만 쓸 수 없다", async () => {
+      await assertFails(updateDoc(bobRef(), {consentedAt: serverTimestamp()}));
+    });
+
+    it("첫 로그인 완료 뒤에는 consentedAt을 바꾸거나 지울 수 없다", async () => {
+      await assertSucceeds(completeFirstLoginTxn({isFirstLogin: false, consentedAt: serverTimestamp()}));
+      await assertFails(updateDoc(bobRef(), {consentedAt: serverTimestamp()}));
+      await assertFails(updateDoc(bobRef(), {consentedAt: deleteField()}));
+      // 다른 프로필 필드 쓰기는 그대로 허용
+      await assertSucceeds(updateDoc(bobRef(), {activeSessionToken: "token"}));
+    });
+
+    it("첫 로그인 완료 뒤 isFirstLogin을 되돌리거나 지울 수 없다 (다시 동의 시각을 쓰는 우회 차단)", async () => {
+      await assertSucceeds(completeFirstLoginTxn({isFirstLogin: false, consentedAt: serverTimestamp()}));
+      await assertFails(updateDoc(bobRef(), {isFirstLogin: true}));
+      await assertFails(updateDoc(bobRef(), {isFirstLogin: deleteField()}));
+    });
+
+    it("첫 로그인 전에도 isFirstLogin을 지워 완료 상태처럼 만들 수 없다", async () => {
+      await assertFails(updateDoc(bobRef(), {isFirstLogin: deleteField()}));
+      await assertFails(updateDoc(bobRef(), {isFirstLogin: deleteField(), consentedAt: serverTimestamp()}));
+    });
+
+    it("문서 생성은 isFirstLogin = true로만 할 수 있다 (완료 상태로 만들어 동의를 건너뛰는 것 차단)", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await deleteDoc(doc(context.firestore(), "users", BOB));
+      });
+      await assertFails(setDoc(bobRef(), {nickname: "", isFirstLogin: false}));
+      await assertFails(setDoc(bobRef(), {nickname: ""}));
+      await assertFails(setDoc(bobRef(), {nickname: "", isFirstLogin: true, consentedAt: serverTimestamp()}));
+      await assertSucceeds(setDoc(bobRef(), {nickname: "", isFirstLogin: true}));
     });
   });
 
