@@ -448,7 +448,7 @@ private fun ConsentSection(
 
         HorizontalDivider(
             modifier = Modifier.padding(vertical = 4.dp),
-            color = MaterialTheme.colorScheme.outlineVariant
+            color = MaterialTheme.colorScheme.outline
         )
 
         ConsentRow(
@@ -508,8 +508,9 @@ private fun ConsentRow(
                 modifier = Modifier.minimumInteractiveComponentSize()
             )
             // 세로 여백: 한 줄이면 체크박스 높이(48dp) 안에 들어가 그대로이고, 두 줄로 넘어가면 위아래 항목과 붙지 않게 한다
-            // WordBreak.Phrase: "개인정보처 / 리방침"처럼 단어 중간에서 줄이 바뀌지 않게 띄어쓰기 단위로 바꾼다 (Android 13 이상, 그 아래는 글자 단위)
-            // 문구 언어(localeList)가 한국어일 때만 적용되므로, 기기 언어가 한국어가 아니어도 같게 보이도록 ko-KR로 지정한다
+            // WordBreak.Phrase: 단어 중간에서 줄이 바뀌지 않게 띄어쓰기 단위로 바꾼다 (지원하지 않는 Android 버전에서는 글자 단위)
+            // 적용 여부가 문구 언어(지정하지 않으면 기기 언어)에 따라 달라, 기기 언어와 상관없이 적용되게 ko-KR로 지정한다
+            // (기기 언어가 영어인 에뮬레이터에서 지정하기 전에는 글자 단위로 바뀌었음)
             Text(
                 text = text,
                 style = textStyle.copy(

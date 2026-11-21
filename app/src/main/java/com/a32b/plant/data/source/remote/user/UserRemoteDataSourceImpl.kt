@@ -73,10 +73,11 @@ class UserRemoteDataSourceImpl @Inject constructor(
 
         return db.runTransaction { txn ->
             val userSnapshot = txn.get(userRef)
-            if (userSnapshot.getString("nickname") == nickname &&
-                userSnapshot.getBoolean("isFirstLogin") == false
-            ) {
-                return@runTransaction CompleteFirstLoginResult.AlreadyCompleted
+            // 이미 완료된 문서면 닉네임이 달라도 아무것도 쓰지 않고 서버의 닉네임을 돌려준다 (#661).
+            // 앞선 요청이 시간 초과 뒤 서버에 반영된 상태에서 다른 닉네임으로 재시도하거나, 시간 초과된 요청이 늦게 재시도돼도
+            // 먼저 완료된 값을 바꾸지 않는다 (동의 시각은 보안 규칙상 완료 이후 다시 쓸 수 없다)
+            if (userSnapshot.getBoolean("isFirstLogin") == false) {
+                return@runTransaction CompleteFirstLoginResult.AlreadyCompleted(userSnapshot.getString("nickname").orEmpty())
             }
 
             if (txn.get(nicknameRef).exists()) {

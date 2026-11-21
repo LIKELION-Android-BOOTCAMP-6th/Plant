@@ -43,6 +43,21 @@ class SetNicknameUseCaseTest {
     }
 
     @Test
+    fun `already completed returns the saved nickname instead of the input (#661)`() = runTest {
+        // 앞선 요청이 시간 초과 뒤 서버에 "이전닉"으로 반영된 상태에서 "새싹"으로 재시도
+        val users = FakeUserRepository(
+            initialUser = User.create().copy(uid = "uid-1"),
+            completeFirstLoginResult = Result.Success("이전닉")
+        )
+        val useCase = SetNicknameUseCase(users)
+
+        val result = useCase("uid-1", "새싹", hasAgreedToRequiredTerms = true)
+
+        assertEquals(Result.Success("이전닉"), result)
+        assertEquals("이전닉", CurrentUser.user.value?.nickname)
+    }
+
+    @Test
     fun `invalid length is rejected without saving`() = runTest {
         val users = FakeUserRepository()
         val useCase = SetNicknameUseCase(users)

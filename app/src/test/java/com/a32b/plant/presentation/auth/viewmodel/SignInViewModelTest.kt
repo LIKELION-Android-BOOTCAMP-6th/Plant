@@ -132,6 +132,22 @@ class SignInViewModelTest {
     }
 
     @Test
+    fun `already completed shows welcome toast with the saved nickname (#661)`() = runSignInTest(
+        completeResult = Result.Success("이전닉")
+    ) { _, viewModel, events ->
+        viewModel.onNicknameChange("새싹")
+        viewModel.confirmNickname()
+        runCurrent()
+
+        assertEquals(
+            setOf(SignInEvent.ShowToast("이전닉님 환영합니다.", isLong = false), SignInEvent.NavigateToHome),
+            events.toSet()
+        )
+        assertEquals(2, events.size)
+        assertFalse(viewModel.uiState.value.showNicknameDialog)
+    }
+
+    @Test
     fun `typing again clears input error`() = runSignInTest { _, viewModel, _ ->
         viewModel.onNicknameChange("a")
         viewModel.confirmNickname()
@@ -353,7 +369,7 @@ class SignInViewModelTest {
      * [agreeAll]이 true면 필수 동의 세 항목을 모두 체크한 상태로 시작한다 (동의와 무관한 기존 닉네임 테스트용)
      */
     private fun runSignInTest(
-        completeResult: Result<Unit> = Result.Success(Unit),
+        completeResult: Result<String>? = null,
         agreeAll: Boolean = true,
         auth: FakeAuthRepository = FakeAuthRepository(),
         block: suspend TestScope.(FakeUserRepository, SignInViewModel, List<SignInEvent>) -> Unit

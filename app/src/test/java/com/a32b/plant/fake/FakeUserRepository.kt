@@ -19,7 +19,8 @@ import kotlinx.coroutines.flow.emptyFlow
  */
 class FakeUserRepository(
     initialUser: User? = null,
-    var completeFirstLoginResult: Result<Unit> = Result.Success(Unit),
+    // null이면 전달받은 nickname 인자로 성공한 것처럼 돌려준다. 이미 완료된 상태(서버 닉네임 반환)는 Result.Success("다른 닉네임")으로 흉내 낸다
+    var completeFirstLoginResult: Result<String>? = null,
     var completeFirstLoginGate: CompletableDeferred<Unit>? = null,
     var updateProfileResult: Result<Unit> = Result.Success(Unit),
     var updateProfileGate: CompletableDeferred<Unit>? = null,
@@ -52,10 +53,10 @@ class FakeUserRepository(
     override fun takeExpiredSessionReason(): SessionExpiredReason? = null
     override suspend fun updateLastSelectedPot(uid: String, potId: String) = Unit
 
-    override suspend fun completeFirstLogin(uid: String, nickname: String): Result<Unit> {
+    override suspend fun completeFirstLogin(uid: String, nickname: String): Result<String> {
         completedNicknames += uid to nickname
         completeFirstLoginGate?.await()
-        return completeFirstLoginResult
+        return completeFirstLoginResult ?: Result.Success(nickname)
     }
 
     override suspend fun updateDarkMode(isDarkMode: Boolean): Result<Unit> {
