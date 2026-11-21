@@ -162,7 +162,7 @@ class StudyingViewModel @Inject constructor(
             // 복원한 세션이 저장할 수 없는 세션이라 멈췄으면(stopIfSessionTooOld) 지운 백업을 다시 쓰지 않는다
             saveInitialSession()
         }
-        onStudyingUsersChange()
+        observeStudyingUsers()
         observeTimer()
         observeServiceSaveResult()
     }
@@ -351,8 +351,12 @@ class StudyingViewModel @Inject constructor(
         }
     }
 
-    /** db에서 같은 태그로 공부중인 사용자 데이터 가져오기 — 유령(강제 종료로 남은 문서)은 유즈케이스가 뺀다 (#618) */
-    fun onStudyingUsersChange(){
+    /**
+     * db에서 같은 태그로 공부중인 사용자 데이터 가져오기 — 유령(강제 종료로 남은 문서)은 유즈케이스가 뺀다 (#618)
+     * 부를 때마다 새 수집을 시작하므로 init에서만 부른다 (#730)
+     * 태그는 savedStateHandle에서 받아 init 시점에 정해지고, 이어서 공부하기 복원(restoreFromLocalBackup)도 태그를 바꾸지 않는다
+     */
+    private fun observeStudyingUsers(){
         viewModelScope.launch(Dispatchers.IO) {
             observeStudyingUsersUseCase(_uiState.value.tag)
                 .collect { users ->
