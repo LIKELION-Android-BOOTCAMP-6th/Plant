@@ -19,7 +19,7 @@ import javax.inject.Inject
  * - 유령은 문서를 바꾸지 않아 리스너가 다시 불리지 않으므로, [REFILTER_INTERVAL_MS]마다 마지막 목록을 다시 거른다
  *   (일시정지 중에도 목록이 보이므로 공부 중일 때만 도는 observeTimer가 아니라 여기서 돈다)
  * - updatedAt은 서버 시각, 비교하는 현재 시각은 기기 시각이라 기기 시계가 빠른 만큼 일찍 숨겨진다.
- *   (기준 시간 − 갱신 간격)보다 빠르면 공부 중인 사람도 갱신 사이에 잠깐씩 숨겨지고, 기준 시간 이상 빠르면 계속 숨겨질 수 있다
+ *   (기준 시간 − 갱신 간격)보다 빠르면 공부 중인 사람도 갱신 사이에 잠깐씩 숨겨질 수 있고, 기준 시간 이상 빠르면 계속 숨겨질 수 있다
  */
 class ObserveStudyingUsersUseCase(
     private val repository: StudyingRepository,
