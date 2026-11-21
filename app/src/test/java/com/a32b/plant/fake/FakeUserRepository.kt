@@ -23,6 +23,7 @@ class FakeUserRepository(
     var completeFirstLoginGate: CompletableDeferred<Unit>? = null,
     var updateProfileResult: Result<Unit> = Result.Success(Unit),
     var updateProfileGate: CompletableDeferred<Unit>? = null,
+    var updateSessionTokenGate: CompletableDeferred<Unit>? = null,
     var darkModeFlow: Flow<Boolean> = emptyFlow(),
     private val callLog: MutableList<String> = mutableListOf()
 ) : UserRepository {
@@ -72,5 +73,13 @@ class FakeUserRepository(
     override suspend fun getUserPreferringServer(uid: String): Result<UserSnapshot> = error("Unused")
     override suspend fun createUser(uid: String): Result<User> = error("Unused")
     override suspend fun checkAttendance(): Result<AttendanceDecision.Success> = error("Unused")
-    override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> = error("Unused")
+
+    /** updateSessionToken 호출 기록 (uid to token) */
+    val sessionTokenUpdates = mutableListOf<Pair<String, String?>>()
+
+    override suspend fun updateSessionToken(uid: String, token: String?): Result<Unit> {
+        sessionTokenUpdates += uid to token
+        updateSessionTokenGate?.await()
+        return Result.Success(Unit)
+    }
 }

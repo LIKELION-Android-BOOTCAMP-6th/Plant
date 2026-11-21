@@ -3,6 +3,7 @@ package com.a32b.plant.presentation.auth.viewmodel
 import com.a32b.plant.core.util.LegalUrls
 import com.a32b.plant.di.CurrentUser
 import com.a32b.plant.domain.error.AppError
+import com.a32b.plant.domain.model.User
 import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.usecase.auth.ResolveUserSessionUseCase
 import com.a32b.plant.domain.usecase.auth.SetNicknameUseCase
@@ -288,6 +289,63 @@ class SignInViewModelTest {
             assertEquals(0, auth.signOutCalls)
             gate.complete(Unit)
             runCurrent()
+        }
+    }
+
+    // 로그인한 사용자가 있어야 SignOutUseCase가 세션 토큰 지우기(updateSessionToken)를 기다린다.
+    // 게이트로 토큰 지우기를 멈춰 "로그아웃 진행 중" 상태를 만든다
+
+    @Test
+    fun `repeated sign out while clearing session token signs out only once`() {
+        val auth = FakeAuthRepository()
+        runSignInTest(auth = auth) { users, viewModel, _ ->
+            val gate = CompletableDeferred<Unit>()
+            users.updateSessionTokenGate = gate
+            users.currentUser.value = User.create().copy(uid = "uid-1")
+            viewModel.onNicknameChange("새싹")
+
+            viewModel.signOutFromNicknameDialog()
+            runCurrent()
+            viewModel.signOutFromNicknameDialog()
+            runCurrent()
+
+            // 토큰 지우기를 기다리는 중: 아직 로그아웃 전이고 다이얼로그 상태도 그대로
+            assertEquals(listOf("uid-1" to null), users.sessionTokenUpdates)
+            assertEquals(0, auth.signOutCalls)
+            assertEquals("새싹", viewModel.uiState.value.nicknameInput)
+
+            gate.complete(Unit)
+            runCurrent()
+
+            assertEquals(1, users.sessionTokenUpdates.size)
+            assertEquals(1, auth.signOutCalls)
+            assertEquals(SignInUiState(), viewModel.uiState.value)
+        }
+    }
+
+    @Test
+    fun `confirm is ignored while signing out`() {
+        val auth = FakeAuthRepository()
+        runSignInTest(auth = auth) { users, viewModel, events ->
+            val gate = CompletableDeferred<Unit>()
+            users.updateSessionTokenGate = gate
+            users.currentUser.value = User.create().copy(uid = "uid-1")
+            viewModel.onNicknameChange("새싹")
+
+            viewModel.signOutFromNicknameDialog()
+            runCurrent()
+            viewModel.confirmNickname()
+            runCurrent()
+
+            assertTrue(users.completedNicknames.isEmpty())
+            assertFalse(viewModel.uiState.value.isNicknameLoading)
+
+            gate.complete(Unit)
+            runCurrent()
+
+            assertTrue(users.completedNicknames.isEmpty())
+            assertEquals(1, auth.signOutCalls)
+            assertEquals(emptyList<SignInEvent>(), events)
         }
     }
 
