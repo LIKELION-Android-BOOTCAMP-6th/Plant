@@ -41,7 +41,7 @@ class ObserveStudyingUsersUseCaseTest {
 
     @Test
     fun `drops users at or over threshold`() {
-        val users = listOf(user("a", now - STALE_THRESHOLD_MS), user("b", now - 20 * 60 * 1000L))
+        val users = listOf(user("a", now - STALE_THRESHOLD_MS), user("b", now - STALE_THRESHOLD_MS * 2))
         assertEquals(emptyList<String>(), uids(ObserveStudyingUsersUseCase.filterActive(users, now)))
     }
 
@@ -61,7 +61,7 @@ class ObserveStudyingUsersUseCaseTest {
     fun `ghost in top 3 is replaced by next active user and order is kept`() {
         // 쿼리 결과는 학습 시간 내림차순 — 유령이 1, 3번째를 차지해도 실제 공부 중인 3명이 순서대로 남는다
         val users = listOf(
-            user("ghost1", now - 15 * 60 * 1000L, 500),
+            user("ghost1", now - STALE_THRESHOLD_MS * 2, 500),
             user("a", now, 400),
             user("ghost2", null, 300),
             user("b", now, 200),
