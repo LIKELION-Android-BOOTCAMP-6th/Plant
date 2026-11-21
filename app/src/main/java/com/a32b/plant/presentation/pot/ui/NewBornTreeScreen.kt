@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -68,6 +69,9 @@ fun NewBornTreeScreen(navController: NavController,
     // 태그 목록 첫 방출 전에는 로딩 표시 — 전환 중 빈 폼 노출 방지 (#384)
     LoadableScreen(viewModel) {
         Scaffold(
+            // edge-to-edge라 adjustResize만으로는 창이 줄지 않아 키보드 높이만큼 직접 여백을 준다 (#671).
+            // Scaffold 전체에 줘야 하단 완료 버튼도 키보드 위로 올라간다.
+            modifier = Modifier.imePadding(),
             topBar = {
                 Text(
                     text = "Plant",

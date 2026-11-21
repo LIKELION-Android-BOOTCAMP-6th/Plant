@@ -11,11 +11,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -31,6 +35,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -53,6 +60,7 @@ import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.TagSheet
 import com.a32b.plant.presentation.core.extension.showToast
+import kotlinx.coroutines.flow.drop
 
 @Composable
 fun CommunityPostScreen(
@@ -126,6 +134,9 @@ fun CommunityPostScreen(
                 modifier = Modifier
                     .padding(innerPadding)
                     .fillMaxSize()
+                    // edge-to-edge라 adjustResize만으로는 창이 줄지 않아, 키보드 높이만큼 목록 영역을 직접 줄인다 (#671).
+                    // 이래야 PostInputField가 커서를 "키보드 위" 영역 안으로 스크롤할 수 있다.
+                    .imePadding()
                     .padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -314,17 +325,32 @@ fun PostInputField(
     maxLength: Int = Int.MAX_VALUE
 ) {
     val context = LocalContext.current
+
+    // 긴 본문을 입력할 때 바깥 스크롤이 커서를 따라가도록 TextFieldState 방식을 쓴다 (#671).
+    // value(String) 방식은 포커스를 얻을 때만 바깥 스크롤에 커서를 보이게 요청해, 입력 중에는 커서가 키보드에 가려졌다.
+    //
+    // 처음 값만 value에서 가져오고, 이후에는 사용자가 바꿀 때만 onValueChange로 알린다.
+    // 입력란이 그려진 뒤 value가 바뀌어도 반영되지 않는다 (지금 호출하는 화면들은 그 뒤에 바깥에서 값을 바꾸지 않음).
+    val state = remember { TextFieldState(value ?: "") }
+    val currentOnValueChange by rememberUpdatedState(onValueChange)
+    LaunchedEffect(state) {
+        // 첫 방출은 처음 값 그대로라 건너뛴다 (알리면 비어 있는 공유 글 추가 내용이 null에서 ""로 바뀜)
+        snapshotFlow { state.text.toString() }.drop(1).collect { currentOnValueChange(it) }
+    }
+    // 글자 수를 넘는 입력은 통째로 되돌리고 안내 (붙여넣기 포함, 이전 동작과 같음)
+    val limitTransformation = remember(maxLength, context) {
+        InputTransformation {
+            if (length > maxLength) {
+                revertAllChanges()
+                context.showToast("${maxLength}자 이하로 입력해주세요.")
+            }
+        }
+    }
+
     Column {
         TextField(
-            value = value ?: "",
-            onValueChange = { input ->
-                if (input.length <= maxLength) {
-                    onValueChange(input)
-                } else {
-                    context.showToast("${maxLength}자 이하로 입력해주세요.")
-                }
-            },
-
+            state = state,
+            inputTransformation = limitTransformation,
             placeholder = {
                 Text(
                     placeholder,
@@ -335,7 +361,7 @@ fun PostInputField(
                 .fillMaxWidth()
                 .shadow(elevation = 1.dp, shape = RoundedCornerShape(8.dp))
                 .background(MaterialTheme.colorScheme.background),
-            singleLine = singleLine,
+            lineLimits = if (singleLine) TextFieldLineLimits.SingleLine else TextFieldLineLimits.Default,
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
                 unfocusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -347,9 +373,9 @@ fun PostInputField(
         )
 
         Text(
-            "${value?.length ?: 0} / $maxLength",
+            "${state.text.length} / $maxLength",
             style = MaterialTheme.typography.bodySmall,
-            color = if ((value?.length ?: 0) >= maxLength)
+            color = if (state.text.length >= maxLength)
                 MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
             modifier = Modifier
                 .align(Alignment.End)
