@@ -15,7 +15,9 @@ import kotlinx.coroutines.flow.Flow
 /** 테스트 공용 [StudyingRepository]. 테스트에서 쓰지 않는 함수는 호출되면 실패한다. */
 class FakeStudyingRepository(
     var saveStudySessionResult: Result<StudySaveResult> = Result.Success(StudySaveResult.Saved),
-    var saveLocalSessionResult: Result<Unit> = Result.Success(Unit)
+    var saveLocalSessionResult: Result<Unit> = Result.Success(Unit),
+    /** observeStudyingUser가 돌려줄 Flow — 넣지 않으면 호출 시 실패 */
+    var studyingUsers: Flow<List<StudyingUser>>? = null
 ) : StudyingRepository {
     var clearLocalSessionCalls = 0
 
@@ -48,7 +50,7 @@ class FakeStudyingRepository(
         return Result.Success(Unit)
     }
 
-    override fun observeStudyingUser(tag: String): Flow<List<StudyingUser>> = error("Unused")
+    override fun observeStudyingUser(tag: String): Flow<List<StudyingUser>> = studyingUsers ?: error("Unused")
     override suspend fun saveStudyingUser(user: StudyingUser): Result<Unit> = error("Unused")
     override suspend fun awaitPendingWrites(): Boolean = error("Unused")
     override suspend fun isStudySessionSaved(uid: String, potId: String, sessionId: String): Result<Boolean> = error("Unused")

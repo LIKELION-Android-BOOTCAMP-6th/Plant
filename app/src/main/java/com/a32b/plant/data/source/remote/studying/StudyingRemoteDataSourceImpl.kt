@@ -8,6 +8,7 @@ import com.a32b.plant.domain.error.AppError
 import com.google.android.gms.tasks.Task
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -33,14 +34,19 @@ class StudyingRemoteDataSourceImpl @Inject constructor(
         val listener = db.collection("studying")
             .whereEqualTo("tag", tag)
             .orderBy("studyingTime", Query.Direction.DESCENDING)
-            .limit(3)
+            // 화면에는 3명만 보이지만, 정리 전 유령(강제 종료로 남은 문서)을 걸러낸 뒤에도 3명이 남도록 넉넉하게 가져온다 (#618)
+            .limit(STUDYING_USER_QUERY_LIMIT)
             .addSnapshotListener { snapshots, exception ->
                 if (exception != null){
                     close(exception)
                     return@addSnapshotListener
                 }
                 val users = snapshots?.documents?.mapNotNull { doc ->
-                    runCatching { doc.toObject(StudyingUserDto::class.java) }.getOrNull()
+                    // 내가 방금 쓴 문서는 서버 시각(updatedAt)이 아직 정해지지 않아 기본값이면 null이 된다
+                    // → 오래된 것으로 걸러지지 않게 로컬 추정 시각을 받는다 (#618)
+                    runCatching {
+                        doc.toObject(StudyingUserDto::class.java, DocumentSnapshot.ServerTimestampBehavior.ESTIMATE)
+                    }.getOrNull()
                 } ?: emptyList()
 
                 trySend(users)
@@ -173,5 +179,11 @@ class StudyingRemoteDataSourceImpl @Inject constructor(
             .document(uid)
             .delete()
             .await()
+    }
+
+    companion object {
+        // 공부 중 목록 쿼리 개수 — 표시 개수(ObserveStudyingUsersUseCase.MAX_DISPLAY_COUNT)보다 넉넉하게 (#618)
+        // 유령이 이 개수 - 표시 개수(7명)보다 많이 위에 있으면 실제 공부 중인 사람이 밀려날 수 있다
+        private const val STUDYING_USER_QUERY_LIMIT = 10L
     }
 }
