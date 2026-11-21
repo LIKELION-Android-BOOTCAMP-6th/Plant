@@ -53,7 +53,7 @@ jobs:
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest --no-daemon
 
-      # 기기 테스트(androidTest)도 위 두 단계에서 컴파일되지 않아, 앱 코드가 바뀌어 깨져도 기기에서 돌릴 때에야 발견된다 (#728)
+      # 기기 테스트(androidTest)도 위 두 Gradle 단계(assembleDebug·testDebugUnitTest)에서는 컴파일되지 않아, 앱 코드나 테스트 코드 변경으로 컴파일이 깨져도 잡히지 않는다 (#728)
       # 실행은 에뮬레이터가 필요해 하지 않고, 기기 테스트 APK를 만드는 것까지만 확인한다 (connectedDebugAndroidTest도 실행 전에 이 APK를 만든다)
       - name: Build instrumented tests
         run: ./gradlew assembleDebugAndroidTest --no-daemon
