@@ -104,7 +104,6 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
     }
 
     LaunchedEffect(Unit) {
-        viewModel.onStudyingUsersChange()
         viewModel.event.collect { event ->
             when(event) {
                 is StudyingEvent.NavigateToStudyResult -> {
