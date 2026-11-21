@@ -72,6 +72,31 @@ describe("posts", () => {
     it("작성자도 본문 외 필드(likeCount 등)는 직접 바꿀 수 없다", async () => {
       await assertFails(updateDoc(doc(asAlice(), "posts", "post1"), {title: "수정", likeCount: 50}));
     });
+
+    // 앱의 공유 글 수정은 title·content·updatedAt만 보낸다 (CommunityRemoteDataSourceImpl.updatePost, #729)
+    it("공유 글 작성자는 제목·추가 내용을 수정할 수 있다 (내용 변경, 지움, null)", async () => {
+      await seed(testEnv, async (db) => {
+        await setDoc(doc(db, "posts", "shared1"), newPost(ALICE, {
+          isShared: true, content: "추가 내용", studyLogs: [{title: "기록"}],
+        }));
+      });
+      const ref = doc(asAlice(), "posts", "shared1");
+      await assertSucceeds(updateDoc(ref, {title: "수정", content: "바꾼 내용", updatedAt: new Date()}));
+      await assertSucceeds(updateDoc(ref, {title: "수정", content: "", updatedAt: new Date()}));
+      await assertSucceeds(updateDoc(ref, {title: "수정", content: null, updatedAt: new Date()}));
+    });
+
+    it("공유 글도 다른 사람은 수정할 수 없고, 작성자도 학습 기록은 바꿀 수 없다", async () => {
+      await seed(testEnv, async (db) => {
+        await setDoc(doc(db, "posts", "shared1"), newPost(ALICE, {
+          isShared: true, content: "추가 내용", studyLogs: [{title: "기록"}],
+        }));
+      });
+      await assertFails(updateDoc(doc(asBob(), "posts", "shared1"),
+        {title: "남의 글 수정", content: "바꾼 내용", updatedAt: new Date()}));
+      await assertFails(updateDoc(doc(asAlice(), "posts", "shared1"),
+        {title: "수정", content: "바꾼 내용", studyLogs: [], updatedAt: new Date()}));
+    });
   });
 
   describe("좋아요", () => {

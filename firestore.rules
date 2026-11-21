@@ -649,7 +649,7 @@ service cloud.firestore {
         newValue('bookmarkedBy', []).size() == 0;
 
       allow update: if signedIn() && (
-        // 작성자 수정: 본문 관련 필드만 (공유 게시글은 title/updatedAt만 보냄)
+        // 작성자 수정: 본문 관련 필드만 (공유 게시글은 tag 없이 title/content/updatedAt만 보냄)
         (isPostAuthor() && changedKeys().hasOnly(['title', 'content', 'tag', 'updatedAt'])) ||
         // 좋아요: 본인 게시글에는 추가 불가, 해제는 허용 (예전 데이터 정리용)
         (selfToggled('likedBy', 'likeCount') && (!isPostAuthor() || selfRemoved('likedBy'))) ||

@@ -132,9 +132,11 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
 
     override fun updatePost(isShared: Boolean, postId: String, title: String, content: String?, tag: TagDto?): Task<Void> =
         if (isShared) {
+            // 공유 글은 태그·학습 기록을 바꾸지 않고 제목과 추가 내용(content)만 수정한다 (#729)
             db.collection("posts").document(postId)
                 .update(
                     "title", title,
+                    "content", content,
                     "updatedAt", Timestamp.now()
                 )
         } else {
