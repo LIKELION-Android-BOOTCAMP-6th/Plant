@@ -139,6 +139,10 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     //function
     implementation("com.google.firebase:firebase-functions")
+    //App Check (#608): release는 Play Integrity, debug는 디버그 제공자
+    //제공자 선택 코드는 src/release·src/debug의 AppCheckProvider.kt
+    implementation("com.google.firebase:firebase-appcheck-playintegrity")
+    debugImplementation("com.google.firebase:firebase-appcheck-debug")
 
     implementation(libs.compose.nav)
     implementation(libs.coroutine.core)
