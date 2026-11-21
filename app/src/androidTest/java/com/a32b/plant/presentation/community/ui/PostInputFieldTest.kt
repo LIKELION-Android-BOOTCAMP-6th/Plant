@@ -48,6 +48,8 @@ class PostInputFieldTest {
                         .verticalScroll(outerScroll)
                 ) {
                     PostInputField(
+                        // #728 CI 실패 확인용 — 확인 후 이 커밋을 되돌린다
+                        notExistingParam = 1,
                         value = initial,
                         onValueChange = { changes += it },
                         placeholder = PLACEHOLDER,
