@@ -107,7 +107,7 @@ class SmallScreenLargeFontTest {
      * 글자가 잘리지 않았는지: 모든 글자가 줄에 배치되고(maxLines에 걸려 잘린 글자 없음), 글자 전체 높이가 Text 높이 안에 들어감
      * - softWrap이 기본값(true)이면 가로로 넘치는 글자는 줄바꿈되거나 maxLines에 걸리므로 위 두 검사로 잡힌다 (이 테스트에서 확인하는 Text는 모두 기본값)
      *   softWrap = false인 Text는 이 판정으로 가로 넘침을 못 잡음. TextLayoutResult.size는 제약 안으로 맞춰져 폭 비교로도 못 잡음
-     * - hasVisualOverflow는 쓰지 않음: 360dp·글꼴 1.0 마이페이지 메뉴 버튼 Text에서 폭 218/819px인데도 true였음 (SM-N986N 기기 테스트 출력)
+     * - hasVisualOverflow는 쓰지 않음: semantics(GetTextLayoutResult)로 받은 결과에서, 360dp·글꼴 1.0 마이페이지 메뉴 버튼 Text가 폭 218/819px인데도 true였음 (SM-N986N 기기 테스트 출력)
      */
     private fun assertNotClipped(label: String, text: String) {
         val r = layoutOf(text)
@@ -229,7 +229,12 @@ class SmallScreenLargeFontTest {
         }
     }
 
-    /** 학습 화면 버튼: 글꼴 1.0에서 150×70dp(수정 전과 같음), 큰 글꼴에서 줄바꿈된 글자가 버튼 안에 들어감 */
+    /**
+     * 학습 화면 버튼: 글꼴 1.0에서 150×70dp, 큰 글꼴에서 줄바꿈된 글자가 버튼 안에 들어감
+     * 높이는 바깥 여백 10dp 두 번과 안쪽 최소 50dp를 Compose가 각각 px로 반올림해 더하므로, 같은 방식으로 계산한 px와 정확히 비교한다
+     * (dp로 바꿔 허용 오차로 비교하면 반올림이 모두 .5에서 일어나는 기기(예: 2.75)에서 float 오차로 틀리게 실패할 수 있음.
+     *  수정 전 height(70.dp)는 한 번만 반올림 — 2.625 기기에서 수정 전 184px, 수정 후 183px)
+     */
     @Test
     fun studyingStateChangeButton() {
         forEachCombo(content = {
@@ -240,8 +245,11 @@ class SmallScreenLargeFontTest {
             val outer = composeRule.onNodeWithTag(TAG).getUnclippedBoundsInRoot()
             val label = "폭 $width, 글꼴 $fontScale"
             if (fontScale == 1.0f) {
-                assertEquals("$label: 너비", 150f, (outer.right - outer.left).value, TOLERANCE.value)
-                assertEquals("$label: 높이", 70f, height(outer), TOLERANCE.value)
+                val sizePx = composeRule.onNodeWithTag(TAG).fetchSemanticsNode().size
+                with(composeRule.density) {
+                    assertEquals("$label: 너비(px)", 150.dp.roundToPx(), sizePx.width)
+                    assertEquals("$label: 높이(px)", 2 * 10.dp.roundToPx() + 50.dp.roundToPx(), sizePx.height)
+                }
             }
             // 카드는 바깥 여백 10dp 안쪽
             val card = DpRect(outer.left + 10.dp, outer.top + 10.dp, outer.right - 10.dp, outer.bottom - 10.dp)
@@ -252,7 +260,8 @@ class SmallScreenLargeFontTest {
 
     /**
      * 공부 중인 사람 카드: 최소 200dp, 3명의 닉네임·공부 시간 글자가 모두 잘리지 않음
-     * (카드가 200dp 고정이면 마지막 행이 남은 높이로 눌려, 위치는 카드 안이어도 글자 아래가 잘린다 → 글자마다 잘림 검사)
+     * (카드가 200dp 고정이고 내용이 그보다 길면 마지막 행부터 남은 높이로 눌려, 위치는 카드 안이어도 글자 아래가 잘린다 → 글자마다 잘림 검사.
+     *  예전 코드를 복사한 임시 테스트(360dp)에서는 글꼴 1.8·2.0일 때 3번째 닉네임이 잘렸고, 1.0에서는 마지막 여백 8dp가 넘친 만큼을 흡수해 잘리지 않았음)
      */
     @Test
     fun studyingUserCard_fitsThreeUsers() {
@@ -324,7 +333,7 @@ class SmallScreenLargeFontTest {
         val WIDTHS = listOf(360.dp, 411.dp)
         // 1.0 = 기본, 2.0 = 이슈의 최대. 사이 값은 비선형 배율 표(FontScaleConverterFactory)에 있는 배율
         val FONT_SCALES = listOf(1.0f, 1.15f, 1.3f, 1.5f, 1.8f, 2.0f)
-        // px → dp 반올림 오차
+        // 크기·위치 값 하나를 px로 반올림할 때 생기는 오차 (0.5px 이하라 0.5dp 이하)
         val TOLERANCE = 0.5.dp
     }
 }

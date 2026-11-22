@@ -357,7 +357,7 @@ fun SetTimer(time: Long, color: Color = Color.Unspecified){
             contentScale = ContentScale.Fit
         )
         val timerStyle = MaterialTheme.typography.titleLarge
-        // 큰 글꼴에서 원 밖으로 넘치지 않게 한 줄에 들어가는 크기까지만 줄임 (들어가면 원래 크기)
+        // 큰 글꼴에서 원 밖으로 넘치지 않게 한 줄에 들어가는 크기까지만 줄임 (최대 titleLarge 크기)
         Text(
             text = TimeFormatter.formatToDigitalClock(time),
             style = timerStyle,
