@@ -1,5 +1,7 @@
 package com.a32b.plant.data.source.remote.block
 
+import android.util.Log
+import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.data.model.BlockedUserDto
 import com.google.android.gms.tasks.Task
 import com.google.firebase.firestore.DocumentSnapshot
@@ -29,7 +31,14 @@ class BlockRemoteDataSourceImpl @Inject constructor(
             }
             val users = snapshot?.documents?.mapNotNull { doc ->
                 // 방금 쓴 문서는 서버 시각이 아직 정해지지 않아 기본값이면 null → 로컬 추정 시각을 받는다
-                doc.toObject(BlockedUserDto::class.java, DocumentSnapshot.ServerTimestampBehavior.ESTIMATE)
+                // 형식이 맞지 않는 문서(콘솔에서 직접 고친 경우 등) 하나 때문에 콜백에서 앱이 종료되지 않게 한다.
+                // 그 문서를 빼면 차단이 풀린 것처럼 보이므로 문서 ID(차단한 uid)만이라도 남긴다
+                safeRunCatching {
+                    doc.toObject(BlockedUserDto::class.java, DocumentSnapshot.ServerTimestampBehavior.ESTIMATE)
+                }.getOrElse { e ->
+                    Log.e("BlockRemoteDataSource", "차단 문서 변환 실패: ${doc.id}", e)
+                    BlockedUserDto(uid = doc.id)
+                }
             } ?: emptyList()
             trySend(users)
         }

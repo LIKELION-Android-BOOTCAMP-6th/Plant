@@ -214,9 +214,12 @@ class CommunityListViewModel @Inject constructor(
     private fun loadInitial() {
         loadJob?.cancel()
         loadMoreJob?.cancel()
+        // 코루틴을 띄우기 전에 바꾼다 (#660) — 그 사이에 loadMore()가 예전 상태로 시작해 첫 페이지를 두 번 붙이지 않게 하고,
+        // 위에서 취소한 refresh()가 isRefreshing = true를 남기지 않게 함께 되돌린다
+        _uiState.update {
+            it.copy(isLoadingMore = true, isRefreshing = false, cursor = null, hasMore = true, posts = emptyList())
+        }
         loadJob = viewModelScope.launch(Dispatchers.IO) {
-            _uiState.update { it.copy(isLoadingMore = true, cursor = null, hasMore = true, posts = emptyList()) }
-
             val state = _uiState.value
             // withTimeoutOrNull: 오프라인 + 캐시 없을 때 Firestore가 무한 대기하는 현상 방지
             val pageResult = withTimeoutOrNull(10_000L) {
@@ -258,11 +261,16 @@ class CommunityListViewModel @Inject constructor(
 
     // 스크롤로 하단 도달 시 호출. 이미 로딩 중이거나 hasMore=false면 무시
     fun loadMore() {
-        val state = _uiState.value
-        if (state.isLoadingMore || state.isRefreshing || !state.hasMore) return
+        // 확인과 isLoadingMore = true를 update 한 번으로 한다 — 하단 감지·차단 목록 변경(메인)과 빈 페이지 이어 부르기(IO)가 거의 동시에 불러도
+        // 하나만 시작해 같은 페이지를 두 번 붙이지 않는다 (같은 postId가 두 번 생기면 목록 key가 겹쳐 앱이 종료됨, #660)
+        var started = false
+        _uiState.update { state ->
+            started = !(state.isLoadingMore || state.isRefreshing || !state.hasMore)
+            if (started) state.copy(isLoadingMore = true) else state
+        }
+        if (!started) return
 
         loadMoreJob = viewModelScope.launch(Dispatchers.IO) {
-            _uiState.update { it.copy(isLoadingMore = true) }
             val curState = _uiState.value
 
             val pageResult = withTimeoutOrNull(10_000L) {
@@ -278,7 +286,8 @@ class CommunityListViewModel @Inject constructor(
                 Log.d("CommunityListVM", "loadMore 성공: ${page.items.size}개 추가, 총 ${curState.posts.size + page.items.size}개, hasMore=${page.hasMore}")
                 _uiState.update {
                     it.copy(
-                        posts = it.posts + page.items,
+                        // 취소가 늦게 닿은 이전 요청 등으로 이미 있는 글이 다시 오면 빼서, 목록 key가 겹치지 않게 한다 (#660)
+                        posts = (it.posts + page.items).distinctBy { post -> post.postId },
                         cursor = page.nextCursor,
                         hasMore = page.hasMore,
                         isLoadingMore = false
@@ -296,11 +305,18 @@ class CommunityListViewModel @Inject constructor(
     // Pull-to-refresh: 필터 유지, 첫 페이지부터 재수신
     fun refresh() {
         Log.d("CommunityListVM", "refresh() 호출됨, isRefreshing=${_uiState.value.isRefreshing}")
-        if (_uiState.value.isRefreshing) return
+        // 확인과 isRefreshing = true를 update 한 번으로 하고, 코루틴을 띄우기 전에 바꾼다 — 그 사이에 loadMore()가 시작되지 않게 한다 (#660).
+        // 아래에서 취소하는 loadMore가 isLoadingMore = true를 남길 수 있으므로 되돌린다.
+        // 단 글이 비어 있으면(필터 재조회 중) 그대로 둬, 새로고침이 끝날 때까지 로딩 표시 대신 "글 없음"이 보이지 않게 한다
+        var started = false
+        _uiState.update { state ->
+            started = !state.isRefreshing
+            if (started) state.copy(isRefreshing = true, isLoadingMore = state.posts.isEmpty() && state.isLoadingMore) else state
+        }
+        if (!started) return
         loadJob?.cancel()
         loadMoreJob?.cancel()
         loadJob = viewModelScope.launch(Dispatchers.IO) {
-            _uiState.update { it.copy(isRefreshing = true) }
             Log.d("CommunityListVM", "refresh 시작")
             val state = _uiState.value
 
@@ -324,6 +340,7 @@ class CommunityListViewModel @Inject constructor(
                         cursor = page.nextCursor,
                         hasMore = page.hasMore,
                         isRefreshing = false,
+                        isLoadingMore = false,
                         suppressLoadMore = true
                     )
                 }
@@ -331,7 +348,7 @@ class CommunityListViewModel @Inject constructor(
                 loadMoreIfPageHidden(page.items, page.hasMore)
             }.onFailure { e ->
                 Log.e("CommunityListVM", "refresh 실패: ${e.message}", e)
-                _uiState.update { it.copy(isRefreshing = false) }
+                _uiState.update { it.copy(isRefreshing = false, isLoadingMore = false) }
                 _events.trySend(CommunityListEvent.ShowToast(e.message ?: "새로고침에 실패했습니다."))
             }
         }

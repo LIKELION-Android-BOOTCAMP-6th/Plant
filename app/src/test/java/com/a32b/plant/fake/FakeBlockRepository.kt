@@ -4,6 +4,7 @@ import com.a32b.plant.domain.model.BlockedUser
 import com.a32b.plant.domain.model.SaveResult
 import com.a32b.plant.domain.repository.BlockRepository
 import com.a32b.plant.domain.result.Result
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,12 +49,19 @@ class FakeBlockRepository(
         return blockResult
     }
 
+    /**
+     * 넣으면 해제는 게이트가 완료될 때까지 끝나지 않는다 (응답 대기 재현).
+     * 성공 결과면 실제 기기 캐시처럼 목록에서 먼저 빼고 기다린다
+     */
+    var unblockGate: CompletableDeferred<Unit>? = null
+
     override suspend fun unblockUser(uid: String, blockedUid: String): Result<SaveResult> {
         unblockCalls += uid to blockedUid
         if (unblockResult is Result.Success) {
             val list = blockedOf(uid)
             list.value = list.value.filterNot { it.uid == blockedUid }
         }
+        unblockGate?.await()
         return unblockResult
     }
 }

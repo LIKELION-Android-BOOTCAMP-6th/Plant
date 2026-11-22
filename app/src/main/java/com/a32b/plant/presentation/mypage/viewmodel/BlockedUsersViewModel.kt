@@ -72,6 +72,9 @@ class BlockedUsersViewModel @Inject constructor(
     }
 
     fun openUnblockDialog(user: BlockedUser) {
+        // 해제 처리 중에는 열지 않는다 — 해제하면 목록에서 바로 빠져 확인 창이 먼저 닫히므로, 처리 중(오프라인이면 최대 5초)에
+        // 다른 사용자의 창이 로딩 상태로 열려 닫을 수 없게 되는 것을 막는다
+        if (_uiState.value.isLoading) return
         _uiState.update { it.copy(unblockTarget = user) }
     }
 

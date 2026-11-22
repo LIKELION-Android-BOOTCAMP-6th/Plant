@@ -14,6 +14,7 @@ import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
 import com.a32b.plant.fake.FakeBlockRepository
 import com.a32b.plant.fake.FakeUserRepository
 import com.a32b.plant.presentation.community.CommunityConstants
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
@@ -74,7 +75,7 @@ class BlockedUsersViewModelTest {
     }
 
     @Test
-    fun `해제가 실패하면 다이얼로그를 유지하고 안내한다`() = runBlockedTest(
+    fun `해제가 실패하고 목록이 그대로면 다이얼로그를 유지하고 안내한다`() = runBlockedTest(
         unblockResult = Result.Failure(AppError.Custom("차단 해제에 실패했어요."))
     ) { _, viewModel, events ->
         viewModel.openUnblockDialog(viewModel.uiState.value.users.first())
@@ -84,6 +85,27 @@ class BlockedUsersViewModelTest {
         assertEquals("a", viewModel.uiState.value.unblockTarget?.uid)
         assertEquals(listOf("a", "b"), viewModel.uiState.value.users.map { it.uid })
         assertEquals(listOf<BlockedUsersEvent>(BlockedUsersEvent.ShowToast("차단 해제에 실패했어요.")), events)
+    }
+
+    @Test
+    fun `해제 처리 중에는 다른 사용자의 해제 창을 열지 않는다`() = runBlockedTest { repository, viewModel, _ ->
+        val gate = CompletableDeferred<Unit>()
+        repository.unblockGate = gate
+        viewModel.openUnblockDialog(viewModel.uiState.value.users.first { it.uid == "a" })
+        viewModel.confirmUnblock()
+        runCurrent()
+        // 기기 캐시에 먼저 반영돼 a가 목록에서 빠지고 확인 창이 닫혔지만, 해제 처리는 아직 진행 중
+        assertTrue(viewModel.uiState.value.isLoading)
+        assertNull(viewModel.uiState.value.unblockTarget)
+
+        viewModel.openUnblockDialog(viewModel.uiState.value.users.first { it.uid == "b" })
+        assertNull(viewModel.uiState.value.unblockTarget)
+
+        gate.complete(Unit)
+        runCurrent()
+        assertFalse(viewModel.uiState.value.isLoading)
+        viewModel.openUnblockDialog(viewModel.uiState.value.users.first { it.uid == "b" })
+        assertEquals("b", viewModel.uiState.value.unblockTarget?.uid)
     }
 
     @Test
