@@ -93,7 +93,7 @@ class AttendanceGoldLabelLargeFontTest {
     /**
      * 글자가 잘리지 않았는지: 모든 글자가 줄에 배치되고(maxLines에 걸려 잘린 글자 없음), 글자 전체 높이가 Text 높이 안에 들어감
      * - 골드 글자 Text는 softWrap 기본값(true)이라 가로로 넘치는 글자는 줄바꿈되고 maxLines = 1에 걸리므로 위 검사로 잡힌다
-     *   (수정 전 "G"가 안 보이던 것도 이 경로: 줄바꿈된 "G"가 1줄 제한으로 잘림)
+     *   (수정 전 411dp·글꼴 2.0에서 "G"가 안 보이던 것도 이 경로: 줄바꿈된 "G"가 1줄 제한으로 잘림)
      */
     private fun assertNotClipped(label: String, text: String) {
         val r = layoutOf(text)
@@ -140,7 +140,7 @@ class AttendanceGoldLabelLargeFontTest {
             composeRule.waitForIdle()
             for (text in GOLD_LABELS) {
                 val r = layoutOf(text)
-                // 같은 폭·가운데 정렬로 재야 줄 위치의 px 맞춤까지 같아진다 (제약 없이 재면 320dp에서 67px, 실제 68px로 1px 차이)
+                // 제약 없이 재면 320dp에서 67px, 실제 68px로 1px 차이가 나서(원인 미확인) Text와 같은 폭·가운데 정렬로 잰다
                 val expected = measurer!!.measure(
                     text,
                     style!!.copy(textAlign = TextAlign.Center),
