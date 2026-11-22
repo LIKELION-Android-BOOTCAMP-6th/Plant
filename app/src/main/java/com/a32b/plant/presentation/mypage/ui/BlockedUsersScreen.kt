@@ -38,6 +38,7 @@ import com.a32b.plant.R
 import com.a32b.plant.domain.model.BlockedUser
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
+import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.mypage.viewmodel.BlockedUsersEvent
@@ -130,6 +131,9 @@ fun BlockedUsersScreen(
                     }
                 }
             }
+
+            // 해제 처리 중 — 해제하면 목록에서 바로 빠져 확인 창이 먼저 닫히므로, 처리가 끝날 때까지(오프라인이면 최대 5초) 여기서 표시한다
+            if (uiState.isLoading) LoadingBox()
         }
     }
 }

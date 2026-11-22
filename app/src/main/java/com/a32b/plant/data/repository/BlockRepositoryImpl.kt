@@ -49,13 +49,14 @@ class BlockRepositoryImpl @Inject constructor(
     }
 
     private fun createSharedBlockedUsers(uid: String): StateFlow<List<BlockedUser>?> {
-        // 이 uid의 목록을 한 번이라도 받았는지 — flow {} 밖에 둬서, 화면을 모두 떠났다가(5초) 리스너를 다시 시작해도
+        // 이 uid의 목록을 한 번이라도 받았는지 — flow {} 밖에 둬서, 구독하는 화면이 모두 떠났다가 리스너를 다시 시작해도
         // 들고 있던 목록을 첫 목록 전 실패로 오인해 빈 목록으로 덮지 않게 한다
         val received = AtomicBoolean(false)
         return flow {
             remote.observeBlockedUsers(uid)
                 .map { list ->
-                    // 최근에 차단한 순서. 서버 시각이 아직 없는 문서(방금 차단)는 맨 위
+                    // 최근에 차단한 순서. 방금 차단한 문서는 기기 추정 시각으로 읽힌다(RemoteDataSource의 ESTIMATE).
+                    // createdAt이 없거나 형식이 맞지 않는 문서(uid만 남긴 경우 포함)는 맨 위
                     list.map { it.toDomain() }.sortedByDescending { it.createdAt ?: Long.MAX_VALUE }
                 }
                 .onEach { received.set(true) }
@@ -68,8 +69,10 @@ class BlockRepositoryImpl @Inject constructor(
                 }
                 .collect { emit(it) }
         }
-            // 화면을 오가는 사이(5초)에는 리스너를 유지해 다시 받지 않는다
-            .stateIn(scope, SharingStarted.WhileSubscribed(SHARE_STOP_TIMEOUT_MS), null)
+            // 구독하는 화면이 없어지면 바로 리스너를 멈춘다(0초). 마지막 목록은 그대로 들고 있어 다시 구독하면 바로 받는다.
+            // 멈추는 시간을 두면, 로그아웃(인증이 끊겨 리스너가 실패)한 뒤 그 시간 안에 같은 계정으로 다시 로그인했을 때
+            // 끝난 리스너를 다시 시작하지 않아 그 세션 동안 차단이 반영되지 않는다 (#660)
+            .stateIn(scope, SharingStarted.WhileSubscribed(0), null)
     }
 
     override suspend fun blockUser(uid: String, target: BlockedUser): Result<SaveResult> =
@@ -115,6 +118,5 @@ class BlockRepositoryImpl @Inject constructor(
     companion object {
         /** 다른 커뮤니티 쓰기(CommunityRepositoryImpl.WRITE_TIMEOUT)와 같은 5초 */
         private val WRITE_TIMEOUT = 5.seconds
-        private const val SHARE_STOP_TIMEOUT_MS = 5_000L
     }
 }
