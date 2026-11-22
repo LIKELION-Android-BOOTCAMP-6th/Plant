@@ -104,6 +104,65 @@ class DeleteAccountViewModelTest {
         }
     }
 
+    // 처리 실패 시 로딩 덮개(LoadingDialog)가 사라지고 토스트가 떠야 한다 (#648)
+    @Test
+    fun networkFailureDuringReauthenticationStopsLoadingAndShowsToast() = runTest {
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val auth = FakeAuthRepository(reauthenticationResult = Result.Failure(AppError.Network()))
+            val viewModel = createViewModel(auth)
+            val events = mutableListOf<DeleteAccountEvent>()
+            backgroundScope.launch(dispatcher) { viewModel.events.toList(events) }
+
+            viewModel.reauthenticateWithGoogleAndDelete("token")
+            runCurrent()
+
+            assertEquals(listOf(DeleteAccountEvent.ShowToast(AppError.Network().message)), events)
+            assertFalse(viewModel.uiState.value.isLoading)
+            assertEquals(0, auth.deleteAccountCalls)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    // 재인증 뒤 서버 탈퇴 함수가 실패한 경우도 덮개가 사라지고 토스트가 떠야 한다 (#648)
+    @Test
+    fun networkFailureDuringDeleteStopsLoadingAndShowsToast() = runTest {
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val auth = FakeAuthRepository(deleteAccountResult = Result.Failure(AppError.Network()))
+            val viewModel = createViewModel(auth)
+            val events = mutableListOf<DeleteAccountEvent>()
+            backgroundScope.launch(dispatcher) { viewModel.events.toList(events) }
+
+            viewModel.reauthenticateWithGoogleAndDelete("token")
+            runCurrent()
+
+            assertEquals(listOf(DeleteAccountEvent.ShowToast(AppError.Network().message)), events)
+            assertFalse(viewModel.uiState.value.isLoading)
+            assertEquals(1, auth.deleteAccountCalls)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    private fun createViewModel(auth: FakeAuthRepository): DeleteAccountViewModel {
+        val users = FakeUserRepository(User.create().copy(uid = "uid-1"))
+        val notifier = CountingSessionExpiredNotifier()
+        return DeleteAccountViewModel(
+            deleteAccountUseCase = DeleteAccountUseCase(
+                authRepository = auth,
+                userRepository = users,
+                studyingRepository = FakeStudyingRepository(),
+                ensureCurrentUserUseCase = EnsureCurrentUserUseCase(users, notifier)
+            ),
+            authRepository = auth,
+            sessionExpiredNotifier = notifier
+        )
+    }
+
     private class CountingSessionExpiredNotifier : SessionExpiredNotifier {
         var calls = 0
         override fun notifySessionExpired(reason: SessionExpiredReason) {

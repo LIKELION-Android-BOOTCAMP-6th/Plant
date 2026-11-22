@@ -29,15 +29,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.domain.type.ImprovementCategory
 import com.a32b.plant.presentation.community.ui.PostInputField
-import com.a32b.plant.presentation.core.component.LoadingBox
+import com.a32b.plant.presentation.core.component.LoadingDialog
 import com.a32b.plant.presentation.core.component.TagGroup
 import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.feedback.viewmodel.ImprovementSuggestionEvent
@@ -63,15 +61,7 @@ fun ImprovementSuggestionScreen(
     }
 
     if (uiState.isLoading) {
-        Dialog(
-            onDismissRequest = {},
-            properties = DialogProperties(
-                dismissOnBackPress = false,
-                dismissOnClickOutside = false
-            )
-        ) {
-            LoadingBox(modifier = Modifier.size(80.dp))
-        }
+        LoadingDialog()
     }
 
     Scaffold(

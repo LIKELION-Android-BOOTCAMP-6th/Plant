@@ -64,7 +64,7 @@ import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
-import com.a32b.plant.presentation.core.component.LoadingBox
+import com.a32b.plant.presentation.core.component.LoadingDialog
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.core.type.StudyingGoalCheckMode
@@ -292,7 +292,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
     }
 
     if (uiState.isLoading)
-        LoadingBox()
+        LoadingDialog()
 
     if (uiState.error != null)
         ConfirmDialog(
