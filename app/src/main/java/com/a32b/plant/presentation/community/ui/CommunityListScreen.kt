@@ -44,6 +44,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
@@ -56,11 +57,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -205,51 +211,13 @@ fun CommunityListScreen(
                                     query = searchQuery,
                                     onQueryChange = { viewModel.onSearchQueryChanged(it) }
                                 )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier
-                                            .padding(start = 16.dp)
-                                            .clickable { viewModel.onIsTagSheetShownChange() }
-                                    ) {
-                                        Text(
-                                            "태그",
-                                            style = MaterialTheme.typography.titleMedium,
-                                        )
-                                        Icon(
-                                            painter = painterResource(id = if (uiState.isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
-                                            contentDescription = "태그박스",
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                    Box(modifier = Modifier.clickable {
-                                        viewModel.onSelectedChanged(emptyList())
-                                    }) {
-                                        TagChip("전체 선택 해제", false)
-                                    }
-
-                                    Spacer(modifier = Modifier.weight(1f))
-
-                                    Text(
-                                        "공유글 보기",
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
-                                    Switch(
-                                        uiState.isSharedShown,
-                                        onCheckedChange = { viewModel.onSharedShownChange() },
-                                        modifier = Modifier
-                                            .scale(0.7f)
-                                            .padding(end = 10.dp),
-                                        colors = SwitchDefaults.colors(
-                                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-                                            uncheckedBorderColor = MaterialTheme.colorScheme.outline
-                                        )
-                                    )
-                                }
+                                TagFilterRow(
+                                    isTagSheetShown = uiState.isTagSheetShown,
+                                    isSharedShown = uiState.isSharedShown,
+                                    onTagClick = { viewModel.onIsTagSheetShownChange() },
+                                    onClearClick = { viewModel.onSelectedChanged(emptyList()) },
+                                    onSharedShownChange = { viewModel.onSharedShownChange() }
+                                )
                                 if (uiState.selected.isNotEmpty()) {
                                     FlowRow(
                                         modifier = Modifier
@@ -392,25 +360,118 @@ fun CommunityListScreen(
     }
 }
 
+/**
+ * 검색창 아래 "태그 · 전체 선택 해제 · 공유글 보기 · 스위치" 줄 (#742)
+ *
+ * - 네 요소가 한 줄에 다 들어가면 한 줄: 앞쪽(태그, 전체 선택 해제)은 왼쪽부터, 뒤쪽(공유글 보기, 스위치)은 오른쪽 끝에 붙이고,
+ *   요소마다 줄 높이의 가운데에 놓는다. 수정 전 Row(CenterVertically + 사이 Spacer weight)와 같은 계산이라 그때와 같은 자리에 그려진다
+ * - 안 들어가면(큰 글꼴·좁은 화면) 뒤쪽을 다음 줄 오른쪽 끝으로 내린다.
+ *   수정 전에는 남은 폭이 모자라 "공유글 보기"가 스위치에 가려지거나, 두 줄로 줄바꿈되며 스위치가 화면 밖으로 밀렸다
+ * - 각 요소는 남은 폭이 아니라 줄 폭 전체를 받아 측정한다 → 다음 줄로 내려간 "공유글 보기"도 한 줄로 그려진다
+ *   (TagFilterRowLargeFontTest: 폭 360·411dp, 글꼴 1.0~2.0에서 확인)
+ */
+@Composable
+internal fun TagFilterRow(
+    isTagSheetShown: Boolean,
+    isSharedShown: Boolean,
+    onTagClick: () -> Unit,
+    onClearClick: () -> Unit,
+    onSharedShownChange: () -> Unit,
+) {
+    val leading = @Composable {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .padding(start = 16.dp)
+                .clickable(onClick = onTagClick)
+        ) {
+            Text(
+                "태그",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Icon(
+                painter = painterResource(id = if (isTagSheetShown) R.drawable.ic_up else R.drawable.ic_down),
+                contentDescription = "태그박스",
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Box(modifier = Modifier.clickable(onClick = onClearClick)) {
+            TagChip("전체 선택 해제", false)
+        }
+    }
+    val trailing = @Composable {
+        Text(
+            "공유글 보기",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Switch(
+            isSharedShown,
+            onCheckedChange = { onSharedShownChange() },
+            modifier = Modifier
+                .scale(0.7f)
+                .padding(end = 10.dp),
+            colors = SwitchDefaults.colors(
+                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                uncheckedBorderColor = MaterialTheme.colorScheme.outline
+            )
+        )
+    }
+    Layout(
+        contents = listOf(leading, trailing),
+        modifier = Modifier.fillMaxWidth()
+    ) { (leadingMeasurables, trailingMeasurables), constraints ->
+        val childConstraints = constraints.copy(minWidth = 0, minHeight = 0)
+        val leadingPlaceables = leadingMeasurables.map { it.measure(childConstraints) }
+        val trailingPlaceables = trailingMeasurables.map { it.measure(childConstraints) }
+        val leadingWidth = leadingPlaceables.sumOf { it.width }
+        val trailingWidth = trailingPlaceables.sumOf { it.width }
+        val width = if (constraints.hasBoundedWidth) constraints.maxWidth else leadingWidth + trailingWidth
+        val leadingHeight = leadingPlaceables.maxOf { it.height }
+        val trailingHeight = trailingPlaceables.maxOf { it.height }
+
+        val isOneLine = leadingWidth + trailingWidth <= width
+        // 한 줄이면 두 묶음이 같은 줄 높이를, 두 줄이면 묶음마다 자기 줄 높이를 쓴다
+        val leadingLineHeight = if (isOneLine) maxOf(leadingHeight, trailingHeight) else leadingHeight
+        val trailingLineHeight = if (isOneLine) leadingLineHeight else trailingHeight
+        val trailingTop = if (isOneLine) 0 else leadingLineHeight
+        val height = (trailingTop + trailingLineHeight).coerceIn(constraints.minHeight, constraints.maxHeight)
+
+        layout(width, height) {
+            var x = 0
+            leadingPlaceables.forEach {
+                it.placeRelative(x, Alignment.CenterVertically.align(it.height, leadingLineHeight))
+                x += it.width
+            }
+            x = width - trailingWidth
+            trailingPlaceables.forEach {
+                it.placeRelative(x, trailingTop + Alignment.CenterVertically.align(it.height, trailingLineHeight))
+                x += it.width
+            }
+        }
+    }
+}
 
 @Composable
 fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
     val focus = LocalFocusManager.current
+    val placeholderStyle = MaterialTheme.typography.labelMedium
+    val inputStyle = MaterialTheme.typography.bodyMedium
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
         placeholder = {
             Text(
                 "검색어를 입력하세요",
-                style = MaterialTheme.typography.labelMedium
+                style = placeholderStyle
             )
         },
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 4.dp)
-            .height(48.dp),
+            .height(searchBarHeight(placeholderStyle, inputStyle)),
         shape = RoundedCornerShape(12.dp),
-        textStyle = MaterialTheme.typography.bodyMedium,
+        textStyle = inputStyle,
         trailingIcon = {
             if (query.isNotEmpty()) {
                 Icon(
@@ -445,6 +506,39 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
         singleLine = true
     )
 }
+
+/**
+ * 검색창 높이 (#742)
+ *
+ * OutlinedTextField는 높이에서 위아래 기본 여백(16dp씩)을 뺀 만큼만 글자 칸으로 준다.
+ * 48dp로 고정하면 글자 칸이 16dp라, 큰 글꼴에서 안내 문구·입력 글자 아래쪽이 잘렸다
+ * (SM-N986N 계측 테스트: 폭 360dp에서 입력 글자는 글꼴 1.15부터 높이가 넘침).
+ * - 한 줄 글자 높이(안내 문구·입력 글자 중 큰 쪽)가 16dp 칸에 들어가면 수정 전과 같은 48dp (글꼴 1.0)
+ * - 안 들어가면 글자 높이 + 위아래 여백으로 늘린다
+ * 최소 높이(heightIn)로 두지 않는 이유: 빈 입력 칸이 글자보다 높게 측정돼 글꼴 1.0에서도 48dp보다 높아진다
+ */
+@Composable
+private fun searchBarHeight(placeholderStyle: TextStyle, inputStyle: TextStyle): Dp {
+    val density = LocalDensity.current
+    val textMeasurer = rememberTextMeasurer()
+    return remember(density, placeholderStyle, inputStyle) {
+        with(density) {
+            val textHeightPx = maxOf(
+                textMeasurer.measure(SEARCH_BAR_SAMPLE_TEXT, placeholderStyle).size.height,
+                textMeasurer.measure(SEARCH_BAR_SAMPLE_TEXT, inputStyle).size.height
+            )
+            // 여백도 OutlinedTextField와 같이 px로 반올림해 더한다 (dp로 더하면 반올림 차이로 1px 모자랄 수 있음)
+            val verticalPaddingPx = SEARCH_BAR_VERTICAL_PADDING.roundToPx() * 2
+            maxOf(SEARCH_BAR_HEIGHT.roundToPx(), textHeightPx + verticalPaddingPx).toDp()
+        }
+    }
+}
+
+private val SEARCH_BAR_HEIGHT = 48.dp
+// OutlinedTextFieldDefaults.contentPadding()의 위·아래 기본값
+private val SEARCH_BAR_VERTICAL_PADDING = 16.dp
+// 한 줄 높이를 재는 글자 — 앱 글꼴(한글 포함)로 그려지는 글자
+private const val SEARCH_BAR_SAMPLE_TEXT = "검"
 
 @Composable
 fun PostCard(post: Post, isLiked: Boolean, isBookmarked: Boolean = false, onClick: () -> Unit) {
