@@ -46,7 +46,7 @@ fun ConfirmDialog(
     dismissOnClickOutside: Boolean = true
 ) {
     // isLoading: 확인 후 처리 중 — 버튼을 막고 로딩 표시, 바깥 터치·뒤로가기로 닫지 않음
-    // dismissOnClickOutside: false면 바깥 터치는 무시하고 뒤로가기만 onDismiss로 보냄 (업데이트 안내의 뒤로가기 = 앱 종료, #662)
+    // dismissOnClickOutside: false면 바깥 터치는 무시한다. 뒤로가기는 isCancelable이고 로딩 중이 아닐 때 onDismiss로 보냄 (업데이트 안내의 뒤로가기 = 앱 종료, #662)
     Dialog(
         onDismissRequest = { if (isCancelable && !isLoading) onDismiss() },
         properties = DialogProperties(dismissOnClickOutside = dismissOnClickOutside)

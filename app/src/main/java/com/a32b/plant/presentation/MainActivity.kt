@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -127,11 +128,18 @@ class MainActivity : ComponentActivity() {
                     // 최소 지원 버전보다 낮으면 안내만 보여주고 화면(내비게이션)은 만들지 않는다 (#662)
                     // 뒤로가기는 앱 종료 — 다이얼로그만 닫히고 앱을 쓸 수 있으면 안 된다
                     if (uiState.isUpdateRequired) {
-                        UpdateRequiredDialog(
-                            message = uiState.updateMessage,
-                            onUpdate = { openPlayStoreDetails() },
-                            onBack = { finish() }
-                        )
+                        // 홈을 거치지 않으므로 홈의 남은 타이머 정리(HomeViewModel.onHomeResumed, #514)를 여기서 한다
+                        LaunchedEffect(Unit) { studyingTimerServiceController.stop() }
+                        // 다이얼로그가 뜨기 전(스플래시 종료 대기 중)에도 뒤로가기는 앱 종료
+                        BackHandler { finish() }
+                        // 다이얼로그는 별도 창이라 스플래시 로고 위에 뜨지 않도록 스플래시가 끝난 뒤에 띄운다 (홈 다이얼로그와 같은 기준, #507)
+                        if (uiState.isSplashExitFinished) {
+                            UpdateRequiredDialog(
+                                message = uiState.updateMessage,
+                                onUpdate = { openPlayStoreDetails() },
+                                onBack = { finish() }
+                            )
+                        }
                         return@Surface
                     }
 

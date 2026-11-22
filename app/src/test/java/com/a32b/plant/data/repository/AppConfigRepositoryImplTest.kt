@@ -17,7 +17,8 @@ import org.junit.Test
 
 // JVM 유닛 테스트에서 확인할 수 없는 경로
 // - FirebaseFirestoreException(UNAVAILABLE·PERMISSION_DENIED 등): Code enum이 초기화될 때 android.util.SparseArray를 써서
-//   "not mocked" 예외가 난다. 오프라인 경로는 같은 분기(isNetworkError)로 처리되는 FirebaseNetworkException으로 확인한다
+//   "not mocked" 예외가 난다. 실제 오프라인 서버 읽기는 이 예외(UNAVAILABLE)로 실패하므로, 그 코드 판별은 이 테스트가 확인하지 않는다.
+//   여기서는 isNetworkError가 true를 내는 FirebaseNetworkException으로 "네트워크 오류면 캐시로 넘어간다"는 흐름만 확인한다
 // - minVersionCode가 잘못된 값: android.util.Log를 호출한다. 값 해석은 AppConfigMapperTest에서 확인한다
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppConfigRepositoryImplTest {
@@ -45,7 +46,7 @@ class AppConfigRepositoryImplTest {
         assertEquals(0, remote.cacheCalls)
     }
 
-    // 오프라인: 서버 읽기가 네트워크 오류로 실패 → 캐시 값으로 판단
+    // 서버 읽기가 네트워크 오류로 실패 → 캐시 값으로 판단
     @Test
     fun offlineUsesCachedValue() = runTest {
         val remote = FakeAppConfigRemoteDataSource(server = { throw networkException() }, cache = { cacheDto })
@@ -95,7 +96,7 @@ class AppConfigRepositoryImplTest {
         assertEquals(2_000L, currentTime)
     }
 
-    // 오프라인 + 캐시에서도 네트워크 오류 → Failure(Network)
+    // 서버·캐시 모두 네트워크 오류 → Failure(Network)
     @Test
     fun offlineWithoutCacheIsNetworkFailure() = runTest {
         val remote = FakeAppConfigRemoteDataSource(

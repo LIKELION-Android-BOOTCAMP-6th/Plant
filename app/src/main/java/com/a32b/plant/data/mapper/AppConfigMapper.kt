@@ -21,7 +21,6 @@ fun AppConfigDto.hasInvalidMinVersionCode(): Boolean =
 // 콘솔에서 숫자 타입에 3.0처럼 넣으면 Double로 저장될 수 있어, 소수점 아래가 0인 값은 정수로 받는다
 private fun Any?.toVersionCodeOrNull(): Long? = when (this) {
     is Long -> this
-    is Int -> toLong()
     is Double -> if (!isNaN() && !isInfinite() && this % 1.0 == 0.0) toLong() else null
     else -> null
 }

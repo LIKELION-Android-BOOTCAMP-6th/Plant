@@ -13,15 +13,16 @@ Firestore `config/app` (Firebase 콘솔에서만 수정. 앱은 읽기만 가능
 | `message` | string (선택) | 안내 문구. 없거나 비어 있으면 앱의 기본 문구를 쓴다 |
 
 - `versionCode`는 `app/build.gradle.kts`의 `defaultConfig.versionCode` 값이다 (`versionName`이 아님)
-- 콘솔에서 필드 타입을 **number**로 넣는다. 문자열(`"3"`)이나 소수(`3.5`)면 확인을 건너뛰고 모두 통과한다 (logcat `AppConfigRepository` 태그에 경고)
+- 콘솔에서 필드 타입을 **number**로 넣는다. 문자열(`"3"`)이나 소수점 아래가 있는 값(`3.5`)이면 확인을 건너뛰고 모두 통과한다 (logcat `AppConfigRepository` 태그에 경고)
 
 ## 앱 동작
 
 스플래시에서 로그인 확인 전에 한 번 확인한다 (`SplashViewModel` → `CheckAppVersionUseCase`).
+이미 실행 중인 앱(백그라운드에 남아 있던 앱 포함)은 다시 확인하지 않으므로, 값을 올려도 앱을 새로 실행할 때까지는 막히지 않는다.
 
 | 상황 | 결과 |
 |---|---|
-| 현재 `versionCode` < `minVersionCode` | 닫을 수 없는 안내 + "업데이트"(Play 스토어 앱 상세, 없으면 웹 Play 스토어). 뒤로가기는 앱 종료 |
+| 현재 `versionCode` < `minVersionCode` | 스플래시가 끝난 뒤 닫을 수 없는 안내 + "업데이트"(Play 스토어 앱 상세, 없으면 웹 Play 스토어). 뒤로가기는 앱 종료. 진행 중이던 공부 타이머(알림)는 멈춘다 |
 | 같거나 높음 / 문서 없음 / `minVersionCode` 없음·잘못된 값 | 기존 흐름 |
 | 서버 응답이 2초 안에 없음, 오프라인 | 기기 캐시 값으로 판단. 캐시에도 없으면 통과 |
 | 권한 거부 등 그 밖의 읽기 실패 | 통과 |
@@ -38,6 +39,7 @@ Firestore `config/app` (Firebase 콘솔에서만 수정. 앱은 읽기만 가능
 2. Play Console에서 그 빌드가 **검토를 통과해 테스터가 받을 수 있는 상태**인지 확인한다
 3. Firebase 콘솔 → Firestore → `config/app`의 `minVersionCode`를 새 `versionCode`로 올린다 (필요하면 `message`도 바꾼다)
 4. 호환되지 않는 변경(규칙 배포, App Check 강제 등)을 적용한다
+   - 3번 뒤에도 이미 실행 중이던 예전 앱은 다시 실행할 때까지 막히지 않으므로, 그 사이 요청이 거부될 수 있다
 
 ⚠️ 1·2보다 먼저 값을 올리면 스토어에 새 버전이 없어 **모든 테스터가 앱을 쓸 수 없다.** 이때는 바로 값을 되돌린다.
 
