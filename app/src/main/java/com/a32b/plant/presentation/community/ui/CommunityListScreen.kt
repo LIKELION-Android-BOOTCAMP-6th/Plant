@@ -45,7 +45,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -101,14 +106,26 @@ fun CommunityListScreen(
     }
 
     // 이벤트 수신 (토스트, 맨 위로 스크롤)
-    // ScrollToTop: 애니메이션 완료 후 clearSuppressLoadMore() 호출 → loadMore 차단 해제
+    // ScrollToTop: 맨 위 스크롤이 끝나거나 건너뛰거나 중단되면 clearSuppressLoadMore() 호출 → loadMore 차단 해제
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
                 is CommunityListEvent.ShowToast -> context.showToast(event.message)
                 is CommunityListEvent.ScrollToTop -> {
-                    listState.animateScrollToItem(0)
-                    viewModel.clearSuppressLoadMore()  // 스크롤 완료 후 loadMore 재허용
+                    try {
+                        // 목록이 한 번도 배치되지 않았으면(빈 목록 안내만 보이는 중) 첫 배치까지 기다려 버리므로 건너뛰고,
+                        // 그 밖에 끝나지 않는 경우에 대비해 시간을 제한한다 — 기다리는 동안 이후 이벤트와 loadMore 차단 해제가 막힌다 (#660)
+                        if (listState.layoutInfo.totalItemsCount > 0) {
+                            withTimeoutOrNull(SCROLL_TO_TOP_TIMEOUT_MS) { listState.animateScrollToItem(0) }
+                        }
+                    } catch (e: CancellationException) {
+                        // 이 코루틴이 살아 있는데 난 취소(애니메이션 중 사용자가 목록을 만짐, 이미 드래그 중이라 시작하지 못함 등)는 넘어간다 (#660).
+                        // 넘어가지 않으면 이벤트 수신이 끝나 이후 토스트·맨 위 스크롤을 받지 못하고, loadMore 차단도 풀리지 않는다.
+                        // 화면을 떠나 이 코루틴 자체가 취소된 경우는 그대로 끝낸다
+                        currentCoroutineContext().ensureActive()
+                    } finally {
+                        viewModel.clearSuppressLoadMore()  // 스크롤이 끝나거나 중단되면 loadMore 재허용
+                    }
                 }
             }
         }
@@ -123,16 +140,36 @@ fun CommunityListScreen(
 
         // 하단 도달 감지 → loadMore
         // snapshotFlow: 스크롤 상태 변화를 레이아웃 단계에서 직접 관찰 (derivedStateOf보다 안정적)
+        // 하단 근처면 지금 보이는 글 수(filteredPosts), 아니면 -1을 보낸다 (#660).
+        // - 보이는 글 수가 바뀌면 다시 보내므로, 받은 페이지 일부가 차단한 사용자 글이라 목록이 화면을 채우지 못해도 이어 부른다.
+        //   전부 차단한 사용자 글인 페이지는 보이는 글 수가 그대로라 여기서는 부르지 않고 ViewModel이 이어 부른다(loadMoreIfPageHidden)
+        // - 로딩 표시 항목은 값에도, 하단 판단에도 세지 않는다 (아래 하단 판단 주석 참고)
+        // - 항목 수가 지금 목록과 다르거나, 이미 사라진 로딩 표시가 배치에 아직 보이면 보내지 않는다(null):
+        //   반영 전 배치로 판단하는 경우를 줄인다
+        // - 검색 중에는 -1: 검색 결과는 전체 로드(searchResults)라 페이지가 필요 없다
+        // - 새로고침 뒤 맨 위 스크롤이 끝날 때까지(suppressLoadMore)도 -1: 막힌 동안 값을 보내면 풀린 뒤 같은 값이라 다시 보내지 않는다
         LaunchedEffect(listState) {
             snapshotFlow {
-                val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
-                    ?: return@snapshotFlow false
-                val total = listState.layoutInfo.totalItemsCount
-                total > 0 && lastVisible >= total - 3
+                val state = uiStateFlow.value
+                if (searchQuery.isNotBlank() || state.suppressLoadMore) return@snapshotFlow -1
+                val info = listState.layoutInfo
+                // 아래 LazyColumn의 항목 구성(보이는 글 + 로딩 표시)과 같아야 한다 — 항목을 추가하면 여기도 함께 바꿀 것
+                val expectedItemCount = filteredPosts.size + if (state.showsLoadingIndicator) 1 else 0
+                val layoutHasIndicator = info.visibleItemsInfo.any { it.key == LOADING_INDICATOR_KEY }
+                if (info.totalItemsCount != expectedItemCount ||
+                    (layoutHasIndicator && !state.showsLoadingIndicator)
+                ) return@snapshotFlow null
+                val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: return@snapshotFlow -1
+                // 하단 근처는 글 수 기준으로 판단한다 — 로딩 표시 항목까지 세면 그 항목이 생겼다 사라질 때 하단 판단이
+                // 꺼졌다 켜져(-1 → 같은 글 수), 불러오기가 끝나자마자 다음 페이지를 한 번 더 부른다 (성공한 경우를 실기기 로그로 확인).
+                // 실패해 로딩 표시가 사라질 때도 같은 이유로 다시 부르지 않는다
+                val postCount = filteredPosts.size
+                if (postCount > 0 && lastVisible >= postCount - 3) postCount else -1
             }
+                .filterNotNull()
                 .distinctUntilChanged()
-                .collect { shouldLoad ->
-                    if (shouldLoad && !uiStateFlow.value.suppressLoadMore) {
+                .collect { nearBottomCount ->
+                    if (nearBottomCount >= 0 && !uiStateFlow.value.suppressLoadMore) {
                         viewModel.loadMore()
                     }
                 }
@@ -282,8 +319,8 @@ fun CommunityListScreen(
                                             )
                                         }
                                         // 하단 로딩 인디케이터 (loadMore 중, 데이터 있을 때만)
-                                        if (uiState.hasMore && uiState.isLoadingMore && uiState.posts.isNotEmpty()) {
-                                            item(key = "loading_indicator") {
+                                        if (uiState.showsLoadingIndicator) {
+                                            item(key = LOADING_INDICATOR_KEY) {
                                                 LoadingBox(modifier = Modifier.fillMaxWidth().padding(16.dp))
                                             }
                                         }
@@ -503,12 +540,24 @@ fun IconStat(iconRes: Any, text: String, tint: Color = Color.Black) {
     }
 }
 
+// 목록 맨 아래 로딩 표시 항목의 key — 하단 도달 감지가 배치에 남아 있는지 확인하는 데도 쓴다
+private const val LOADING_INDICATOR_KEY = "loading_indicator"
+
+// 새로고침 뒤 맨 위 스크롤을 기다리는 최대 시간 — 넘으면 스크롤을 멈추고 loadMore 차단을 푼다
+private const val SCROLL_TO_TOP_TIMEOUT_MS = 3_000L
+
 @Composable
 fun EmptyStateView(hasQuery: Boolean = false) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(
-            text = if (hasQuery) "검색어에 해당하는 게시글이 없어요 😭" else "찾으시는 게시글이 없어요 😭",
-            style = MaterialTheme.typography.bodyMedium
-        )
+    // 당겨서 새로고침(PullToRefreshBox)은 스크롤되는 내용에서만 당김을 받으므로, 안내 하나뿐이어도 스크롤 목록으로 둔다 (#660)
+    // → 첫 불러오기 실패, 받은 글이 전부 차단한 사용자 글인데 다음 페이지 불러오기가 실패한 경우에도 당겨서 다시 시도할 수 있다
+    LazyColumn(Modifier.fillMaxSize()) {
+        item {
+            Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = if (hasQuery) "검색어에 해당하는 게시글이 없어요 😭" else "찾으시는 게시글이 없어요 😭",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
     }
 }

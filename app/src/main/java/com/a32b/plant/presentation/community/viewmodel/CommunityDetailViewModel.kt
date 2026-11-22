@@ -22,10 +22,13 @@ import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.type.ReportReason
 import com.a32b.plant.domain.usecase.community.AddCommentUseCase
+import com.a32b.plant.domain.usecase.community.BlockUserUseCase
+import com.a32b.plant.domain.usecase.community.ObserveBlockedUsersUseCase
 import com.a32b.plant.domain.usecase.community.CreateCommunityReportUseCase
 import com.a32b.plant.domain.usecase.community.ToggleBookmarkUseCase
 import com.a32b.plant.domain.usecase.community.ToggleLikeUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
+import com.a32b.plant.presentation.community.BlockedContentFilter
 import com.a32b.plant.presentation.community.CommunityConstants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -41,10 +44,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -78,7 +86,18 @@ data class CommunityDetailUiState(
     val reportTargetId: String = "",
     val selectedReportReason: ReportReason? = null,
     val reportDetailText: String = "",
-    val isReportSubmitting: Boolean = false
+    val isReportSubmitting: Boolean = false,
+
+    // 사용자 차단 확인 다이얼로그 (#660) — null이면 닫힘
+    val blockTarget: BlockTarget? = null,
+    val isBlockSubmitting: Boolean = false
+)
+
+/** 차단할 게시글·댓글 작성자 — 닉네임·프로필은 차단 목록 화면 표시용으로 함께 저장한다 */
+data class BlockTarget(
+    val uid: String,
+    val nickname: String,
+    val profileImg: String
 )
 
 sealed class CommunityDetailEvent {
@@ -93,6 +112,8 @@ class CommunityDetailViewModel @Inject constructor(
     private val toggleLikeUseCase: ToggleLikeUseCase,
     private val toggleBookmarkUseCase: ToggleBookmarkUseCase,
     private val createCommunityReportUseCase: CreateCommunityReportUseCase,
+    private val blockUserUseCase: BlockUserUseCase,
+    observeBlockedUsersUseCase: ObserveBlockedUsersUseCase,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase,
     private val postUpdateNotifier: PostUpdateNotifier,
     private val networkMonitor: NetworkMonitor,
@@ -106,6 +127,9 @@ class CommunityDetailViewModel @Inject constructor(
         private val COMMENT_TOAST_DEBOUNCE = 1000.milliseconds
         private const val BLANK_COMMENT_MESSAGE = "댓글 내용을 입력해주세요"
         private const val BLIND_POST_COMMENT_EDIT_BLOCKED_MESSAGE = "숨김 처리된 게시글의 댓글은 수정할 수 없어요"
+        private const val BLOCKED_MESSAGE = "차단했어요"
+        // 첫 로드에서 차단 목록을 기다리는 최대 시간 — 보통 기기 캐시에서 바로 오고, 못 받아도 도착하면 그때 숨겨진다
+        private const val BLOCKED_USERS_WAIT_MS = 2_000L
     }
 
     private val _uiState = MutableStateFlow(CommunityDetailUiState())
@@ -124,6 +148,23 @@ class CommunityDetailViewModel @Inject constructor(
 
     private val _post = MutableStateFlow<Post?>(null)
     val post: StateFlow<Post?> = _post.asStateFlow()
+
+    // 차단한 사용자 uid (#660). null = 아직 차단 목록을 받지 못함
+    // Eagerly: 화면이 구독하기 전(loadInitial)부터 받아 첫 표시 전에 기다릴 수 있게 한다
+    private val blockedUids: StateFlow<Set<String>?> = observeBlockedUsersUseCase()
+        .map { users -> users.map { it.uid }.toSet() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    // 화면에 보일 댓글 — 차단한 사용자의 댓글을 뺀다. commentList(전체)는 댓글 수 계산·임시 댓글 병합에 그대로 쓴다
+    // 아래 두 값은 Eagerly: 화면이 구독하기 전부터 계산해, 첫 화면이 초기값(빈 댓글·차단 아님)으로 한 번 그려지지 않게 한다
+    val visibleComments: StateFlow<List<Comment>> = combine(_uiState, blockedUids) { state, blocked ->
+        BlockedContentFilter.visibleComments(state.commentList, blocked.orEmpty())
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    // 차단한 사용자의 글로 직접 들어온 경우(내 활동 등) — 화면은 내용 대신 안내를 표시한다
+    val isPostAuthorBlocked: StateFlow<Boolean> = combine(_post, blockedUids) { post, blocked ->
+        post != null && BlockedContentFilter.isBlocked(post, blocked.orEmpty())
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     // 좋아요/북마크 디바운스 상태
     private var likeDebounceJob: Job? = null
@@ -179,6 +220,9 @@ class CommunityDetailViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoadFailed = true) }
                     sendToast(e.message)
                 }
+
+            // 차단 목록을 받기 전에 보여 주면 차단한 사용자의 글·댓글이 잠깐 보였다 사라지므로 잠시 기다린다
+            withTimeoutOrNull(BLOCKED_USERS_WAIT_MS) { blockedUids.filterNotNull().first() }
 
             commentsDeferred.await()
                 .onSuccess { comments ->
@@ -819,6 +863,64 @@ class CommunityDetailViewModel @Inject constructor(
                 }
 
             _uiState.update { it.copy(isReportSubmitting = false) }
+        }
+    }
+
+    /** 게시글 작성자 차단 확인 창 — 내 글이면 열지 않는다 (화면도 차단 메뉴를 보여 주지 않음) */
+    fun openPostAuthorBlockDialog() {
+        val author = _post.value?.author ?: return
+        openBlockDialog(BlockTarget(author.id, author.nickname, author.profileImg))
+    }
+
+    /** 댓글 작성자 차단 확인 창 — 내 댓글, 서버 반영 전 임시 댓글이면 열지 않는다 (신고·수정 아이콘과 같은 기준) */
+    fun openCommentAuthorBlockDialog(comment: Comment) {
+        if (comment.isPending) return
+        openBlockDialog(BlockTarget(comment.user.uid, comment.user.nickname, comment.user.profileImg))
+    }
+
+    private fun openBlockDialog(target: BlockTarget) {
+        if (target.uid.isBlank() || target.uid == _uiState.value.currentUid) return
+        _uiState.update { it.copy(blockTarget = target) }
+    }
+
+    fun closeBlockDialog() {
+        // 처리 중에는 닫지 않는다 (다이얼로그도 isLoading으로 바깥 터치·뒤로가기를 막음)
+        if (_uiState.value.isBlockSubmitting) return
+        _uiState.update { it.copy(blockTarget = null) }
+    }
+
+    /**
+     * 차단 확인 — 성공하면 그 사용자의 글·댓글이 차단 목록 구독으로 바로 숨겨진다.
+     * 오프라인이어도 기기 캐시에 먼저 반영돼 바로 숨겨지고, 연결되면 서버에 저장된다 (Pending).
+     * 게시글 작성자를 차단했으면 이 화면에 남을 내용이 없으므로 목록으로 돌아간다.
+     */
+    fun confirmBlock() {
+        val state = _uiState.value
+        val target = state.blockTarget ?: return
+        if (state.isBlockSubmitting) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isBlockSubmitting = true) }
+            blockUserUseCase(uid = target.uid, nickname = target.nickname, profileImg = target.profileImg)
+                .onSuccess { saveResult ->
+                    _uiState.update { it.copy(blockTarget = null, isBlockSubmitting = false) }
+                    // 같은 코루틴에서 안내를 먼저 보낸다 — sendToast()는 따로 launch해 화면 이동 뒤에 도착할 수 있고,
+                    // 그러면 화면이 닫혀 이벤트 수신이 멈춘 뒤라 안내가 뜨지 않는다
+                    _eventChannel.send(
+                        CommunityDetailEvent.ShowToast(
+                            if (saveResult == SaveResult.Saved) BLOCKED_MESSAGE else CommunityConstants.WRITE_PENDING_MESSAGE
+                        )
+                    )
+                    if (target.uid == _post.value?.author?.id) _eventChannel.send(CommunityDetailEvent.NavigateBack)
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(isBlockSubmitting = false) }
+                    when (e) {
+                        // 세션 만료 안내는 UseCase의 유저 확인에서 이미 보냈다
+                        is AppError.UnknownUser -> _uiState.update { it.copy(blockTarget = null) }
+                        else -> sendToast(e.message)
+                    }
+                }
         }
     }
 

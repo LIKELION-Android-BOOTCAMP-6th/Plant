@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 사용자 차단 아이콘 (#660): 원 + 대각선. 색은 사용하는 곳에서 tint로 지정 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <path
+        android:pathData="M12,3A9,9 0,1 1,12 21A9,9 0,1 1,12 3Z"
+        android:strokeColor="#000000"
+        android:strokeWidth="1.8" />
+
+    <path
+        android:pathData="M5.6,5.6L18.4,18.4"
+        android:strokeColor="#000000"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round" />
+
+</vector>

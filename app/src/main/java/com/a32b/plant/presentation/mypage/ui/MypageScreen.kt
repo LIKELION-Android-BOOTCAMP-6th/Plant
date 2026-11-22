@@ -158,6 +158,7 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                 onOpenSourceLicenseClick = { navController.navigate(Routes.OpenSourceLicense) },
                 onBugReportClick = { navController.navigate(Routes.BugReport) },
                 onImprovementSuggestionClick = { navController.navigate(Routes.ImprovementSuggestion) },
+                onBlockedUsersClick = { navController.navigate(Routes.BlockedUsers) },
                 onLogoutClick = {
                     showLogoutDialog = true
                 },
@@ -181,6 +182,7 @@ private fun MyPageContent(
     onOpenSourceLicenseClick: () -> Unit,
     onBugReportClick: () -> Unit,
     onImprovementSuggestionClick: () -> Unit,
+    onBlockedUsersClick: () -> Unit,
     onAccountManageClick: () -> Unit,
     onLogoutClick: () -> Unit
 ) {
@@ -216,6 +218,7 @@ private fun MyPageContent(
                 ButtonTemplate(text = "오픈소스 라이선스", onClick = onOpenSourceLicenseClick)
                 ButtonTemplate(text = "버그 제보", onClick = onBugReportClick)
                 ButtonTemplate(text = "개선사항 제안", onClick = onImprovementSuggestionClick)
+                ButtonTemplate(text = "차단 목록", onClick = onBlockedUsersClick)
                 ButtonTemplate(text = "계정 관리", onClick = onAccountManageClick)
                 ButtonTemplate(text = "로그아웃", onClick = onLogoutClick)
             }
@@ -242,6 +245,7 @@ private fun MyPageContentPreview() {
             onOpenSourceLicenseClick = {},
             onBugReportClick = {},
             onImprovementSuggestionClick = {},
+            onBlockedUsersClick = {},
             onAccountManageClick = {},
             onLogoutClick = {}
         )

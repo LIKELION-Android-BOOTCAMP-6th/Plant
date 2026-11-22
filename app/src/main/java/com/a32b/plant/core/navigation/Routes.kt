@@ -11,6 +11,7 @@ sealed interface Routes {
     @Serializable data object Mypage: Routes
     @Serializable data object AccountManage : Routes
     @Serializable data object OpenSourceLicense : Routes
+    @Serializable data object BlockedUsers : Routes
     @Serializable data object CommunityActivity: Routes
 
     @Serializable data class StudyPlanDetail(val potId: String) : Routes

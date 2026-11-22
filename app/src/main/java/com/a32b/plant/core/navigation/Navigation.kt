@@ -17,6 +17,7 @@ import com.a32b.plant.presentation.feedback.ui.BugReportScreen
 import com.a32b.plant.presentation.feedback.ui.ImprovementSuggestionScreen
 import com.a32b.plant.presentation.home.ui.HomeScreen
 import com.a32b.plant.presentation.mypage.ui.AccountManageScreen
+import com.a32b.plant.presentation.mypage.ui.BlockedUsersScreen
 import com.a32b.plant.presentation.mypage.ui.MyPageScreen
 import com.a32b.plant.presentation.mypage.ui.OpenSourceLicenseScreen
 import com.a32b.plant.presentation.pot.ui.NewBornTreeScreen
@@ -58,6 +59,7 @@ fun PlantAppNavigation(navController: NavHostController, viewModel: SplashViewMo
             composable<Routes.Mypage> { MyPageScreen(navController) }
             composable<Routes.AccountManage> { AccountManageScreen(navController) }
             composable<Routes.OpenSourceLicense> { OpenSourceLicenseScreen(navController) }
+            composable<Routes.BlockedUsers> { BlockedUsersScreen(navController) }
 
             composable<Routes.CommunityList> {
                 CommunityListScreen(navController)
