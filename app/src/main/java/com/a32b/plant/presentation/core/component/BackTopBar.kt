@@ -59,12 +59,18 @@ fun BackTopBar(
         actions = {
             // CenterAlignedTopAppBar는 actions를 앱바 전체 폭으로 재서, actions가 넓으면 제목 자리가 0이 되고
             // 더 넓으면 뒤로가기까지 덮는다 (material3 1.4.0 AppBar.kt TopAppBarMeasurePolicy).
-            // 그래서 actions 폭을 "앱바 폭 - 뒤로가기 영역 - 제목 최소 폭"까지로 제한한다.
+            // 그래서 actions 폭을 "앱바 폭 - 뒤로가기 영역 - 제목 칸 최소 폭"까지로 제한한다.
             // 상한보다 넓은 actions는 안에서 스스로 줄여야 한다 (예: 내 활동 선택 모드의 삭제 버튼 문구 말줄임)
             Row(
                 modifier = Modifier.layout { measurable, constraints ->
                     val reserved = (NavigationAreaWidth + TitleMinWidth).roundToPx()
-                    val maxWidth = (constraints.maxWidth - reserved).coerceAtLeast(0)
+                    // 폭이 정해지지 않은 측정(IntrinsicSize 등)에서는 상한을 두지 않는다.
+                    // 무한대에서 빼면 Constraints로 나타낼 수 없는 큰 수가 되어 예외가 난다
+                    val maxWidth = if (constraints.hasBoundedWidth) {
+                        (constraints.maxWidth - reserved).coerceAtLeast(0)
+                    } else {
+                        constraints.maxWidth
+                    }
                     val placeable = measurable.measure(constraints.copy(minWidth = 0, maxWidth = maxWidth))
                     layout(placeable.width, placeable.height) { placeable.place(0, 0) }
                 },
@@ -85,7 +91,8 @@ fun BackTopBar(
 // (최소 터치 영역 48dp 안에 보이는 버튼 40dp가 가운데 놓임 — material3 1.4.0 IconButton.kt)
 private val NavigationAreaWidth = 52.dp
 
-// actions가 넓어도 제목에 남겨 두는 최소 폭. 글꼴이 아주 크면 이 안에서 말줄임된다
+// actions가 넓어도 제목에 남겨 두는 제목 칸 최소 폭. 제목 칸 좌우 안쪽 여백 4dp씩(material3 AppBar.kt)을 빼면
+// 글자가 쓸 수 있는 폭은 40dp이고, 글꼴이 아주 크면 이 안에서 말줄임된다
 private val TitleMinWidth = 48.dp
 
 @Preview(showBackground = true, name = "타이틀만")

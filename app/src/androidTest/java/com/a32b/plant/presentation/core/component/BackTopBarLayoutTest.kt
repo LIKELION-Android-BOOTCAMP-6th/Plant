@@ -1,9 +1,11 @@
 package com.a32b.plant.presentation.core.component
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -69,7 +71,7 @@ class BackTopBarLayoutTest {
         val backDescription: String = "뒤로가기",
         // actions 안 요소를 찾는 방법 (merged 트리 기준: 버튼 하나가 노드 하나)
         val actionFinders: List<Finder> = emptyList(),
-        // 글꼴 1.0·폭 360dp에서 제목이 말줄임 없이 다 보여야 하는지 (긴 화분 이름은 말줄임이 정상)
+        // 글꼴 1.0(모든 폭)에서 제목이 말줄임 없이 다 보여야 하는지 (긴 화분 이름은 말줄임이 정상)
         val fitsAtDefault: Boolean = true,
         // 어떤 폭·글꼴에서도 말줄임 없이 다 보여야 하는 글자 (예: 선택 개수)
         val alwaysVisibleTexts: List<String> = emptyList(),
@@ -246,6 +248,27 @@ class BackTopBarLayoutTest {
         back.assertIsEnabled()
         back.performClick()
         composeRule.runOnIdle { assertEquals("활성일 때 onBack 호출 횟수", 1, backCount) }
+    }
+
+    /**
+     * 폭이 정해지지 않은 측정(IntrinsicSize)에서도 예외 없이 그려진다.
+     * actions 폭 상한을 무한대 폭에서 빼면 Constraints로 나타낼 수 없는 값이 되어 앱이 종료됐다 (PR #744 리뷰)
+     */
+    @Test
+    fun intrinsicWidthMeasureDoesNotCrash() {
+        composeRule.setContent {
+            PlantTheme {
+                BackTopBar(
+                    title = "내 활동",
+                    onBack = {},
+                    modifier = Modifier.width(IntrinsicSize.Max).testTag(BACK_BAR)
+                ) {
+                    TextButton(onClick = {}) { Text("선택", style = MaterialTheme.typography.titleMedium) }
+                }
+            }
+        }
+        composeRule.onNodeWithTag(BACK_BAR).assertExists()
+        composeRule.onNode(hasText("내 활동") and hasAnyAncestor(hasTestTag(BACK_BAR)), useUnmergedTree = true).assertExists()
     }
 
     private companion object {

@@ -36,7 +36,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.a32b.plant.presentation.core.extension.showToast
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudyPlanDetailScreen(
     navController: NavController,
