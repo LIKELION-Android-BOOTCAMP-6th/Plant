@@ -165,7 +165,7 @@ fun StudyingGoalCheckDialog(
  * - 기본 세로 여백(8dp)이면 글자 줄 높이(20sp)와 합쳐 36dp가 되어 1.0에서도 33dp를 넘으므로 세로 여백을 6dp로 줄임
  */
 @Composable
-private fun DialogSmallButton(
+internal fun DialogSmallButton(
     text: String,
     containerColor: Color,
     onClick: () -> Unit,
