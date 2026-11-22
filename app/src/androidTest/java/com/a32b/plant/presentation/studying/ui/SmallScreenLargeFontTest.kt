@@ -49,7 +49,7 @@ import org.junit.runner.RunWith
  *   (Density(density, fontScale)도 기기 설정과 같은 비선형 배율을 쓴다 — ui-unit FontScaling.android.kt)
  * - 폭: 360dp(이슈의 360×640), 411dp(1080px ÷ 2.625 = 테스트 기기 SM-N986N 폭)
  *   기기 폭보다 넓은 값도 그대로 쓰도록 requiredWidth로 정한다 (width는 기기 폭에 맞춰 줄어듦)
- * - 글꼴 1.0에서는 수정 전과 같은 크기인지도 확인한다
+ * - 글꼴 1.0에서는 수정 전과 같은 크기인지도 확인한다 (자동 크기 조절 글자는 기기 dpi에 따라 한 단계(0.25sp) 작은 것까지 허용)
  * - 학습 화면 전체(스크롤·사용자 카드 위치)와 프로필 다이얼로그는 ViewModel이 필요해 실기기에서 확인함
  */
 @RunWith(AndroidJUnit4::class)
@@ -167,21 +167,32 @@ class SmallScreenLargeFontTest {
         assertEquals("확인한 조합 수", expected.size, checked)
     }
 
-    /** 결과 화면 날짜: 글꼴 1.0·411dp에서는 수정 전처럼 22sp 한 줄 (줄었다면 22sp 한 줄 폭보다 좁아짐) */
+    /**
+     * 결과 화면 날짜: 글꼴 1.0·411dp에서는 수정 전처럼 22sp 한 줄 (폭 때문에 줄어들지 않음)
+     * 자동 크기 조절은 px 단위 float로 계산해서, 기기 dpi에 따라 글꼴 1.0에서도 한 단계(0.25sp) 작게 나올 수 있다
+     * (TextAutoSize.kt 계산을 따라 해 보면 420·440·480dpi는 22sp, 448·453dpi는 21.75sp) → 21.75sp~22sp 한 줄 폭 사이면 통과
+     */
     @Test
     fun resultTimestamp_sameAsBeforeAtDefaultFont() {
-        var naturalWidth = 0
+        var maxWidth = 0
+        var oneStepSmallerWidth = 0
         composeRule.setContent {
             Frame(411.dp, 1.0f) {
                 ResultContent()
-                val style = MaterialTheme.typography.titleSmall.copy(fontSize = 22.sp)
-                naturalWidth = rememberTextMeasurer().measure(TIMESTAMP, style, maxLines = 1, softWrap = false).size.width
+                val measurer = rememberTextMeasurer()
+                val style = MaterialTheme.typography.titleSmall
+                maxWidth = measurer.measure(TIMESTAMP, style.copy(fontSize = 22.sp), maxLines = 1, softWrap = false).size.width
+                oneStepSmallerWidth = measurer.measure(TIMESTAMP, style.copy(fontSize = 21.75.sp), maxLines = 1, softWrap = false).size.width
             }
         }
         composeRule.waitForIdle()
         val r = layoutOf(TIMESTAMP)
         assertEquals(1, r.lineCount)
-        assertEquals(naturalWidth, r.size.width)
+        // float 계산·글자 배치 차이로 21.75sp 한 줄 폭과 1px 안팎 다를 수 있어 아래쪽은 1px 여유
+        assertTrue(
+            "폭 ${r.size.width}px가 21.75sp(${oneStepSmallerWidth}px)~22sp(${maxWidth}px) 한 줄 폭 밖",
+            r.size.width in (oneStepSmallerWidth - 1)..maxWidth
+        )
     }
 
     /** 결과 화면 큰 시간(1시간 이상 HH:mm:ss): 한 줄, 잘리지 않음 */
@@ -198,7 +209,7 @@ class SmallScreenLargeFontTest {
     /**
      * 학습 목표 확인 다이얼로그 버튼(DialogSmallButton): 글꼴 1.0에서 33dp(수정 전과 같음), 큰 글꼴에서 글자가 버튼 안에 들어감
      * Dialog 안에는 여기서 바꾼 fontScale이 적용되지 않아(기기 글꼴 배율을 따름 — 기기 테스트에서 확인) 버튼만 직접 그린다
-     * (다이얼로그 전체는 실기기에서 글꼴 1.0·1.3·2.0으로 확인)
+     * (다이얼로그 전체는 실기기에서 글꼴 1.0·1.3·2.0으로 확인 — 버튼 세로 여백을 6dp로 줄였던 중간 버전으로 확인함)
      */
     @Test
     fun goalCheckDialogButton() {
@@ -232,7 +243,8 @@ class SmallScreenLargeFontTest {
     /**
      * 학습 화면 버튼: 글꼴 1.0에서 150×70dp, 큰 글꼴에서 줄바꿈된 글자가 버튼 안에 들어감
      * 높이는 바깥 여백 10dp 두 번과 안쪽 최소 50dp를 Compose가 각각 px로 반올림해 더하므로, 같은 방식으로 계산한 px와 정확히 비교한다
-     * (dp로 바꿔 허용 오차로 비교하면 반올림이 모두 .5에서 일어나는 기기(예: 2.75)에서 float 오차로 틀리게 실패할 수 있음.
+     * (dp 허용 오차로 비교하면 틀리게 실패할 수 있음: 0.5dp면 반올림 3번이 쌓여 넘고(2.75 기기: 194px ≈ 70.55dp),
+     *  1.5px로 넓혀도 정확히 1.5px 차이 나는 경우 px→dp 변환의 float 오차로 넘음.
      *  수정 전 height(70.dp)는 한 번만 반올림 — 2.625 기기에서 수정 전 184px, 수정 후 183px)
      */
     @Test

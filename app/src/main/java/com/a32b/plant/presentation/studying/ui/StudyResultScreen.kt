@@ -230,7 +230,7 @@ fun StudyResultContent(
  *
  * 한 줄에 안 들어가면 16sp까지 줄여 한 줄로 맞추고, 16sp로도 안 들어가면 원래 크기(22sp)로 줄바꿈한다 (#673)
  * 한 줄 고정만 쓰면 360dp 폭·글꼴 2.0에서 끝("~ 09:54")이 잘림 — 줄바꿈은 잘리지 않으므로 마지막 수단으로 둠
- * 16sp 한 줄이 들어가는지는 그릴 때마다 현재 폭으로 재서 정함
+ * 16sp 한 줄이 들어가는지는 현재 폭에서 재서 정함 (폭이 바뀌면 다시 잼)
  */
 @Composable
 private fun StudyTimestampText(timestamp: String) {
