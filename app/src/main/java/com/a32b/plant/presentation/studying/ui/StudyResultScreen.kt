@@ -192,7 +192,7 @@ fun StudyResultContent(
                     ProfileImage(level, 200)
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // 큰 글꼴에서 화면 폭을 넘지 않게 한 줄에 들어가는 크기까지만 줄임 — 들어가면 원래 크기(50sp) (#673)
+                    // 화면 폭보다 길면 한 줄에 들어가는 크기까지만 줄임 — 들어가면 원래 크기(50sp) (#673)
                     Text(
                         TimeFormatter.formatToDigitalClock(time),
                         style = MaterialTheme.typography.titleLarge,
@@ -231,7 +231,6 @@ fun StudyResultContent(
  * 한 줄에 안 들어가면 16sp까지 줄여 한 줄로 맞추고, 16sp로도 안 들어가면 원래 크기(22sp)로 줄바꿈한다 (#673)
  * 한 줄 고정만 쓰면 360dp 폭·글꼴 2.0에서 끝("~ 09:54")이 잘림 — 줄바꿈은 잘리지 않으므로 마지막 수단으로 둠
  * 16sp 한 줄이 들어가는지는 그릴 때마다 현재 폭으로 재서 정함
- * (넘침 결과를 상태로 기억해 두는 방식은 실기기 411dp·글꼴 1.3에서 한 줄에 들어가는데도 줄바꿈으로 남아서 쓰지 않음)
  */
 @Composable
 private fun StudyTimestampText(timestamp: String) {

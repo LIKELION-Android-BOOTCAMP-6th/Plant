@@ -148,7 +148,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
         Surface(modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
-            // 작은 화면·큰 글꼴에서 내용이 화면보다 길면 스크롤 (#673)
+            // 내용이 화면보다 길면 스크롤 (#673)
             // 최소 높이를 화면 높이로 잡아, 내용이 짧을 때는 weight 여백이 남은 공간을 채워 사용자 카드가 지금처럼 맨 아래에 붙음
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                 Column(
@@ -363,7 +363,7 @@ fun StateChangeButton(text: String, backColor: Color, function: () -> Unit){
         colors = CardDefaults.cardColors(containerColor = backColor),
         elevation = CardDefaults.cardElevation(defaultElevation = if (LocalIsDarkTheme.current) 0.dp else 3.dp)
     ) {
-        // 높이는 최소 50dp(바깥 여백 포함 70dp) — 큰 글꼴에서 글자가 줄바꿈되면 버튼이 늘어남 (#673)
+        // 높이는 최소 50dp(바깥 여백 포함 70dp) — 글자가 줄바꿈되는 등 더 높아지면 늘어남 (#673)
         Box(modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp).padding(8.dp),
             contentAlignment = Alignment.Center){
             Text("$text", style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
@@ -374,7 +374,7 @@ fun StateChangeButton(text: String, backColor: Color, function: () -> Unit){
 @Composable
 fun StudyingUserCard(users: List<StudyingUser>, tag: String){
     Card(
-        // 최소 200dp — 큰 글꼴에서 사용자 3명이 다 안 들어가면 늘어남 (본문이 스크롤되므로 잘리지 않음, #673)
+        // 최소 200dp — 내용이 더 길면 늘어남 (본문이 스크롤되므로 잘리지 않음, #673)
         modifier = Modifier.fillMaxWidth().heightIn(min = 200.dp),
         shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomEnd = 0.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary),

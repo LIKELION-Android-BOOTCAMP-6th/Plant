@@ -4,7 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -156,13 +155,12 @@ fun StudyingGoalCheckDialog(
 }
 
 /**
- * 다이얼로그 하단의 작은 버튼 — 글꼴 1.0에서는 지금처럼 33dp, 큰 글꼴에서는 글자에 맞춰 늘어남 (#673)
+ * 다이얼로그 하단의 작은 버튼 — 최소 33dp(글꼴 1.0에서는 지금과 같음), 글자가 더 높아지면 늘어남 (#673)
  *
  * - 고정 height(33.dp)는 큰 글꼴에서 글자를 잘라서 heightIn(min)으로 바꿈
- * - Material3 Button은 최소 높이가 고정되지 않으면 자리를 48dp로 넓히므로(minimumInteractiveComponentSize),
- *   그대로 두면 글꼴 1.0에서도 버튼 줄이 15dp 늘어남 → 자리 넓히기만 끔.
- *   터치 영역은 Compose가 작은 터치 대상을 48dp까지 넓혀 판정하므로 유지됨 (ViewConfiguration.minimumTouchTargetSize)
- * - 기본 세로 여백(8dp)이면 글자 줄 높이(20sp)와 합쳐 36dp가 되어 1.0에서도 33dp를 넘으므로 세로 여백을 6dp로 줄임
+ * - Material3 Button은 높이가 고정되지 않으면 차지하는 자리를 48dp로 넓혀(minimumInteractiveComponentSize)
+ *   글꼴 1.0에서도 다이얼로그가 길어지므로 자리 넓히기만 끔
+ *   (터치 영역은 Compose가 48dp보다 작은 터치 대상을 넓혀 판정함 — ui NodeCoordinator)
  */
 @Composable
 internal fun DialogSmallButton(
@@ -176,7 +174,6 @@ internal fun DialogSmallButton(
             onClick = onClick,
             shape = RoundedCornerShape(8.dp),
             modifier = modifier.heightIn(min = 33.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 6.dp),
             colors = ButtonDefaults.buttonColors(containerColor = containerColor)
         ) { Text(text, style = MaterialTheme.typography.bodySmall) }
     }

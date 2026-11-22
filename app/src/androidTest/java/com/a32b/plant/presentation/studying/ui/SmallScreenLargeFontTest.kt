@@ -133,7 +133,6 @@ class SmallScreenLargeFontTest {
             val minWidth = measurer!!.measure(TIMESTAMP, minStyle!!, maxLines = 1, softWrap = false).size.width
             val fitsAtMin = minWidth <= r.layoutInput.constraints.maxWidth
             val label = "폭 $width, 글꼴 $fontScale"
-            println("#673 날짜 $label: 줄 ${r.lineCount}, 폭 ${r.size.width}/${r.layoutInput.constraints.maxWidth}px, 16sp 한 줄 폭 ${minWidth}px")
             assertNotClipped(label, TIMESTAMP)
             assertEquals("$label: 줄 수", if (fitsAtMin) 1 else 2, r.lineCount)
         }
@@ -162,7 +161,6 @@ class SmallScreenLargeFontTest {
         forEachCombo(content = { ResultContent() }) { width, fontScale ->
             val r = layoutOf("01:00:00")
             val label = "폭 $width, 글꼴 $fontScale"
-            println("#673 시간 $label: 폭 ${r.size.width}/${r.layoutInput.constraints.maxWidth}px, 높이 ${r.size.height}px")
             assertNotClipped(label, "01:00:00")
             assertEquals("$label: 줄 수", 1, r.lineCount)
         }
@@ -170,7 +168,7 @@ class SmallScreenLargeFontTest {
 
     /**
      * 학습 목표 확인 다이얼로그 버튼(DialogSmallButton): 글꼴 1.0에서 33dp(수정 전과 같음), 큰 글꼴에서 글자가 버튼 안에 들어감
-     * Dialog는 자기 창의 Density(기기 실제 글꼴 배율)를 써서 여기서 바꾼 fontScale이 안 닿으므로 버튼만 직접 그린다
+     * Dialog 안에는 여기서 바꾼 fontScale이 적용되지 않아(기기 글꼴 배율을 따름 — 기기 테스트에서 확인) 버튼만 직접 그린다
      * (다이얼로그 전체는 실기기에서 글꼴 1.0·1.3·2.0으로 확인)
      */
     @Test
@@ -182,7 +180,6 @@ class SmallScreenLargeFontTest {
         }) { width, fontScale ->
             val button = composeRule.onNodeWithTag(TAG).getUnclippedBoundsInRoot()
             val label = "폭 $width, 글꼴 $fontScale"
-            println("#673 다이얼로그 버튼 $label: 높이 ${height(button)}dp")
             if (fontScale == 1.0f) assertEquals("$label: 버튼 높이", 33f, height(button), TOLERANCE.value)
             assertInside(label, textBounds("종료"), button)
             assertNotClipped(label, "종료")
@@ -197,7 +194,6 @@ class SmallScreenLargeFontTest {
         }) { width, fontScale ->
             val button = composeRule.onNodeWithTag(TAG).getUnclippedBoundsInRoot()
             val label = "폭 $width, 글꼴 $fontScale"
-            println("#673 메뉴 $label: 버튼 높이 ${height(button)}dp")
             if (fontScale == 1.0f) assertEquals("$label: 버튼 높이", 50f, height(button), TOLERANCE.value)
             assertInside(label, textBounds(MENU_TEXT), button)
             assertNotClipped(label, MENU_TEXT)
@@ -214,7 +210,6 @@ class SmallScreenLargeFontTest {
         }) { width, fontScale ->
             val outer = composeRule.onNodeWithTag(TAG).getUnclippedBoundsInRoot()
             val label = "폭 $width, 글꼴 $fontScale"
-            println("#673 학습 버튼 $label: ${(outer.right - outer.left).value}×${height(outer)}dp")
             if (fontScale == 1.0f) {
                 assertEquals("$label: 너비", 150f, (outer.right - outer.left).value, TOLERANCE.value)
                 assertEquals("$label: 높이", 70f, height(outer), TOLERANCE.value)
@@ -235,7 +230,6 @@ class SmallScreenLargeFontTest {
         }) { width, fontScale ->
             val card = composeRule.onNodeWithTag(TAG).getUnclippedBoundsInRoot()
             val label = "폭 $width, 글꼴 $fontScale"
-            println("#673 사용자 카드 $label: 높이 ${height(card)}dp")
             assertTrue("$label: 카드 높이 200dp 미만", height(card) >= 200f - TOLERANCE.value)
             users.forEach { assertInside("$label ${it.nickname}", textBounds(it.nickname), card) }
         }

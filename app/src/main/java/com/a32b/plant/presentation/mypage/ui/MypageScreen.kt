@@ -307,7 +307,7 @@ fun ButtonTemplate(
     Button(
         onClick = onClick,
         enabled = enabled,
-        // 최소 50dp — 큰 글꼴에서 글자가 잘리지 않게 글자에 맞춰 늘어남 (#673)
+        // 최소 50dp — 글자가 더 높아지면 늘어남 (#673)
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 50.dp),
@@ -528,9 +528,9 @@ fun ProfileDialog(
                     )
                 }
 
-                // 버튼 높이는 최소 45dp — 큰 글꼴에서 글자에 맞춰 늘어남 (#673)
-                // Material3 Button은 높이가 고정되지 않으면 자리를 48dp로 넓혀 글꼴 1.0에서도 3dp 늘어나므로 자리 넓히기만 끔
-                // (터치 영역은 Compose가 작은 터치 대상을 48dp까지 넓혀 판정하므로 유지됨)
+                // 버튼 높이는 최소 45dp — 글자가 더 높아지면 늘어남 (#673)
+                // Material3 Button은 높이가 고정되지 않으면 차지하는 자리를 48dp로 넓혀 글꼴 1.0에서도 다이얼로그가 길어지므로 자리 넓히기만 끔
+                // (터치 영역은 Compose가 48dp보다 작은 터치 대상을 넓혀 판정함 — ui NodeCoordinator)
                 CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
