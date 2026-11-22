@@ -44,7 +44,7 @@ class BlockedUsersViewModel @Inject constructor(
     val event = _event.receiveAsFlow()
 
     companion object {
-        // 차단 목록을 끝내 받지 못해도(리스너 실패) 빈 화면에 머물지 않도록 기다리는 최대 시간
+        // 차단 목록이 오지 않아도(리스너 응답 없음) 로딩 화면에 머물지 않도록 기다리는 최대 시간. 첫 목록 전에 리스너가 실패하면 저장소가 빈 목록을 보낸다
         private const val INITIAL_WAIT_MS = 2_000L
         private const val UNBLOCKED_MESSAGE = "차단을 해제했어요"
     }

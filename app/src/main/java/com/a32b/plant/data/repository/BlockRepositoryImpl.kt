@@ -14,13 +14,16 @@ import com.a32b.plant.domain.repository.BlockRepository
 import com.a32b.plant.domain.result.Result
 import com.google.android.gms.tasks.Task
 import com.google.firebase.firestore.FirebaseFirestoreException
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -42,17 +45,31 @@ class BlockRepositoryImpl @Inject constructor(
 
     private fun sharedBlockedUsers(uid: String): StateFlow<List<BlockedUser>?> = synchronized(lock) {
         shared?.takeIf { it.first == uid }?.second
-            ?: remote.observeBlockedUsers(uid)
+            ?: createSharedBlockedUsers(uid).also { shared = uid to it }
+    }
+
+    private fun createSharedBlockedUsers(uid: String): StateFlow<List<BlockedUser>?> {
+        // 이 uid의 목록을 한 번이라도 받았는지 — flow {} 밖에 둬서, 화면을 모두 떠났다가(5초) 리스너를 다시 시작해도
+        // 들고 있던 목록을 첫 목록 전 실패로 오인해 빈 목록으로 덮지 않게 한다
+        val received = AtomicBoolean(false)
+        return flow {
+            remote.observeBlockedUsers(uid)
                 .map { list ->
                     // 최근에 차단한 순서. 서버 시각이 아직 없는 문서(방금 차단)는 맨 위
                     list.map { it.toDomain() }.sortedByDescending { it.createdAt ?: Long.MAX_VALUE }
                 }
-                // 로그아웃·탈퇴로 인증이 먼저 끊기면 PERMISSION_DENIED가 올 수 있다.
-                // 앱 범위 스코프 밖으로 전파되면 앱이 죽으므로 흡수하고 마지막 목록을 유지한다
-                .catch { e -> Log.e("BlockRepository", "차단 목록 구독 실패: ${e.message}", e) }
-                // 화면을 오가는 사이(5초)에는 리스너를 유지해 다시 받지 않는다
-                .stateIn(scope, SharingStarted.WhileSubscribed(SHARE_STOP_TIMEOUT_MS), null)
-                .also { shared = uid to it }
+                .onEach { received.set(true) }
+                // 앱 범위 스코프 밖으로 전파되면 앱이 죽으므로 흡수한다.
+                // 이미 받은 목록이 있으면 그대로 유지하고, 첫 목록 전에 실패했으면(보안 규칙 거부 등) 빈 목록을 한 번 보낸다
+                // → 첫 목록을 기다리는 화면(목록·상세·차단 목록)이 열 때마다 대기 시간까지 기다리지 않게 한다
+                .catch { e ->
+                    Log.e("BlockRepository", "차단 목록 구독 실패: ${e.message}", e)
+                    if (!received.get()) emit(emptyList())
+                }
+                .collect { emit(it) }
+        }
+            // 화면을 오가는 사이(5초)에는 리스너를 유지해 다시 받지 않는다
+            .stateIn(scope, SharingStarted.WhileSubscribed(SHARE_STOP_TIMEOUT_MS), null)
     }
 
     override suspend fun blockUser(uid: String, target: BlockedUser): Result<SaveResult> =

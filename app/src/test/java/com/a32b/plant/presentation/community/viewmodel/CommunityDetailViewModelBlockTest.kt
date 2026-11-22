@@ -192,12 +192,8 @@ class CommunityDetailViewModelBlockTest {
                 savedStateHandle = SavedStateHandle(mapOf("postId" to POST_ID))
             )
             val events = mutableListOf<CommunityDetailEvent>()
-            val collectors = launch(dispatcher) {
-                launch { viewModel.event.collect { events += it } }
-                // WhileSubscribed 상태는 화면처럼 구독해야 값이 갱신된다
-                launch { viewModel.visibleComments.collect {} }
-                launch { viewModel.isPostAuthorBlocked.collect {} }
-            }
+            // visibleComments·isPostAuthorBlocked는 구독하지 않는다 — 화면이 구독하기 전(첫 화면)에도 값이 맞아야 하므로
+            val collectors = launch(dispatcher) { viewModel.event.collect { events += it } }
             advanceUntilIdle()   // loadInitial (차단 목록 대기 포함)
             events.clear()       // 첫 로드는 안내를 보내지 않지만, 테스트 대상 이벤트만 보도록 비운다
 

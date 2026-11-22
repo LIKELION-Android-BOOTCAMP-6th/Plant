@@ -156,14 +156,15 @@ class CommunityDetailViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     // 화면에 보일 댓글 — 차단한 사용자의 댓글을 뺀다. commentList(전체)는 댓글 수 계산·임시 댓글 병합에 그대로 쓴다
+    // 아래 두 값은 Eagerly: 화면이 구독하기 전부터 계산해, 첫 화면이 초기값(빈 댓글·차단 아님)으로 한 번 그려지지 않게 한다
     val visibleComments: StateFlow<List<Comment>> = combine(_uiState, blockedUids) { state, blocked ->
         BlockedContentFilter.visibleComments(state.commentList, blocked.orEmpty())
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     // 차단한 사용자의 글로 직접 들어온 경우(내 활동 등) — 화면은 내용 대신 안내를 표시한다
     val isPostAuthorBlocked: StateFlow<Boolean> = combine(_post, blockedUids) { post, blocked ->
         post != null && BlockedContentFilter.isBlocked(post, blocked.orEmpty())
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     // 좋아요/북마크 디바운스 상태
     private var likeDebounceJob: Job? = null
