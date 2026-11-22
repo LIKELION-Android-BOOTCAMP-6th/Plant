@@ -53,6 +53,7 @@
 
 1. App Check를 넣은 앱을 비공개 테스트로 배포한다 (강제는 끈 상태)
 2. 콘솔 App Check의 서비스별 지표에서 "확인된 요청" 비율을 본다. 확인 안 된 요청이 우리 테스터 기기에서 나오면 원인을 찾는다 (SHA 미등록, 예전 버전 앱, 디버그 토큰 미등록 등)
+   - 강제 전에 `config/app`의 `minVersionCode`를 App Check가 들어간 버전 이상으로 올려, 예전 버전 사용자에게 업데이트 안내가 뜨게 한다 ([FORCE_UPDATE.md](FORCE_UPDATE.md#값을-올리는-순서-배포-시))
 3. 함수: Callable 3개(`checkAttendance`, `openBonusBoxes`, `deleteAccount`)에 `enforceAppCheck: true`를 넣어 배포한다
 4. Firestore: 콘솔 App Check에서 Cloud Firestore 강제를 켠다
 

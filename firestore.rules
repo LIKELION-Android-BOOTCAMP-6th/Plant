@@ -739,6 +739,14 @@ service cloud.firestore {
       allow read: if request.auth != null;
     }
 
+    // 앱 설정: 최소 지원 버전(minVersionCode)·업데이트 안내 문구(message) (#662)
+    // 스플래시에서 로그인 확인 전에 읽으므로 로그인하지 않아도 읽을 수 있다
+    // 공개해도 되는 값만 두는 문서라 config/app 하나만 연다 (다른 config 문서는 규칙 없음 = 거부)
+    // 쓰기 규칙 없음 = 거부 (값은 Firebase 콘솔에서만 바꾼다. 순서는 docs/FORCE_UPDATE.md)
+    match /config/app {
+      allow read: if true;
+    }
+
     // "공부 중" 표시 (#525) — 앱은 문서 전체를 set으로 쓰고(StudyingRemoteDataSourceImpl.saveStudyingUser)
     // updatedAt = serverTimestamp()를 함께 보낸다. 예약 함수(cleanUpStaleStudying)가 updatedAt이 오래된 문서를 지운다
     function validStudyingUser() {

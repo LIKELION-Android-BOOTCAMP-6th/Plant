@@ -92,6 +92,8 @@ android {
     }
     buildFeatures {
         compose = true
+        // 스플래시의 최소 지원 버전 확인에서 BuildConfig.VERSION_CODE를 읽는다 (#662)
+        buildConfig = true
     }
 }
 

@@ -1,5 +1,6 @@
 package com.a32b.plant.di.data
 
+import com.a32b.plant.data.repository.AppConfigRepositoryImpl
 import com.a32b.plant.data.repository.AuthRepositoryImpl
 import com.a32b.plant.data.repository.BlockRepositoryImpl
 import com.a32b.plant.data.repository.CommunityRepositoryImpl
@@ -12,6 +13,7 @@ import com.a32b.plant.data.repository.ReportRepositoryImpl
 import com.a32b.plant.data.repository.StudyLogRepositoryImpl
 import com.a32b.plant.data.repository.StudyingRepositoryImpl
 import com.a32b.plant.data.repository.UserRepositoryImpl
+import com.a32b.plant.domain.repository.AppConfigRepository
 import com.a32b.plant.domain.repository.AuthRepository
 import com.a32b.plant.domain.repository.BlockRepository
 import com.a32b.plant.domain.repository.CommunityRepository
@@ -33,6 +35,10 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
+
+    @Binds
+    @Singleton
+    abstract fun bindAppConfigRepository(impl: AppConfigRepositoryImpl): AppConfigRepository
 
     @Binds
     @Singleton
