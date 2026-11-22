@@ -9,6 +9,7 @@ import android.view.View
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -38,7 +40,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -151,7 +155,7 @@ fun StudyResultContent(
             horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(modifier = Modifier.height(17.dp))
 
-            Text(timestamp , style = MaterialTheme.typography.titleSmall , fontSize = 22.sp)
+            StudyTimestampText(timestamp)
             Spacer(modifier = Modifier.height(13.dp))
 
             val cardModifier = Modifier.fillMaxWidth()
@@ -188,7 +192,13 @@ fun StudyResultContent(
                     ProfileImage(level, 200)
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Text(TimeFormatter.formatToDigitalClock(time), style = MaterialTheme.typography.titleLarge, fontSize = 50.sp,)
+                    // 카드 안쪽 폭보다 길면 한 줄에 들어가는 크기까지만 줄임 (최대 50sp, #673)
+                    Text(
+                        TimeFormatter.formatToDigitalClock(time),
+                        style = MaterialTheme.typography.titleLarge,
+                        maxLines = 1,
+                        autoSize = TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = 50.sp)
+                    )
 
                     when (reward) {
                         is StudyRewardUi.Granted -> {
@@ -214,6 +224,41 @@ fun StudyResultContent(
     }
 
 }
+
+/**
+ * 결과 화면 상단 날짜·시각 (예: "2026년 11월 22일 일요일 09:51 ~ 09:54")
+ *
+ * 한 줄에 안 들어가면 16sp까지 줄여 한 줄로 맞추고, 16sp로도 안 들어가면 원래 크기(22sp)로 줄바꿈한다 (#673)
+ * 한 줄 고정만 쓰면 360dp 폭·글꼴 2.0에서 끝("~ 09:54")이 잘림 — 줄바꿈은 잘리지 않으므로 마지막 수단으로 둠
+ * 16sp 한 줄이 들어가는지는 현재 폭에서 재서 정함 (폭이 바뀌면 다시 잼)
+ */
+@Composable
+private fun StudyTimestampText(timestamp: String) {
+    val style = MaterialTheme.typography.titleSmall
+    val textMeasurer = rememberTextMeasurer()
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        val fitsOneLine = !textMeasurer.measure(
+            text = timestamp,
+            style = style.copy(fontSize = TIMESTAMP_MIN_FONT_SIZE),
+            maxLines = 1,
+            softWrap = false,
+            constraints = Constraints(maxWidth = constraints.maxWidth)
+        ).hasVisualOverflow
+        Text(
+            text = timestamp,
+            style = style,
+            fontSize = TIMESTAMP_MAX_FONT_SIZE,
+            textAlign = TextAlign.Center,
+            maxLines = if (fitsOneLine) 1 else Int.MAX_VALUE,
+            autoSize = if (fitsOneLine) {
+                TextAutoSize.StepBased(minFontSize = TIMESTAMP_MIN_FONT_SIZE, maxFontSize = TIMESTAMP_MAX_FONT_SIZE)
+            } else null
+        )
+    }
+}
+
+private val TIMESTAMP_MAX_FONT_SIZE = 22.sp
+private val TIMESTAMP_MIN_FONT_SIZE = 16.sp
 
 /** 보상이 아직 표시되지 않을 때의 안내 (보상은 서버가 지급, #453) */
 @Composable

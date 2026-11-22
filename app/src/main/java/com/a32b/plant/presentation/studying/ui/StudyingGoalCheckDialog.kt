@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,13 +23,16 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -120,35 +124,57 @@ fun StudyingGoalCheckDialog(
                             horizontalArrangement = Arrangement.End,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Button(
-                                onClick = onDismiss,
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.height(33.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.outline)
-                            ) { Text("취소", style = MaterialTheme.typography.bodySmall) }
+                            DialogSmallButton(
+                                text = "취소",
+                                containerColor = MaterialTheme.colorScheme.outline,
+                                onClick = onDismiss
+                            )
                             Spacer(Modifier.width(8.dp))
-                            Button(
-                                onClick = onConfirm,
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.height(33.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(0.7f))
-                            ) { Text("종료", style = MaterialTheme.typography.bodySmall) }
+                            DialogSmallButton(
+                                text = "종료",
+                                containerColor = MaterialTheme.colorScheme.primary.copy(0.7f),
+                                onClick = onConfirm
+                            )
                         }
                     }
                     StudyingGoalCheckMode.CHECK -> {
-                        Button(
+                        DialogSmallButton(
+                            text = "닫기",
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
                             onClick = onDismiss,
-                            shape = RoundedCornerShape(8.dp),
                             modifier = Modifier
                                 .align(Alignment.End)
                                 .padding(end = 7.dp, bottom = 7.dp)
-                                .height(33.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-                        ) { Text("닫기", style = MaterialTheme.typography.bodySmall) }
+                        )
                     }
                 }
             }
         }
+    }
+}
+
+/**
+ * 다이얼로그 하단의 작은 버튼 — 최소 33dp(글꼴 1.0에서는 지금과 같음), 글자가 더 높아지면 늘어남 (#673)
+ *
+ * - 고정 height(33.dp)는 큰 글꼴에서 글자를 잘라서 heightIn(min)으로 바꿈
+ * - Material3 Button은 높이가 고정되지 않으면 차지하는 자리를 48dp로 넓혀(minimumInteractiveComponentSize)
+ *   글꼴 1.0에서도 다이얼로그가 길어지므로 자리 넓히기만 끔
+ *   (터치 영역은 Compose가 48dp보다 작은 터치 대상을 넓혀 판정함 — ui NodeCoordinator)
+ */
+@Composable
+internal fun DialogSmallButton(
+    text: String,
+    containerColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+        Button(
+            onClick = onClick,
+            shape = RoundedCornerShape(8.dp),
+            modifier = modifier.heightIn(min = 33.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = containerColor)
+        ) { Text(text, style = MaterialTheme.typography.bodySmall) }
     }
 }
 

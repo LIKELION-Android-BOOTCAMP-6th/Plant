@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -26,6 +27,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -35,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -303,9 +306,10 @@ fun ButtonTemplate(
     Button(
         onClick = onClick,
         enabled = enabled,
+        // 최소 50dp — 글자가 더 높아지면 늘어남 (#673)
         modifier = Modifier
             .fillMaxWidth()
-            .height(50.dp),
+            .heightIn(min = 50.dp),
         shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -523,43 +527,48 @@ fun ProfileDialog(
                     )
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = {
-                            viewModel.clearProfileState()
-                            onDismiss()
-                        },
-                        enabled = !uiState.isLoading,
-                        modifier = Modifier
-                            .height(45.dp)
-                            .weight(1f),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.outline,
-                        )
+                // 버튼 높이는 최소 45dp — 글자가 더 높아지면 늘어남 (#673)
+                // Material3 Button은 높이가 고정되지 않으면 차지하는 자리를 48dp로 넓혀 글꼴 1.0에서도 다이얼로그가 길어지므로 자리 넓히기만 끔
+                // (터치 영역은 Compose가 48dp보다 작은 터치 대상을 넓혀 판정함 — ui NodeCoordinator)
+                CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            "취소",
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    }
+                        Button(
+                            onClick = {
+                                viewModel.clearProfileState()
+                                onDismiss()
+                            },
+                            enabled = !uiState.isLoading,
+                            modifier = Modifier
+                                .heightIn(min = 45.dp)
+                                .weight(1f),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.outline,
+                            )
+                        ) {
+                            Text(
+                                "취소",
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
 
-                    Button(
-                        onClick = {
-                            viewModel.updateProfile(newUserName, selectedImageLevel)
-                        },
-                        enabled = !uiState.isLoading, // 작업중이면 버튼 클릭 비활성화 하려고 추가
-                        modifier = Modifier
-                            .height(45.dp)
-                            .weight(1f),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                        )
-                    ) { Text("저장", style = MaterialTheme.typography.labelLarge) }
+                        Button(
+                            onClick = {
+                                viewModel.updateProfile(newUserName, selectedImageLevel)
+                            },
+                            enabled = !uiState.isLoading, // 작업중이면 버튼 클릭 비활성화 하려고 추가
+                            modifier = Modifier
+                                .heightIn(min = 45.dp)
+                                .weight(1f),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                            )
+                        ) { Text("저장", style = MaterialTheme.typography.labelLarge) }
+                    }
                 }
             }
         }
