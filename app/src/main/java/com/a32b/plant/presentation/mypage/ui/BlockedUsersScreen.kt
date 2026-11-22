@@ -158,7 +158,8 @@ private fun BlockedUserRow(
         TextButton(onClick = onUnblockClick) {
             Text(
                 text = "차단 해제",
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.labelLarge,
+                // labelLarge 기본색(onSurface) 대신 누를 수 있는 동작임을 드러내는 색
                 color = MaterialTheme.colorScheme.primary
             )
         }
