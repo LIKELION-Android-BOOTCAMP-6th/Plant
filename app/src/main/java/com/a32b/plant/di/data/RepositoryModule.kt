@@ -1,6 +1,7 @@
 package com.a32b.plant.di.data
 
 import com.a32b.plant.data.repository.AuthRepositoryImpl
+import com.a32b.plant.data.repository.BlockRepositoryImpl
 import com.a32b.plant.data.repository.CommunityRepositoryImpl
 import com.a32b.plant.data.repository.CommunityReportRepositoryImpl
 import com.a32b.plant.data.repository.FeedbackRepositoryImpl
@@ -12,6 +13,7 @@ import com.a32b.plant.data.repository.StudyLogRepositoryImpl
 import com.a32b.plant.data.repository.StudyingRepositoryImpl
 import com.a32b.plant.data.repository.UserRepositoryImpl
 import com.a32b.plant.domain.repository.AuthRepository
+import com.a32b.plant.domain.repository.BlockRepository
 import com.a32b.plant.domain.repository.CommunityRepository
 import com.a32b.plant.domain.repository.CommunityReportRepository
 import com.a32b.plant.domain.repository.FeedbackRepository
@@ -35,6 +37,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindAuthRepository(impl: AuthRepositoryImpl) : AuthRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindBlockRepository(impl: BlockRepositoryImpl): BlockRepository
 
     @Binds
     @Singleton

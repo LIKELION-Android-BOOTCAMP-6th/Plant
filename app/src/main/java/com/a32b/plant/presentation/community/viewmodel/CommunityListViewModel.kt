@@ -12,6 +12,8 @@ import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
+import com.a32b.plant.domain.usecase.community.ObserveBlockedUsersUseCase
+import com.a32b.plant.presentation.community.BlockedContentFilter
 import com.a32b.plant.presentation.community.CommunityConstants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -22,6 +24,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -52,7 +56,8 @@ sealed class CommunityListEvent {
 @HiltViewModel
 class CommunityListViewModel @Inject constructor(
     private val repository: CommunityRepository,
-    private val postUpdateObserver: PostUpdateObserver
+    private val postUpdateObserver: PostUpdateObserver,
+    private val observeBlockedUsersUseCase: ObserveBlockedUsersUseCase
 ) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(CommunityListUiState())
@@ -63,6 +68,12 @@ class CommunityListViewModel @Inject constructor(
 
     private val _events = Channel<CommunityListEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
+
+    // 차단한 사용자 uid (#660). null = 아직 차단 목록을 받지 못함 (첫 로드에서 차단한 글이 잠깐 보이지 않게 기다리는 데 사용)
+    // posts·searchResults에는 차단한 사용자 글도 그대로 두고 화면에 보낼 때(filteredPosts)만 뺀다
+    // → 커서·silentRefresh() 재조회 개수가 서버 페이지와 그대로 맞고, 차단·해제가 다시 불러오지 않아도 바로 반영된다
+    private val _blockedUids = MutableStateFlow<Set<String>?>(null)
+    private val blockedUids: Set<String> get() = _blockedUids.value.orEmpty()
 
     private var loadJob: Job? = null
     private var loadMoreJob: Job? = null
@@ -88,14 +99,40 @@ class CommunityListViewModel @Inject constructor(
         private const val LOCAL_PATCH_PROTECTION_WINDOW_MS = 5_000L
         // 상호작용이 전혀 없어도, 다른 사용자의 변경사항을 놓치지 않기 위한 최소 백그라운드 재동기화 주기
         private const val BACKGROUND_RESYNC_INTERVAL_MS = 60_000L
+        // 첫 로드에서 차단 목록을 기다리는 최대 시간 — 보통 기기 캐시에서 바로 오고, 못 받아도 도착하면 그때 숨겨진다
+        private const val BLOCKED_USERS_WAIT_MS = 2_000L
     }
 
     init {
+        observeBlockedUsers()
         fetchTags()
         loadInitial()
         observePostUpdates()
         observePostCreated()
         observePostDeleted()
+    }
+
+    // 차단·해제는 화면에 보낼 때 다시 거르므로(filteredPosts) 목록을 다시 불러오지 않는다.
+    // 상세 화면에서 차단해 지금 불러온 글이 전부 숨겨지면 화면 하단 도달 신호가 오지 않으므로 다음 페이지를 직접 부른다
+    private fun observeBlockedUsers() {
+        viewModelScope.launch {
+            observeBlockedUsersUseCase().collect { users ->
+                _blockedUids.value = users.map { it.uid }.toSet()
+                val state = _uiState.value
+                if (state.hasLoadedOnce && !state.isLoadingMore && !state.isRefreshing &&
+                    BlockedContentFilter.needsNextPage(state.posts, state.hasMore, blockedUids)
+                ) {
+                    loadMore()
+                }
+            }
+        }
+    }
+
+    // 방금 받은 페이지가 전부 차단한 사용자 글이면 다음 페이지를 이어서 부른다 (#660).
+    // 다음 페이지도 전부 숨겨지면 다시 여기로 와서 끝(hasMore = false)까지 이어지고, 끝이면 빈 목록 안내가 보인다.
+    // 실패하면 이어 부르지 않는다 (hasMore는 true로 남아 당겨서 새로고침으로 다시 시도)
+    private fun loadMoreIfPageHidden(pageItems: List<Post>, hasMore: Boolean) {
+        if (BlockedContentFilter.needsNextPage(pageItems, hasMore, blockedUids)) loadMore()
     }
 
     // 삭제한 글을 바로 빼서, 재조회를 건너뛰는 60초 안의 복귀에서도 남지 않게 한다 (#712).
@@ -191,6 +228,9 @@ class CommunityListViewModel @Inject constructor(
                 )
             } ?: Result.Failure(AppError.Network())
 
+            // 차단 목록을 받기 전에 글을 보여 주면 차단한 사용자 글이 잠깐 보였다 사라지므로 잠시 기다린다
+            withTimeoutOrNull(BLOCKED_USERS_WAIT_MS) { _blockedUids.filterNotNull().first() }
+
             pageResult.onSuccess { page ->
                 Log.d("CommunityListVM", "loadInitial 성공: ${page.items.size}개 로드, hasMore=${page.hasMore}, nextCursor=${page.nextCursor}")
                 lastSyncedAt = System.currentTimeMillis()
@@ -205,6 +245,7 @@ class CommunityListViewModel @Inject constructor(
                         hasLoadedOnce = true
                     )
                 }
+                loadMoreIfPageHidden(page.items, page.hasMore)
             }.onFailure { e ->
                 Log.e("CommunityListVM", "loadInitial 실패: ${e.message}", e)
                 _uiState.update { it.copy(isLoadingMore = false, hasMore = false, hasLoadedOnce = true) }
@@ -243,6 +284,7 @@ class CommunityListViewModel @Inject constructor(
                         isLoadingMore = false
                     )
                 }
+                loadMoreIfPageHidden(page.items, page.hasMore)
             }.onFailure { e ->
                 Log.e("CommunityListVM", "loadMore 실패: ${e.message}", e)
                 _uiState.update { it.copy(isLoadingMore = false) }
@@ -286,6 +328,7 @@ class CommunityListViewModel @Inject constructor(
                     )
                 }
                 _events.trySend(CommunityListEvent.ScrollToTop)
+                loadMoreIfPageHidden(page.items, page.hasMore)
             }.onFailure { e ->
                 Log.e("CommunityListVM", "refresh 실패: ${e.message}", e)
                 _uiState.update { it.copy(isRefreshing = false) }
@@ -398,6 +441,7 @@ class CommunityListViewModel @Inject constructor(
                     )
                 }
                 if (scrollToTopAfterSync) _events.trySend(CommunityListEvent.ScrollToTop)
+                loadMoreIfPageHidden(page.items, page.hasMore)
             }.onFailure {
                 // 네트워크 실패 → 다음 ON_RESUME에서 재시도할 수 있도록 플래그 복구
                 hasPendingInteractionSinceLastSync = true
@@ -408,17 +452,19 @@ class CommunityListViewModel @Inject constructor(
 
     fun onIsTagSheetShownChange() = _uiState.update { it.copy(isTagSheetShown = !it.isTagSheetShown) }
 
-    // 화면에 표시할 리스트
+    // 화면에 표시할 리스트 — 차단한 사용자 글은 두 경우 모두 뺀다 (#660)
     // 검색어 없음 → 페이지네이션 posts 그대로
     // 검색어 있음 → 전체 로드된 searchResults에서 contains 필터 (블라인드 게시글은 숨겨진 제목/본문으로 매칭되지 않도록 제외)
     val filteredPosts = combine(
         _uiState,
-        _searchQuery
-    ) { state, query ->
+        _searchQuery,
+        _blockedUids
+    ) { state, query, blocked ->
+        val blockedUids = blocked.orEmpty()
         if (query.isBlank()) {
-            state.posts
+            BlockedContentFilter.visiblePosts(state.posts, blockedUids)
         } else {
-            state.searchResults.filter { post ->
+            BlockedContentFilter.visiblePosts(state.searchResults, blockedUids).filter { post ->
                 !post.isBlind && (
                     post.title.contains(query, ignoreCase = true) ||
                         (post.content?.contains(query, ignoreCase = true) ?: false)

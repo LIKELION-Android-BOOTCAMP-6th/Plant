@@ -123,16 +123,23 @@ fun CommunityListScreen(
 
         // 하단 도달 감지 → loadMore
         // snapshotFlow: 스크롤 상태 변화를 레이아웃 단계에서 직접 관찰 (derivedStateOf보다 안정적)
+        // 하단 근처면 지금까지 받은 글 수(uiState.posts, 차단한 사용자 글 포함), 아니면 -1을 보낸다.
+        // 받은 글 수가 늘면 다시 보내므로, 받은 페이지 일부가 차단한 사용자 글이라(#660) 목록이 화면을 채우지 못해
+        // 계속 하단 근처에 있어도 다음 페이지를 이어 부른다.
+        // 화면 항목 수(totalItemsCount)를 쓰지 않는 이유: 로딩 표시 항목이 생겼다 사라지며 값이 바뀌어, 불러오기가 실패하면 곧바로 다시 부르기를 반복한다
+        // 검색 중에는 보내지 않는다: 검색 결과는 전체 로드(searchResults)라 페이지가 필요 없고,
+        // 결과가 짧아 계속 하단 근처면 받은 글 수가 늘 때마다 다음 페이지를 불러 전체를 페이지 단위로 다 받게 된다
         LaunchedEffect(listState) {
             snapshotFlow {
+                if (searchQuery.isNotBlank()) return@snapshotFlow -1
                 val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
-                    ?: return@snapshotFlow false
+                    ?: return@snapshotFlow -1
                 val total = listState.layoutInfo.totalItemsCount
-                total > 0 && lastVisible >= total - 3
+                if (total > 0 && lastVisible >= total - 3) uiStateFlow.value.posts.size else -1
             }
                 .distinctUntilChanged()
-                .collect { shouldLoad ->
-                    if (shouldLoad && !uiStateFlow.value.suppressLoadMore) {
+                .collect { nearBottomTotal ->
+                    if (nearBottomTotal >= 0 && !uiStateFlow.value.suppressLoadMore) {
                         viewModel.loadMore()
                     }
                 }

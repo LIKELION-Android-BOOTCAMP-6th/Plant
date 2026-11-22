@@ -124,6 +124,8 @@ fun CommunityDetailScreen(
 
     val postState by viewModel.post.collectAsStateWithLifecycle()
     val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
+    val visibleComments by viewModel.visibleComments.collectAsStateWithLifecycle()
+    val isPostAuthorBlocked by viewModel.isPostAuthorBlocked.collectAsStateWithLifecycle()
     val showDeleteDialog = viewModel.showDeleteDialog.value
 
 
@@ -218,6 +220,18 @@ fun CommunityDetailScreen(
         )
     }
 
+    // 사용자 차단 확인 다이얼로그 (#660) — 되돌릴 수 있는 동작이라(마이페이지 > 차단 목록에서 해제) 삭제·탈퇴 같은 강조는 하지 않음
+    uiState.blockTarget?.let { target ->
+        ConfirmDialog(
+            text = "${target.nickname}님을 차단할까요?",
+            semiText = "차단하면 이 사용자의 게시글과 댓글이 보이지 않아요.\n마이페이지 > 차단 목록에서 해제할 수 있어요.",
+            confirmBtnText = "차단",
+            isLoading = uiState.isBlockSubmitting,
+            onDismiss = { viewModel.closeBlockDialog() },
+            onConfirm = { viewModel.confirmBlock() }
+        )
+    }
+
     // 신고 BottomSheet
     if (uiState.showReportSheet) {
         ReportBottomSheet(
@@ -270,6 +284,28 @@ fun CommunityDetailScreen(
                                         Text("돌아가기")
                                     }
                                 }
+                            }
+                        }
+                    }
+                    return@Scaffold
+                }
+                // 차단한 사용자의 글로 직접 들어온 경우(내 활동 등, #660) — 제목·내용·댓글을 보여 주지 않는다
+                if (isPostAuthorBlocked) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "차단한 사용자의 글이에요",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondary
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            TextButton(onClick = { navController.popBackStack() }) {
+                                Text("돌아가기")
                             }
                         }
                     }
@@ -466,12 +502,23 @@ fun CommunityDetailScreen(
                                                 modifier = Modifier.size(22.dp)
                                             )
                                         }
-                                    } else if (!isPostBlind) {
-                                        IconButton(onClick = { viewModel.openPostReportSheet() }) {
+                                    } else {
+                                        if (!isPostBlind) {
+                                            IconButton(onClick = { viewModel.openPostReportSheet() }) {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.ic_siren_report),
+                                                    contentDescription = "신고",
+                                                    tint = MaterialTheme.colorScheme.error,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
+                                        }
+                                        // 숨김 처리된 글이어도 작성자는 차단할 수 있다 (#660)
+                                        IconButton(onClick = { viewModel.openPostAuthorBlockDialog() }) {
                                             Icon(
-                                                painter = painterResource(R.drawable.ic_siren_report),
-                                                contentDescription = "신고",
-                                                tint = MaterialTheme.colorScheme.error,
+                                                painter = painterResource(R.drawable.ic_block_user),
+                                                contentDescription = "사용자 차단",
+                                                tint = MaterialTheme.colorScheme.onSurface,
                                                 modifier = Modifier.size(20.dp)
                                             )
                                         }
@@ -499,8 +546,8 @@ fun CommunityDetailScreen(
                                 Spacer(modifier = Modifier.height(20.dp))
                             }
 
-                            // CommentRow에 수정/삭제 기능 파라미터 전달
-                            items(uiState.commentList) { commentData ->
+                            // CommentRow에 수정/삭제 기능 파라미터 전달 — 차단한 사용자의 댓글은 뺀 목록 (#660)
+                            items(visibleComments) { commentData ->
                                 CommentRow(
                                     comment = commentData,
                                     isOwner = commentData.user.uid == uiState.currentUid,
@@ -515,7 +562,8 @@ fun CommunityDetailScreen(
                                     onEditSubmit = { viewModel.submitEditComment() },
                                     onEditCancel = { viewModel.cancelEditComment() },
                                     onDeleteClick = { viewModel.openCommentDeleteDialog(commentData.commentId) },
-                                    onReportClick = { viewModel.openCommentReportSheet(commentData.commentId) }
+                                    onReportClick = { viewModel.openCommentReportSheet(commentData.commentId) },
+                                    onBlockClick = { viewModel.openCommentAuthorBlockDialog(commentData) }
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
                             }
@@ -544,7 +592,8 @@ fun CommentRow(
     onEditSubmit: () -> Unit,
     onEditCancel: () -> Unit,
     onDeleteClick: () -> Unit,
-    onReportClick: () -> Unit = {}
+    onReportClick: () -> Unit = {},
+    onBlockClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val maxLength = 100
@@ -631,6 +680,18 @@ fun CommentRow(
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier
                                 .clickable { onReportClick() }
+                                .padding(8.dp)
+                                .size(12.dp)
+                        )
+                    }
+                    // 사용자 차단 (#660) — 내 댓글·수정 중·서버 반영 전 임시 댓글은 제외 (신고 아이콘과 같은 기준, 숨김 처리된 댓글은 차단 가능)
+                    if (!isOwner && !isEditing && !isPending) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_block_user),
+                            contentDescription = "사용자 차단",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier
+                                .clickable { onBlockClick() }
                                 .padding(8.dp)
                                 .size(12.dp)
                         )
