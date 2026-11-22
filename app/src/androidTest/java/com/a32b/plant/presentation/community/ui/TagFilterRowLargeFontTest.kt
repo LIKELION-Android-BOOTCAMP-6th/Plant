@@ -56,7 +56,7 @@ import org.junit.runner.RunWith
  *
  * - 화면 폭은 Box 폭(requiredWidth)으로, 글꼴 배율은 LocalDensity의 fontScale로 바꿔 확인한다 (BottomBarLargeFontTest와 같은 방식)
  * - 화면처럼 좌우 10dp 여백(CommunityListScreen의 Column padding) 안에 그린다
- * - 스위치 위치는 semantics 노드(toggleable) 범위로 본다. scale(0.7f)이 반영된, 화면에 보이는 크기에 가까운 범위
+ * - 스위치 위치는 semantics 노드(isToggleable) 범위로 본다
  */
 @RunWith(AndroidJUnit4::class)
 class TagFilterRowLargeFontTest {
@@ -277,7 +277,10 @@ class TagFilterRowLargeFontTest {
     }
 }
 
-/** 수정 전(develop 2bb74cec) CommunityListScreen의 같은 줄을 그대로 옮긴 것 — 글꼴 1.0 회귀 비교용 */
+/**
+ * 수정 전(develop 2bb74cec) CommunityListScreen의 같은 줄을 옮긴 것 — 글꼴 1.0 회귀 비교용.
+ * 클릭 동작은 빈 람다, 태그 아이콘은 태그 선택 창이 닫힌 상태(ic_down)로 고정했다
+ */
 @Composable
 private fun LegacyTagFilterRow(isSharedShown: Boolean) {
     Row(

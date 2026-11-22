@@ -169,7 +169,10 @@ class SearchBarSectionLargeFontTest {
     }
 }
 
-/** 수정 전(develop 2bb74cec) SearchBarSection을 그대로 옮긴 것 — 글꼴 1.0 회귀 비교용. 아이콘 클릭 동작은 뺐다 */
+/**
+ * 수정 전(develop 2bb74cec) SearchBarSection을 옮긴 것 — 글꼴 1.0 회귀 비교용.
+ * 입력 변경·아이콘 클릭 동작은 뺐고, 검색어 유무에 따른 아이콘 두 갈래는 Icon 하나에 조건으로 합쳤다 (모양·크기 값은 같음)
+ */
 @Composable
 private fun LegacySearchBarSection(query: String) {
     OutlinedTextField(

@@ -364,7 +364,8 @@ fun CommunityListScreen(
  * 검색창 아래 "태그 · 전체 선택 해제 · 공유글 보기 · 스위치" 줄 (#742)
  *
  * - 네 요소가 한 줄에 다 들어가면 한 줄: 앞쪽(태그, 전체 선택 해제)은 왼쪽부터, 뒤쪽(공유글 보기, 스위치)은 오른쪽 끝에 붙이고,
- *   요소마다 줄 높이의 가운데에 놓는다. 수정 전 Row(CenterVertically + 사이 Spacer weight)와 같은 계산이라 그때와 같은 자리에 그려진다
+ *   요소마다 줄 높이의 가운데에 놓는다. 수정 전 Row(CenterVertically + 사이 Spacer weight)와 같은 계산이다
+ *   (글꼴 1.0·폭 360·411dp에서 수정 전과 위치·크기가 px 단위로 같음을 TagFilterRowLargeFontTest로 확인)
  * - 안 들어가면(큰 글꼴·좁은 화면) 뒤쪽을 다음 줄 오른쪽 끝으로 내린다.
  *   수정 전에는 남은 폭이 모자라 "공유글 보기"가 스위치에 가려지거나, 두 줄로 줄바꿈되며 스위치가 화면 밖으로 밀렸다
  * - 각 요소는 남은 폭이 아니라 줄 폭 전체를 받아 측정한다 → 다음 줄로 내려간 "공유글 보기"도 한 줄로 그려진다
@@ -515,7 +516,8 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
  * (SM-N986N 계측 테스트: 폭 360dp에서 입력 글자는 글꼴 1.15부터 높이가 넘침).
  * - 한 줄 글자 높이(안내 문구·입력 글자 중 큰 쪽)가 16dp 칸에 들어가면 수정 전과 같은 48dp (글꼴 1.0)
  * - 안 들어가면 글자 높이 + 위아래 여백으로 늘린다
- * 최소 높이(heightIn)로 두지 않는 이유: 빈 입력 칸이 글자보다 높게 측정돼 글꼴 1.0에서도 48dp보다 높아진다
+ * 최소 높이(heightIn(min = 48.dp))로 두지 않는 이유: 글꼴 1.0에서도 48dp보다 높아진다
+ * (SM-N986N, 폭 360dp, 빈 검색어에서 126 → 147px)
  */
 @Composable
 private fun searchBarHeight(placeholderStyle: TextStyle, inputStyle: TextStyle): Dp {
