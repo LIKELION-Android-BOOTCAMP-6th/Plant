@@ -130,9 +130,12 @@ class CommunityListViewModel @Inject constructor(
 
     // 방금 받은 페이지가 전부 차단한 사용자 글이면 다음 페이지를 이어서 부른다 (#660).
     // 다음 페이지도 전부 숨겨지면 다시 여기로 와서 끝(hasMore = false)까지 이어지고, 끝이면 빈 목록 안내가 보인다.
-    // 실패하면 이어 부르지 않는다 (hasMore는 true로 남아 당겨서 새로고침으로 다시 시도)
+    // 실패하면 이어 부르지 않는다 (hasMore는 true로 남고, 빈 목록 안내에서 당겨서 새로고침으로 다시 시도할 수 있다)
+    // 메인에서 부른다: loadMore()를 부르는 곳이 모두 메인이 되어, 필터 변경(loadInitial)이 첫 페이지를 불러오는 동안(isLoadingMore = true) 도착한 예전 호출은 거절된다
     private fun loadMoreIfPageHidden(pageItems: List<Post>, hasMore: Boolean) {
-        if (BlockedContentFilter.needsNextPage(pageItems, hasMore, blockedUids)) loadMore()
+        viewModelScope.launch {
+            if (BlockedContentFilter.needsNextPage(pageItems, hasMore, blockedUids)) loadMore()
+        }
     }
 
     // 삭제한 글을 바로 빼서, 재조회를 건너뛰는 60초 안의 복귀에서도 남지 않게 한다 (#712).
@@ -261,7 +264,7 @@ class CommunityListViewModel @Inject constructor(
 
     // 스크롤로 하단 도달 시 호출. 이미 로딩 중이거나 hasMore=false면 무시
     fun loadMore() {
-        // 확인과 isLoadingMore = true를 update 한 번으로 한다 — 하단 감지·차단 목록 변경(메인)과 빈 페이지 이어 부르기(IO)가 거의 동시에 불러도
+        // 확인과 isLoadingMore = true를 update 한 번으로 한다 — 하단 감지·차단 목록 변경·빈 페이지 이어 부르기가 이어서 불러도
         // 하나만 시작해 같은 페이지를 두 번 붙이지 않는다 (같은 postId가 두 번 생기면 목록 key가 겹쳐 앱이 종료됨, #660)
         var started = false
         _uiState.update { state ->

@@ -45,6 +45,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -107,8 +110,16 @@ fun CommunityListScreen(
             when (event) {
                 is CommunityListEvent.ShowToast -> context.showToast(event.message)
                 is CommunityListEvent.ScrollToTop -> {
-                    listState.animateScrollToItem(0)
-                    viewModel.clearSuppressLoadMore()  // 스크롤 완료 후 loadMore 재허용
+                    try {
+                        listState.animateScrollToItem(0)
+                    } catch (e: CancellationException) {
+                        // 이 코루틴이 살아 있는데 난 취소(애니메이션 중 사용자가 목록을 만짐, 이미 드래그 중이라 시작하지 못함 등)는 넘어간다 (#660).
+                        // 넘어가지 않으면 이벤트 수신이 끝나 이후 토스트·맨 위 스크롤을 받지 못하고, loadMore 차단도 풀리지 않는다.
+                        // 화면을 떠나 이 코루틴 자체가 취소된 경우는 그대로 끝낸다
+                        currentCoroutineContext().ensureActive()
+                    } finally {
+                        viewModel.clearSuppressLoadMore()  // 스크롤이 끝나거나 중단되면 loadMore 재허용
+                    }
                 }
             }
         }
@@ -129,9 +140,11 @@ fun CommunityListScreen(
         // 화면 항목 수(totalItemsCount)를 쓰지 않는 이유: 로딩 표시 항목이 생겼다 사라지며 값이 바뀌어, 불러오기가 실패하면 곧바로 다시 부르기를 반복한다
         // 검색 중에는 보내지 않는다: 검색 결과는 전체 로드(searchResults)라 페이지가 필요 없고,
         // 결과가 짧아 계속 하단 근처면 받은 글 수가 바뀔 때마다 다음 페이지를 불러 전체를 페이지 단위로 다 받게 된다
+        // 새로고침 뒤 맨 위 스크롤이 끝날 때까지(suppressLoadMore)도 -1을 보낸다: 막힌 동안 글 수를 보내 버리면
+        // 막힘이 풀린 뒤 같은 값이라 다시 보내지 않아, 짧은 목록에서 다음 페이지를 부르지 않게 된다
         LaunchedEffect(listState) {
             snapshotFlow {
-                if (searchQuery.isNotBlank()) return@snapshotFlow -1
+                if (searchQuery.isNotBlank() || uiStateFlow.value.suppressLoadMore) return@snapshotFlow -1
                 val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
                     ?: return@snapshotFlow -1
                 val total = listState.layoutInfo.totalItemsCount
@@ -512,10 +525,16 @@ fun IconStat(iconRes: Any, text: String, tint: Color = Color.Black) {
 
 @Composable
 fun EmptyStateView(hasQuery: Boolean = false) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(
-            text = if (hasQuery) "검색어에 해당하는 게시글이 없어요 😭" else "찾으시는 게시글이 없어요 😭",
-            style = MaterialTheme.typography.bodyMedium
-        )
+    // 당겨서 새로고침(PullToRefreshBox)은 스크롤되는 내용에서만 당김을 받으므로, 안내 하나뿐이어도 스크롤 목록으로 둔다 (#660)
+    // → 첫 불러오기 실패, 받은 글이 전부 차단한 사용자 글인데 다음 페이지 불러오기가 실패한 경우에도 당겨서 다시 시도할 수 있다
+    LazyColumn(Modifier.fillMaxSize()) {
+        item {
+            Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = if (hasQuery) "검색어에 해당하는 게시글이 없어요 😭" else "찾으시는 게시글이 없어요 😭",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
     }
 }
