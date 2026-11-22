@@ -1,7 +1,9 @@
 package com.a32b.plant.presentation.studying.ui
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -14,8 +16,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.text.TextLayoutResult
@@ -44,6 +48,7 @@ import org.junit.runner.RunWith
  * - 화면 폭은 Box 폭으로, 글꼴 배율은 LocalDensity의 fontScale로 바꿔 확인한다
  *   (Density(density, fontScale)도 기기 설정과 같은 비선형 배율을 쓴다 — ui-unit FontScaling.android.kt)
  * - 폭: 360dp(이슈의 360×640), 411dp(1080px ÷ 2.625 = 테스트 기기 SM-N986N 폭)
+ *   기기 폭보다 넓은 값도 그대로 쓰도록 requiredWidth로 정한다 (width는 기기 폭에 맞춰 줄어듦)
  * - 글꼴 1.0에서는 수정 전과 같은 크기인지도 확인한다
  * - 학습 화면 전체(스크롤·사용자 카드 위치)와 프로필 다이얼로그는 ViewModel이 필요해 실기기에서 확인함
  */
@@ -58,7 +63,7 @@ class SmallScreenLargeFontTest {
         val density = LocalDensity.current
         CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
             PlantTheme(darkTheme = false) {
-                Box(modifier = Modifier.width(width)) { content() }
+                Box(modifier = Modifier.requiredWidth(width)) { content() }
             }
         }
     }
@@ -99,23 +104,27 @@ class SmallScreenLargeFontTest {
     }
 
     /**
-     * 글자가 잘리지 않았는지: 모든 글자가 줄에 배치되고(maxLines에 걸려 잘린 글자 없음), 폭이 허용 폭 안이고, 글자 전체 높이가 Text 높이 안에 들어감
-     * (hasVisualOverflow는 버튼 안 Text에서 폭이 남는데도 true가 나와 쓰지 않음 — SM-N986N 기기 테스트에서 확인)
+     * 글자가 잘리지 않았는지: 모든 글자가 줄에 배치되고(maxLines에 걸려 잘린 글자 없음), 글자 전체 높이가 Text 높이 안에 들어감
+     * - softWrap이 기본값(true)이면 가로로 넘치는 글자는 줄바꿈되거나 maxLines에 걸리므로 위 두 검사로 잡힌다 (이 테스트에서 확인하는 Text는 모두 기본값)
+     *   softWrap = false인 Text는 이 판정으로 가로 넘침을 못 잡음. TextLayoutResult.size는 제약 안으로 맞춰져 폭 비교로도 못 잡음
+     * - hasVisualOverflow는 쓰지 않음: 360dp·글꼴 1.0 마이페이지 메뉴 버튼 Text에서 폭 218/819px인데도 true였음 (SM-N986N 기기 테스트 출력)
      */
     private fun assertNotClipped(label: String, text: String) {
         val r = layoutOf(text)
         assertFalse("$label: 줄 수 제한에 걸려 잘림", r.multiParagraph.didExceedMaxLines)
         assertEquals("$label: 배치되지 않은 글자 있음", text.length, r.getLineEnd(r.lineCount - 1, visibleEnd = true))
-        assertTrue("$label: 폭 넘침 ${r.size.width}/${r.layoutInput.constraints.maxWidth}", r.size.width <= r.layoutInput.constraints.maxWidth)
-        // 고정 높이 안에서 줄바꿈되면 Text 높이는 칸에 맞춰 줄고 글자는 잘림 → 글자 전체 높이와 비교
+        // 칸 높이보다 글자가 높으면 Text 높이는 칸에 맞춰 줄고 글자는 잘림 → 글자 전체 높이와 비교
         assertFalse("$label: 높이 넘침 ${r.multiParagraph.height}/${r.size.height}px", r.didOverflowHeight)
     }
 
     private fun height(rect: DpRect): Float = (rect.bottom - rect.top).value
 
+    /** 결과 화면처럼 바깥 여백 10dp를 두고 그린다 (StudyResultScreen의 Column padding) — 그래야 폭이 실기기와 같음 */
     @Composable
     private fun ResultContent() {
-        StudyResultContent(TIMESTAMP, "면접", "qa667", emptyList(), emptyList(), "0", ONE_HOUR_MS, reward = null, scrollable = false)
+        Box(modifier = Modifier.padding(10.dp)) {
+            StudyResultContent(TIMESTAMP, "면접", "qa667", emptyList(), emptyList(), "0", ONE_HOUR_MS, reward = null, scrollable = false)
+        }
     }
 
     /** 결과 화면 날짜: 잘리지 않음. 16sp로 한 줄에 들어가면 한 줄, 안 들어가면 줄바꿈 */
@@ -136,6 +145,26 @@ class SmallScreenLargeFontTest {
             assertNotClipped(label, TIMESTAMP)
             assertEquals("$label: 줄 수", if (fitsAtMin) 1 else 2, r.lineCount)
         }
+    }
+
+    /**
+     * 결과 화면 날짜: 실기기(SM-N986N)에서 본 줄 수와 같은지 — 위 테스트의 기대값이 코드와 같은 방식으로 계산돼서 따로 고정값으로 확인
+     * 실기기 확인: 411dp 글꼴 1.0·1.3 한 줄, 2.0 두 줄 / 360dp(wm size 945x1680) 글꼴 1.0 한 줄, 1.3·2.0 두 줄
+     */
+    @Test
+    fun resultTimestamp_matchesDeviceLineCount() {
+        val expected = mapOf(
+            (360.dp to 1.0f) to 1, (360.dp to 1.3f) to 2, (360.dp to 2.0f) to 2,
+            (411.dp to 1.0f) to 1, (411.dp to 1.3f) to 1, (411.dp to 2.0f) to 2
+        )
+        var checked = 0
+        forEachCombo(content = { ResultContent() }) { width, fontScale ->
+            val lines = expected[width to fontScale] ?: return@forEachCombo
+            assertEquals("폭 $width, 글꼴 $fontScale: 줄 수", lines, layoutOf(TIMESTAMP).lineCount)
+            checked++
+        }
+        // WIDTHS·FONT_SCALES가 바뀌어 고정값 조합이 빠지면 아무것도 확인하지 않고 통과하지 않도록
+        assertEquals("확인한 조합 수", expected.size, checked)
     }
 
     /** 결과 화면 날짜: 글꼴 1.0·411dp에서는 수정 전처럼 22sp 한 줄 (줄었다면 22sp 한 줄 폭보다 좁아짐) */
@@ -221,7 +250,10 @@ class SmallScreenLargeFontTest {
         }
     }
 
-    /** 공부 중인 사람 카드: 최소 200dp, 큰 글꼴에서도 3명이 모두 카드 안에 들어감 */
+    /**
+     * 공부 중인 사람 카드: 최소 200dp, 3명의 닉네임·공부 시간 글자가 모두 잘리지 않음
+     * (카드가 200dp 고정이면 마지막 행이 남은 높이로 눌려, 위치는 카드 안이어도 글자 아래가 잘린다 → 글자마다 잘림 검사)
+     */
     @Test
     fun studyingUserCard_fitsThreeUsers() {
         val users = (1..3).map { StudyingUser("u$it", "사용자$it", "0", "면접", 60_000L * it, null) }
@@ -231,7 +263,36 @@ class SmallScreenLargeFontTest {
             val card = composeRule.onNodeWithTag(TAG).getUnclippedBoundsInRoot()
             val label = "폭 $width, 글꼴 $fontScale"
             assertTrue("$label: 카드 높이 200dp 미만", height(card) >= 200f - TOLERANCE.value)
-            users.forEach { assertInside("$label ${it.nickname}", textBounds(it.nickname), card) }
+            users.forEachIndexed { index, user ->
+                // StudyingUserItem의 공부 시간 글자 (formatToMinute: 60_000ms × n → "n분")
+                val timeText = " ${index + 1}분 째 공부중!"
+                for (text in listOf(user.nickname, timeText)) {
+                    assertInside("$label $text", textBounds(text), card)
+                    assertNotClipped("$label $text", text)
+                }
+            }
+        }
+    }
+
+    /**
+     * 학습 화면 "일시정지" 표시: 글꼴 1.0에서 20dp(수정 전과 같음), 큰 글꼴에서 잘리지 않음,
+     * 숨겼을 때도 높이가 같고(아래 버튼이 움직이지 않음) 접근성 트리에 나오지 않음
+     */
+    @Test
+    fun pausedLabel() {
+        forEachCombo(widths = listOf(360.dp), content = {
+            Column {
+                Box(modifier = Modifier.testTag(TAG)) { PausedLabel(visible = true) }
+                Box(modifier = Modifier.testTag(HIDDEN_TAG)) { PausedLabel(visible = false) }
+            }
+        }) { _, fontScale ->
+            val label = "글꼴 $fontScale"
+            val shown = composeRule.onNodeWithTag(TAG).getUnclippedBoundsInRoot()
+            val hidden = composeRule.onNodeWithTag(HIDDEN_TAG).getUnclippedBoundsInRoot()
+            if (fontScale == 1.0f) assertEquals("$label: 높이", 20f, height(shown), TOLERANCE.value)
+            assertEquals("$label: 숨겼을 때 높이", height(shown), height(hidden), TOLERANCE.value)
+            composeRule.onAllNodesWithText(PAUSED_TEXT, useUnmergedTree = true).assertCountEquals(1)
+            assertNotClipped(label, PAUSED_TEXT)
         }
     }
 
@@ -253,6 +314,8 @@ class SmallScreenLargeFontTest {
 
     private companion object {
         const val TAG = "target"
+        const val HIDDEN_TAG = "hidden"
+        const val PAUSED_TEXT = "일시정지"
         const val TIMESTAMP = "2026년 11월 22일 일요일 09:58 ~ 09:59"
         const val MENU_TEXT = "오픈소스 라이선스"
         const val DEBUG_TEXT = "+1h [DEBUG]"

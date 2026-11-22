@@ -42,10 +42,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -189,15 +191,9 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
                         color = if (uiState.goalCheckMode == StudyingGoalCheckMode.FINISH) MaterialTheme.colorScheme.error else Color.Unspecified
                     )
 
-                    Box(modifier = Modifier.height(20.dp), contentAlignment = Alignment.Center) {
-                        if (!uiState.isStudying && uiState.goalCheckMode == null && !uiState.isGoalInputDialogShown) {
-                            Text(
-                                text = "일시정지",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline
-                            )
-                        }
-                    }
+                    PausedLabel(
+                        visible = !uiState.isStudying && uiState.goalCheckMode == null && !uiState.isGoalInputDialogShown
+                    )
 
                     Spacer(modifier = Modifier.height(10.dp))
 
@@ -324,6 +320,25 @@ fun StudyStatusBadge(tag: String, title: String){
             color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+    }
+}
+
+/**
+ * 타이머 아래 "일시정지" 표시 (#287)
+ *
+ * 글자를 항상 그려 두고 숨길 때는 투명하게만 해서, 보이고 안 보일 때 높이가 같게 함 (아래 버튼이 움직이지 않게)
+ * 높이는 최소 20dp — 글자가 더 높아지면 늘어남 (#673. 고정 20dp에서는 글꼴 1.8부터 글자 높이가 20dp를 넘고, 2.0에서 글자 아래가 잘리는 것을 확인)
+ */
+@Composable
+internal fun PausedLabel(visible: Boolean) {
+    Box(modifier = Modifier.heightIn(min = 20.dp), contentAlignment = Alignment.Center) {
+        Text(
+            text = "일시정지",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.outline,
+            // 숨긴 글자는 TalkBack이 읽지 않게 semantics도 비움
+            modifier = if (visible) Modifier else Modifier.alpha(0f).clearAndSetSemantics {}
+        )
     }
 }
 

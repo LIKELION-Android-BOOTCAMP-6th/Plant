@@ -37,7 +37,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.a32b.plant.R
@@ -169,7 +168,7 @@ internal fun DialogSmallButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
         Button(
             onClick = onClick,
             shape = RoundedCornerShape(8.dp),

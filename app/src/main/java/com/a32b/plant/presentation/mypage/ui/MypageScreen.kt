@@ -55,7 +55,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -531,7 +530,7 @@ fun ProfileDialog(
                 // 버튼 높이는 최소 45dp — 글자가 더 높아지면 늘어남 (#673)
                 // Material3 Button은 높이가 고정되지 않으면 차지하는 자리를 48dp로 넓혀 글꼴 1.0에서도 다이얼로그가 길어지므로 자리 넓히기만 끔
                 // (터치 영역은 Compose가 48dp보다 작은 터치 대상을 넓혀 판정함 — ui NodeCoordinator)
-                CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)

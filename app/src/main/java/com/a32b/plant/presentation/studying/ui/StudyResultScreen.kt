@@ -192,7 +192,7 @@ fun StudyResultContent(
                     ProfileImage(level, 200)
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // 화면 폭보다 길면 한 줄에 들어가는 크기까지만 줄임 — 들어가면 원래 크기(50sp) (#673)
+                    // 카드 안쪽 폭보다 길면 한 줄에 들어가는 크기까지만 줄임 — 들어가면 원래 크기(50sp) (#673)
                     Text(
                         TimeFormatter.formatToDigitalClock(time),
                         style = MaterialTheme.typography.titleLarge,
