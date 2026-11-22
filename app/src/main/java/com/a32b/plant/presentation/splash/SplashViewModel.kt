@@ -2,11 +2,14 @@ package com.a32b.plant.presentation.splash
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.BuildConfig
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.domain.model.AppVersionCheckResult
 import com.a32b.plant.domain.model.AutoLoginResult
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.session.SessionExpiredReason
+import com.a32b.plant.domain.usecase.appversion.CheckAppVersionUseCase
 import com.a32b.plant.domain.usecase.auth.CheckAutoLoginUseCase
 import com.a32b.plant.domain.usecase.mypage.ObserveDarkModeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,7 +27,11 @@ data class SplashUiState(
     val isLoading: Boolean = true,
     val isDarkMode: Boolean = false,
     val isFirstScreenReady: Boolean = false,
-    val isSplashExitFinished: Boolean = false
+    val isSplashExitFinished: Boolean = false,
+    /** 최소 지원 버전보다 낮아 업데이트 안내만 보여주는 상태 (#662). true면 첫 화면(로그인·홈)을 만들지 않는다 */
+    val isUpdateRequired: Boolean = false,
+    /** 업데이트 안내 문구 (config/app의 message). null이면 화면의 기본 문구 */
+    val updateMessage: String? = null
 )
 
 sealed class SplashEvent {
@@ -35,7 +42,8 @@ sealed class SplashEvent {
 @HiltViewModel
 class SplashViewModel @Inject constructor(
     private val checkAutoLoginUseCase: CheckAutoLoginUseCase,
-    private val observeDarkModeUseCase: ObserveDarkModeUseCase
+    private val observeDarkModeUseCase: ObserveDarkModeUseCase,
+    private val checkAppVersionUseCase: CheckAppVersionUseCase
     ) : ViewModel() {
 
 
@@ -51,8 +59,22 @@ class SplashViewModel @Inject constructor(
 
     init {
         observeDarkMode()
-        checkAuthLogin()
+        checkAppVersionThenLogin()
         limitSplashExitWait()
+    }
+
+    // 최소 지원 버전 확인을 로그인 확인보다 먼저 한다 (#662)
+    // 업데이트가 필요하면 로그인 확인(자동 로그인·세션 만료 처리)을 하지 않고 안내만 보여준다
+    private fun checkAppVersionThenLogin() {
+        viewModelScope.launch {
+            when (val result = checkAppVersionUseCase(BuildConfig.VERSION_CODE.toLong())) {
+                AppVersionCheckResult.UpToDate -> checkAuthLogin()
+                is AppVersionCheckResult.UpdateRequired -> {
+                    _uiState.update { it.copy(isUpdateRequired = true, updateMessage = result.message) }
+                    onFirstScreenReady()
+                }
+            }
+        }
     }
 
     private fun observeDarkMode() {
@@ -83,23 +105,21 @@ class SplashViewModel @Inject constructor(
         }
     }
 
-    private fun checkAuthLogin() {
-        viewModelScope.launch {
-            checkAutoLoginUseCase()
-                .onSuccess { result ->
-                    when (result) {
-                        is AutoLoginResult.LoggedIn -> startHome()
-                        AutoLoginResult.NotLoggedIn -> startSignIn()
-                        is AutoLoginResult.SessionExpired -> {
-                            _event.send(SplashEvent.ShowSessionExpired(result.reason))
-                            startSignIn()
-                        }
+    private suspend fun checkAuthLogin() {
+        checkAutoLoginUseCase()
+            .onSuccess { result ->
+                when (result) {
+                    is AutoLoginResult.LoggedIn -> startHome()
+                    AutoLoginResult.NotLoggedIn -> startSignIn()
+                    is AutoLoginResult.SessionExpired -> {
+                        _event.send(SplashEvent.ShowSessionExpired(result.reason))
+                        startSignIn()
                     }
                 }
-                .onFailure {
-                    startSignIn()
-                }
-        }
+            }
+            .onFailure {
+                startSignIn()
+            }
     }
 
     private fun startSignIn() {

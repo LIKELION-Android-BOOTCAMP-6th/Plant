@@ -42,9 +42,11 @@ import com.a32b.plant.domain.usecase.auth.SignOutUseCase
 import com.a32b.plant.domain.session.SessionExpiredReason
 import com.a32b.plant.presentation.core.component.BottomBar
 import com.a32b.plant.presentation.core.component.ConfirmDialog
+import com.a32b.plant.presentation.core.extension.openPlayStoreDetails
 import com.a32b.plant.presentation.home.viewmodel.HomeViewModel
 import com.a32b.plant.presentation.splash.SplashEvent
 import com.a32b.plant.presentation.splash.SplashViewModel
+import com.a32b.plant.presentation.splash.UpdateRequiredDialog
 import com.a32b.plant.presentation.studying.service.StudyingTimerServiceController
 import com.a32b.plant.presentation.theme.PlantTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -76,7 +78,9 @@ class MainActivity : ComponentActivity() {
         compatSplashScreen.setKeepOnScreenCondition {
             //해당 값이 트루일 동안 스플래시 유지
             val uiState = viewModel.uiState.value
-            viewModel.destination.value == null || uiState.isLoading || !uiState.isFirstScreenReady
+            // 업데이트가 필요하면 첫 화면(destination)을 정하지 않으므로 그 조건은 보지 않는다 (#662)
+            (viewModel.destination.value == null && !uiState.isUpdateRequired) ||
+                uiState.isLoading || !uiState.isFirstScreenReady
         }
         // 시스템 기본 종료 효과(로고 잔상) 없이 첫 화면으로 전환
         // 라이브러리 리스너는 시스템 바 색을 테마 값으로 덮어쓰므로 플랫폼 API를 직접 사용.
@@ -120,6 +124,17 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
+                    // 최소 지원 버전보다 낮으면 안내만 보여주고 화면(내비게이션)은 만들지 않는다 (#662)
+                    // 뒤로가기는 앱 종료 — 다이얼로그만 닫히고 앱을 쓸 수 있으면 안 된다
+                    if (uiState.isUpdateRequired) {
+                        UpdateRequiredDialog(
+                            message = uiState.updateMessage,
+                            onUpdate = { openPlayStoreDetails() },
+                            onBack = { finish() }
+                        )
+                        return@Surface
+                    }
+
                     val navController = rememberNavController()
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
 

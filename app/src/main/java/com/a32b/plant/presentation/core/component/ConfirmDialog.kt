@@ -27,6 +27,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 
 private const val DIALOG_CONTENT_MAX_HEIGHT_RATIO = 0.5f
 
@@ -41,10 +42,15 @@ fun ConfirmDialog(
     confirmBtnText: String = "예",
     textStyle: TextStyle? = null,
     buttonTextStyle: TextStyle? = null,
-    isLoading: Boolean = false
+    isLoading: Boolean = false,
+    dismissOnClickOutside: Boolean = true
 ) {
     // isLoading: 확인 후 처리 중 — 버튼을 막고 로딩 표시, 바깥 터치·뒤로가기로 닫지 않음
-    Dialog(onDismissRequest = { if (isCancelable && !isLoading) onDismiss() }) {
+    // dismissOnClickOutside: false면 바깥 터치는 무시하고 뒤로가기만 onDismiss로 보냄 (업데이트 안내의 뒤로가기 = 앱 종료, #662)
+    Dialog(
+        onDismissRequest = { if (isCancelable && !isLoading) onDismiss() },
+        properties = DialogProperties(dismissOnClickOutside = dismissOnClickOutside)
+    ) {
         // 다이얼로그는 별도 창이라 화면의 LoadingBox가 위에 그려지지 않으므로 다이얼로그 안에 겹쳐 표시
         Box {
             Card(shape = RoundedCornerShape(30.dp),

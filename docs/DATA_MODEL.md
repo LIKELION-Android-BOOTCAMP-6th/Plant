@@ -150,3 +150,12 @@ nicknames
 └── {nickname}
     └── nickname: String
 ```
+
+### config
+```
+config
+└── app
+    ├── minVersionCode: Number     # 이보다 낮은 versionCode는 업데이트 안내 (#662)
+    └── message: String            # 업데이트 안내 문구 (선택)
+```
+- 로그인 전에도 읽기 가능, 앱에서 쓰기 불가 (Firebase 콘솔에서만 수정). 운영 순서는 [FORCE_UPDATE.md](FORCE_UPDATE.md)

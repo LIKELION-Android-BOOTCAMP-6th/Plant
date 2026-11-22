@@ -10,6 +10,8 @@ import com.a32b.plant.data.source.remote.community.CommunityRemoteDataSource
 import com.a32b.plant.data.source.remote.community.CommunityRemoteDataSourceImpl
 import com.a32b.plant.data.source.remote.community.CommunityReportRemoteDataSource
 import com.a32b.plant.data.source.remote.community.CommunityReportRemoteDataSourceImpl
+import com.a32b.plant.data.source.remote.config.AppConfigRemoteDataSource
+import com.a32b.plant.data.source.remote.config.AppConfigRemoteDataSourceImpl
 import com.a32b.plant.data.source.remote.feedback.FeedbackRemoteDataSource
 import com.a32b.plant.data.source.remote.feedback.FeedbackRemoteDataSourceImpl
 import com.a32b.plant.data.source.remote.pot.PotRemoteDataSource
@@ -50,6 +52,10 @@ abstract class DataSourceModule {
     @Binds
     @Singleton
     abstract fun bindCommunityReportRemoteDataSource(impl: CommunityReportRemoteDataSourceImpl): CommunityReportRemoteDataSource
+
+    @Binds
+    @Singleton
+    abstract fun bindAppConfigRemoteDataSource(impl: AppConfigRemoteDataSourceImpl): AppConfigRemoteDataSource
 
     @Binds
     @Singleton
