@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import com.a32b.plant.presentation.core.component.BackTopBar
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.LoadingBox
@@ -117,36 +118,20 @@ fun StudyPlanDetailScreen(
 
         Scaffold(
             topBar = {
-                TopAppBar(
-                    windowInsets = WindowInsets(top = 0.dp),
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-                        actionIconContentColor = MaterialTheme.colorScheme.onSurface,
+                BackTopBar(
+                    title = "[${pot.tagName}] ${pot.name}",
+                    // 공유 모드에서는 뒤로가기 자리가 X(공유 취소)로 바뀐다
+                    onBack = {
+                        if(isShareMode) viewModel.setShareMode(false)
+                        else navController.popBackStack()
+                    },
+                    backIcon = painterResource(
+                        id = if(isShareMode) R.drawable.ic_study_result_close
+                            else R.drawable.ic_backbtn
                     ),
-                    title = {
-                        Text("[${pot.tagName}] ${pot.name}",
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                    },
-                    navigationIcon = {
-                            //뒤로 가기
-                            IconButton(onClick = {
-                                if(isShareMode) viewModel.setShareMode(false)
-                                else navController.popBackStack()
-                            }) {
-                                Icon(
-                                    painter = painterResource(
-                                        id = if(isShareMode) R.drawable.ic_study_result_close
-                                            else R.drawable.ic_backbtn
-                                    ),
-                                    contentDescription = if (isShareMode) "공유 취소" else "뒤로가기",
-                                    modifier = Modifier.size(19.dp),
-                                )
-                            }
-                    },
+                    backContentDescription = if (isShareMode) "공유 취소" else "뒤로가기",
                     actions = {
+                        // 순서: 수정·공유·삭제 — 수정과 삭제를 떨어뜨려 잘못 누르기를 줄인다 (#645)
                         // 수정
                         if(!isShareMode) {
                             IconButton(onClick = { viewModel.setEditDialogShown(true) }) {
@@ -154,14 +139,6 @@ fun StudyPlanDetailScreen(
                                     painter = painterResource(id = R.drawable.ic_edit),
                                     "수정하기",
                                     modifier = Modifier.size(19.dp)
-                                )
-                            }
-                            IconButton(onClick = { viewModel.setPotDeleteDialogShown(true) }) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_trash),
-                                    "화분 전체 삭제하기",
-                                    modifier = Modifier.size(24.dp)
-    //                                modifier = Modifier.size(19.dp)
                                 )
                             }
                         }
@@ -176,6 +153,17 @@ fun StudyPlanDetailScreen(
                                 Icon(painterResource(id = R.drawable.ic_check), contentDescription = "확인", modifier = Modifier.size(19.dp), tint = MaterialTheme.colorScheme.onSurface)
                             } else {
                                 Icon(painterResource(id = R.drawable.ic_share), contentDescription = "공유", modifier = Modifier.size(19.dp))
+                            }
+                        }
+                        // 화분 전체 삭제
+                        if(!isShareMode) {
+                            IconButton(onClick = { viewModel.setPotDeleteDialogShown(true) }) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_trash),
+                                    "화분 전체 삭제하기",
+                                    // 다른 아이콘(19dp)과 눈으로 보이는 크기를 맞춘 의도된 크기 (#645)
+                                    modifier = Modifier.size(24.dp)
+                                )
                             }
                         }
                     }

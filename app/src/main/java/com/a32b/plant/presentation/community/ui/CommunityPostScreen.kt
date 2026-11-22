@@ -20,17 +20,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -42,7 +38,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.semantics
@@ -56,6 +51,7 @@ import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.community.CommunityConstants
 import com.a32b.plant.presentation.community.viewmodel.CommunityPostEvent
 import com.a32b.plant.presentation.community.viewmodel.CommunityPostViewModel
+import com.a32b.plant.presentation.core.component.BackTopBar
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.TagSheet
@@ -266,7 +262,6 @@ fun CommunityPostScreen(
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostTopBar(
     isEditMode: Boolean,
@@ -277,22 +272,9 @@ fun PostTopBar(
     onRegisterClick: () -> Unit
 ) {
     val isOfflineLooking = isOffline && !isSubmitting
-    CenterAlignedTopAppBar(
-        title = {
-            Text(
-                if (isEditMode) "글 수정" else "글쓰기",
-                style = MaterialTheme.typography.displayLarge
-            )
-        },
-        navigationIcon = {
-            IconButton(onClick = onBackClick) {
-                Icon(
-                    painterResource(id = R.drawable.ic_arrow_back),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        },
+    BackTopBar(
+        title = if (isEditMode) "글 수정" else "글쓰기",
+        onBack = onBackClick,
         actions = {
             Surface(
                 modifier = Modifier
@@ -310,8 +292,7 @@ fun PostTopBar(
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
-        },
-        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
+        }
     )
 }
 
