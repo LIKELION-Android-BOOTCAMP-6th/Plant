@@ -39,6 +39,26 @@ fun plantTypography(colorScheme: ColorScheme): Typography{
             lineHeight = 36.sp,
             color = colorScheme.onSurface
         ),
+        //큰 타이머 숫자 - 학습 결과 화면의 학습 시간 (autoSize 최대 크기로 사용) (#644)
+        displayMedium = TextStyle(
+            fontFamily = title,
+            fontSize = 50.sp,
+            color = colorScheme.onSurface
+        ),
+        //중간 크기 시간 숫자 - 홈 메인카드의 오늘 학습 시간 (#644)
+        displaySmall = TextStyle(
+            fontFamily = title,
+            fontSize = 26.sp,
+            color = colorScheme.onSurface
+        ),
+        //결과 날짜 - 학습 결과 화면 상단의 날짜·시각 (autoSize 최대 크기로 사용) (#644)
+        //줄 높이는 원래 쓰던 titleSmall 값(20sp)을 그대로 옮겨 화면 높이가 바뀌지 않게 함
+        headlineSmall = TextStyle(
+            fontFamily = bold,
+            fontSize = 22.sp,
+            lineHeight = 20.sp,
+            color = colorScheme.onSurface
+        ),
         //타이틀 부분 - 커뮤니티 디테일의 제목, 학습계획창의 제목, 마이페이지(닉네임, 버튼들, 창 제목) 등
         titleLarge = TextStyle(
             fontFamily = title,
@@ -93,5 +113,17 @@ fun plantTypography(colorScheme: ColorScheme): Typography{
             lineHeight = 20.sp,
             color = colorScheme.onSecondary
         ),
+        //작은 강조 글씨 (11sp, bodySmall 12sp보다 작게) - 홈 버그 제보, 출석판 골드 라벨 (#644)
+        labelSmall = TextStyle(
+            fontFamily = bold,
+            fontSize = 11.sp,
+            lineHeight = 16.sp,
+            color = colorScheme.onSurface
+        ),
     )
 }
+
+//홈 아이템 칸 아래 이름 (#644) - Typography 기본 항목을 모두 써서 확장 속성으로 정의
+//labelSmall(11sp)보다 1sp 작게: 글꼴 2배에서 11sp는 "영양제"가 좁은 칸에 다 들어가지 않고 "영양…"으로 잘렸다
+val Typography.homeItemLabel: TextStyle
+    get() = labelSmall.copy(fontSize = 10.sp)

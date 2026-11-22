@@ -52,7 +52,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -281,7 +280,8 @@ fun DarkModeToggleButton(
             // 좌측
             Text(
                 text = "다크모드",
-                style = MaterialTheme.typography.titleSmall,
+                // 아래 메뉴 버튼(ButtonTemplate)과 같은 글자 스타일
+                style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(start = 8.dp),
             )
             // 우측
@@ -328,7 +328,7 @@ fun ButtonTemplate(
         ) {
             Text(
                 text = text,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.bodyMedium,
                 color = textColor
             )
         }
@@ -393,8 +393,7 @@ fun ProfileRow(
                 Spacer(modifier = Modifier.width(14.dp))
                 Text(
                     text = uiState.totalStudyTime,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.titleMedium
                 )
             }
         }

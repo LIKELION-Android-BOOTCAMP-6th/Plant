@@ -211,7 +211,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                             Text(
                                 "설정 완료",
                                 style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.background,
+                                color = MaterialTheme.colorScheme.onPrimary,
                             )
                         }
                     }

@@ -25,16 +25,16 @@ fun StudyLogCard(studyLogs: List<StudyLog>) {
                 modifier = Modifier.padding(start= 10.dp, end = 10.dp, top = 3.dp, bottom = 3.dp).fillMaxWidth(),
                 elevation = CardDefaults.elevatedCardElevation(2.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-                Text("${log.title} [${TimeFormatter.formatToDigitalClock(log.studyingTime)}]", style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.padding(10.dp),
-                    fontSize = 15.sp
+                Text("${log.title} [${TimeFormatter.formatToDigitalClock(log.studyingTime)}]", style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(10.dp)
                 )
                 log.contents.forEachIndexed { index, content ->
                     StudyGoalItem(
                         text = content,
                         isCompleted = log.completedContents.isCompletedAt(index),
                         modifier = Modifier.padding(10.dp),
-                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 18.sp),
+                        // 화분 상세의 학습 기록 상세(StudyLogDetailDialog)와 같은 작은 글씨
+                        style = MaterialTheme.typography.bodySmall,
                         iconSize = 8.sp
                     )
                 }

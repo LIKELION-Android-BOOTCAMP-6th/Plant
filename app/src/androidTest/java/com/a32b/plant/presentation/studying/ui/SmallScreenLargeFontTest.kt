@@ -136,7 +136,7 @@ class SmallScreenLargeFontTest {
             ResultContent()
             // 기대값 계산용 — 지금 글꼴 배율로 16sp 한 줄 폭을 잰다
             measurer = rememberTextMeasurer()
-            minStyle = MaterialTheme.typography.titleSmall.copy(fontSize = 16.sp)
+            minStyle = MaterialTheme.typography.headlineSmall.copy(fontSize = 16.sp)
         }) { width, fontScale ->
             val r = layoutOf(TIMESTAMP)
             val minWidth = measurer!!.measure(TIMESTAMP, minStyle!!, maxLines = 1, softWrap = false).size.width
@@ -180,7 +180,7 @@ class SmallScreenLargeFontTest {
             Frame(411.dp, 1.0f) {
                 ResultContent()
                 val measurer = rememberTextMeasurer()
-                val style = MaterialTheme.typography.titleSmall
+                val style = MaterialTheme.typography.headlineSmall
                 maxWidth = measurer.measure(TIMESTAMP, style.copy(fontSize = 22.sp), maxLines = 1, softWrap = false).size.width
                 oneStepSmallerWidth = measurer.measure(TIMESTAMP, style.copy(fontSize = 21.75.sp), maxLines = 1, softWrap = false).size.width
             }

@@ -21,7 +21,6 @@ import com.a32b.plant.R
 import com.a32b.plant.domain.model.StudyLog
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import com.a32b.plant.presentation.core.component.ConfirmDialog
@@ -109,7 +108,7 @@ fun StudyPlanDetailScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     TextButton(onClick = { navController.popBackStack() }) {
-                        Text("돌아가기")
+                        Text("돌아가기", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
@@ -307,8 +306,8 @@ fun StudyPlanDetailScreen(
                                         Spacer(modifier = Modifier.height(10.dp))
 
                                         // 제목
-                                        Text("제목 변경", style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = FontWeight.Bold)
+                                        // ConfirmDialog와 같은 모양이라 제목도 ConfirmDialog와 같은 titleMedium
+                                        Text("제목 변경", style = MaterialTheme.typography.titleMedium)
 
                                         Spacer(modifier = Modifier.height(16.dp))
 
