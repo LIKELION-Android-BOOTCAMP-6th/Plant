@@ -511,7 +511,7 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
 /**
  * 검색창 높이 (#742)
  *
- * OutlinedTextField는 높이에서 위아래 기본 여백(16dp씩)을 뺀 만큼만 글자 칸으로 준다.
+ * OutlinedTextField는 라벨·보조 글(supportingText)이 없으면 높이에서 위아래 기본 여백(16dp씩)을 뺀 만큼만 글자 칸으로 준다.
  * 48dp로 고정하면 글자 칸이 16dp라, 큰 글꼴에서 안내 문구·입력 글자 아래쪽이 잘렸다
  * (SM-N986N 계측 테스트: 폭 360dp에서 입력 글자는 글꼴 1.15부터 높이가 넘침).
  * - 한 줄 글자 높이(안내 문구·입력 글자 중 큰 쪽)가 16dp 칸에 들어가면 수정 전과 같은 48dp (글꼴 1.0)
