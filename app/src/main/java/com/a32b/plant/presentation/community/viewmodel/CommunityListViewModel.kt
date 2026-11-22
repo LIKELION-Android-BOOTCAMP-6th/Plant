@@ -46,7 +46,10 @@ data class CommunityListUiState(
     val searchResults: List<Post> = emptyList(),  // 검색 전체 로드 결과
     val isSearchLoading: Boolean = false,           // 검색 로딩 중
     val suppressLoadMore: Boolean = false           // refresh 후 ScrollToTop 완료 전까지 loadMore 차단
-)
+) {
+    // 목록 맨 아래 로딩 표시 항목을 보여 주는지 — 목록과 하단 도달 감지(배치 반영 여부 판단)가 같은 기준을 쓰도록 한 곳에 둔다
+    val showsLoadingIndicator: Boolean get() = hasMore && isLoadingMore && posts.isNotEmpty()
+}
 
 sealed class CommunityListEvent {
     data class ShowToast(val message: String) : CommunityListEvent()
@@ -300,7 +303,7 @@ class CommunityListViewModel @Inject constructor(
             }.onFailure { e ->
                 Log.e("CommunityListVM", "loadMore 실패: ${e.message}", e)
                 _uiState.update { it.copy(isLoadingMore = false) }
-                // hasMore는 true 유지 → 사용자가 다시 스크롤해 재시도 가능
+                // hasMore는 true 유지 → 사용자가 다시 스크롤해 재시도 가능 (화면을 채우지 못하는 짧은 목록은 당겨서 새로고침으로)
             }
         }
     }

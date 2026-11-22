@@ -49,6 +49,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -134,25 +135,36 @@ fun CommunityListScreen(
 
         // 하단 도달 감지 → loadMore
         // snapshotFlow: 스크롤 상태 변화를 레이아웃 단계에서 직접 관찰 (derivedStateOf보다 안정적)
-        // 하단 근처면 지금까지 받은 글 수(uiState.posts, 차단한 사용자 글 포함), 아니면 -1을 보낸다.
-        // 받은 글 수가 바뀌면(페이지 추가·글 삭제·새로고침 등) 다시 보내므로, 받은 페이지 일부가 차단한 사용자 글이라(#660) 목록이 화면을 채우지 못해
-        // 계속 하단 근처에 있어도 다음 페이지를 이어 부른다.
-        // 화면 항목 수(totalItemsCount)를 쓰지 않는 이유: 로딩 표시 항목이 생겼다 사라지며 값이 바뀌어, 불러오기가 실패하면 곧바로 다시 부르기를 반복한다
-        // 검색 중에는 보내지 않는다: 검색 결과는 전체 로드(searchResults)라 페이지가 필요 없고,
-        // 결과가 짧아 계속 하단 근처면 받은 글 수가 바뀔 때마다 다음 페이지를 불러 전체를 페이지 단위로 다 받게 된다
-        // 새로고침 뒤 맨 위 스크롤이 끝날 때까지(suppressLoadMore)도 -1을 보낸다: 막힌 동안 글 수를 보내 버리면
-        // 막힘이 풀린 뒤 같은 값이라 다시 보내지 않아, 짧은 목록에서 다음 페이지를 부르지 않게 된다
+        // 하단 근처면 지금 보이는 글 수(filteredPosts), 아니면 -1을 보낸다 (#660).
+        // - 보이는 글 수가 바뀌면 다시 보내므로, 받은 페이지 일부가 차단한 사용자 글이라 목록이 화면을 채우지 못해도 이어 부른다.
+        //   전부 차단한 사용자 글인 페이지는 보이는 글 수가 그대로라 여기서는 부르지 않고 ViewModel이 이어 부른다(loadMoreIfPageHidden)
+        // - 로딩 표시 항목은 값에도, 하단 판단에도 세지 않는다 (아래 하단 판단 주석 참고)
+        // - 항목 수가 지금 목록과 다르거나, 이미 사라진 로딩 표시가 배치에 아직 보이면 보내지 않는다(null):
+        //   반영 전 배치로 판단하는 경우를 줄인다
+        // - 검색 중에는 -1: 검색 결과는 전체 로드(searchResults)라 페이지가 필요 없다
+        // - 새로고침 뒤 맨 위 스크롤이 끝날 때까지(suppressLoadMore)도 -1: 막힌 동안 값을 보내면 풀린 뒤 같은 값이라 다시 보내지 않는다
         LaunchedEffect(listState) {
             snapshotFlow {
-                if (searchQuery.isNotBlank() || uiStateFlow.value.suppressLoadMore) return@snapshotFlow -1
-                val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
-                    ?: return@snapshotFlow -1
-                val total = listState.layoutInfo.totalItemsCount
-                if (total > 0 && lastVisible >= total - 3) uiStateFlow.value.posts.size else -1
+                val state = uiStateFlow.value
+                if (searchQuery.isNotBlank() || state.suppressLoadMore) return@snapshotFlow -1
+                val info = listState.layoutInfo
+                // 아래 LazyColumn의 항목 구성(보이는 글 + 로딩 표시)과 같아야 한다 — 항목을 추가하면 여기도 함께 바꿀 것
+                val expectedItemCount = filteredPosts.size + if (state.showsLoadingIndicator) 1 else 0
+                val layoutHasIndicator = info.visibleItemsInfo.any { it.key == LOADING_INDICATOR_KEY }
+                if (info.totalItemsCount != expectedItemCount ||
+                    (layoutHasIndicator && !state.showsLoadingIndicator)
+                ) return@snapshotFlow null
+                val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: return@snapshotFlow -1
+                // 하단 근처는 글 수 기준으로 판단한다 — 로딩 표시 항목까지 세면 그 항목이 생겼다 사라질 때 하단 판단이
+                // 꺼졌다 켜져(-1 → 같은 글 수), 불러오기가 끝나자마자 다음 페이지를 한 번 더 부른다 (성공한 경우를 실기기 로그로 확인).
+                // 실패해 로딩 표시가 사라질 때도 같은 이유로 다시 부르지 않는다
+                val postCount = filteredPosts.size
+                if (postCount > 0 && lastVisible >= postCount - 3) postCount else -1
             }
+                .filterNotNull()
                 .distinctUntilChanged()
-                .collect { nearBottomTotal ->
-                    if (nearBottomTotal >= 0 && !uiStateFlow.value.suppressLoadMore) {
+                .collect { nearBottomCount ->
+                    if (nearBottomCount >= 0 && !uiStateFlow.value.suppressLoadMore) {
                         viewModel.loadMore()
                     }
                 }
@@ -302,8 +314,8 @@ fun CommunityListScreen(
                                             )
                                         }
                                         // 하단 로딩 인디케이터 (loadMore 중, 데이터 있을 때만)
-                                        if (uiState.hasMore && uiState.isLoadingMore && uiState.posts.isNotEmpty()) {
-                                            item(key = "loading_indicator") {
+                                        if (uiState.showsLoadingIndicator) {
+                                            item(key = LOADING_INDICATOR_KEY) {
                                                 LoadingBox(modifier = Modifier.fillMaxWidth().padding(16.dp))
                                             }
                                         }
@@ -522,6 +534,9 @@ fun IconStat(iconRes: Any, text: String, tint: Color = Color.Black) {
         )
     }
 }
+
+// 목록 맨 아래 로딩 표시 항목의 key — 하단 도달 감지가 배치에 남아 있는지 확인하는 데도 쓴다
+private const val LOADING_INDICATOR_KEY = "loading_indicator"
 
 @Composable
 fun EmptyStateView(hasQuery: Boolean = false) {
