@@ -300,7 +300,7 @@ private fun AttendanceRewardItem(
 
                 else -> Text(
                     text = reward.day.toString(),
-                    // 다음 출석 칸만 굵게 — 같은 12sp의 굵은 글꼴(titleSmall)과 일반 글꼴(bodySmall)로 구분
+                    // 다음 출석 칸만 굵게 — 같은 12sp에서 글꼴만 다르게 구분 (titleSmall은 R.font.medium, bodySmall은 R.font.light)
                     style = if (isNext) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodySmall,
                     color = textColor
                 )

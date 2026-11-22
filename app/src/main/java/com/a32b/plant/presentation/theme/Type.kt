@@ -113,7 +113,7 @@ fun plantTypography(colorScheme: ColorScheme): Typography{
             lineHeight = 20.sp,
             color = colorScheme.onSecondary
         ),
-        //가장 작은 강조 글씨 (bodySmall 12sp보다 작게) - 홈 버그 제보, 출석판 골드 라벨 (#644)
+        //작은 강조 글씨 (11sp, bodySmall 12sp보다 작게) - 홈 버그 제보, 출석판 골드 라벨 (#644)
         labelSmall = TextStyle(
             fontFamily = bold,
             fontSize = 11.sp,
