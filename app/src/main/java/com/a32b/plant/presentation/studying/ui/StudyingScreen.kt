@@ -10,16 +10,23 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -141,97 +148,104 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
         Surface(modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-
-                Spacer(modifier = Modifier.height(40.dp))
-                StudyStatusBadge(uiState.tag, uiState.title)
-
-                if (!uiState.isLocalSaved) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.errorContainer
-                    ) {
-                        Text(
-                            text = "자동 저장에 실패했습니다. 앱 종료 시 학습 기록이 유실될 수 있습니다.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(30.dp))
-                // 저장되는 시작 시각(uiState.startedAt)을 표시 — 백업에서 복원한 세션·디버그 +1h도 기록과 같은 시각으로 보임
-                // 첫 화면에서는 아직 0일 수 있어(그대로 그리면 1970-01-01 0시, 한국 시간 "09:00"이 깜빡임) 그때만 화면을 연 시각으로 표시
-                Text("${TimeFormatter.formatToTimeOnly(uiState.startedAt.takeIf { it != 0L } ?: startTime)} ~", style = MaterialTheme.typography.bodyMedium, fontSize = 13.sp,)
-                SetTimer(
-                    time = uiState.timer,
-                    color = if (uiState.goalCheckMode == StudyingGoalCheckMode.FINISH) MaterialTheme.colorScheme.error else Color.Unspecified
-                )
-
-                Box(modifier = Modifier.height(20.dp), contentAlignment = Alignment.Center) {
-                    if (!uiState.isStudying && uiState.goalCheckMode == null && !uiState.isGoalInputDialogShown) {
-                        Text(
-                            text = "일시정지",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Card(
-                    modifier = Modifier.padding(10.dp)
-                        .clickable{ viewModel.onChangeGoalCheckMode(StudyingGoalCheckMode.CHECK)},
-                    shape = RoundedCornerShape(10.dp),
-                    colors = CardDefaults.cardColors(MaterialTheme.colorScheme.secondaryContainer),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            // 작은 화면·큰 글꼴에서 내용이 화면보다 길면 스크롤 (#673)
+            // 최소 높이를 화면 높이로 잡아, 내용이 짧을 때는 weight 여백이 남은 공간을 채워 사용자 카드가 지금처럼 맨 아래에 붙음
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .heightIn(min = maxHeight),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    val goalIconSize = 23.dp
-                    Box(modifier = Modifier.padding(vertical = 13.dp, horizontal = 13.dp).width(250.dp)) {
-                        Text(
-                            "오늘의 학습 목표",
-                            style = MaterialTheme.typography.bodyMedium,
-                            textAlign = TextAlign.Center,
-                            // 아이콘 너비 + 여백(8)을 양쪽에 똑같이 줘서 가운데 정렬 유지 + 큰 글꼴에서 아이콘과 겹침 방지
-                            modifier = Modifier.align(Alignment.Center).padding(horizontal = goalIconSize + 8.dp)
-                        )
 
-                        Icon(
-                            painter = painterResource(R.drawable.ic_right),
-                            contentDescription = null,
-                            modifier = Modifier.size(goalIconSize).align(Alignment.CenterEnd),
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
+                    Spacer(modifier = Modifier.height(40.dp))
+                    StudyStatusBadge(uiState.tag, uiState.title)
+
+                    if (!uiState.isLocalSaved) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.errorContainer
+                        ) {
+                            Text(
+                                text = "자동 저장에 실패했습니다. 앱 종료 시 학습 기록이 유실될 수 있습니다.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                            )
+                        }
                     }
 
-                }
+                    Spacer(modifier = Modifier.height(30.dp))
+                    // 저장되는 시작 시각(uiState.startedAt)을 표시 — 백업에서 복원한 세션·디버그 +1h도 기록과 같은 시각으로 보임
+                    // 첫 화면에서는 아직 0일 수 있어(그대로 그리면 1970-01-01 0시, 한국 시간 "09:00"이 깜빡임) 그때만 화면을 연 시각으로 표시
+                    Text("${TimeFormatter.formatToTimeOnly(uiState.startedAt.takeIf { it != 0L } ?: startTime)} ~", style = MaterialTheme.typography.bodyMedium, fontSize = 13.sp,)
+                    SetTimer(
+                        time = uiState.timer,
+                        color = if (uiState.goalCheckMode == StudyingGoalCheckMode.FINISH) MaterialTheme.colorScheme.error else Color.Unspecified
+                    )
 
-                Spacer(modifier = Modifier.height(15.dp))
-
-                Row {
-                    //일시정지/학습시작 버튼
-                    StateChangeButton(timerButtonText, timerButtonBack){ viewModel.onStudyingStatusChange()}
-                    StateChangeButton("학습종료", MaterialTheme.colorScheme.surface) {
-                        viewModel.onChangeGoalCheckMode(StudyingGoalCheckMode.FINISH)
+                    Box(modifier = Modifier.height(20.dp), contentAlignment = Alignment.Center) {
+                        if (!uiState.isStudying && uiState.goalCheckMode == null && !uiState.isGoalInputDialogShown) {
+                            Text(
+                                text = "일시정지",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
                     }
-                }
 
-                // [DEBUG] 보상 테스트용 — 릴리즈 전 제거
-                StateChangeButton("+1h [DEBUG]", MaterialTheme.colorScheme.errorContainer) {
-                    viewModel.addDebugTime()
-                }
-                Spacer(modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                StudyingUserCard(studyingUsers, uiState.tag)
+                    Card(
+                        modifier = Modifier.padding(10.dp)
+                            .clickable{ viewModel.onChangeGoalCheckMode(StudyingGoalCheckMode.CHECK)},
+                        shape = RoundedCornerShape(10.dp),
+                        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.secondaryContainer),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    ) {
+                        val goalIconSize = 23.dp
+                        Box(modifier = Modifier.padding(vertical = 13.dp, horizontal = 13.dp).width(250.dp)) {
+                            Text(
+                                "오늘의 학습 목표",
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center,
+                                // 아이콘 너비 + 여백(8)을 양쪽에 똑같이 줘서 가운데 정렬 유지 + 큰 글꼴에서 아이콘과 겹침 방지
+                                modifier = Modifier.align(Alignment.Center).padding(horizontal = goalIconSize + 8.dp)
+                            )
+
+                            Icon(
+                                painter = painterResource(R.drawable.ic_right),
+                                contentDescription = null,
+                                modifier = Modifier.size(goalIconSize).align(Alignment.CenterEnd),
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                    }
+
+                    Spacer(modifier = Modifier.height(15.dp))
+
+                    Row {
+                        //일시정지/학습시작 버튼
+                        StateChangeButton(timerButtonText, timerButtonBack){ viewModel.onStudyingStatusChange()}
+                        StateChangeButton("학습종료", MaterialTheme.colorScheme.surface) {
+                            viewModel.onChangeGoalCheckMode(StudyingGoalCheckMode.FINISH)
+                        }
+                    }
+
+                    // [DEBUG] 보상 테스트용 — 릴리즈 전 제거
+                    StateChangeButton("+1h [DEBUG]", MaterialTheme.colorScheme.errorContainer) {
+                        viewModel.addDebugTime()
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    StudyingUserCard(studyingUsers, uiState.tag)
+                }
             }
         }
         if (uiState.isGoalInputDialogShown){
@@ -315,7 +329,10 @@ fun StudyStatusBadge(tag: String, title: String){
 
 @Composable
 fun SetTimer(time: Long, color: Color = Color.Unspecified){
-    Box(modifier = Modifier.size(250.dp)
+    // 폭이 250dp보다 좁으면 폭에 맞춰 정사각형으로 줄어듦 (#673)
+    Box(modifier = Modifier.widthIn(max = 250.dp)
+        .fillMaxWidth()
+        .aspectRatio(1f)
         .padding(16.dp),
         contentAlignment = Alignment.Center){
         Image(
@@ -324,13 +341,21 @@ fun SetTimer(time: Long, color: Color = Color.Unspecified){
             modifier = Modifier.matchParentSize(),
             contentScale = ContentScale.Fit
         )
-        Text(text = "${TimeFormatter.formatToDigitalClock(time)}", style = MaterialTheme.typography.titleLarge, color = color)
+        val timerStyle = MaterialTheme.typography.titleLarge
+        // 큰 글꼴에서 원 밖으로 넘치지 않게 한 줄에 들어가는 크기까지만 줄임 (들어가면 원래 크기)
+        Text(
+            text = TimeFormatter.formatToDigitalClock(time),
+            style = timerStyle,
+            color = color,
+            maxLines = 1,
+            autoSize = TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = timerStyle.fontSize)
+        )
     }
 }
 @Composable
 fun StateChangeButton(text: String, backColor: Color, function: () -> Unit){
     Card(
-        modifier = Modifier.width(150.dp).height(70.dp).padding(10.dp)
+        modifier = Modifier.width(150.dp).padding(10.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null){function()},
@@ -338,9 +363,10 @@ fun StateChangeButton(text: String, backColor: Color, function: () -> Unit){
         colors = CardDefaults.cardColors(containerColor = backColor),
         elevation = CardDefaults.cardElevation(defaultElevation = if (LocalIsDarkTheme.current) 0.dp else 3.dp)
     ) {
-        Box(modifier = Modifier.fillMaxSize(),
+        // 높이는 최소 50dp(바깥 여백 포함 70dp) — 큰 글꼴에서 글자가 줄바꿈되면 버튼이 늘어남 (#673)
+        Box(modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp).padding(8.dp),
             contentAlignment = Alignment.Center){
-            Text("$text", style = MaterialTheme.typography.bodyMedium,)
+            Text("$text", style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
         }
     }
 }
@@ -348,7 +374,8 @@ fun StateChangeButton(text: String, backColor: Color, function: () -> Unit){
 @Composable
 fun StudyingUserCard(users: List<StudyingUser>, tag: String){
     Card(
-        modifier = Modifier.fillMaxWidth().height(200.dp),
+        // 최소 200dp — 큰 글꼴에서 사용자 3명이 다 안 들어가면 늘어남 (본문이 스크롤되므로 잘리지 않음, #673)
+        modifier = Modifier.fillMaxWidth().heightIn(min = 200.dp),
         shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomEnd = 0.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary),
         ) {

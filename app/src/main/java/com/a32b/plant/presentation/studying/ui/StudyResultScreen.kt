@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -151,7 +152,13 @@ fun StudyResultContent(
             horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(modifier = Modifier.height(17.dp))
 
-            Text(timestamp , style = MaterialTheme.typography.titleSmall , fontSize = 22.sp)
+            // 큰 글꼴에서 줄바꿈되지 않게 한 줄에 들어가는 크기까지만 줄임 — 들어가면 원래 크기(22sp) (#673)
+            Text(
+                timestamp,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                autoSize = TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = 22.sp)
+            )
             Spacer(modifier = Modifier.height(13.dp))
 
             val cardModifier = Modifier.fillMaxWidth()
@@ -188,7 +195,13 @@ fun StudyResultContent(
                     ProfileImage(level, 200)
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Text(TimeFormatter.formatToDigitalClock(time), style = MaterialTheme.typography.titleLarge, fontSize = 50.sp,)
+                    // 큰 글꼴에서 화면 폭을 넘지 않게 한 줄에 들어가는 크기까지만 줄임 — 들어가면 원래 크기(50sp) (#673)
+                    Text(
+                        TimeFormatter.formatToDigitalClock(time),
+                        style = MaterialTheme.typography.titleLarge,
+                        maxLines = 1,
+                        autoSize = TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = 50.sp)
+                    )
 
                     when (reward) {
                         is StudyRewardUi.Granted -> {
