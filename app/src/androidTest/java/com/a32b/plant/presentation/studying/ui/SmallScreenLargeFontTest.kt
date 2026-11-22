@@ -296,7 +296,54 @@ class SmallScreenLargeFontTest {
     }
 
     /**
-     * 학습 화면 "일시정지" 표시: 글꼴 1.0에서 20dp(수정 전과 같음), 큰 글꼴에서 잘리지 않음,
+     * 공부 중인 사람 카드, 닉네임 10자(NicknameRule.MAX_LENGTH): 공부 시간 글자가 쪼개지지 않고 한 줄 (#736)
+     * 닉네임과 한 줄에 안 들어가면 공부 시간은 통째로 다음 줄, 닉네임은 한 줄(넘치면 말줄임)
+     */
+    @Test
+    fun studyingUserCard_longNickname() {
+        val users = (1..3).map { StudyingUser("u$it", "가나다라마바사아자$it", "0", "면접", 132 * 60_000L, null) }
+        forEachCombo(content = {
+            Box(modifier = Modifier.testTag(TAG)) { StudyingUserCard(users, "면접") }
+        }) { width, fontScale ->
+            val card = composeRule.onNodeWithTag(TAG).getUnclippedBoundsInRoot()
+            val label = "폭 $width, 글꼴 $fontScale"
+            assertTrue("$label: 카드 높이 200dp 미만", height(card) >= 200f - TOLERANCE.value)
+            // 세 줄이 같은 글자라 첫 번째 사람의 공부 시간만 확인 (formatToMinute: 132분)
+            val time = composeRule.onAllNodesWithText(LONG_TIME_TEXT, useUnmergedTree = true)
+            time.assertCountEquals(3)
+            users.forEach { user ->
+                val r = layoutOf(user.nickname)
+                assertEquals("$label ${user.nickname}: 줄 수", 1, r.lineCount)
+                assertFalse("$label ${user.nickname}: 높이 넘침", r.didOverflowHeight)
+                assertInside("$label ${user.nickname}", textBounds(user.nickname), card)
+            }
+            val timeNode = time[0].fetchSemanticsNode()
+            val results = mutableListOf<TextLayoutResult>()
+            timeNode.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action?.invoke(results)
+            val timeLayout = results.first()
+            assertEquals("$label 공부 시간: 줄 수", 1, timeLayout.lineCount)
+            assertEquals("$label 공부 시간: 배치되지 않은 글자 있음", LONG_TIME_TEXT.length, timeLayout.getLineEnd(0, visibleEnd = true))
+            assertFalse("$label 공부 시간: 높이 넘침", timeLayout.didOverflowHeight)
+            assertInside("$label 공부 시간", time[0].getUnclippedBoundsInRoot(), card)
+        }
+    }
+
+    /** 공부 중인 사람 카드, 짧은 닉네임·글꼴 1.0: 수정 전처럼 닉네임 바로 뒤 같은 줄에 공부 시간 (#736) */
+    @Test
+    fun studyingUserCard_shortNicknameSameLine() {
+        val user = StudyingUser("u1", "사용자1", "0", "면접", 60_000L, null)
+        forEachCombo(content = { StudyingUserCard(listOf(user), "면접") }) { width, fontScale ->
+            if (fontScale != 1.0f) return@forEachCombo
+            val nickname = textBounds(user.nickname)
+            val time = textBounds(" 1분 째 공부중!")
+            val label = "폭 $width"
+            assertEquals("$label: 공부 시간이 닉네임 바로 뒤", nickname.right.value, time.left.value, TOLERANCE.value)
+            assertEquals("$label: 공부 시간 줄 수", 1, layoutOf(" 1분 째 공부중!").lineCount)
+        }
+    }
+
+    /**
+     * 학습 화면 "일시정지" 표시:글꼴 1.0에서 20dp(수정 전과 같음), 큰 글꼴에서 잘리지 않음,
      * 숨겼을 때도 높이가 같고(아래 버튼이 움직이지 않음) 접근성 트리에 나오지 않음
      */
     @Test
@@ -339,6 +386,7 @@ class SmallScreenLargeFontTest {
         const val PAUSED_TEXT = "일시정지"
         const val TIMESTAMP = "2026년 11월 22일 일요일 09:58 ~ 09:59"
         const val MENU_TEXT = "오픈소스 라이선스"
+        const val LONG_TIME_TEXT = " 132분 째 공부중!"
         const val DEBUG_TEXT = "+1h [DEBUG]"
         const val ONE_HOUR_MS = 3_600_000L
         const val TEN_HOURS_MS = 36_000_000L

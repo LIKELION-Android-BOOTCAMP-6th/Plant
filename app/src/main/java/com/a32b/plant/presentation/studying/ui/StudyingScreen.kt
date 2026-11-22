@@ -12,6 +12,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -49,6 +50,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -409,9 +411,18 @@ fun StudyingUserItem(user: StudyingUser){
     Row(Modifier.padding(10.dp),
         verticalAlignment = Alignment.CenterVertically) {
         ProfileImage(user.profileImg, 30)
-        Text(text = user.nickname, style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(top = 3.dp, start = 3.dp))
-        Text(text = " ${TimeFormatter.formatToMinute(user.studyingTime)} 째 공부중!", style = MaterialTheme.typography.bodyMedium,)
+        // 닉네임과 공부 시간이 한 줄에 안 들어가면 공부 시간을 통째로 다음 줄로 내림 (#736)
+        // 예전에는 닉네임이 폭을 먼저 가져가, 공부 시간이 남은 좁은 폭에서 여러 줄로 쪼개졌음
+        // 닉네임 혼자 한 줄보다 길면 말줄임
+        FlowRow(
+            modifier = Modifier.weight(1f, fill = false),
+            itemVerticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = user.nickname, style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 3.dp, start = 3.dp),
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(text = " ${TimeFormatter.formatToMinute(user.studyingTime)} 째 공부중!", style = MaterialTheme.typography.bodyMedium,)
+        }
     }
 }
 
