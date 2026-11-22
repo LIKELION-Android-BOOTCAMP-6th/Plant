@@ -192,12 +192,13 @@ fun StudyResultContent(
                     ProfileImage(level, 200)
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // 카드 안쪽 폭보다 길면 한 줄에 들어가는 크기까지만 줄임 (최대 50sp, #673)
+                    // 카드 안쪽 폭보다 길면 한 줄에 들어가는 크기까지만 줄임 (최대 displayMedium 크기, #673)
+                    val timerStyle = MaterialTheme.typography.displayMedium
                     Text(
                         TimeFormatter.formatToDigitalClock(time),
-                        style = MaterialTheme.typography.titleLarge,
+                        style = timerStyle,
                         maxLines = 1,
-                        autoSize = TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = 50.sp)
+                        autoSize = TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = timerStyle.fontSize)
                     )
 
                     when (reward) {
@@ -234,7 +235,7 @@ fun StudyResultContent(
  */
 @Composable
 private fun StudyTimestampText(timestamp: String) {
-    val style = MaterialTheme.typography.titleSmall
+    val style = MaterialTheme.typography.headlineSmall
     val textMeasurer = rememberTextMeasurer()
     BoxWithConstraints(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         val fitsOneLine = !textMeasurer.measure(
@@ -247,17 +248,16 @@ private fun StudyTimestampText(timestamp: String) {
         Text(
             text = timestamp,
             style = style,
-            fontSize = TIMESTAMP_MAX_FONT_SIZE,
             textAlign = TextAlign.Center,
             maxLines = if (fitsOneLine) 1 else Int.MAX_VALUE,
             autoSize = if (fitsOneLine) {
-                TextAutoSize.StepBased(minFontSize = TIMESTAMP_MIN_FONT_SIZE, maxFontSize = TIMESTAMP_MAX_FONT_SIZE)
+                TextAutoSize.StepBased(minFontSize = TIMESTAMP_MIN_FONT_SIZE, maxFontSize = style.fontSize)
             } else null
         )
     }
 }
 
-private val TIMESTAMP_MAX_FONT_SIZE = 22.sp
+// 줄일 수 있는 최소 크기. 최대 크기는 headlineSmall(22sp)
 private val TIMESTAMP_MIN_FONT_SIZE = 16.sp
 
 /** 보상이 아직 표시되지 않을 때의 안내 (보상은 서버가 지급, #453) */

@@ -103,6 +103,7 @@ import com.a32b.plant.presentation.core.component.festiveConfettiParties
 import com.a32b.plant.presentation.core.component.LoadingBox
 import com.a32b.plant.presentation.theme.LocalIsDarkTheme
 import com.a32b.plant.presentation.theme.deleteAccountButtonContentDark
+import com.a32b.plant.presentation.theme.homeItemLabel
 import androidx.compose.ui.graphics.Color
 import java.time.LocalDate
 import java.time.format.TextStyle
@@ -482,7 +483,7 @@ fun PotChangeDialog(
                     containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
-                Text("선택 완료")
+                Text("선택 완료", style = MaterialTheme.typography.bodyMedium)
             }
         },
         dismissButton = {
@@ -492,7 +493,7 @@ fun PotChangeDialog(
                     contentColor = MaterialTheme.colorScheme.onSecondary
                 )
             ) {
-                Text("취소")
+                Text("취소", style = MaterialTheme.typography.bodyMedium)
             }
         },
         shape = RoundedCornerShape(24.dp)
@@ -612,10 +613,8 @@ fun HomeTopBar(
                     // 상점 아이콘 그림은 칸 중앙보다 약간 아래에 그려져 있어, 글자도 1dp 내려 위아래 끝을 맞춤
                     // (offset은 레이아웃 자리를 바꾸지 않아 터치 영역·옆 요소 배치에 영향 없음)
                     modifier = Modifier.offset(y = 1.dp),
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = 11.sp,
-                        lineHeight = 13.sp
-                    ),
+                    // 줄 높이(13sp)는 두 줄 높이를 상점 아이콘 그림에 맞춘 값이라 labelSmall 기본값(16sp) 대신 유지
+                    style = MaterialTheme.typography.labelSmall.copy(lineHeight = 13.sp),
                     color = MaterialTheme.colorScheme.error,
                     textAlign = TextAlign.Center,
                     maxLines = 2
@@ -785,9 +784,8 @@ fun MainPlantCard(
                 modifier = Modifier
                     .alpha(if (studyTimeText == null) 0f else 1f)
                     .then(if (studyTimeText == null) Modifier.clearAndSetSemantics { } else Modifier),
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.tertiary,
-                fontSize = 26.sp
+                style = MaterialTheme.typography.displaySmall,
+                color = MaterialTheme.colorScheme.tertiary
             )
             Spacer(modifier = Modifier.height(5.dp.compactIf(compact)))
 
@@ -1060,8 +1058,7 @@ private fun HomeItemTile(
                         text = line,
                         // 칸 전체 설명(accessibilityLabel)과 겹치지 않게 이름은 따로 읽지 않는다
                         modifier = Modifier.clearAndSetSemantics { },
-                        style = MaterialTheme.typography.titleSmall.copy(
-                            fontSize = 10.sp,
+                        style = MaterialTheme.typography.homeItemLabel.copy(
                             lineHeight = ITEM_LABEL_LINE_HEIGHT,
                             // 1줄짜리 Text는 기본으로 줄 높이의 위아래 여백을 잘라내서 "보너스" / "박스" 사이가 좁아진다.
                             // 잘라내지 않아 줄마다 ITEM_LABEL_LINE_HEIGHT 높이를 그대로 쓴다
@@ -1382,14 +1379,14 @@ private fun RecoveryDialog(
                     onClick = onDiscard,
                     enabled = !isLoading
                 ) {
-                    Text("확인")
+                    Text("확인", style = MaterialTheme.typography.bodyMedium)
                 }
             } else {
                 Button(
                     onClick = onRecover,
                     enabled = !isLoading
                 ) {
-                    Text("저장")
+                    Text("저장", style = MaterialTheme.typography.bodyMedium)
                 }
             }
         },
@@ -1399,7 +1396,7 @@ private fun RecoveryDialog(
                     onClick = onDiscard,
                     enabled = !isLoading
                 ) {
-                    Text("폐기")
+                    Text("폐기", style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }
@@ -1485,7 +1482,7 @@ fun BonusBoxOpenDialog(
                     onClick = { count = maxCount },
                     enabled = count < maxCount && !isOpening
                 ) {
-                    Text("전체 선택 (MAX)", color = MaterialTheme.colorScheme.tertiary)
+                    Text("전체 선택 (MAX)", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.tertiary)
                 }
             }
         },
@@ -1495,12 +1492,12 @@ fun BonusBoxOpenDialog(
                 enabled = !isOpening,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                Text(if (isOpening) "개봉 중..." else "${count}개 개봉하기")
+                Text(if (isOpening) "개봉 중..." else "${count}개 개봉하기", style = MaterialTheme.typography.bodyMedium)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isOpening) {
-                Text("취소", color = MaterialTheme.colorScheme.onSecondary)
+                Text("취소", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondary)
             }
         },
         shape = RoundedCornerShape(24.dp)

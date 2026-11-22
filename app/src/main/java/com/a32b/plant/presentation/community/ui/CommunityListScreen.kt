@@ -62,7 +62,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -229,16 +228,14 @@ fun CommunityListScreen(
                                     Box(modifier = Modifier.clickable {
                                         viewModel.onSelectedChanged(emptyList())
                                     }) {
-                                        TagChip("전체 선택 해제", 13, false)
+                                        TagChip("전체 선택 해제", false)
                                     }
 
                                     Spacer(modifier = Modifier.weight(1f))
 
                                     Text(
                                         "공유글 보기",
-                                        style =
-                                            MaterialTheme.typography.titleMedium,
-                                            fontSize = 14.sp,
+                                        style = MaterialTheme.typography.titleMedium
                                     )
                                     Switch(
                                         uiState.isSharedShown,
@@ -489,8 +486,8 @@ fun PostCard(post: Post, isLiked: Boolean, isBookmarked: Boolean = false, onClic
             }
             Spacer(modifier = Modifier.height(3.dp))
             Row(modifier = Modifier.offset(x = (-5).dp).padding(vertical = 3.dp)) {
-                if (post.isShared ?: false) TagChip("공유", 12)
-                TagChip(post.tag.name, 12)
+                if (post.isShared ?: false) TagChip("공유")
+                TagChip(post.tag.name)
             }
 
             Spacer(modifier = Modifier.height(3.dp))

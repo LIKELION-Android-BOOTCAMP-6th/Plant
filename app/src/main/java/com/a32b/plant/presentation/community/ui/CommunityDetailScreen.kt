@@ -277,11 +277,11 @@ fun CommunityDetailScreen(
                                             onClick = { viewModel.refresh() },
                                             enabled = !uiState.isRefreshing
                                         ) {
-                                            Text("다시 시도")
+                                            Text("다시 시도", style = MaterialTheme.typography.bodyMedium)
                                         }
                                     }
                                     TextButton(onClick = { navController.popBackStack() }) {
-                                        Text("돌아가기")
+                                        Text("돌아가기", style = MaterialTheme.typography.bodyMedium)
                                     }
                                 }
                             }
@@ -387,9 +387,9 @@ fun CommunityDetailScreen(
 
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Row(modifier = Modifier.offset(x = (-3).dp)) {
-                                    if (currentPost.isShared ?: false) TagChip("공유", 12)
+                                    if (currentPost.isShared ?: false) TagChip("공유")
 
-                                    TagChip(currentPost.tag.name, 12)
+                                    TagChip(currentPost.tag.name)
                                 }
                                 Spacer(modifier = Modifier.height(20.dp))
 

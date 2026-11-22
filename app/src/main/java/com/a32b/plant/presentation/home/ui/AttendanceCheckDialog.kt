@@ -31,11 +31,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.a32b.plant.R
@@ -290,8 +288,7 @@ private fun AttendanceRewardItem(
             when {
                 isChecked -> Text(
                     text = "✓",
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall,
                     color = textColor
                 )
 
@@ -303,8 +300,8 @@ private fun AttendanceRewardItem(
 
                 else -> Text(
                     text = reward.day.toString(),
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = if (isNext) FontWeight.Bold else FontWeight.Normal,
+                    // 다음 출석 칸만 굵게 — 같은 12sp의 굵은 글꼴(titleSmall)과 일반 글꼴(bodySmall)로 구분
+                    style = if (isNext) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodySmall,
                     color = textColor
                 )
             }
@@ -313,8 +310,7 @@ private fun AttendanceRewardItem(
         Text(
             text = if (reward.showLabelBelow) reward.label else " ",
             modifier = Modifier.width(42.dp),
-            style = MaterialTheme.typography.bodySmall,
-            fontSize = 11.sp,
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.primary,
             textAlign = TextAlign.Center,
             maxLines = 1

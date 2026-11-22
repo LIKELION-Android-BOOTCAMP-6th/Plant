@@ -22,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -62,7 +61,6 @@ fun StudyLogDetailDialog(
                     Text(
                         text = if (log.title.isNotEmpty()) log.title else "학습기록 상세" ,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -87,9 +85,8 @@ fun StudyLogDetailDialog(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(text = "공부시간 : [${TimeFormatter.formatToDigitalClock(log.studyingTime)}]",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -97,8 +94,7 @@ fun StudyLogDetailDialog(
                 //상세 기록 내용
                 if(log.contents.isNotEmpty()){
                     Text(text = "학습 내용",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
 
