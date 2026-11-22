@@ -296,12 +296,16 @@ class SmallScreenLargeFontTest {
     }
 
     /**
-     * 공부 중인 사람 카드, 닉네임 10자(NicknameRule.MAX_LENGTH): 공부 시간 글자가 쪼개지지 않고 한 줄 (#736)
+     * 공부 중인 사람 카드, 한글 닉네임 10자(NicknameRule.MAX_LENGTH): 공부 시간 글자가 쪼개지지 않고 한 줄 (#736)
      * 닉네임과 한 줄에 안 들어가면 공부 시간은 통째로 다음 줄, 닉네임은 한 줄(넘치면 말줄임)
+     * 한글 10자는 확인하는 폭·글꼴에서 말줄임 없이 다 보이는지도 확인 (닉네임 규칙은 글자 수만 제한해, 더 넓은 글자는 말줄임될 수 있음)
      */
     @Test
     fun studyingUserCard_longNickname() {
-        val users = (1..3).map { StudyingUser("u$it", "가나다라마바사아자$it", "0", "면접", 132 * 60_000L, null) }
+        // onNodeWithText는 글자가 똑같은 노드를 찾으므로 세 닉네임은 마지막 글자만 다르게 함
+        val users = listOf("차", "카", "타").mapIndexed { index, last ->
+            StudyingUser("u$index", "가나다라마바사아자$last", "0", "면접", 132 * 60_000L, null)
+        }
         forEachCombo(content = {
             Box(modifier = Modifier.testTag(TAG)) { StudyingUserCard(users, "면접") }
         }) { width, fontScale ->
@@ -314,6 +318,8 @@ class SmallScreenLargeFontTest {
             users.forEach { user ->
                 val r = layoutOf(user.nickname)
                 assertEquals("$label ${user.nickname}: 줄 수", 1, r.lineCount)
+                assertFalse("$label ${user.nickname}: 말줄임됨", r.isLineEllipsized(0))
+                assertEquals("$label ${user.nickname}: 배치되지 않은 글자 있음", user.nickname.length, r.getLineEnd(0, visibleEnd = true))
                 assertFalse("$label ${user.nickname}: 높이 넘침", r.didOverflowHeight)
                 assertInside("$label ${user.nickname}", textBounds(user.nickname), card)
             }
@@ -343,7 +349,7 @@ class SmallScreenLargeFontTest {
     }
 
     /**
-     * 학습 화면 "일시정지" 표시:글꼴 1.0에서 20dp(수정 전과 같음), 큰 글꼴에서 잘리지 않음,
+     * 학습 화면 "일시정지" 표시: 글꼴 1.0에서 20dp(수정 전과 같음), 큰 글꼴에서 잘리지 않음,
      * 숨겼을 때도 높이가 같고(아래 버튼이 움직이지 않음) 접근성 트리에 나오지 않음
      */
     @Test
