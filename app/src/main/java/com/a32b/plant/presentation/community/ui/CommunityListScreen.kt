@@ -50,6 +50,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -105,14 +106,18 @@ fun CommunityListScreen(
     }
 
     // 이벤트 수신 (토스트, 맨 위로 스크롤)
-    // ScrollToTop: 애니메이션 완료 후 clearSuppressLoadMore() 호출 → loadMore 차단 해제
+    // ScrollToTop: 맨 위 스크롤이 끝나거나 건너뛰거나 중단되면 clearSuppressLoadMore() 호출 → loadMore 차단 해제
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
                 is CommunityListEvent.ShowToast -> context.showToast(event.message)
                 is CommunityListEvent.ScrollToTop -> {
                     try {
-                        listState.animateScrollToItem(0)
+                        // 목록이 한 번도 배치되지 않았으면(빈 목록 안내만 보이는 중) 첫 배치까지 기다려 버리므로 건너뛰고,
+                        // 그 밖에 끝나지 않는 경우에 대비해 시간을 제한한다 — 기다리는 동안 이후 이벤트와 loadMore 차단 해제가 막힌다 (#660)
+                        if (listState.layoutInfo.totalItemsCount > 0) {
+                            withTimeoutOrNull(SCROLL_TO_TOP_TIMEOUT_MS) { listState.animateScrollToItem(0) }
+                        }
                     } catch (e: CancellationException) {
                         // 이 코루틴이 살아 있는데 난 취소(애니메이션 중 사용자가 목록을 만짐, 이미 드래그 중이라 시작하지 못함 등)는 넘어간다 (#660).
                         // 넘어가지 않으면 이벤트 수신이 끝나 이후 토스트·맨 위 스크롤을 받지 못하고, loadMore 차단도 풀리지 않는다.
@@ -537,6 +542,9 @@ fun IconStat(iconRes: Any, text: String, tint: Color = Color.Black) {
 
 // 목록 맨 아래 로딩 표시 항목의 key — 하단 도달 감지가 배치에 남아 있는지 확인하는 데도 쓴다
 private const val LOADING_INDICATOR_KEY = "loading_indicator"
+
+// 새로고침 뒤 맨 위 스크롤을 기다리는 최대 시간 — 넘으면 스크롤을 멈추고 loadMore 차단을 푼다
+private const val SCROLL_TO_TOP_TIMEOUT_MS = 3_000L
 
 @Composable
 fun EmptyStateView(hasQuery: Boolean = false) {

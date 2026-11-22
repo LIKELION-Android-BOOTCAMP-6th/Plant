@@ -305,7 +305,7 @@ fun CommunityDetailScreen(
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             TextButton(onClick = { navController.popBackStack() }) {
-                                Text("돌아가기")
+                                Text("돌아가기", style = MaterialTheme.typography.labelLarge)
                             }
                         }
                     }
