@@ -224,7 +224,7 @@ fun CommunityDetailScreen(
     uiState.blockTarget?.let { target ->
         ConfirmDialog(
             text = "${target.nickname}님을 차단할까요?",
-            semiText = "차단하면 이 사용자의 게시글과 댓글이 보이지 않아요.\n마이페이지 > 차단 목록에서 해제할 수 있어요.",
+            semiText = "차단하면 이 사용자의 글과 댓글이 숨겨져요.\n마이페이지 > 차단 목록에서 해제할 수 있어요.",
             confirmBtnText = "차단",
             isLoading = uiState.isBlockSubmitting,
             onDismiss = { viewModel.closeBlockDialog() },

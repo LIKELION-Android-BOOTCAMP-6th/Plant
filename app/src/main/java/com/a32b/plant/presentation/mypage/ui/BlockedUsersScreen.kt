@@ -67,7 +67,7 @@ fun BlockedUsersScreen(
     uiState.unblockTarget?.let { target ->
         ConfirmDialog(
             text = "${target.nickname}님의 차단을 해제할까요?",
-            semiText = "해제하면 이 사용자의 게시글과 댓글이 다시 보여요.",
+            semiText = "해제하면 글과 댓글이 다시 보여요.",
             confirmBtnText = "해제",
             isLoading = uiState.isLoading,
             onDismiss = { viewModel.closeUnblockDialog() },
