@@ -8,7 +8,7 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <!-- 스플래시 (다크모드 값은 values-night/colors.xml) -->
+    <!-- 스플래시: 시스템 다크 모드여도 이 라이트 값만 사용 (values-night에 두지 않음, #675) -->
     <color name="splash_background">#EEF5E4</color>
     <color name="splash_logo_track">#D9E8C6</color>
     <color name="splash_logo_primary">#8DB85A</color>
