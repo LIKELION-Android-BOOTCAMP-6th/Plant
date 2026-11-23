@@ -10,6 +10,7 @@ import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.domain.model.UnseenStudyReward
 import com.a32b.plant.domain.result.Result
 import kotlinx.coroutines.flow.Flow
+import java.time.LocalDate
 
 interface StudyingRepository {
 
@@ -76,5 +77,13 @@ interface StudyingRepository {
     suspend fun readLocalGoalDraft(): Result<StudyingGoalDraft?>
 
     suspend fun clearLocalGoalDraft(): Result<Unit>
+
+    /**
+     * 학습 화면 알림 설정 안내를 마지막으로 띄운 날 읽기/저장 (#610)
+     * 세션 백업과 달리 기기 설정 저장소에 둬서 학습을 끝내 백업을 지워도 남는다
+     */
+    suspend fun readNotificationGuideShownDate(): Result<LocalDate?>
+
+    suspend fun saveNotificationGuideShownDate(date: LocalDate): Result<Unit>
 
 }
