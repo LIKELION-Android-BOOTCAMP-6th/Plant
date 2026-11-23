@@ -30,7 +30,7 @@ import org.junit.runner.RunWith
 /**
  * 공부 기록 카드 [StudyRecordCard] 정보 배치 (#682)
  *
- * - 1줄 제목, 2줄 "공부 시간 HH:MM:SS". 제목에 이미 날짜가 있어 2줄에 날짜를 다시 쓰지 않음
+ * - 1줄 제목, 2줄 "공부 시간 " + formatToDigitalClock 결과. 제목에 이미 날짜가 있어 2줄에 날짜를 다시 쓰지 않음
  * - 제목이 없으면 날짜가 제목 (날짜는 한 번만), createAt도 없으면 "-"
  * - 학습 내용은 2개까지, 넘치면 "외 N개"
  * - 공유 모드: 체크박스 표시, 휴지통 숨김
@@ -94,7 +94,8 @@ class StudyRecordCardTest {
     @Test
     fun withoutTitle_dateBecomesTitleAndIsNotRepeated() {
         setCard(log(title = ""))
-        composeRule.onAllNodesWithText(dateText, substring = true).assertCountEquals(1)
+        // 카드(Card onClick)가 안의 글자를 노드 하나로 합치므로, 글자 노드 단위로 세야 중복을 잡는다
+        composeRule.onAllNodesWithText(dateText, substring = true, useUnmergedTree = true).assertCountEquals(1)
         composeRule.onNodeWithText(dateText).assertIsDisplayed()
         composeRule.onNodeWithText(timeText).assertIsDisplayed()
     }

@@ -452,7 +452,8 @@ fun StudyRecordCard(
     ) {
         Row(
             modifier = Modifier.padding(
-                start = if (isShareMode) 4.dp else 16.dp,
+                // 공유 모드: 카드 체크박스를 위 "전체 선택" 체크박스와 같은 가로 위치에 맞춤 (둘 다 화면 끝에서 16dp)
+                start = if (isShareMode) 0.dp else 16.dp,
                 end = if (isShareMode) 16.dp else 8.dp,
                 top = 12.dp,
                 bottom = 12.dp
