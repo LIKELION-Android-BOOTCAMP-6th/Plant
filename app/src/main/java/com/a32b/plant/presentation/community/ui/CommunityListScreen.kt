@@ -367,9 +367,10 @@ fun CommunityListScreen(
  *   요소마다 줄 높이의 가운데에 놓는다. 수정 전 Row(CenterVertically + 사이 Spacer weight)와 같은 계산이다
  *   (글꼴 1.0·폭 360·411dp에서 수정 전과 위치·크기가 px 단위로 같음을 TagFilterRowLargeFontTest로 확인)
  * - 안 들어가면(큰 글꼴·좁은 화면) 뒤쪽을 다음 줄 오른쪽 끝으로 내린다.
- *   수정 전에는 남은 폭이 모자라 "공유글 보기"가 스위치에 가려지거나, 두 줄로 줄바꿈되며 스위치가 화면 밖으로 밀렸다
+ *   수정 전에는 남은 폭이 모자라 스위치 자리가 줄고 52dp 트랙이 그 자리 밖으로 넘쳐 그려져,
+ *   "공유글 보기" 끝 글자가 스위치에 가려지거나, "공유글 보기"가 두 줄로 줄바꿈되고 스위치 오른쪽이 화면 밖으로 잘렸다
  * - 각 요소는 남은 폭이 아니라 줄 폭 전체를 받아 측정한다 → 다음 줄로 내려간 "공유글 보기"도 한 줄로 그려진다
- *   (TagFilterRowLargeFontTest: 폭 360·411dp, 글꼴 1.0~2.0에서 확인)
+ *   (TagFilterRowLargeFontTest: 폭 360·411dp, 글꼴 1.0·1.15·1.3·1.5·1.8·2.0에서 확인)
  */
 @Composable
 internal fun TagFilterRow(
