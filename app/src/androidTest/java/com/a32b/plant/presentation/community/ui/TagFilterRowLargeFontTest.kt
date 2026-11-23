@@ -116,9 +116,15 @@ class TagFilterRowLargeFontTest {
 
     private fun areaBounds(): Rect = composeRule.onNodeWithTag(ROW_AREA).fetchSemanticsNode().boundsInRoot
 
-    /** 글자는 한 줄로 다 보이고, 요소끼리 겹치지 않으며, 모두 여백 안쪽(화면 안)에 있다 */
+    /**
+     * - 글자 3개(태그·전체 선택 해제·공유글 보기)가 한 줄로 다 보인다
+     * - 스위치가 자리를 다 받았다: 자리가 모자라면 스위치 노드(isToggleable)는 좁아지지만 트랙은 52dp로 넘쳐 그려져
+     *   아래 겹침 검사를 피해 가므로, 노드 폭이 [SWITCH_SCALE]배 한 트랙 폭과 같은지 먼저 본다
+     * - 공유글 보기–스위치, (같은 줄이면) 전체 선택 해제–공유글 보기가 가로로 겹치지 않는다
+     * - 글자 3개와 스위치가 좌우 여백 안쪽(화면 안)에 있다
+     */
     private fun assertNoOverlapOrClip(label: String) {
-        SHARED_TEXT.let {
+        listOf(TAG_TEXT, CLEAR_TEXT, SHARED_TEXT).forEach {
             val r = layoutOf(it)
             assertEquals("$label $it: 줄 수", 1, r.lineCount)
             assertEquals("$label $it: 배치되지 않은 글자 있음", it.length, r.getLineEnd(0, visibleEnd = true))
@@ -128,6 +134,8 @@ class TagFilterRowLargeFontTest {
         val clear = textBounds(CLEAR_TEXT)
         val shared = textBounds(SHARED_TEXT)
         val switch = switchBounds()
+        val expectedSwitchWidth = with(composeRule.density) { SWITCH_TRACK_WIDTH.toPx() } * SWITCH_SCALE
+        assertEquals("$label: 스위치 폭이 줄어듦 ($switch)", expectedSwitchWidth, switch.width, SWITCH_WIDTH_TOLERANCE_PX)
         listOf(TAG_TEXT to tag, CLEAR_TEXT to clear, SHARED_TEXT to shared, "스위치" to switch).forEach { (name, b) ->
             assertTrue("$label $name: 왼쪽이 여백 밖 ($b, 영역 $area)", b.left >= area.left)
             assertTrue("$label $name: 오른쪽이 여백 밖 ($b, 영역 $area)", b.right <= area.right)
@@ -274,6 +282,11 @@ class TagFilterRowLargeFontTest {
         const val CLEAR_TEXT = "전체 선택 해제"
         const val SHARED_TEXT = "공유글 보기"
         const val TAG_ICON_DESC = "태그박스"
+        // material3 1.4.0 SwitchTokens.TrackWidth, CommunityListScreen의 Modifier.scale(0.7f)
+        val SWITCH_TRACK_WIDTH = 52.dp
+        const val SWITCH_SCALE = 0.7f
+        // 노드 범위가 px로 반올림되며 생기는 오차
+        const val SWITCH_WIDTH_TOLERANCE_PX = 1f
     }
 }
 
