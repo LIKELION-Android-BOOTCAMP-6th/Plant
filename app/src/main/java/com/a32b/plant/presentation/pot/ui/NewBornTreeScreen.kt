@@ -132,8 +132,9 @@ fun NewBornTreeScreen(navController: NavController,
                     Box(
                         modifier = Modifier
                             .size(220.dp)
-                            .clip(RoundedCornerShape(32.dp))
-                            .background(MaterialTheme.colorScheme.primary),
+                            // 내 화분 목록 카드(PotListScreen)와 같은 배경·모서리
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
                     ){
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {

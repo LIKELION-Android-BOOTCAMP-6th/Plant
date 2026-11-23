@@ -1,18 +1,13 @@
 package com.a32b.plant.presentation.report
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -20,6 +15,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavController
 import com.a32b.plant.presentation.core.component.LoadableScreen
+import com.a32b.plant.presentation.core.component.TabTopBar
 import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.report.ui.ReportContent
 import com.a32b.plant.presentation.report.viewmodel.ReportEvent
@@ -51,19 +47,7 @@ fun ReportScreen(
 
     LoadableScreen(viewModel = viewModel) {
         Scaffold(
-            topBar = {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 16.dp, top = 16.dp, end = 16.dp)
-                ) {
-                    Text(
-                        "리포트",
-                        style = MaterialTheme.typography.displayLarge,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-            },
+            topBar = { TabTopBar(title = "리포트") },
             containerColor = MaterialTheme.colorScheme.background
         ) { paddingValues ->
             ReportContent(

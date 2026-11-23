@@ -176,7 +176,8 @@ fun HomeScreen(
             text = reward.announceText(),
             isSingleBtn = true,
             onDismiss = viewModel::dismissAttendanceReward,
-            onConfirm = viewModel::dismissAttendanceReward
+            onConfirm = viewModel::dismissAttendanceReward,
+            iconRes = reward.iconRes()
         )
     }
 
@@ -367,6 +368,12 @@ fun HomeScreen(
 private fun AttendanceReward.announceText(): String = when (this) {
     is AttendanceReward.Coin -> "${amount}골드를 획득했습니다!"
     is AttendanceReward.ItemReward -> "${type.kor} ${amount}개를 획득했습니다!"
+}
+
+// 아이템은 학습 결과 보상(StudyRewardSection)과 같은 ItemType.resId, 골드는 출석판과 같은 ic_coin
+private fun AttendanceReward.iconRes(): Int = when (this) {
+    is AttendanceReward.Coin -> R.drawable.ic_coin
+    is AttendanceReward.ItemReward -> type.resId
 }
 
 @Composable
