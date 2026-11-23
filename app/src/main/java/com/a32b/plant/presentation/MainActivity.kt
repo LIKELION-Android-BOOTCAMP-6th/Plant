@@ -36,6 +36,7 @@ import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.a32b.plant.core.navigation.PlantAppNavigation
+import com.a32b.plant.core.navigation.isBottomTab
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.domain.session.SessionExpiredObserver
@@ -242,13 +243,7 @@ class MainActivity : ComponentActivity() {
                         viewModel.onFirstScreenReady()
                     }
 
-                    val showBottomBar = navBackStackEntry?.destination?.let { destination ->
-                        destination.hasRoute<Routes.HomeMain>() ||
-                                destination.hasRoute<Routes.CommunityList>() ||
-                                destination.hasRoute<Routes.Mypage>() ||
-                                destination.hasRoute<Routes.Report>() ||
-                                destination.hasRoute<Routes.PotList>()
-                    } ?: false
+                    val showBottomBar = navBackStackEntry?.destination?.isBottomTab() ?: false
                     Scaffold(
                         modifier = Modifier.fillMaxSize(),
                         bottomBar = {
