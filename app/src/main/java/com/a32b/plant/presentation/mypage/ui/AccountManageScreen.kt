@@ -80,7 +80,7 @@ fun AccountManageScreen(
                 is DeleteAccountEvent.RequestGoogleReauth -> {
                     coroutineScope.launch {
                         context.showToast(
-                            "보안을 위해 Google 계정을\n다시 확인합니다.",
+                            "본인 확인을 위해 Google 계정을\n한 번 더 확인합니다.",
                             Toast.LENGTH_LONG
                         )
                         val googleIdOption =

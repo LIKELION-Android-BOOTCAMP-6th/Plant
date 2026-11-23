@@ -1,5 +1,7 @@
 package com.a32b.plant.presentation.core.component
 
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,12 +27,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.a32b.plant.R
 import com.a32b.plant.presentation.theme.PlantTheme
 
 private const val DIALOG_CONTENT_MAX_HEIGHT_RATIO = 0.5f
@@ -47,8 +52,10 @@ fun ConfirmDialog(
     buttonTextStyle: TextStyle? = null,
     isLoading: Boolean = false,
     dismissOnClickOutside: Boolean = true,
-    isDestructive: Boolean = false
+    isDestructive: Boolean = false,
+    @DrawableRes iconRes: Int? = null
 ) {
+    // iconRes: 본문(text) 왼쪽에 24dp 아이콘을 붙인다. 출석 보상 알림처럼 무엇을 받았는지 보여줄 때 사용 (#681)
     // isLoading: 확인 후 처리 중 — 버튼을 막고 로딩 표시, 바깥 터치·뒤로가기로 닫지 않음
     // isDestructive: 삭제·탈퇴처럼 되돌릴 수 없는 동작 — 확인 버튼을 error 배경 + onError 글자로 강조 (#647). confirmBtnText에 동작 이름("삭제", "탈퇴")을 함께 넘길 것
     // dismissOnClickOutside: false면 바깥 터치는 무시한다. 뒤로가기는 isCancelable이고 로딩 중이 아닐 때 onDismiss로 보냄 (업데이트 안내의 뒤로가기 = 앱 종료, #662)
@@ -70,7 +77,25 @@ fun ConfirmDialog(
                         modifier = Modifier
                             .heightIn(max = maxContentHeight)
                             .verticalScroll(rememberScrollState())) {
-                        Text(text, style = textStyle ?: MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+                        if (iconRes != null) {
+                            // 글자가 길거나 글꼴이 커도 아이콘이 밀려나지 않도록 글자에 남은 폭만 주고 줄바꿈시킨다
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Image(
+                                    painter = painterResource(iconRes),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text,
+                                    modifier = Modifier.weight(1f, fill = false),
+                                    style = textStyle ?: MaterialTheme.typography.titleMedium,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        } else {
+                            Text(text, style = textStyle ?: MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+                        }
                         semiText?.let {
                             Spacer(modifier = Modifier.height(9.dp))
                             Text(semiText, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
@@ -156,5 +181,33 @@ private fun ConfirmDialogDestructiveDarkPreview() {
 private fun ConfirmDialogDefaultDarkPreview() {
     PlantTheme(darkTheme = true) {
         ConfirmDialog(text = "로그아웃 하시겠습니까?", onDismiss = {}, onConfirm = {})
+    }
+}
+
+@Preview(showBackground = true, name = "아이콘 - 라이트")
+@Composable
+private fun ConfirmDialogIconLightPreview() {
+    PlantTheme(darkTheme = false) {
+        ConfirmDialog(
+            text = "100골드를 획득했습니다!",
+            isSingleBtn = true,
+            onDismiss = {},
+            onConfirm = {},
+            iconRes = R.drawable.ic_coin
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "아이콘 - 다크·큰 글꼴", fontScale = 2f, widthDp = 320)
+@Composable
+private fun ConfirmDialogIconDarkLargeFontPreview() {
+    PlantTheme(darkTheme = true) {
+        ConfirmDialog(
+            text = "비료 1개를 획득했습니다!",
+            isSingleBtn = true,
+            onDismiss = {},
+            onConfirm = {},
+            iconRes = R.drawable.ic_fertilizer
+        )
     }
 }

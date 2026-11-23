@@ -374,7 +374,7 @@ fun ProfileRow(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "${uiState.nickname} 님",
+                    text = uiState.nickname,
                     style = MaterialTheme.typography.displayLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
