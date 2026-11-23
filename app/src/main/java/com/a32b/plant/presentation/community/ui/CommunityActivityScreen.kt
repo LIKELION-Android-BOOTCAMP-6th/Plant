@@ -1,5 +1,6 @@
 package com.a32b.plant.presentation.community.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,6 +67,11 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
         }
     }
 
+    // 선택 모드면 시스템 뒤로가기도 상단바 "취소"처럼 모드만 해제한다 (#748)
+    BackHandler(enabled = uiState.isSelectionMode) {
+        viewModel.exitSelectionMode()
+    }
+
     if (uiState.isDeleteDialogShown) {
         val (text, semiText) = when (uiState.selected) {
             ActivityType.LIKE -> "선택한 좋아요를 취소하시겠습니까?" to null
@@ -124,7 +130,7 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                             }
                         }
                         TextButton(
-                            onClick = { viewModel.toggleSelectionMode() }
+                            onClick = { viewModel.exitSelectionMode() }
                         ) {
                             Text(
                                 "취소",

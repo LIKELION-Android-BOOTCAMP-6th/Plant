@@ -83,6 +83,11 @@ class CommunityActivityViewModel @Inject constructor(
         _uiState.update { it.copy(isSelectionMode = !it.isSelectionMode, selectedIds = emptySet()) }
     }
 
+    // 선택 모드 해제만 한다 (상단바 "취소"·시스템 뒤로가기). 뒤집기가 아니라서 이미 꺼진 상태에서 불려도 다시 켜지지 않는다 (#748)
+    fun exitSelectionMode() {
+        _uiState.update { it.copy(isSelectionMode = false, selectedIds = emptySet()) }
+    }
+
     fun toggleItemSelection(id: String) {
         _uiState.update { state ->
             val newIds = if (id in state.selectedIds) state.selectedIds - id

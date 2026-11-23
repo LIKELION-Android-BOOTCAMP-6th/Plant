@@ -30,6 +30,7 @@ import org.junit.Test
 /**
  * '내 활동' 선택 삭제 중 화면을 나가도 목록에 삭제 신호가 가는지 확인한다 (#712).
  * 화면 이탈은 ViewModel이 정리될 때처럼 viewModelScope를 취소해 재현한다.
+ * 선택 모드 해제(exitSelectionMode)가 모드를 끄기만 하는지도 확인한다 (#748).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class CommunityActivityViewModelTest {
@@ -60,6 +61,25 @@ class CommunityActivityViewModelTest {
         assertFalse(viewModel.uiState.value.isSelectionMode)
         assertTrue(viewModel.uiState.value.selectedIds.isEmpty())
         assertEquals(listOf<CommunityActivityEvent>(CommunityActivityEvent.ShowToast("삭제되었습니다.")), events)
+    }
+
+    @Test
+    fun `선택 모드에서 해제하면 모드가 꺼지고 선택이 비워진다`() = runActivityTest { _, _, viewModel, _ ->
+        viewModel.toggleSelectionMode()
+        viewModel.toggleItemSelection("a1")
+
+        viewModel.exitSelectionMode()
+
+        assertFalse(viewModel.uiState.value.isSelectionMode)
+        assertTrue(viewModel.uiState.value.selectedIds.isEmpty())
+    }
+
+    @Test
+    fun `선택 모드가 꺼진 상태에서 해제해도 다시 켜지지 않는다`() = runActivityTest { _, _, viewModel, _ ->
+        viewModel.exitSelectionMode()
+
+        assertFalse(viewModel.uiState.value.isSelectionMode)
+        assertTrue(viewModel.uiState.value.selectedIds.isEmpty())
     }
 
     // ---------- 도우미 ----------
