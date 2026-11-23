@@ -78,6 +78,8 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
             ActivityType.BOOKMARK -> "선택한 북마크를 취소하시겠습니까?" to null
             else -> "선택한 항목을 삭제하시겠습니까?" to "삭제된 데이터는 복구할 수 없습니다."
         }
+        // 게시글·댓글 삭제만 되돌릴 수 없는 동작으로 강조 (#647). 좋아요·북마크 취소는 다시 누르면 되돌릴 수 있어 일반 "예" 유지
+        val isDestructive = uiState.selected != ActivityType.LIKE && uiState.selected != ActivityType.BOOKMARK
         ConfirmDialog(
             text = text,
             semiText = semiText,
@@ -87,7 +89,9 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                 viewModel.deleteSelected()
             },
             textStyle = MaterialTheme.typography.titleMedium,
-            buttonTextStyle = MaterialTheme.typography.labelLarge
+            buttonTextStyle = MaterialTheme.typography.labelLarge,
+            confirmBtnText = if (isDestructive) "삭제" else "예",
+            isDestructive = isDestructive
         )
     }
 

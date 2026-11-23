@@ -277,7 +277,9 @@ fun StudyPlanDetailScreen(
                             semiText = "정말로 이 학습 기록을 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.",
                             onDismiss = { viewModel.dismissDeleteDialog() },
                             onConfirm = { viewModel.confirmDelete() },
-                            isLoading = isWriting
+                            isLoading = isWriting,
+                            confirmBtnText = "삭제",
+                            isDestructive = true
                         )
                     }
                     // 제목 변경 다이얼로그
@@ -401,7 +403,9 @@ fun StudyPlanDetailScreen(
                                     navController.popBackStack()
                                 }
                             },
-                            isLoading = isWriting
+                            isLoading = isWriting,
+                            confirmBtnText = "삭제",
+                            isDestructive = true
                         )
                     }
 

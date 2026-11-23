@@ -207,7 +207,9 @@ fun CommunityDetailScreen(
         ConfirmDialog(
             text = "게시글을 삭제하시겠습니까?",
             onDismiss = { viewModel.closeDeleteDialog() },
-            onConfirm = { viewModel.deletePost() }
+            onConfirm = { viewModel.deletePost() },
+            confirmBtnText = "삭제",
+            isDestructive = true
         )
     }
 
@@ -216,7 +218,9 @@ fun CommunityDetailScreen(
         ConfirmDialog(
             text = "댓글을 삭제하시겠습니까?",
             onDismiss = { viewModel.closeCommentDeleteDialog() },
-            onConfirm = { viewModel.deleteComment() }
+            onConfirm = { viewModel.deleteComment() },
+            confirmBtnText = "삭제",
+            isDestructive = true
         )
     }
 
