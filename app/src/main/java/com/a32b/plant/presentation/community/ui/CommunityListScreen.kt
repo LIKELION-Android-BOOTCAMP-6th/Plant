@@ -377,10 +377,11 @@ internal const val SHARED_SWITCH_TAG = "shared_switch"
  * - 안 들어가면(큰 글꼴·좁은 화면) 뒤쪽을 다음 줄 오른쪽 끝으로 내린다.
  *   수정 전에는 남은 폭이 모자라 스위치 자리가 줄고 52dp 트랙이 그 자리 밖으로 넘쳐 그려져,
  *   "공유글 보기" 끝 글자가 스위치에 가려지거나, "공유글 보기"가 두 줄로 줄바꿈되고 스위치 오른쪽이 화면 밖으로 잘렸다
- * - 각 요소는 남은 폭이 아니라 줄 폭 전체를 받아 측정한다 → 다음 줄로 내려간 "공유글 보기"도 한 줄로 그려진다
- *   (TagFilterRowLargeFontTest: 폭 360·411dp, 글꼴 1.0·1.15·1.3·1.5·1.8·2.0에서 확인)
+ * - 앞쪽 두 요소와 뒤쪽 묶음(공유글 보기 + 스위치 Row)은 남은 폭이 아니라 줄 폭 전체를 받아 측정한다
+ *   → 다음 줄로 내려간 "공유글 보기"도 한 줄로 그려진다. 뒤쪽 묶음 안에서 스위치는 글자를 뺀 폭을 받는다 (#750)
+ *   (TagFilterRowLargeFontTest: 폭 360·411dp, 글꼴 1.0·1.15·1.3·1.5·1.8·2.0에서 글자 한 줄·스위치 폭 안 줄어듦 확인)
  * - "공유글 보기" 글자와 스위치는 한 묶음으로 누른다 (#750). 수정 전에는 Switch에 넘긴 scale(0.7f)이
- *   Switch 안의 누르는 범위(48dp 최소 크기 포함)까지 함께 줄여 48dp보다 작았고, 스위치에 라벨도 없었다
+ *   Switch의 누르는 범위까지 함께 줄여 48dp보다 작았고, 스위치에 라벨도 없었다
  *   (누르는 범위 가로·세로 48dp 이상, 라벨은 TagFilterRowLargeFontTest로 확인)
  */
 @Composable
@@ -415,8 +416,8 @@ internal fun TagFilterRow(
     val trailing = @Composable {
         // 글자와 스위치를 한 번에 누르는 범위로 묶는다 (#750)
         // - 범위: 스위치 자리(52 × 48dp + 오른쪽 10dp)와 글자 전체. scale(0.7f) 밖이라 줄어들지 않는다
-        // - TalkBack: 이 노드 하나가 "공유글 보기"와 켜짐/꺼짐을 함께 읽는다 (role = Switch)
-        // - 같은 interactionSource를 스위치에 넘겨, 눌렀을 때 thumb ripple·커지는 모양은 수정 전처럼 스위치에만 나온다
+        // - 접근성: 이 노드 하나에 "공유글 보기" 글자·role = Switch·켜짐/꺼짐이 함께 담긴다
+        // - 줄 전체 ripple은 끄고(indication = null) 같은 interactionSource를 스위치에 넘겨, 눌림 효과는 thumb에만 나오게 한다
         val interactionSource = remember { MutableInteractionSource() }
         Row(
             verticalAlignment = Alignment.CenterVertically,
