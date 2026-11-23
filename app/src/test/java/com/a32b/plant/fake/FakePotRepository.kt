@@ -7,6 +7,7 @@ import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.PotRepository
 import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.type.ItemType
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import java.util.Date
 
@@ -17,9 +18,19 @@ data class LevelUpRequest(val uid: String, val potId: String, val currentLevel: 
 class FakePotRepository(
     var cachedPot: Pot? = null,
     var levelUpResult: Result<SaveResult> = Result.Success(SaveResult.Saved),
-    var updatePotNameResult: Result<SaveResult> = Result.Success(SaveResult.Saved)
+    var updatePotNameResult: Result<SaveResult> = Result.Success(SaveResult.Saved),
+    /** getPots가 돌려줄 Flow — 넣지 않으면 호출 시 실패 */
+    var pots: Flow<List<Pot>>? = null,
+    /** getTodayStudyLogs 결과 — 넣지 않으면 호출 시 실패 */
+    var todayStudyLogsResult: Result<List<StudyLog>>? = null
 ) : PotRepository {
     val levelUps = mutableListOf<LevelUpRequest>()
+
+    /** 넣으면 levelUpPot이 게이트가 완료될 때까지 끝나지 않는다 (처리 중 상태 확인용) */
+    var levelUpGate: CompletableDeferred<Unit>? = null
+
+    /** 넣으면 levelUpPot이 결과를 돌려주기 전에 호출된다 (쓰기가 기기 캐시에 먼저 반영되는 상황 흉내용) */
+    var onLevelUp: (() -> Unit)? = null
 
     /** updatePotName 호출 기록 (uid, potId, newName) */
     val updates = mutableListOf<Triple<String, String, String>>()
@@ -33,6 +44,8 @@ class FakePotRepository(
         items: Map<ItemType, Int>
     ): Result<SaveResult> {
         levelUps += LevelUpRequest(uid, potId, currentLevel, items)
+        onLevelUp?.invoke()
+        levelUpGate?.await()
         return levelUpResult
     }
 
@@ -41,12 +54,12 @@ class FakePotRepository(
         return updatePotNameResult
     }
 
-    override fun getPots(uid: String): Flow<List<Pot>> = error("Unused")
+    override fun getPots(uid: String): Flow<List<Pot>> = pots ?: error("Unused")
     override fun getAvailableTags(): Flow<List<Tag>> = error("Unused")
     override suspend fun addPot(uid: String, tag: Tag, name: String): Result<SaveResult> = error("Unused")
     override suspend fun getUserPotById(uid: String, potId: String): Pot? = error("Unused")
     override suspend fun deleteEntirePot(uid: String, potId: String): Result<SaveResult> = error("Unused")
     override suspend fun completeStudyPlan(uid: String, potId: String): Result<SaveResult> = error("Unused")
     override suspend fun getTodayStudyLogs(uid: String, potId: String, startOfToday: Date): Result<List<StudyLog>> =
-        error("Unused")
+        todayStudyLogsResult ?: error("Unused")
 }

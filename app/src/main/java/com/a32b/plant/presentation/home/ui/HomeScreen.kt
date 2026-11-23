@@ -180,15 +180,6 @@ fun HomeScreen(
         )
     }
 
-    uiState.insufficientItemsMessage?.let { message ->
-        ConfirmDialog(
-            text = message,
-            semiText = "아이템 상점에서 구매할 수 있어요.",
-            onDismiss = { viewModel.onDismissInsufficientDialog() },
-            onConfirm = { viewModel.onDismissInsufficientDialog() }
-        )
-    }
-
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
@@ -198,11 +189,10 @@ fun HomeScreen(
                     // 앱이 모르는 보상만 나오면 비어 있다 (지급은 서버에서 끝남) → 결과 창 없이 닫기만 한다
                     bonusBoxResult = event.items.takeIf { it.isNotEmpty() }
                 }
+                is HomeEvent.OpenBonusBoxDialog -> showOpenDialog = true // 오픈 수량 선택 다이얼로그 호출
                 is HomeEvent.LevelUpSuccess -> {
                     showLevelUpConfetti = true
-                    context.showToast(
-                        if (event.isPending) "레벨업 성공! 네트워크에 연결되면 자동으로 저장돼요." else "레벨업 성공!"
-                    )
+                    context.showToast(event.message)
                 }
             }
         }
@@ -270,11 +260,8 @@ fun HomeScreen(
                                     ))
                             }
                         },
-                        onLevelUpClick = {
-                            if (!hasNoPot && !uiState.isLoading) {
-                                viewModel.onLevelUpClick(displayPot.id)
-                            }
-                        },
+                        // 화분 없음·처리 중 가드는 ViewModel에서 한다
+                        onLevelUpClick = viewModel::onLevelUpClick,
 
                         //화분 생성 이동 or 화분 변경 다이얼로그 오픈
                         onChangeOrMakeClick = {
@@ -298,14 +285,8 @@ fun HomeScreen(
                         compact = compact,
                         item = userItem,
                         onItemClick = { clickedType ->
-                            if (clickedType == ItemType.BOX) {
-                                if (isBoxOpening) return@HomeItemBoxSection
-                                if (userItem.box <= 0) {
-                                    context.showToast("보유한 보너스 박스가 없습니다.")
-                                } else {
-                                    showOpenDialog = true // 오픈 수량 선택 다이얼로그 호출
-                                }
-                            }
+                            // 박스가 없으면 ViewModel이 토스트, 있으면 OpenBonusBoxDialog 이벤트로 다이얼로그를 연다
+                            if (clickedType == ItemType.BOX) viewModel.onBonusBoxClick()
                         }
                     )
                 }
@@ -345,6 +326,15 @@ fun HomeScreen(
             }
         }
 
+        // 레벨업 확인 다이얼로그 (#678) — 처리 중에는 아래 LoadingDialog도 함께 띄운다
+        uiState.levelUpDialog?.let { dialog ->
+            LevelUpDialog(
+                state = dialog,
+                isLoading = uiState.isLoading,
+                onConfirm = viewModel::onLevelUpConfirm,
+                onDismiss = viewModel::onLevelUpDialogDismiss
+            )
+        }
         if (uiState.isLoading){
             LoadingDialog()
         }
@@ -825,8 +815,8 @@ fun MainPlantCard(
 
                 Spacer(modifier = Modifier.height(8.dp.compactIf(compact)))
 
-                // 학습 시간 부족·최고 레벨이면 비활성처럼만 표시 — enabled=false면 클릭이 막혀 남은 시간 안내를 띄울 수 없으므로
-                // 조건 확인과 안내는 ViewModel(LevelUpPotUseCase)에서 한다. 실제로 막는 것은 처리 중일 때뿐
+                // 학습 시간 부족·최고 레벨이면 비활성처럼만 표시 — enabled=false면 클릭이 막혀 확인 다이얼로그·안내를 띄울 수 없으므로
+                // 누르면 ViewModel이 확인 다이얼로그를 열거나(최고 레벨·완료 화분은 토스트) 한다 (#678). 실제로 막는 것은 처리 중일 때뿐
                 Button(
                     onClick = onLevelUpClick,
                     modifier = Modifier
@@ -1083,8 +1073,9 @@ private val ITEM_LABEL_LINE_HEIGHT = 14.sp
 /** 아이템 이름 자리 높이에 쓰는 줄 수. "보너스" / "박스"가 2줄이라 모든 칸의 이름 자리를 2줄 높이로 맞춘다 (#387) */
 private const val ITEM_LABEL_LINE_SLOTS = 2
 
-// 레벨업 버튼이 비활성처럼 보일 때(학습 시간 부족·최고 레벨) TalkBack이 읽는 상태
-private const val LEVEL_UP_NOT_READY_STATE_DESCRIPTION = "조건 미충족"
+// 레벨업 버튼이 비활성처럼 보일 때(학습 시간 부족·최고 레벨, 다이얼로그에서는 재료 부족 포함) TalkBack이 읽는 상태
+// 홈 버튼과 레벨업 다이얼로그(LevelUpDialog) 버튼이 함께 쓴다
+internal const val LEVEL_UP_NOT_READY_STATE_DESCRIPTION = "조건 미충족"
 
 /**
  * 홈 타일에 쓰는 이름을 줄 단위로 나눈 목록 (#387)

@@ -18,7 +18,9 @@ class FakeStudyingRepository(
     var saveStudySessionResult: Result<StudySaveResult> = Result.Success(StudySaveResult.Saved),
     var saveLocalSessionResult: Result<Unit> = Result.Success(Unit),
     /** observeStudyingUser가 돌려줄 Flow — 넣지 않으면 호출 시 실패 */
-    var studyingUsers: Flow<List<StudyingUser>>? = null
+    var studyingUsers: Flow<List<StudyingUser>>? = null,
+    /** observeUnseenStudyRewards가 돌려줄 Flow — 넣지 않으면 호출 시 실패 */
+    var unseenStudyRewards: Flow<List<UnseenStudyReward>>? = null
 ) : StudyingRepository {
     var clearLocalSessionCalls = 0
 
@@ -70,7 +72,8 @@ class FakeStudyingRepository(
     override suspend fun awaitPendingWrites(): Boolean = error("Unused")
     override suspend fun isStudySessionSaved(uid: String, potId: String, sessionId: String): Result<Boolean> = error("Unused")
     override fun observeStudyReward(uid: String, potId: String, sessionId: String): Flow<StudyRewardStatus?> = error("Unused")
-    override fun observeUnseenStudyRewards(uid: String): Flow<List<UnseenStudyReward>> = error("Unused")
+    override fun observeUnseenStudyRewards(uid: String): Flow<List<UnseenStudyReward>> =
+        unseenStudyRewards ?: error("Unused")
     override suspend fun markStudyRewardsSeen(uid: String, refs: List<StudyLogRef>): Result<Unit> = error("Unused")
     override suspend fun deleteStudyingUserInfo(): Result<Unit> = error("Unused")
     override suspend fun readLocalSession(): Result<StudyingSession?> = error("Unused")
