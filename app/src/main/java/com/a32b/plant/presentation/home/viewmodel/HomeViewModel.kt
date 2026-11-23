@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -63,8 +64,8 @@ data class AttendanceUiState(
 )
 
 data class HomeUiState(
-    val levelUpReady: Boolean = false, // 레벨업 학습 시간 조건 충족 (false면 버튼을 비활성처럼 표시, 누르면 LevelUpPotUseCase가 이유 안내 — 남은 시간·최고 레벨 등)
-    val insufficientItemsMessage: String? = null, // 아이템 부족 다이얼로그 문구 ("햇빛, 물이(가) 부족합니다.") — null이면 닫힘
+    val levelUpReady: Boolean = false, // 레벨업 학습 시간 조건 충족 (false면 홈 버튼을 비활성처럼 표시, 누르면 확인 다이얼로그에서 부족한 내용을 보여줌 — 최고 레벨·완료 화분은 토스트)
+    val levelUpDialog: LevelUpDialogUiState? = null, // 레벨업 확인 다이얼로그 (#678) — null이면 닫힘
     val levelUpProgress: Float = 0f,
     val levelUpProgressText: String = "",
     val isLoading: Boolean = false
@@ -73,8 +74,14 @@ data class HomeUiState(
 sealed class HomeEvent {
     data class ShowToast(val message: String) : HomeEvent()
     data class BonusBoxResult(val items: List<ItemType>) : HomeEvent()
+    // 보너스 박스 개수 선택 다이얼로그 열기 — 박스가 있을 때만 보낸다 (없으면 ShowToast)
+    object OpenBonusBoxDialog : HomeEvent()
+    // newLevel: 레벨업으로 올라간 레벨
     // isPending: 서버 응답 없이 기기에만 반영됨 (오프라인) — 연결되면 자동 전송, 다시 보내지 않음
-    data class LevelUpSuccess(val isPending: Boolean) : HomeEvent()
+    data class LevelUpSuccess(val newLevel: Int, val isPending: Boolean) : HomeEvent() {
+        // 화면은 이 문구를 그대로 토스트로 띄운다 (#678)
+        val message: String get() = levelUpSuccessMessage(newLevel, isPending)
+    }
 }
 
 private fun DailyCheckThisMonth.toAttendanceUiState(): AttendanceUiState {
@@ -121,6 +128,9 @@ private fun DailyCheckThisMonth.toAttendanceUiStateKeeping(
 internal const val ATTENDANCE_OFFLINE_MESSAGE = "인터넷에 연결되면 출석할 수 있어요"
 // Android 12부터 텍스트 토스트는 두 줄까지만 보이므로(Android 13 실기기에서 이전 문구는 "출석판을 확인..."에서 잘림) 짧게 유지한다
 internal const val ATTENDANCE_NETWORK_ERROR_MESSAGE = "출석 결과를 받지 못했어요. 출석판을 확인해주세요."
+
+// 보너스 박스가 없을 때 박스 칸을 누르면 보여주는 문구 (#678에서 화면에서 옮김, 문구는 그대로)
+internal const val NO_BONUS_BOX_MESSAGE = "보유한 보너스 박스가 없습니다."
 
 /**
  * 홈 "오늘 학습 시간"의 0 표시 — 화분 있음(기록 0)·화분 없음·조회 실패를 같은 형식으로 맞춘다 (#584)
@@ -229,6 +239,12 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState = _uiState.asStateFlow()
 
+    // 레벨업 다이얼로그를 연 화분과 그때의 레벨 — null이면 닫힘 (#678)
+    // 표시 내용은 observeLevelUpDialog가 화분·보유 아이템 최신 값으로 만든다
+    private val levelUpDialogTarget = MutableStateFlow<LevelUpDialogTarget?>(null)
+
+    private data class LevelUpDialogTarget(val potId: String, val level: Int)
+
     // 지급됐지만 아직 보여주지 않은 학습 보상 (오프라인에서 저장한 세션, 결과 화면을 못 본 세션) — #453
     private val _unseenStudyRewards = MutableStateFlow<List<UnseenStudyReward>>(emptyList())
     // 쌓인 보상 창에 표시할 합계 — 없으면 null (창을 띄우지 않음)
@@ -240,6 +256,7 @@ class HomeViewModel @Inject constructor(
         checkUserAndLoadData()
         observeUserItem()
         observeUnseenStudyRewards()
+        observeLevelUpDialog()
     }
 
     /**
@@ -599,6 +616,16 @@ class HomeViewModel @Inject constructor(
         _attendanceUiState.update { it.copy(reward = null) }
     }
 
+    // 홈 아이템 칸의 보너스 박스 클릭 — 개봉 중이면 무시, 박스가 없으면 안내, 있으면 개수 선택 다이얼로그를 연다
+    fun onBonusBoxClick() {
+        if (_isBoxOpening.value) return
+        if (_userItem.value.box <= 0) {
+            sendToast(NO_BONUS_BOX_MESSAGE)
+        } else {
+            viewModelScope.launch { _eventChannel.send(HomeEvent.OpenBonusBoxDialog) }
+        }
+    }
+
     fun openBoxes(count: Int) {
         if (count <= 0) return
         if (_isBoxOpening.value) return
@@ -657,34 +684,84 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(levelUpReady = ready) }
     }
 
-    // 레벨업 (#456): 조건 확인·안내는 LevelUpPotUseCase가 하고, 여기서는 결과만 화면에 알린다
+    /**
+     * 레벨업 다이얼로그 표시 내용을 화분·보유 아이템 최신 값으로 다시 만든다 (#678)
+     * - 열린 사이 아이템 수가 바뀌면(학습 보상, 다른 기기 사용 등) 바뀐 보유 개수로 다시 그린다
+     * - 연 화분이 아니거나(삭제 등으로 대표 화분이 바뀜) 레벨이 달라지면(레벨업 반영, 다른 기기에서 레벨업) 닫는다
+     *   → 이 기기의 레벨업도 기기 캐시에 반영되는 즉시 레벨이 바뀌어 결과를 받기 전에 닫힌다 (처리 중 표시는 LoadingDialog가 이어서 함)
+     * - 완료 화분·최고 레벨이 되면(buildLevelUpDialogUiState가 null) 닫는다
+     */
+    private fun observeLevelUpDialog() {
+        viewModelScope.launch {
+            combine(levelUpDialogTarget, _displayPot, _userItem) { target, pot, item ->
+                target
+                    ?.takeIf { pot.id == it.potId && pot.potLevel == it.level }
+                    ?.let { buildLevelUpDialogUiState(pot, item) }
+            }.collect { dialog ->
+                if (dialog == null) levelUpDialogTarget.value = null
+                _uiState.update { it.copy(levelUpDialog = dialog) }
+            }
+        }
+    }
+
+    /**
+     * 홈 "화분 레벨업" 버튼 (#678): 바로 요청하지 않고 필요한 재료·학습 시간을 보여주는 확인 다이얼로그를 연다
+     * 최고 레벨·완료 화분은 다이얼로그 대신 지금처럼 안내만 한다 (문구는 LevelUpPotUseCase와 같음)
+     */
+    fun onLevelUpClick() {
+        val pot = _displayPot.value
+        if (pot.id.isEmpty() || pot == Pot.EMPTY) return
+        if (_uiState.value.isLoading) return
+        when {
+            pot.isCompleted -> sendToast(LevelUpPotUseCase.COMPLETED_POT_MESSAGE)
+            PotLevelConditions.getCondition(pot.potLevel) == null -> sendToast(LevelUpPotUseCase.MAX_LEVEL_MESSAGE)
+            else -> levelUpDialogTarget.value = LevelUpDialogTarget(pot.id, pot.potLevel)
+        }
+    }
+
+    /** 레벨업 다이얼로그 닫기 — 처리 중에는 닫지 않는다 (다이얼로그 취소 버튼·바깥 터치도 막혀 있음) */
+    fun onLevelUpDialogDismiss() {
+        if (_uiState.value.isLoading) return
+        levelUpDialogTarget.value = null
+    }
+
+    // 레벨업 다이얼로그의 "레벨업" 버튼 (#456, #678)
+    // 조건이 부족해 보이면(버튼이 흐림) 요청하지 않고 부족한 내용만 안내한다
+    // 충족해 보이면 LevelUpPotUseCase가 기기 캐시 값으로 다시 확인한 뒤 요청한다 (그 사이 바뀐 경우 UseCase 문구로 안내)
     // 레벨 이미지·아이템 개수는 화분·유저 실시간 구독이 기기 캐시 반영 즉시 갱신하므로 직접 바꾸지 않는다
     // (서버에서 거부되면 캐시가 되돌아가 구독이 원래 값으로 다시 그린다)
-    fun onLevelUpClick(potId: String) {
+    fun onLevelUpConfirm() {
         // 처리 중 연타 가드 — 같은 레벨업 batch가 두 번 가지 않게 한다 (두 번 가도 규칙이 두 번째를 거부함)
         if (_uiState.value.isLoading) return
+        val dialog = _uiState.value.levelUpDialog ?: return
+        dialog.notReadyMessage?.let { message ->
+            sendToast(message)
+            return
+        }
         _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
-            levelUpPotUseCase(potId)
+            levelUpPotUseCase(dialog.potId)
                 .onSuccess { result ->
+                    levelUpDialogTarget.value = null
                     _uiState.update { it.copy(isLoading = false) }
-                    _eventChannel.send(HomeEvent.LevelUpSuccess(isPending = result == SaveResult.Pending))
+                    // 새 레벨은 요청한 다이얼로그의 레벨 + 1 (UseCase는 같은 기기 캐시의 화분 레벨로 요청한다)
+                    _eventChannel.send(
+                        HomeEvent.LevelUpSuccess(
+                            newLevel = dialog.newLevel,
+                            isPending = result == SaveResult.Pending
+                        )
+                    )
                 }
                 .onFailure { e ->
+                    // 다이얼로그는 열어 둬서 다시 시도할 수 있게 한다
                     _uiState.update { it.copy(isLoading = false) }
                     when (e) {
+                        // LevelUpPotUseCase가 이미 ensureCurrentUserUseCase로 세션 만료를 알렸다
                         is AppError.UnknownUser -> Unit
-                        is AppError.InsufficientItems -> {
-                            _uiState.update { it.copy(insufficientItemsMessage = e.message) }
-                        }
                         else -> sendToast(e.message)
                     }
                 }
         }
-    }
-
-    fun onDismissInsufficientDialog() {
-        _uiState.update { it.copy(insufficientItemsMessage = null) }
     }
 
     //바 계산 & 레벨업 조건 검증 일괄 처리용
