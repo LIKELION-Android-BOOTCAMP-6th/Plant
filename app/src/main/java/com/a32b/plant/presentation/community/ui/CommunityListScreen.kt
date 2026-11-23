@@ -463,15 +463,18 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
         value = query,
         onValueChange = onQueryChange,
         placeholder = {
+            // 입력 글자(singleLine)처럼 한 줄로 두고, 좁은 화면·큰 글꼴에서 안 들어가면 말줄임 (#749)
             Text(
                 "검색어를 입력하세요",
-                style = placeholderStyle
+                style = placeholderStyle,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         },
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 4.dp)
-            .height(searchBarHeight(placeholderStyle, inputStyle)),
+            .height(searchBarHeight(placeholderStyle, inputStyle, query)),
         shape = RoundedCornerShape(12.dp),
         textStyle = inputStyle,
         trailingIcon = {
@@ -519,16 +522,29 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
  * - 안 들어가면 글자 높이 + 위아래 여백으로 늘린다
  * 최소 높이(heightIn(min = 48.dp))로 두지 않는 이유: 글꼴 1.0에서도 48dp보다 높아진다
  * (SM-N986N, 폭 360dp, 빈 검색어에서 126 → 147px)
+ *
+ * 입력 글자는 실제 검색어로 잰다 (#749). 앱 글꼴에 없는 문자(이모지 등)는 기기의 다른 글꼴로 그려져
+ * 같은 글자 크기에서도 한 줄이 더 높아질 수 있어, "검" 한 글자로만 재면 넘쳤다
+ * (SM-N986N, 폭 360dp, 글꼴 1.0: "검색어 가나다" 39px, "검색😀" 46px).
+ * - 앞에 "검"을 붙여 재므로 높이는 빈 검색어보다 낮아지지 않는다. 한글 검색어("검색어 가나다")는 빈 검색어와 같았다 (SearchBarSectionLargeFontTest, 글꼴 1.0이면 48dp)
+ * - 더 높은 줄이 되는 문자를 넣으면 검색창이 높아지고, 지우면 돌아온다 (상단바 높이가 바뀌어 아래 목록도 그만큼 움직임)
+ * - 안내 문구는 한 줄(maxLines = 1)이라 "검"으로 잰다
  */
 @Composable
-private fun searchBarHeight(placeholderStyle: TextStyle, inputStyle: TextStyle): Dp {
+private fun searchBarHeight(placeholderStyle: TextStyle, inputStyle: TextStyle, query: String): Dp {
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
-    return remember(density, placeholderStyle, inputStyle) {
+    return remember(density, placeholderStyle, inputStyle, query) {
         with(density) {
             val textHeightPx = maxOf(
-                textMeasurer.measure(SEARCH_BAR_SAMPLE_TEXT, placeholderStyle).size.height,
-                textMeasurer.measure(SEARCH_BAR_SAMPLE_TEXT, inputStyle).size.height
+                textMeasurer.measure(SEARCH_BAR_SAMPLE_TEXT, placeholderStyle, maxLines = 1).size.height,
+                // 검색창이 singleLine이라 줄바꿈 없이 한 줄로 잰다
+                textMeasurer.measure(
+                    SEARCH_BAR_SAMPLE_TEXT + query,
+                    inputStyle,
+                    softWrap = false,
+                    maxLines = 1
+                ).size.height
             )
             // 여백도 OutlinedTextField와 같이 px로 반올림해 더한다 (dp로 더하면 반올림 차이로 1px 모자랄 수 있음)
             val verticalPaddingPx = SEARCH_BAR_VERTICAL_PADDING.roundToPx() * 2
