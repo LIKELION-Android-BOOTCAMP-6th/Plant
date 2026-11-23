@@ -118,6 +118,7 @@ private fun ReportSummaryMetricChip(
  * 띄어쓰기에서만 줄이 나뉘게 단어 안 글자 사이에 WORD JOINER(U+2060)를 넣는다 (#649)
  * 띄어쓰기가 없어도 숫자·한글 글자 사이에서 줄이 나뉘어 "743시간 59" / "분"처럼 쪼개졌음 (에뮬레이터 측정)
  * 화면 표시용 — 읽기 문구(contentDescription)는 원래 값을 쓴다
+ * 숫자·한글 문자열용: Char 단위로 나누므로 이모지처럼 두 Char로 된 글자에 쓰면 그 사이에도 들어가 글자가 깨진다
  */
 internal fun keepWordsTogether(text: String): String =
     text.split(' ').joinToString(" ") { word -> word.toList().joinToString(WORD_JOINER) }
