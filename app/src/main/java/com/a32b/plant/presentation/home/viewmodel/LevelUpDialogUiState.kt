@@ -52,7 +52,7 @@ data class LevelUpDialogUiState(
 
 /**
  * 화분과 보유 아이템으로 다이얼로그 상태를 만든다 — 완료 화분·최고 레벨은 레벨업할 수 없으므로 null
- * 학습 시간 기준은 레벨업 가능 최소 시간(minHoursForLevelUp)이다. 홈 진행 바의 기준(maxHoursForProgress)과 다르다
+ * 학습 시간 기준은 레벨업 가능 최소 시간(minHoursForLevelUp)이다. 홈 진행 바 100% 기준과 같다 (#679)
  */
 internal fun buildLevelUpDialogUiState(pot: Pot, item: Item): LevelUpDialogUiState? {
     if (pot.isCompleted) return null

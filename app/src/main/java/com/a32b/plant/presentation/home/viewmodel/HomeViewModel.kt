@@ -661,21 +661,6 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    //진행도 & 텍스트 계산
-    private fun computeProgress(pot: Pot): Pair<Float, String> {
-        val condition = PotLevelConditions.getCondition(pot.potLevel)
-            ?: return 1f to "최고 레벨"
-
-        val maxMs = condition.maxHoursForProgress * 3_600_000L
-        val progress = (pot.potTotalStudyingTime.toFloat() / maxMs).coerceIn(0f, 1f)
-
-        // 누적·요약 시간 규칙 "n시간 n분" (#649), 예: "21% (1시간 4분/5시간)"
-        val current = TimeFormatter.formatToHoursMinutes(pot.potTotalStudyingTime)
-        val required = TimeFormatter.formatToHoursMinutes(maxMs)
-        val text = "${(progress * 100).toInt()}% ($current/$required)"
-        return progress to text
-    }
-
     // 레벨업 재검증
     private fun recheckLevelUpCondition(pot: Pot) {
         val ready = pot.id.isNotEmpty() &&
@@ -771,11 +756,12 @@ class HomeViewModel @Inject constructor(
 
     //바 계산 & 레벨업 조건 검증 일괄 처리용
     private fun updateProgressAndCondition(pot: Pot) {
-        val (progress, text) = computeProgress(pot)
+        // 진행 바는 레벨마다 0~100%, 100% = 레벨업 가능 (#679)
+        val progress = buildLevelUpProgress(pot)
         _uiState.update {
             it.copy(
-                levelUpProgress = progress,
-                levelUpProgressText = text
+                levelUpProgress = progress.progress,
+                levelUpProgressText = progress.text
             )
         }
         recheckLevelUpCondition(pot)
