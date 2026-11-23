@@ -64,12 +64,12 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * 큰 글꼴에서 커뮤니티 목록 "태그 · 전체 선택 해제 · 공유글 보기 · 스위치" 줄이 겹치거나 잘리지 않는지 확인 (#742)
+ * 큰 글꼴에서 커뮤니티 목록 "태그 · 전체 선택 해제 · 공유글만 보기 · 스위치" 줄이 겹치거나 잘리지 않는지 확인 (#742)
  *
  * - 화면 폭은 Box 폭(requiredWidth)으로, 글꼴 배율은 LocalDensity의 fontScale로 바꿔 확인한다 (BottomBarLargeFontTest와 같은 방식)
  * - 화면처럼 좌우 10dp 여백(CommunityListScreen의 Column padding) 안에 그린다
  * - 스위치 모양의 자리는 [SHARED_SWITCH_TAG] 노드 범위로 본다 (scale(0.7f)이 반영된 범위)
- * - 누를 수 있는 범위·접근성 노드는 "공유글 보기"와 스위치를 묶은 toggleable 노드(isToggleable)로 본다 (#750)
+ * - 누를 수 있는 범위·접근성 노드는 "공유글만 보기"와 스위치를 묶은 toggleable 노드(isToggleable)로 본다 (#750)
  */
 @RunWith(AndroidJUnit4::class)
 class TagFilterRowLargeFontTest {
@@ -139,10 +139,10 @@ class TagFilterRowLargeFontTest {
     private fun areaBounds(): Rect = composeRule.onNodeWithTag(ROW_AREA).fetchSemanticsNode().boundsInRoot
 
     /**
-     * - 글자 3개(태그·전체 선택 해제·공유글 보기)가 한 줄로 다 보인다
+     * - 글자 3개(태그·전체 선택 해제·공유글만 보기)가 한 줄로 다 보인다
      * - 스위치가 자리를 다 받았다: 자리가 모자라면 스위치 모양 노드([SHARED_SWITCH_TAG])는 좁아지지만 트랙은 52dp로 넘쳐 그려져
      *   아래 겹침 검사를 피해 가므로, 노드 폭이 [SWITCH_SCALE]배 한 트랙 폭과 같은지 먼저 본다
-     * - 공유글 보기–스위치, (같은 줄이면) 전체 선택 해제–공유글 보기가 가로로 겹치지 않는다
+     * - 공유글만 보기–스위치, (같은 줄이면) 전체 선택 해제–공유글만 보기가 가로로 겹치지 않는다
      * - 글자 3개와 스위치가 좌우 여백 안쪽(화면 안)에 있다
      * - 스위치 Row(toggleable 노드)가 여백 안쪽에 있고, 태그·전체 선택 해제와 레이아웃 범위가 겹치지 않는다 (#750).
      *   태그·칩은 가로나 세로가 48dp보다 작으면 실제 터치 범위가 레이아웃보다 넓어지지만,
@@ -165,10 +165,10 @@ class TagFilterRowLargeFontTest {
             assertTrue("$label $name: 왼쪽이 여백 밖 ($b, 영역 $area)", b.left >= area.left)
             assertTrue("$label $name: 오른쪽이 여백 밖 ($b, 영역 $area)", b.right <= area.right)
         }
-        assertTrue("$label: 공유글 보기($shared)가 스위치($switch)에 가려짐", shared.right <= switch.left)
+        assertTrue("$label: 공유글만 보기($shared)가 스위치($switch)에 가려짐", shared.right <= switch.left)
         // 같은 줄에 있으면 앞쪽 묶음과 뒤쪽 묶음이 가로로 겹치지 않아야 한다
         if (shared.overlapsVertically(clear)) {
-            assertTrue("$label: 전체 선택 해제($clear)와 공유글 보기($shared)가 겹침", clear.right <= shared.left)
+            assertTrue("$label: 전체 선택 해제($clear)와 공유글만 보기($shared)가 겹침", clear.right <= shared.left)
         }
         val toggle = toggleBounds()
         assertTrue("$label: 누르는 범위($toggle)가 여백 밖 (영역 $area)", toggle.left >= area.left && toggle.right <= area.right)
@@ -195,7 +195,7 @@ class TagFilterRowLargeFontTest {
         forEachCombo(darkTheme = true) { width, fontScale -> assertNoOverlapOrClip("다크, 폭 $width, 글꼴 $fontScale") }
     }
 
-    /** 글꼴 1.0에서는 한 줄 (공유글 보기와 태그가 같은 줄) */
+    /** 글꼴 1.0에서는 한 줄 (공유글만 보기와 태그가 같은 줄) */
     @Test
     fun defaultFontStaysOneLine() {
         forEachCombo { width, fontScale ->
@@ -219,7 +219,7 @@ class TagFilterRowLargeFontTest {
     /**
      * 스위치·전체 선택 해제·태그를 누르면 각 콜백이 불린다
      * - 전체 선택 해제·태그를 눌러도 스위치는 바뀌지 않는다
-     * - 스위치 모양 가운데와 "공유글 보기" 글자를 눌러도 스위치가 바뀐다 (#750)
+     * - 스위치 모양 가운데와 "공유글만 보기" 글자를 눌러도 스위치가 바뀐다 (#750)
      */
     @Test
     fun clicksCallCallbacks() {
@@ -248,11 +248,11 @@ class TagFilterRowLargeFontTest {
             assertEquals("태그 콜백 횟수", 1, tagClicks)
             assertFalse("전체 선택 해제·태그를 눌렀는데 스위치가 바뀜", sharedShown)
         }
-        // 스위치 모양 가운데와 "공유글 보기" 글자를 눌러도 바뀐다 (#750)
+        // 스위치 모양 가운데와 "공유글만 보기" 글자를 눌러도 바뀐다 (#750)
         composeRule.onNodeWithTag(SHARED_SWITCH_TAG, useUnmergedTree = true).performClick()
         composeRule.runOnIdle { assertTrue("스위치 모양을 눌러도 켜지지 않음", sharedShown) }
         composeRule.onNodeWithText(SHARED_TEXT, useUnmergedTree = true).performClick()
-        composeRule.runOnIdle { assertFalse("공유글 보기 글자를 눌러도 꺼지지 않음", sharedShown) }
+        composeRule.runOnIdle { assertFalse("공유글만 보기 글자를 눌러도 꺼지지 않음", sharedShown) }
     }
 
     /**
@@ -295,7 +295,7 @@ class TagFilterRowLargeFontTest {
         }
     }
 
-    /** 접근성 노드가 하나이고, "공유글 보기"·스위치 역할·켜짐/꺼짐을 함께 갖는다 (#750) */
+    /** 접근성 노드가 하나이고, "공유글만 보기"·스위치 역할·켜짐/꺼짐을 함께 갖는다 (#750) */
     @Test
     fun switchHasLabelForAccessibility() {
         var shown by mutableStateOf(false)
@@ -312,7 +312,8 @@ class TagFilterRowLargeFontTest {
 
     /**
      * 글꼴 1.0에서는 수정 전 Row와 위치·크기가 px 단위로 같다
-     * (수정 전 코드를 [LegacyTagFilterRow]로 옮겨 두고 같은 조건에서 비교)
+     * (수정 전 코드를 [LegacyTagFilterRow]로 옮겨 두고 같은 조건에서 비교. 스위치 글자는 둘 다 지금 문구라
+     *  배치 계산이 같은지를 본다 — [LegacyTagFilterRow] KDoc 참고)
      */
     @Test
     fun defaultFontMatchesLegacyLayout() {
@@ -376,7 +377,7 @@ class TagFilterRowLargeFontTest {
         const val ROW_AREA = "row_area"
         const val TAG_TEXT = "태그"
         const val CLEAR_TEXT = "전체 선택 해제"
-        const val SHARED_TEXT = "공유글 보기"
+        const val SHARED_TEXT = "공유글만 보기"
         const val TAG_ICON_DESC = "태그박스"
         // material3 1.4.0 SwitchTokens.TrackWidth, CommunityListScreen의 Modifier.scale(0.7f)
         val SWITCH_TRACK_WIDTH = 52.dp
@@ -393,7 +394,10 @@ class TagFilterRowLargeFontTest {
 /**
  * 수정 전(develop 2bb74cec) CommunityListScreen의 같은 줄을 옮긴 것 — 글꼴 1.0 회귀 비교용.
  * 클릭 동작은 빈 람다, 태그 아이콘은 태그 선택 창이 닫힌 상태(ic_down)로 고정했다.
- * "공유글 보기"·Switch 부분은 #750 수정 전 TagFilterRow와도 같아서, #750의 스위치 모양 회귀 비교에도 쓴다
+ * Switch 부분은 #750 수정 전 TagFilterRow와도 같아서, #750의 스위치 모양 회귀 비교에도 쓴다
+ * - 스위치 글자만 #757에서 바꾼 문구("공유글만 보기")로 넣었다. 수정 전 코드는 "공유글 보기"를 그렸지만,
+ *   문구가 다르면 글자 폭이 달라 px 비교가 성립하지 않는다. 그래서 이 비교는 같은 글자를 놓았을 때
+ *   배치 계산(수정 전 Row + Spacer weight ↔ 지금 TagFilterRow의 Layout)이 같은지를 본다
  */
 @Composable
 private fun LegacyTagFilterRow(isSharedShown: Boolean) {
@@ -424,7 +428,7 @@ private fun LegacyTagFilterRow(isSharedShown: Boolean) {
         Spacer(modifier = Modifier.weight(1f))
 
         Text(
-            "공유글 보기",
+            "공유글만 보기",
             style = MaterialTheme.typography.titleMedium
         )
         Switch(
