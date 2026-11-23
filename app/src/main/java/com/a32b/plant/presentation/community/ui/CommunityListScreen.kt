@@ -86,6 +86,11 @@ import com.a32b.plant.presentation.core.component.TagChip
 import com.a32b.plant.presentation.core.component.TagSheet
 import com.a32b.plant.presentation.core.extension.showToast
 import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -360,6 +365,9 @@ fun CommunityListScreen(
     }
 }
 
+/** [TagFilterRow]의 공유글 보기 스위치 (테스트에서 스위치 모양의 자리를 찾을 때 씀) */
+internal const val SHARED_SWITCH_TAG = "shared_switch"
+
 /**
  * 검색창 아래 "태그 · 전체 선택 해제 · 공유글 보기 · 스위치" 줄 (#742)
  *
@@ -371,6 +379,9 @@ fun CommunityListScreen(
  *   "공유글 보기" 끝 글자가 스위치에 가려지거나, "공유글 보기"가 두 줄로 줄바꿈되고 스위치 오른쪽이 화면 밖으로 잘렸다
  * - 각 요소는 남은 폭이 아니라 줄 폭 전체를 받아 측정한다 → 다음 줄로 내려간 "공유글 보기"도 한 줄로 그려진다
  *   (TagFilterRowLargeFontTest: 폭 360·411dp, 글꼴 1.0·1.15·1.3·1.5·1.8·2.0에서 확인)
+ * - "공유글 보기" 글자와 스위치는 한 묶음으로 누른다 (#750). 수정 전에는 Switch에 넘긴 scale(0.7f)이
+ *   Switch 안의 누르는 범위(48dp 최소 크기 포함)까지 함께 줄여 48dp보다 작았고, 스위치에 라벨도 없었다
+ *   (누르는 범위 가로·세로 48dp 이상, 라벨은 TagFilterRowLargeFontTest로 확인)
  */
 @Composable
 internal fun TagFilterRow(
@@ -402,22 +413,43 @@ internal fun TagFilterRow(
         }
     }
     val trailing = @Composable {
-        Text(
-            "공유글 보기",
-            style = MaterialTheme.typography.titleMedium
-        )
-        Switch(
-            isSharedShown,
-            onCheckedChange = { onSharedShownChange() },
-            modifier = Modifier
-                .scale(0.7f)
-                .padding(end = 10.dp),
-            colors = SwitchDefaults.colors(
-                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-                uncheckedBorderColor = MaterialTheme.colorScheme.outline
+        // 글자와 스위치를 한 번에 누르는 범위로 묶는다 (#750)
+        // - 범위: 스위치 자리(52 × 48dp + 오른쪽 10dp)와 글자 전체. scale(0.7f) 밖이라 줄어들지 않는다
+        // - TalkBack: 이 노드 하나가 "공유글 보기"와 켜짐/꺼짐을 함께 읽는다 (role = Switch)
+        // - 같은 interactionSource를 스위치에 넘겨, 눌렀을 때 thumb ripple·커지는 모양은 수정 전처럼 스위치에만 나온다
+        val interactionSource = remember { MutableInteractionSource() }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.toggleable(
+                value = isSharedShown,
+                interactionSource = interactionSource,
+                indication = null,
+                role = Role.Switch,
+                onValueChange = { onSharedShownChange() }
             )
-        )
+        ) {
+            Text(
+                "공유글 보기",
+                style = MaterialTheme.typography.titleMedium
+            )
+            // onCheckedChange = null이면 Switch가 자기 누르는 범위·semantics를 만들지 않는다.
+            // 그때 빠지는 minimumInteractiveComponentSize(48dp)를 직접 붙여 수정 전과 같은 자리(52 × 48dp)를 차지하게 한다
+            Switch(
+                isSharedShown,
+                onCheckedChange = null,
+                modifier = Modifier
+                    .scale(0.7f)
+                    .padding(end = 10.dp)
+                    .minimumInteractiveComponentSize()
+                    .testTag(SHARED_SWITCH_TAG),
+                colors = SwitchDefaults.colors(
+                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    uncheckedBorderColor = MaterialTheme.colorScheme.outline
+                ),
+                interactionSource = interactionSource
+            )
+        }
     }
     Layout(
         contents = listOf(leading, trailing),
