@@ -69,7 +69,7 @@ import org.junit.runner.RunWith
  * - 화면 폭은 Box 폭(requiredWidth)으로, 글꼴 배율은 LocalDensity의 fontScale로 바꿔 확인한다 (BottomBarLargeFontTest와 같은 방식)
  * - 화면처럼 좌우 10dp 여백(CommunityListScreen의 Column padding) 안에 그린다
  * - 스위치 모양의 자리는 [SHARED_SWITCH_TAG] 노드 범위로 본다 (scale(0.7f)이 반영된 범위)
- * - 누를 수 있는 범위·TalkBack이 읽는 노드는 "공유글 보기"와 스위치를 묶은 toggleable 노드(isToggleable)로 본다 (#750)
+ * - 누를 수 있는 범위·접근성 노드는 "공유글 보기"와 스위치를 묶은 toggleable 노드(isToggleable)로 본다 (#750)
  */
 @RunWith(AndroidJUnit4::class)
 class TagFilterRowLargeFontTest {
@@ -140,11 +140,13 @@ class TagFilterRowLargeFontTest {
 
     /**
      * - 글자 3개(태그·전체 선택 해제·공유글 보기)가 한 줄로 다 보인다
-     * - 스위치가 자리를 다 받았다: 자리가 모자라면 스위치 노드(isToggleable)는 좁아지지만 트랙은 52dp로 넘쳐 그려져
+     * - 스위치가 자리를 다 받았다: 자리가 모자라면 스위치 모양 노드([SHARED_SWITCH_TAG])는 좁아지지만 트랙은 52dp로 넘쳐 그려져
      *   아래 겹침 검사를 피해 가므로, 노드 폭이 [SWITCH_SCALE]배 한 트랙 폭과 같은지 먼저 본다
      * - 공유글 보기–스위치, (같은 줄이면) 전체 선택 해제–공유글 보기가 가로로 겹치지 않는다
      * - 글자 3개와 스위치가 좌우 여백 안쪽(화면 안)에 있다
-     * - 스위치를 누르는 범위(toggleable 노드)가 여백 안쪽에 있고, 태그·전체 선택 해제를 누르는 범위와 겹치지 않는다 (#750)
+     * - 스위치 Row(toggleable 노드)가 여백 안쪽에 있고, 태그·전체 선택 해제와 레이아웃 범위가 겹치지 않는다 (#750).
+     *   태그·칩은 가로나 세로가 48dp보다 작으면 실제 터치 범위가 레이아웃보다 넓어지지만,
+     *   Row 안을 누르면 Row가 직접 맞은 노드라 스위치가 바뀐다
      */
     private fun assertNoOverlapOrClip(label: String) {
         listOf(TAG_TEXT, CLEAR_TEXT, SHARED_TEXT).forEach {
@@ -172,7 +174,7 @@ class TagFilterRowLargeFontTest {
         assertTrue("$label: 누르는 범위($toggle)가 여백 밖 (영역 $area)", toggle.left >= area.left && toggle.right <= area.right)
         listOf(TAG_TEXT, CLEAR_TEXT).forEach {
             val other = clickableBounds(it)
-            assertFalse("$label: 누르는 범위($toggle)가 $it($other)와 겹침", toggle.overlaps(other))
+            assertFalse("$label: 스위치 Row 레이아웃 범위($toggle)가 $it($other)와 겹침", toggle.overlaps(other))
         }
     }
 
@@ -214,7 +216,11 @@ class TagFilterRowLargeFontTest {
         }
     }
 
-    /** 스위치·전체 선택 해제·태그를 누르면 각 콜백이 불린다 */
+    /**
+     * 스위치·전체 선택 해제·태그를 누르면 각 콜백이 불린다
+     * - 전체 선택 해제·태그를 눌러도 스위치는 바뀌지 않는다
+     * - 스위치 모양 가운데와 "공유글 보기" 글자를 눌러도 스위치가 바뀐다 (#750)
+     */
     @Test
     fun clicksCallCallbacks() {
         var tagClicks = 0
@@ -252,7 +258,7 @@ class TagFilterRowLargeFontTest {
     /**
      * 스위치 모양 가운데에서 위·아래·왼쪽·오른쪽으로 [TOUCH_OFFSETS]만큼 떨어진 곳을 누르면 바뀐다 (#750)
      * - 48dp 범위면 가운데에서 24dp까지 눌려야 하므로, px 반올림 여유를 두고 23dp까지 누른다
-     * - 누를 때마다 켜짐↔꺼짐이 바뀌므로 두 상태 모두에서 누르게 된다
+     * - 누를 때마다 켜짐↔꺼짐이 바뀌어, 조합마다 켜짐·꺼짐 상태에서 번갈아 누른다 (한 점을 한 조합에서 두 상태로 누르지는 않음)
      * - 누르는 범위(toggleable 노드)가 가로·세로 48dp 이상인지도 본다
      */
     @Test
@@ -289,7 +295,7 @@ class TagFilterRowLargeFontTest {
         }
     }
 
-    /** TalkBack이 읽는 노드가 하나이고, "공유글 보기"·스위치 역할·켜짐/꺼짐을 함께 갖는다 (#750) */
+    /** 접근성 노드가 하나이고, "공유글 보기"·스위치 역할·켜짐/꺼짐을 함께 갖는다 (#750) */
     @Test
     fun switchHasLabelForAccessibility() {
         var shown by mutableStateOf(false)
