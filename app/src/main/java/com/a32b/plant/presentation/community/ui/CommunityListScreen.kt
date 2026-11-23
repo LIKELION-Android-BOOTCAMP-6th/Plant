@@ -86,6 +86,11 @@ import com.a32b.plant.presentation.core.component.TagChip
 import com.a32b.plant.presentation.core.component.TagSheet
 import com.a32b.plant.presentation.core.extension.showToast
 import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -360,17 +365,25 @@ fun CommunityListScreen(
     }
 }
 
+/** [TagFilterRow]의 공유글 보기 스위치 (테스트에서 스위치 모양의 자리를 찾을 때 씀) */
+internal const val SHARED_SWITCH_TAG = "shared_switch"
+
 /**
  * 검색창 아래 "태그 · 전체 선택 해제 · 공유글 보기 · 스위치" 줄 (#742)
  *
  * - 네 요소가 한 줄에 다 들어가면 한 줄: 앞쪽(태그, 전체 선택 해제)은 왼쪽부터, 뒤쪽(공유글 보기, 스위치)은 오른쪽 끝에 붙이고,
- *   요소마다 줄 높이의 가운데에 놓는다. 수정 전 Row(CenterVertically + 사이 Spacer weight)와 같은 계산이다
- *   (글꼴 1.0·폭 360·411dp에서 수정 전과 위치·크기가 px 단위로 같음을 TagFilterRowLargeFontTest로 확인)
+ *   요소마다 줄 높이의 가운데에 놓는다 (뒤쪽은 묶음 Row를 줄 가운데에, 글자·스위치를 Row 가운데에 놓는다).
+ *   글꼴 1.0·폭 360·411dp에서 수정 전 Row(CenterVertically + 사이 Spacer weight)와 위치·크기가 px 단위로 같음을
+ *   TagFilterRowLargeFontTest로 확인
  * - 안 들어가면(큰 글꼴·좁은 화면) 뒤쪽을 다음 줄 오른쪽 끝으로 내린다.
  *   수정 전에는 남은 폭이 모자라 스위치 자리가 줄고 52dp 트랙이 그 자리 밖으로 넘쳐 그려져,
  *   "공유글 보기" 끝 글자가 스위치에 가려지거나, "공유글 보기"가 두 줄로 줄바꿈되고 스위치 오른쪽이 화면 밖으로 잘렸다
- * - 각 요소는 남은 폭이 아니라 줄 폭 전체를 받아 측정한다 → 다음 줄로 내려간 "공유글 보기"도 한 줄로 그려진다
- *   (TagFilterRowLargeFontTest: 폭 360·411dp, 글꼴 1.0·1.15·1.3·1.5·1.8·2.0에서 확인)
+ * - 앞쪽 두 요소와 뒤쪽 묶음(공유글 보기 + 스위치 Row)은 남은 폭이 아니라 줄 폭 전체를 받아 측정한다
+ *   → 다음 줄로 내려간 "공유글 보기"도 한 줄로 그려진다. 뒤쪽 묶음 안에서 스위치는 글자를 뺀 폭을 받는다 (#750)
+ *   (TagFilterRowLargeFontTest: 폭 360·411dp, 글꼴 1.0·1.15·1.3·1.5·1.8·2.0에서 글자 한 줄·스위치 폭 안 줄어듦 확인)
+ * - "공유글 보기" 글자와 스위치는 한 묶음으로 누른다 (#750). 수정 전에는 Switch에 넘긴 scale(0.7f)이
+ *   Switch의 누르는 범위까지 함께 줄여 48dp보다 작았고, 스위치에 라벨도 없었다
+ *   (누르는 범위 가로·세로 48dp 이상, 라벨은 TagFilterRowLargeFontTest로 확인)
  */
 @Composable
 internal fun TagFilterRow(
@@ -402,22 +415,43 @@ internal fun TagFilterRow(
         }
     }
     val trailing = @Composable {
-        Text(
-            "공유글 보기",
-            style = MaterialTheme.typography.titleMedium
-        )
-        Switch(
-            isSharedShown,
-            onCheckedChange = { onSharedShownChange() },
-            modifier = Modifier
-                .scale(0.7f)
-                .padding(end = 10.dp),
-            colors = SwitchDefaults.colors(
-                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-                uncheckedBorderColor = MaterialTheme.colorScheme.outline
+        // 글자와 스위치를 한 번에 누르는 범위로 묶는다 (#750)
+        // - 범위: 스위치 자리(52 × 48dp + 오른쪽 10dp)와 글자 전체. scale(0.7f) 밖이라 줄어들지 않는다
+        // - 접근성: 이 노드 하나에 "공유글 보기" 글자·role = Switch·켜짐/꺼짐이 함께 담긴다
+        // - 줄 전체 ripple은 끄고(indication = null) 같은 interactionSource를 스위치에 넘겨, 눌림 효과는 thumb에만 나오게 한다
+        val interactionSource = remember { MutableInteractionSource() }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.toggleable(
+                value = isSharedShown,
+                interactionSource = interactionSource,
+                indication = null,
+                role = Role.Switch,
+                onValueChange = { onSharedShownChange() }
             )
-        )
+        ) {
+            Text(
+                "공유글 보기",
+                style = MaterialTheme.typography.titleMedium
+            )
+            // onCheckedChange = null이면 Switch가 자기 누르는 범위·semantics를 만들지 않는다.
+            // 그때 빠지는 minimumInteractiveComponentSize(48dp)를 직접 붙여 수정 전과 같은 자리(52 × 48dp)를 차지하게 한다
+            Switch(
+                isSharedShown,
+                onCheckedChange = null,
+                modifier = Modifier
+                    .scale(0.7f)
+                    .padding(end = 10.dp)
+                    .minimumInteractiveComponentSize()
+                    .testTag(SHARED_SWITCH_TAG),
+                colors = SwitchDefaults.colors(
+                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    uncheckedBorderColor = MaterialTheme.colorScheme.outline
+                ),
+                interactionSource = interactionSource
+            )
+        }
     }
     Layout(
         contents = listOf(leading, trailing),
