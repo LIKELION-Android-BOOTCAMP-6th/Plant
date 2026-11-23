@@ -13,7 +13,6 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.performClick
 import androidx.test.espresso.Espresso
-import androidx.core.graphics.ColorUtils
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.a32b.plant.presentation.theme.DarkColorScheme
 import com.a32b.plant.presentation.theme.LightColorScheme
@@ -28,8 +27,9 @@ import org.junit.runner.RunWith
  * [ConfirmDialog] isDestructive 확인 버튼 색 (#647)
  *
  * - 배경: 확인 버튼 캡처의 왼쪽 가장자리(x = 2px) 세로 가운데 픽셀이 기대 배경색인지
- * - 글자: 캡처 안에 글자색과 정확히 같은 픽셀이 1개 이상 있는지
- * - 대비: 스킴의 error / onError 대비가 WCAG AA 일반 글자 기준(4.5:1) 이상인지
+ * - 글자: 버튼 안 Text 노드 캡처 안에 글자색과 정확히 같은 픽셀이 1개 이상 있는지.
+ *   버튼 노드 캡처에는 버튼 모양 밖의 카드 배경도 찍혀, 라이트의 onError(흰색)와 카드(흰색)를 구분하지 못한다
+ * - error / onError 대비(4.5:1 이상)는 PlantColorSchemeTest(단위 테스트)에서 확인
  * - 로딩: isDestructive와 isLoading을 함께 켜도 로딩 표시가 뜨고, 확인 버튼·뒤로가기가 막히는지
  */
 @RunWith(AndroidJUnit4::class)
@@ -58,18 +58,22 @@ class ConfirmDialogDestructiveTest {
         }
         composeRule.waitForIdle()
 
-        val pixels = composeRule
+        val buttonPixels = composeRule
             .onNode(hasClickAction() and hasText(confirmText))
             .captureToImage()
             .toPixelMap()
 
-        val edge = pixels[2, pixels.height / 2]
+        val edge = buttonPixels[2, buttonPixels.height / 2]
         assertEquals("확인 버튼 배경색", expectedContainer.toArgb(), edge.toArgb())
 
+        val textPixelMap = composeRule
+            .onNode(hasText(confirmText), useUnmergedTree = true)
+            .captureToImage()
+            .toPixelMap()
         val textArgb = expectedText.toArgb()
         var textPixels = 0
-        for (x in 0 until pixels.width) for (y in 0 until pixels.height) {
-            if (pixels[x, y].toArgb() == textArgb) textPixels++
+        for (x in 0 until textPixelMap.width) for (y in 0 until textPixelMap.height) {
+            if (textPixelMap[x, y].toArgb() == textArgb) textPixels++
         }
         assertTrue("확인 버튼 글자색 픽셀 없음", textPixels > 0)
     }
@@ -98,14 +102,6 @@ class ConfirmDialogDestructiveTest {
         darkTheme = true, isDestructive = false, confirmText = "예",
         expectedContainer = DarkColorScheme.primary, expectedText = DarkColorScheme.onSurface
     )
-
-    @Test
-    fun errorOnErrorContrast_meetsAA() {
-        val light = ColorUtils.calculateContrast(LightColorScheme.onError.toArgb(), LightColorScheme.error.toArgb())
-        val dark = ColorUtils.calculateContrast(DarkColorScheme.onError.toArgb(), DarkColorScheme.error.toArgb())
-        assertTrue("라이트 대비 $light", light >= 4.5)
-        assertTrue("다크 대비 $dark", dark >= 4.5)
-    }
 
     @Test
     fun destructiveLoading_showsProgressAndBlocksConfirmAndBack() {
