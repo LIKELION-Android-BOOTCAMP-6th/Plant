@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <style name="Theme.Plant" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Plant" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- 스플래시 테마에서 켠 두 값(바 아이콘 어둡게)이 스플래시 뒤 테마에 남지 않게 끔 (#675) -->
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
+    </style>
 
     <!-- 스플래시 테마 (Android 8~11: 배경색 + 정적 로고). Android 12+는 values-v31/themes.xml -->
     <style name="Theme.Plant.Splash" parent="Theme.SplashScreen">
