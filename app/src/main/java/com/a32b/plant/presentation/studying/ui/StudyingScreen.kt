@@ -68,6 +68,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
+import com.a32b.plant.BuildConfig
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.util.safeRunCatching
@@ -265,9 +266,11 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
                         }
                     }
 
-                    // [DEBUG] 보상 테스트용 — 릴리즈 전 제거
-                    StateChangeButton("+1h [DEBUG]", MaterialTheme.colorScheme.errorContainer) {
-                        viewModel.addDebugTime()
+                    // [DEBUG] 보상 테스트용 — 디버그 빌드에서만 보인다. 사용자용(릴리즈) 빌드에서는 그리지 않는다 (#590)
+                    if (BuildConfig.DEBUG) {
+                        StateChangeButton("+1h [DEBUG]", MaterialTheme.colorScheme.errorContainer) {
+                            viewModel.addDebugTime()
+                        }
                     }
                     Spacer(modifier = Modifier.weight(1f))
 

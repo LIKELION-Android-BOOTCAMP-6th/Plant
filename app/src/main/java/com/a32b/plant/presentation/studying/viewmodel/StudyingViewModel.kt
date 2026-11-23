@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.a32b.plant.BuildConfig
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.error.AppError
@@ -371,11 +372,13 @@ class StudyingViewModel @Inject constructor(
     }
 
     /**
-     * [DEBUG] 타이머에 1시간(3,600,000ms) 추가 — 보상 테스트용, 릴리즈 전 제거
+     * [DEBUG] 타이머에 1시간(3,600,000ms) 추가 — 보상 테스트용, 디버그 빌드에서만 동작한다
+     * 사용자용(릴리즈) 빌드에서는 버튼을 그리지 않고, 다른 곳에서 불러도 아무것도 바꾸지 않고 반환한다 (#590)
      * 시작 시각도 1시간 앞당긴다. 타이머만 늘리면 startedAt + 학습 시간이 실제 시각보다 1시간 늦어져
      * 보안 규칙이 "미래 종료"로 저장을 거부한다 (#453)
      */
     fun addDebugTime() {
+        if (!BuildConfig.DEBUG) return
         val newTimer = _uiState.value.timer + 3_600_000L
         lastTooOldCheckMs = newTimer
         lastUpdateMs = newTimer
