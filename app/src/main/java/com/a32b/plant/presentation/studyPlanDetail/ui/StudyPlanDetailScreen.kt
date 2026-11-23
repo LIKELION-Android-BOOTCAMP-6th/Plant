@@ -36,6 +36,7 @@ import com.a32b.plant.domain.util.PotNameRule
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.a32b.plant.presentation.core.extension.showToast
+import com.a32b.plant.presentation.theme.LocalIsDarkTheme
 
 @Composable
 fun StudyPlanDetailScreen(
@@ -242,8 +243,8 @@ fun StudyPlanDetailScreen(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(MaterialTheme.colorScheme.background),
-                            contentPadding = PaddingValues(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             items(logs) { record ->
                                 StudyRecordCard(
@@ -441,15 +442,21 @@ fun StudyRecordCard(
     onDeleteClick: () -> Unit){
 
     Card(
-        modifier = Modifier.fillMaxWidth()
-            .padding(vertical = 2.dp)
-            .clickable{ onCardClick()},
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-        shape = RoundedCornerShape(3.dp),
-        elevation = CardDefaults.cardElevation(2.dp)
+        onClick = onCardClick,
+        modifier = Modifier.fillMaxWidth(),
+        // 사각형 버튼 색(secondaryContainer)은 다크에서 757575라 보조 글씨(B8B8B8)·휴지통이 잘 안 보여 카드 배경 역할 색으로 변경 (#682)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        shape = RoundedCornerShape(12.dp),
+        // #677 기준: 다크는 그림자 없이 색으로 구분, 라이트는 카드(FFFFFF)와 배경(FFFFFD)이 거의 같아 2dp 유지
+        elevation = CardDefaults.cardElevation(defaultElevation = if (LocalIsDarkTheme.current) 0.dp else 2.dp)
     ) {
         Row(
-            modifier = Modifier.padding(4.dp),
+            modifier = Modifier.padding(
+                start = if (isShareMode) 4.dp else 16.dp,
+                end = if (isShareMode) 16.dp else 8.dp,
+                top = 12.dp,
+                bottom = 12.dp
+            ),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if(isShareMode) {
@@ -458,49 +465,55 @@ fun StudyRecordCard(
                     onCheckedChange = onSelectionChange,
                     colors = plantCheckboxColors()
                 )
-                Spacer(modifier = Modifier.width(5.dp))
+                Spacer(modifier = Modifier.width(4.dp))
             }
-            //리스트 상세 다이얼로그
-            Column(modifier = Modifier.padding(5.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ){
-                // 날짜
-                Text(
-                    text = if (log.title.isNotEmpty()) log.title else TimeFormatter.formatTimeToDate(log.createAt ?: 0),
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-            )
-                // 2. 공부시간 (우측 고정)
-                Text(
-                    text = "[${TimeFormatter.formatToDigitalClock(log.studyingTime)}]",
-                    style = MaterialTheme.typography.titleSmall,
-                )
-                Spacer(modifier = Modifier.width(5.dp))
-
-                if(!isShareMode) {
-                    //삭제 버튼
-                    IconButton(
-                        onClick = onDeleteClick,
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            painterResource(R.drawable.ic_trash),
-                            contentDescription = "상세 공부 기록 삭제",
-                            tint = MaterialTheme.colorScheme.outline
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        // 1줄: 제목 (없으면 날짜를 제목으로. createAt이 없으면 formatTimeToDate가 "-")
+                        Text(
+                            text = log.title.ifEmpty { TimeFormatter.formatTimeToDate(log.createAt ?: 0) },
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        // 2줄: 공부 시간 — 제목이 이미 "날짜 시작 ~ 종료"(StudyingViewModel)라 날짜는 다시 쓰지 않음 (#682)
+                        Text(
+                            text = "공부 시간 ${TimeFormatter.formatToDigitalClock(log.studyingTime)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
+                    if(!isShareMode) {
+                        //삭제 버튼 (오른쪽 위)
+                        IconButton(
+                            onClick = onDeleteClick,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                painterResource(R.drawable.ic_trash),
+                                contentDescription = "상세 공부 기록 삭제",
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSecondary
+                            )
+                        }
+                    }
                 }
-            }
-            Spacer(modifier = Modifier.height(6.dp))
 
-            // 학습 상세 내용 -> 2줄 제한
-            val previewContents = log.contents.take(2)
+                // 학습 내용: 2개까지, 넘치면 "외 N개"
+                val previewContents = log.contents.take(MAX_PREVIEW_CONTENTS)
                 if (previewContents.isNotEmpty()) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
                         previewContents.forEachIndexed { index, content ->
                             StudyGoalItem(
                                 text = content,
@@ -511,11 +524,12 @@ fun StudyRecordCard(
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
-                        if (log.contents.size > 2) {
+                        val restCount = log.contents.size - MAX_PREVIEW_CONTENTS
+                        if (restCount > 0) {
                             Text(
-                                text = "...",
+                                text = "외 ${restCount}개",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSecondary
                             )
                         }
                     }
@@ -524,3 +538,6 @@ fun StudyRecordCard(
         }
     }
 }
+
+// 카드에 미리 보여줄 학습 내용 개수
+private const val MAX_PREVIEW_CONTENTS = 2
