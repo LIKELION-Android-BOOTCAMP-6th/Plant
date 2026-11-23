@@ -60,7 +60,7 @@ class CommunityActivityViewModelTest {
         selectAndDelete(viewModel, "a1")
 
         assertEquals(listOf("post-1"), notifier.deleted)
-        assertFalse(viewModel.uiState.value.isLoading)
+        assertFalse(viewModel.uiState.value.isLoadingShown)
         assertFalse(viewModel.uiState.value.isSelectionMode)
         assertTrue(viewModel.uiState.value.selectedIds.isEmpty())
         assertEquals(listOf<CommunityActivityEvent>(CommunityActivityEvent.ShowToast("삭제되었습니다.")), events)

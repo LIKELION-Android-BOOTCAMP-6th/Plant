@@ -118,7 +118,7 @@ class CommunityActivityViewModel @Inject constructor(
         // 삭제가 겹쳐 시작되면 먼저 끝난 쪽이 isDeleting을 풀어 버리므로, 진행 중이면 새로 시작하지 않는다 (#754)
         if (toDelete.isEmpty() || _uiState.value.isDeleting) return
 
-        // launch 밖에서 바로 켠다: 확인과 켜기 사이에 다른 호출이 끼어들지 않게
+        // 위의 진행 중 확인과 같은 흐름에서 바로 켜지도록 launch 밖에 둔다
         _uiState.update { it.copy(isDeleting = true) }
         viewModelScope.launch {
             // NonCancellable: 응답 전에 화면을 나가도 남은 항목을 끝까지 처리하고, 성공한 묶음마다 목록에 알리기 위함 (#712)
