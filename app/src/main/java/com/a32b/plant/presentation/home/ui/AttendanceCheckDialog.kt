@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,9 +31,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -292,7 +296,7 @@ private fun AttendanceRewardItem(
             contentAlignment = Alignment.Center
         ) {
             when {
-                isChecked -> Text(
+                isChecked -> CircleText(
                     text = "✓",
                     style = MaterialTheme.typography.titleSmall,
                     color = textColor
@@ -304,7 +308,7 @@ private fun AttendanceRewardItem(
                     modifier = Modifier.size(22.dp)
                 )
 
-                else -> Text(
+                else -> CircleText(
                     text = reward.day.toString(),
                     // 다음 출석 칸만 굵게 — 같은 12sp에서 글꼴만 다르게 구분 (titleSmall은 R.font.medium, bodySmall은 R.font.light)
                     style = if (isNext) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodySmall,
@@ -344,12 +348,7 @@ private fun GoldRewardLabel(text: String, modifier: Modifier = Modifier) {
     val style = MaterialTheme.typography.labelSmall
     val textMeasurer = rememberTextMeasurer()
     BoxWithConstraints(modifier = modifier) {
-        val fits = !textMeasurer.measure(
-            text = text,
-            style = style,
-            maxLines = 1,
-            constraints = Constraints(maxWidth = constraints.maxWidth)
-        ).hasVisualOverflow
+        val fits = textMeasurer.fitsOneLine(text, style, constraints.maxWidth)
         Text(
             text = text,
             modifier = Modifier.fillMaxWidth(),
@@ -363,6 +362,46 @@ private fun GoldRewardLabel(text: String, modifier: Modifier = Modifier) {
         )
     }
 }
+
+/**
+ * 출석판 원 안의 날짜 숫자·"✓"
+ *
+ * 좁은 화면·큰 글꼴에서 원이 작아지면 글자가 잘렸다 (#755, SM-N986N 계측 테스트 로그로 확인)
+ * - 두 자리 숫자: 300dp·글꼴 2.0에서 보통 글꼴(bodySmall) 한 줄 폭 70px가 원 폭(칸에 따라 69px 또는 70px)보다 넓은 칸만
+ *   두 줄로 줄바꿈되고, 원 높이를 넘는 둘째 줄이 잘려 첫 글자만 보였다 ("10"·"15"·"22"는 69px 칸, "18"·"27"은 70px 칸)
+ *   → [GoldRewardLabel]과 같이 한 줄에 들어가면 그대로, 안 들어갈 때만 [CIRCLE_TEXT_MIN_FONT_SIZE]까지 줄여 한 줄로 맞춘다
+ *   (항상 autoSize를 켜지 않는 이유·말줄임을 쓰지 않는 이유도 [GoldRewardLabel]과 같음)
+ * - "✓": 줄 높이가 원보다 크면(300dp·글꼴 2.0에서 91px > 69px) Text가 원 높이로 줄어든 채 위쪽부터 그려져 기준선이 원 아래로 나갔다
+ *   → wrapContentHeight(unbounded = true)로 줄 전체 높이를 유지한 채 원 가운데에 맞춘다
+ *   (줄 높이가 원보다 작으면 원래도 가운데 정렬이라 위치가 바뀌지 않음)
+ * - 원 크기는 그대로라 7칸 배치는 바뀌지 않는다
+ */
+@Composable
+private fun CircleText(text: String, style: TextStyle, color: Color) {
+    val textMeasurer = rememberTextMeasurer()
+    BoxWithConstraints(contentAlignment = Alignment.Center) {
+        val fits = textMeasurer.fitsOneLine(text, style, constraints.maxWidth)
+        Text(
+            text = text,
+            modifier = Modifier.wrapContentHeight(unbounded = true),
+            style = style,
+            color = color,
+            maxLines = 1,
+            autoSize = if (fits) null else {
+                TextAutoSize.StepBased(minFontSize = CIRCLE_TEXT_MIN_FONT_SIZE, maxFontSize = style.fontSize)
+            }
+        )
+    }
+}
+
+/** [style] 그대로 [maxWidth] 안에 한 줄로 들어가는지 (높이는 보지 않음) */
+private fun TextMeasurer.fitsOneLine(text: String, style: TextStyle, maxWidth: Int): Boolean =
+    !measure(
+        text = text,
+        style = style,
+        maxLines = 1,
+        constraints = Constraints(maxWidth = maxWidth)
+    ).hasVisualOverflow
 
 /**
  * label   보상 이름. "다음 출석 보상" 안내 문구에 쓰이므로 아이콘이 있어도 비우지 않는다.
@@ -385,6 +424,11 @@ private const val OFFLINE_STATE_DESCRIPTION = "오프라인"
 // 320dp·글꼴 2.0 칸(SM-N986N에서 86px)에 "100G"가 한 줄로 들어가는 크기가 6sp~7sp 사이라 6sp로 둠
 // (6sp 75px, 7sp 88px — AttendanceGoldLabelLargeFontTest 작업 중 TextMeasurer로 잰 값)
 private val GOLD_LABEL_MIN_FONT_SIZE = 6.sp
+
+// 원 안 글자를 줄일 수 있는 최소 크기. 최대 크기는 bodySmall·titleSmall(12sp)
+// 같은 출석판의 골드 글자 최소 크기와 맞춤. 실제로 필요한 크기는 이보다 훨씬 큼
+// (280dp·글꼴 2.0 원 62px에 보통 글꼴 두 자리 숫자(12sp 70px)가 들어가려면 약 10.6sp = 12sp × 62 ÷ 70 — SM-N986N 계측 로그로 계산)
+private val CIRCLE_TEXT_MIN_FONT_SIZE = GOLD_LABEL_MIN_FONT_SIZE
 
 private val attendanceRewards: List<AttendanceRewardUi> = (1..28).map { day ->
     when (val reward = AttendanceRewardTable.of(day)) {
