@@ -1,5 +1,6 @@
 package com.a32b.plant.presentation.studyPlanDetail.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -86,6 +87,11 @@ fun StudyPlanDetailScreen(
                 is StudyPlanDetailEvent.ShowToast -> context.showToast(event.message)
             }
         }
+    }
+
+    // 공유 모드면 시스템 뒤로가기도 상단바 X처럼 공유 모드만 해제한다 (선택 초기화 포함) (#748)
+    BackHandler(enabled = isShareMode) {
+        viewModel.setShareMode(false)
     }
 
     LoadableScreen(viewModel) {

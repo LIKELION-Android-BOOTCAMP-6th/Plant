@@ -62,6 +62,25 @@ class CommunityActivityViewModelTest {
         assertEquals(listOf<CommunityActivityEvent>(CommunityActivityEvent.ShowToast("삭제되었습니다.")), events)
     }
 
+    @Test
+    fun `선택 모드에서 해제하면 모드가 꺼지고 선택이 비워진다`() = runActivityTest { _, _, viewModel, _ ->
+        viewModel.toggleSelectionMode()
+        viewModel.toggleItemSelection("a1")
+
+        viewModel.exitSelectionMode()
+
+        assertFalse(viewModel.uiState.value.isSelectionMode)
+        assertTrue(viewModel.uiState.value.selectedIds.isEmpty())
+    }
+
+    @Test
+    fun `선택 모드가 꺼진 상태에서 해제해도 다시 켜지지 않는다`() = runActivityTest { _, _, viewModel, _ ->
+        viewModel.exitSelectionMode()
+
+        assertFalse(viewModel.uiState.value.isSelectionMode)
+        assertTrue(viewModel.uiState.value.selectedIds.isEmpty())
+    }
+
     // ---------- 도우미 ----------
 
     private fun TestScope.selectAndDelete(viewModel: CommunityActivityViewModel, activityId: String) {
