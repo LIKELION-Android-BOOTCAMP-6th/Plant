@@ -42,7 +42,7 @@ import org.junit.runner.RunWith
  * - 큰 글꼴: 본문(LevelUpDialogContent)의 글자가 한 줄을 넘지 않고 이름과 개수가 겹치지 않음
  *   Dialog 안에는 LocalDensity 덮어쓰기가 닿지 않아 본문만 직접 그린다
  *   폭 232dp: M3 AlertDialog 최소 폭 280dp(material3 1.4.0 AlertDialog.kt DialogMinWidth) - 좌우 여백 24dp씩
- *   폭 272dp: 테스트 기기(SM-N986N, 420dpi) 캡처에서 다이얼로그 폭 839px ÷ 2.625 ≒ 320dp - 48dp
+ *   폭 272dp: 테스트 기기(SM-N986N, 420dpi)의 uiautomator 다이얼로그 bounds 폭 840px ÷ 2.625 = 320dp - 48dp
  */
 @RunWith(AndroidJUnit4::class)
 class LevelUpDialogTest {

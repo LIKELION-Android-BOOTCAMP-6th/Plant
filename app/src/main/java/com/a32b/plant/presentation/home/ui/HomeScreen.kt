@@ -326,7 +326,7 @@ fun HomeScreen(
             }
         }
 
-        // 레벨업 확인 다이얼로그 (#678) — 처리 중에는 아래 LoadingDialog가 위에 겹쳐 그려진다
+        // 레벨업 확인 다이얼로그 (#678) — 처리 중에는 아래 LoadingDialog도 함께 띄운다
         uiState.levelUpDialog?.let { dialog ->
             LevelUpDialog(
                 state = dialog,

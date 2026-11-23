@@ -1,6 +1,5 @@
 package com.a32b.plant.presentation.home.viewmodel
 
-import android.content.Context
 import android.content.ContextWrapper
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.Item
@@ -102,8 +101,7 @@ class HomeViewModelLevelUpTest {
             checkLevelUpConditionUseCase = CheckLevelUpConditionUseCase(),
             levelUpPotUseCase = LevelUpPotUseCase(pots, ensureUser),
             // 이 테스트에서는 타이머 서비스를 멈추는 onHomeResumed를 부르지 않으므로 Context는 쓰이지 않는다
-            // (단위 테스트의 android.jar는 생성자가 "Stub!" 예외를 던지므로 생성자 없이 만든다)
-            studyingTimerServiceController = StudyingTimerServiceController(unusedContext()),
+            studyingTimerServiceController = StudyingTimerServiceController(ContextWrapper(null)),
             networkMonitor = object : NetworkMonitor {
                 override fun isOnline() = true
                 override fun observeIsOnline() = flowOf(true)
@@ -261,14 +259,6 @@ class HomeViewModelLevelUpTest {
         val owned = createEnv(items = readyItems.copy(box = 2))
         owned.viewModel.onBonusBoxClick()
         assertEquals(listOf(HomeEvent.OpenBonusBoxDialog), owned.events)
-    }
-
-    // 생성자를 부르지 않고 객체만 만든다 (JVM의 sun.misc.Unsafe — 컴파일 클래스패스가 android.jar라 리플렉션으로 찾는다)
-    private fun unusedContext(): Context {
-        val unsafeClass = Class.forName("sun.misc.Unsafe")
-        val unsafe = unsafeClass.getDeclaredField("theUnsafe").apply { isAccessible = true }.get(null)
-        return unsafeClass.getMethod("allocateInstance", Class::class.java)
-            .invoke(unsafe, ContextWrapper::class.java) as Context
     }
 
     private companion object {
