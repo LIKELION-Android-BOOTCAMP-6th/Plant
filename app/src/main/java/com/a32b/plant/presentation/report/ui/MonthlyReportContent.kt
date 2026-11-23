@@ -45,9 +45,9 @@ fun MonthlyReportContent(report: MonthlyReport) {
         )
         Text("${report.month.year}년 ${report.month.monthValue}월", style = MaterialTheme.typography.titleLarge)
         ReportCard(spacing = 12.dp, containerColor = containerColor) {
-            ReportField("총 공부 시간", TimeFormatter.formatToKoreanDuration(report.totalMillis), emphasized = true, caption = "시작일 기준")
+            ReportField("총 공부 시간", TimeFormatter.formatToHoursMinutes(report.totalMillis), emphasized = true, caption = "시작일 기준")
             ReportField(
-                "하루 평균", TimeFormatter.formatToKoreanDuration(report.averageMillis), emphasized = true,
+                "하루 평균", TimeFormatter.formatToHoursMinutes(report.averageMillis), emphasized = true,
                 caption = reportAverageCaption(report)
             )
         }
@@ -78,9 +78,9 @@ private fun MonthlyDailyGraph(report: MonthlyReport) {
     } else {
         MaterialTheme.colorScheme.tertiary
     }
-    // 눈금은 상한의 4등분이라 항상 분 단위다. 0 눈금만 "0초" 대신 "0"으로 둔다.
+    // 눈금은 상한의 4등분이라 항상 분 단위다. 0 눈금도 다른 요약 시간처럼 "0분" (#649, 예전에는 "0초" 대신 "0")
     val tickLabels = (0..4).map { tick ->
-        if (tick == 0) "0" else TimeFormatter.formatToKoreanDuration((upper * tick / 4).toLong())
+        TimeFormatter.formatToHoursMinutes((upper * tick / 4).toLong())
     }
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = MaterialTheme.typography.bodySmall
@@ -98,7 +98,7 @@ private fun MonthlyDailyGraph(report: MonthlyReport) {
     val barGap = 8.dp
     val horizontalScrollState = rememberScrollState()
     val voiceDescription = report.dailyTotals.joinToString(", ", prefix = "날짜별 공부 시간. ") {
-        "${it.date.dayOfMonth}일 ${TimeFormatter.formatToKoreanDuration(it.totalMillis)}"
+        "${it.date.dayOfMonth}일 ${TimeFormatter.formatToHoursMinutes(it.totalMillis)}"
     }
     val labels = listOf(1, 5, 10, 15, 20, 25, report.month.lengthOfMonth())
     val dayLabelWidth = with(density) {

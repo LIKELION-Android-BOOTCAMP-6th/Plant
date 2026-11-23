@@ -47,13 +47,13 @@ class LevelUpPotUseCaseTest {
 
     @Test
     fun studyTimeShortTellsRemainingTimeWithoutRequest() = runBlocking {
-        // 1시간 조건에 30분 30.5초 학습 → 남은 시간 29분 29.5초 → 초 단위 올림
+        // 1시간 조건에 30분 30.5초 학습 → 남은 시간 29분 29.5초 → 분 단위 올림 (#649)
         val pots = FakePotRepository(pot(level = 0, time = 30 * 60_000L + 30_500L))
         val useCase = createUseCase(pots, items = items(100))
 
         val result = useCase("pot-1")
 
-        assertEquals(Result.Failure(AppError.Custom("레벨업까지 학습 시간이 29분 30초 남았어요.")), result)
+        assertEquals(Result.Failure(AppError.Custom("레벨업까지 학습 시간이 30분 남았어요.")), result)
         assertTrue(pots.levelUps.isEmpty())
     }
 

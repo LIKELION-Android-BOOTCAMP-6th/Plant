@@ -134,9 +134,9 @@ internal const val NO_BONUS_BOX_MESSAGE = "보유한 보너스 박스가 없습�
 
 /**
  * 홈 "오늘 학습 시간"의 0 표시 — 화분 있음(기록 0)·화분 없음·조회 실패를 같은 형식으로 맞춘다 (#584)
- * formatToDigitalClock은 학습 타이머·알림·결과 화면 등 여러 곳에서 쓰므로 반환 형식을 바꾸지 않고, 0을 이 함수 결과에 맞춘다
+ * 누적·요약 시간이므로 formatToHoursMinutes의 0 표기("0분")를 쓴다 (#649)
  */
-internal val ZERO_STUDY_TIME: String = TimeFormatter.formatToDigitalClock(0L)
+internal val ZERO_STUDY_TIME: String = TimeFormatter.formatToHoursMinutes(0L)
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -194,7 +194,7 @@ class HomeViewModel @Inject constructor(
     val events = _eventChannel.receiveAsFlow()
 
     // 오늘 학습 시간 상태 — null은 조회 중 (화면은 자리만 차지하고 글자를 숨김, #584)
-    // 0은 화분 있음·없음·조회 실패 모두 formatToDigitalClock(0) 형식으로 맞춘다
+    // 0은 화분 있음·없음·조회 실패 모두 formatToHoursMinutes(0) 형식("0분")으로 맞춘다
     private val _todayStudyTime = MutableStateFlow<String?>(null)
     val todayStudyTime = _todayStudyTime.asStateFlow()
 
@@ -496,7 +496,7 @@ class HomeViewModel @Inject constructor(
         todayStudyTimeJob = viewModelScope.launch {
             getTodayTotalStudyTimeUseCase(uid, potId)
                 .onSuccess { totalMillis ->
-                    _todayStudyTime.value = TimeFormatter.formatToDigitalClock(totalMillis)
+                    _todayStudyTime.value = TimeFormatter.formatToHoursMinutes(totalMillis)
                 }
                 .onFailure { error ->
                     _todayStudyTime.value = ZERO_STUDY_TIME
@@ -669,9 +669,10 @@ class HomeViewModel @Inject constructor(
         val maxMs = condition.maxHoursForProgress * 3_600_000L
         val progress = (pot.potTotalStudyingTime.toFloat() / maxMs).coerceIn(0f, 1f)
 
-        val currentMin = pot.potTotalStudyingTime / 60_000
-        val requiredMin = maxMs / 60_000
-        val text = "${(progress * 100).toInt()}% (${currentMin}분/${requiredMin}분)"
+        // 누적·요약 시간 규칙 "n시간 n분" (#649), 예: "21% (1시간 4분/5시간)"
+        val current = TimeFormatter.formatToHoursMinutes(pot.potTotalStudyingTime)
+        val required = TimeFormatter.formatToHoursMinutes(maxMs)
+        val text = "${(progress * 100).toInt()}% ($current/$required)"
         return progress to text
     }
 

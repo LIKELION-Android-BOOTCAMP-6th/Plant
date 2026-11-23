@@ -39,10 +39,11 @@ class LevelUpPotUseCase @Inject constructor(
 
         val requiredMs = condition.minHoursForLevelUp * HOUR_MS
         if (pot.potTotalStudyingTime < requiredMs) {
-            // 남은 시간이 1초 미만이어도 "0초"가 되지 않게 초 단위로 올림
-            val remainingMs = (requiredMs - pot.potTotalStudyingTime + 999) / 1000 * 1000
+            // 요약 시간 규칙 "n시간 n분" (#649). 분 단위로 올려 1분 미만이 남아도 "1분 남았어요"로 안내한다
+            // (레벨업 다이얼로그의 남은 시간과 같은 계산 — LevelUpDialogUiState)
+            val remainingMs = (requiredMs - pot.potTotalStudyingTime + MINUTE_MS - 1) / MINUTE_MS * MINUTE_MS
             return Result.Failure(
-                AppError.Custom("레벨업까지 학습 시간이 ${TimeFormatter.formatToKoreanDuration(remainingMs)} 남았어요.")
+                AppError.Custom("레벨업까지 학습 시간이 ${TimeFormatter.formatToHoursMinutes(remainingMs)} 남았어요.")
             )
         }
 
@@ -62,7 +63,8 @@ class LevelUpPotUseCase @Inject constructor(
     }
 
     companion object {
-        private const val HOUR_MS = 60 * 60 * 1000L
+        private const val MINUTE_MS = 60 * 1000L
+        private const val HOUR_MS = 60 * MINUTE_MS
         const val POT_NOT_FOUND_MESSAGE = "존재하지 않거나 삭제된 화분입니다."
         const val COMPLETED_POT_MESSAGE = "완료된 화분은 레벨업할 수 없습니다."
         const val MAX_LEVEL_MESSAGE = "이미 최고 레벨입니다."

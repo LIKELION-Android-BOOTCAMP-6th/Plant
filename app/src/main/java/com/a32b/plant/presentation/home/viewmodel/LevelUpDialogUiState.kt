@@ -1,5 +1,6 @@
 package com.a32b.plant.presentation.home.viewmodel
 
+import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.Item
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.model.PotLevelConditions
@@ -66,11 +67,11 @@ internal fun buildLevelUpDialogUiState(pot: Pot, item: Item): LevelUpDialogUiSta
         items = condition.requiredItems
             .map { (type, required) -> LevelUpItemRequirement(type, item.countOf(type), required) }
             .sortedBy { it.type.ordinal },
-        currentStudyTimeText = formatHoursMinutes(pot.potTotalStudyingTime),
-        requiredStudyTimeText = formatHoursMinutes(requiredMs),
-        // 남은 시간은 분 단위로 올림 — 30초 남았을 때 "0분 남았어요"가 되지 않게 한다
+        currentStudyTimeText = TimeFormatter.formatToHoursMinutes(pot.potTotalStudyingTime),
+        requiredStudyTimeText = TimeFormatter.formatToHoursMinutes(requiredMs),
+        // 남은 시간은 분 단위로 올림 — 30초 남았을 때 "1분 미만 남았어요"가 아니라 "1분 남았어요"로 안내한다
         remainingStudyTimeText = if (remainingMs > 0) {
-            formatHoursMinutes((remainingMs + MINUTE_MS - 1) / MINUTE_MS * MINUTE_MS)
+            TimeFormatter.formatToHoursMinutes((remainingMs + MINUTE_MS - 1) / MINUTE_MS * MINUTE_MS)
         } else {
             null
         }
@@ -94,21 +95,6 @@ internal fun levelUpSuccessMessage(newLevel: Int, isPending: Boolean): String {
 private fun directionParticle(number: Int): String = when (number % 10) {
     0, 3, 6 -> "으로"
     else -> "로"
-}
-
-/**
- * 누적·요약 시간 표기 "n시간 n분" (초는 버림, 0은 "0분") — #649의 요약 시간 규칙
- * #649에서 TimeFormatter에 요약용 함수가 생기면 그 함수로 바꾼다 (formatToKoreanDuration은 초까지 붙이고 0이면 "0초")
- */
-private fun formatHoursMinutes(millis: Long): String {
-    val totalMinutes = millis.coerceAtLeast(0) / MINUTE_MS
-    val hours = totalMinutes / 60
-    val minutes = totalMinutes % 60
-    return when {
-        hours > 0 && minutes > 0 -> "${hours}시간 ${minutes}분"
-        hours > 0 -> "${hours}시간"
-        else -> "${minutes}분"
-    }
 }
 
 private const val MINUTE_MS = 60_000L

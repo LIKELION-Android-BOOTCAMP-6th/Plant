@@ -21,14 +21,14 @@ fun DailyReportContent(report: DailyReport) {
             streakDays = report.streakDays,
             streakLabel = "연속"
         )
-        // 시작한 기록이 없으면 "0초 + 기록 없음" 한 번만 보여주고, 최고·최저 줄과 목록 카드는 숨긴다(반복 제거).
+        // 시작한 기록이 없으면 "0분 + 기록 없음" 한 번만 보여주고, 최고·최저 줄과 목록 카드는 숨긴다(반복 제거).
         val hasRecords = report.records.isNotEmpty()
         ReportCard(
             spacing = 12.dp,
             containerColor = containerColor
         ) {
             ReportField(
-                "총 공부 시간", TimeFormatter.formatToKoreanDuration(report.totalMillis), emphasized = true,
+                "총 공부 시간", TimeFormatter.formatToHoursMinutes(report.totalMillis), emphasized = true,
                 caption = if (hasRecords) "이 날짜에 시작한 기록 기준" else "이 날짜에 시작한 기록 없음"
             )
             report.highest?.let { highest ->

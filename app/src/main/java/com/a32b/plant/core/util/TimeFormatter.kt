@@ -8,12 +8,11 @@ import java.util.Locale
 
 object TimeFormatter {
     /**
-    분단위 표시 : fun formatToMinute(time: Long): String
-     -> ~분
-     시분초 표시 : fun formatToDigitalClock(millis: Long): String
-     -> 1시간 이상 HH:mm:ss, 1시간 미만 mm:ss
-     시간 길이 표시 : fun formatToKoreanDuration(millis: Long): String
-     -> ~시간 ~분 ~초 (0인 단위는 생략, 1초 미만은 0초)
+     흘러가는 시간 표시 : fun formatToDigitalClock(millis: Long): String
+     -> HH:mm:ss 고정 (1시간 미만도 시 자리 포함, 예: 00:47:12)
+     누적·요약 시간 표시 : fun formatToHoursMinutes(millis: Long): String
+     -> n시간 n분 (초는 버림, 예: 2시간 25분·38시간 25분·5시간·47분)
+        0 이하는 "0분", 0 초과 1분 미만(1ms~59,999ms)은 "1분 미만" (#649)
 
      로컬 시간 날짜만 표시 : fun formatToKoreanDate(dateTime: LocalDateTime): String
      -> yyyy년 MM월 dd일
@@ -22,30 +21,29 @@ object TimeFormatter {
 
      파이어스토어 타임스탬프 -> yyyy년 MM월 dd일 : fun formatTimestamp(timestamop: Timestamp): String
      */
-    fun formatToMinute(time: Long): String = "${time/1000/60}분"
-
     fun formatToDigitalClock(millis: Long): String{
         val totalSec = millis / 1000
         val hours = totalSec / 3600
         val minute = (totalSec % 3600) / 60
         val secs = totalSec % 60
 
-        return if (hours > 0) String.format("%02d:%02d:%02d", hours, minute, secs)
-        else String.format("%02d:%02d", minute, secs)
+        return String.format("%02d:%02d:%02d", hours, minute, secs)
     }
 
-    fun formatToKoreanDuration(millis: Long): String {
-        val totalSec = millis / 1000
-        val hours = totalSec / 3600
-        val minute = (totalSec % 3600) / 60
-        val secs = totalSec % 60
-
-        val units = mutableListOf<String>()
-        if (hours > 0) units.add("${hours}시간")
-        if (minute > 0) units.add("${minute}분")
-        if (secs > 0) units.add("${secs}초")
-        return if (units.isEmpty()) "0초" else units.joinToString(" ")
+    fun formatToHoursMinutes(millis: Long): String {
+        if (millis <= 0L) return "0분"
+        val totalMinutes = millis / MINUTE_MS
+        if (totalMinutes == 0L) return "1분 미만"
+        val hours = totalMinutes / 60
+        val minutes = totalMinutes % 60
+        return when {
+            hours > 0 && minutes > 0 -> "${hours}시간 ${minutes}분"
+            hours > 0 -> "${hours}시간"
+            else -> "${minutes}분"
+        }
     }
+
+    private const val MINUTE_MS = 60_000L
 
     fun formatToDateOnly(dateTime: LocalDateTime): String
         = dateTime.format(DateTimeFormatter.ofPattern("yyyyMMdd"))

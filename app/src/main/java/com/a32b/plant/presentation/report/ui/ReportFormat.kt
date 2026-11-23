@@ -13,8 +13,8 @@ fun reportAverageCaption(report: MonthlyReport): String? {
 
 // 예: "[자격증] 정처기 · 1시간 20분"
 fun reportRecordTitle(record: ReportRecord): String =
-    "[${record.tagName}] ${record.potName} · ${TimeFormatter.formatToKoreanDuration(record.studyingTime)}"
+    "[${record.tagName}] ${record.potName} · ${TimeFormatter.formatToHoursMinutes(record.studyingTime)}"
 
 // 예: "2026년 10월 05일 · 1시간 20분"
 fun reportDayTotal(day: ReportDailyTotal): String =
-    "${TimeFormatter.formatToKoreanDate(day.date.atStartOfDay())} · ${TimeFormatter.formatToKoreanDuration(day.totalMillis)}"
+    "${TimeFormatter.formatToKoreanDate(day.date.atStartOfDay())} · ${TimeFormatter.formatToHoursMinutes(day.totalMillis)}"

@@ -87,6 +87,15 @@ class LevelUpDialogUiStateTest {
     }
 
     @Test
+    fun 학습_시간이_1분_미만이면_1분_미만으로_표시하고_남은_시간은_분_단위로_올린다() {
+        // 30초 학습: 현재 "1분 미만"(#649), 남은 59분 30초 → "59분"이 아니라 "1시간"
+        val state = buildLevelUpDialogUiState(pot(0, 30_000L), item(heart = 1))!!
+
+        assertEquals("1분 미만", state.currentStudyTimeText)
+        assertEquals("1시간", state.remainingStudyTimeText)
+    }
+
+    @Test
     fun 최고_레벨과_완료_화분은_다이얼로그를_만들지_않는다() {
         assertNull(buildLevelUpDialogUiState(pot(PotLevelConditions.MAX_LEVEL, 1_000 * HOUR), item()))
         assertNull(buildLevelUpDialogUiState(pot(1, 5 * HOUR, isCompleted = true), item(heart = 5, sun = 3, water = 1)))
