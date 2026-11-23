@@ -180,19 +180,42 @@ class HomeViewModelLevelUpTest {
     }
 
     @Test
-    fun 요청이_실패하면_다이얼로그를_열어_둔_채_토스트() = runTest(dispatcher) {
-        val env = createEnv(levelUpResult = Result.Failure(AppError.Network()))
+    fun 쓰기_전에_UseCase가_실패하면_다이얼로그를_열어_둔_채_토스트() = runTest(dispatcher) {
+        val env = createEnv()
         env.viewModel.onLevelUpClick()
+        // Fake에서 UseCase의 화분 조회 결과만 null로 바꿔 요청 전 실패를 만든다
+        // (실제로 화분이 사라지면 화분 목록 구독으로 다이얼로그도 닫힌다)
+        env.pots.cachedPot = null
 
         env.viewModel.onLevelUpConfirm()
 
-        assertEquals(listOf(HomeEvent.ShowToast(AppError.Network().message)), env.events)
+        assertTrue(env.pots.levelUps.isEmpty())
+        assertEquals(listOf(HomeEvent.ShowToast(LevelUpPotUseCase.POT_NOT_FOUND_MESSAGE)), env.events)
         assertNotNull(env.viewModel.uiState.value.levelUpDialog)
         assertFalse(env.viewModel.uiState.value.isLoading)
     }
 
     @Test
-    fun 처리_중에는_연타와_닫기를_막는다() = runTest(dispatcher) {
+    fun 캐시_반영_뒤_서버가_거부하면_다이얼로그는_닫힌_채_토스트만_뜨고_되돌아가도_다시_열리지_않는다() = runTest(dispatcher) {
+        val rejection = AppError.Custom("레벨업 거부")
+        val env = createEnv(levelUpResult = Result.Failure(rejection))
+        // 레벨업 batch가 기기 캐시에 먼저 반영되어 화분 레벨이 오른 상황
+        env.pots.onLevelUp = { env.potList.value = listOf(lv1Pot.copy(potLevel = 2)) }
+        env.viewModel.onLevelUpClick()
+
+        env.viewModel.onLevelUpConfirm()
+
+        assertNull(env.viewModel.uiState.value.levelUpDialog)
+        assertEquals(listOf(HomeEvent.ShowToast(rejection.message)), env.events)
+        assertFalse(env.viewModel.uiState.value.isLoading)
+
+        // 서버 거부로 캐시가 원래 레벨로 되돌아감
+        env.potList.value = listOf(lv1Pot)
+        assertNull(env.viewModel.uiState.value.levelUpDialog)
+    }
+
+    @Test
+    fun 처리_중에는_연타와_닫기와_다시_열기를_막는다() = runTest(dispatcher) {
         val env = createEnv()
         val gate = CompletableDeferred<Unit>()
         env.pots.levelUpGate = gate
@@ -201,11 +224,16 @@ class HomeViewModelLevelUpTest {
         env.viewModel.onLevelUpConfirm()
         env.viewModel.onLevelUpConfirm()
         env.viewModel.onLevelUpDialogDismiss()
-        env.viewModel.onLevelUpClick()
 
         assertTrue(env.viewModel.uiState.value.isLoading)
         assertEquals(1, env.pots.levelUps.size)
         assertNotNull(env.viewModel.uiState.value.levelUpDialog)
+
+        // 처리 중 레벨이 바뀌어 다이얼로그가 닫힌 뒤 홈 버튼을 눌러도 다음 레벨 다이얼로그를 열지 않는다
+        env.potList.value = listOf(lv1Pot.copy(potLevel = 2))
+        assertNull(env.viewModel.uiState.value.levelUpDialog)
+        env.viewModel.onLevelUpClick()
+        assertNull(env.viewModel.uiState.value.levelUpDialog)
 
         gate.complete(Unit)
         assertFalse(env.viewModel.uiState.value.isLoading)

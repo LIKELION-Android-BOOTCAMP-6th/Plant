@@ -83,7 +83,7 @@ fun LevelUpDialog(
 
 /**
  * 다이얼로그 본문: 필요한 재료 목록 + 학습 시간
- * Dialog 안에는 테스트의 글꼴 배율 덮어쓰기(LocalDensity)가 닿지 않아, 큰 글꼴 확인용으로 본문을 따로 둔다 (LevelUpDialogLargeFontTest)
+ * Dialog 안에는 테스트의 글꼴 배율 덮어쓰기(LocalDensity)가 닿지 않아, 큰 글꼴 확인용으로 본문을 따로 둔다 (LevelUpDialogTest.contentTextsStayOnOneLineWithoutOverlapInLargeFont)
  */
 @Composable
 internal fun LevelUpDialogContent(state: LevelUpDialogUiState) {

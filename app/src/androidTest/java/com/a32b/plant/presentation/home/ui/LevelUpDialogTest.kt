@@ -62,8 +62,9 @@ class LevelUpDialogTest {
         remainingStudyTimeText = null
     )
 
-    // 가장 긴 경우: Lv.5 → 6 재료 5종이 모두 부족, 학습 시간 150시간
-    private val longestState = LevelUpDialogUiState(
+    // 긴 경우: Lv.5 → 6 재료 5종 중 4종 부족(영양제는 보유 999개로 세 자리 개수 확인용), 학습 시간 1분 남음
+    // 보유 개수 네 자리 이상은 확인하지 않음
+    private val longState = LevelUpDialogUiState(
         potId = "pot-1",
         currentLevel = 5,
         items = listOf(
@@ -113,15 +114,22 @@ class LevelUpDialogTest {
 
     @Test
     fun loadingBlocksConfirmAndCancel() {
+        var confirms = 0
         var dismisses = 0
         composeRule.setContent {
             PlantTheme(darkTheme = true) {
-                LevelUpDialog(state = notReadyState, isLoading = true, onConfirm = {}, onDismiss = { dismisses++ })
+                LevelUpDialog(
+                    state = notReadyState,
+                    isLoading = true,
+                    onConfirm = { confirms++ },
+                    onDismiss = { dismisses++ }
+                )
             }
         }
 
-        composeRule.onNodeWithText("레벨업 중...").assertIsNotEnabled()
-        composeRule.onNodeWithText("취소").assertIsNotEnabled()
+        composeRule.onNodeWithText("레벨업 중...").assertIsNotEnabled().performClick()
+        composeRule.onNodeWithText("취소").assertIsNotEnabled().performClick()
+        assertEquals(0, confirms)
         assertEquals(0, dismisses)
     }
 
@@ -137,7 +145,7 @@ class LevelUpDialogTest {
             composeRule.waitForIdle()
             val where = "폭 $width, 글꼴 $fontScale"
 
-            for (item in longestState.items) {
+            for (item in longState.items) {
                 val name = composeRule.onNodeWithText(item.type.kor, useUnmergedTree = true)
                 val count = composeRule.onNodeWithText("${item.owned} / ${item.required}개", useUnmergedTree = true)
                 listOf(name, count).forEach { node ->
@@ -163,7 +171,7 @@ class LevelUpDialogTest {
         CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
             PlantTheme(darkTheme = false) {
                 Box(modifier = Modifier.requiredWidth(width)) {
-                    LevelUpDialogContent(longestState)
+                    LevelUpDialogContent(longState)
                 }
             }
         }

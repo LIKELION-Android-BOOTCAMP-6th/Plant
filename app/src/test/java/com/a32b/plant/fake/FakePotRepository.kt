@@ -29,6 +29,9 @@ class FakePotRepository(
     /** 넣으면 levelUpPot이 게이트가 완료될 때까지 끝나지 않는다 (처리 중 상태 확인용) */
     var levelUpGate: CompletableDeferred<Unit>? = null
 
+    /** 넣으면 levelUpPot이 결과를 돌려주기 전에 호출된다 (쓰기가 기기 캐시에 먼저 반영되는 상황 흉내용) */
+    var onLevelUp: (() -> Unit)? = null
+
     /** updatePotName 호출 기록 (uid, potId, newName) */
     val updates = mutableListOf<Triple<String, String, String>>()
 
@@ -41,6 +44,7 @@ class FakePotRepository(
         items: Map<ItemType, Int>
     ): Result<SaveResult> {
         levelUps += LevelUpRequest(uid, potId, currentLevel, items)
+        onLevelUp?.invoke()
         levelUpGate?.await()
         return levelUpResult
     }

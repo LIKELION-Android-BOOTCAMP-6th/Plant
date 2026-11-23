@@ -744,7 +744,8 @@ class HomeViewModel @Inject constructor(
                 .onSuccess { result ->
                     levelUpDialogTarget.value = null
                     _uiState.update { it.copy(isLoading = false) }
-                    // 새 레벨은 요청한 다이얼로그의 레벨 + 1 (UseCase는 같은 기기 캐시의 화분 레벨로 요청한다)
+                    // 새 레벨은 요청한 다이얼로그의 레벨 + 1
+                    // UseCase는 요청 시점의 기기 캐시 화분 레벨로 요청하므로, 누른 뒤 요청 전에 레벨이 바뀌지 않았다는 전제다
                     _eventChannel.send(
                         HomeEvent.LevelUpSuccess(
                             newLevel = dialog.newLevel,
@@ -753,7 +754,10 @@ class HomeViewModel @Inject constructor(
                     )
                 }
                 .onFailure { e ->
-                    // 다이얼로그는 열어 둬서 다시 시도할 수 있게 한다
+                    // 다이얼로그를 직접 닫지 않는다
+                    // - 쓰기가 기기 캐시에 반영되기 전에 끝난 실패(UseCase 사전 확인·화분 조회 실패 등)는 열린 채 남아 다시 시도할 수 있다
+                    // - 서버 거부는 캐시 반영으로 레벨이 바뀌어 이미 닫힌 뒤라 토스트만 뜬다 (캐시가 되돌아가도 다시 열지 않음)
+                    //   (캐시 반영이 서버 응답보다 먼저 화분 구독에 닿는다는 전제)
                     _uiState.update { it.copy(isLoading = false) }
                     when (e) {
                         // LevelUpPotUseCase가 이미 ensureCurrentUserUseCase로 세션 만료를 알렸다
