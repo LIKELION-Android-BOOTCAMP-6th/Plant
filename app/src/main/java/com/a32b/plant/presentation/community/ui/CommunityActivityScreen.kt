@@ -100,90 +100,99 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                BackTopBar(
-                    title = "내 활동",
-                    onBack = { navController.popBackStack() }
-                ) {
-                    if (uiState.isSelectionMode) {
-                        if (uiState.selectedCount > 0) {
-                            // 좁은 화면·큰 글꼴에서 BackTopBar가 actions 폭을 제한하면 이 버튼이 남은 폭만 쓰고,
-                            // 문구만 말줄임해 선택 개수 "(n)"은 항상 보이게 한다 (#645)
+            Box(modifier = Modifier.fillMaxSize()) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    BackTopBar(
+                        title = "내 활동",
+                        onBack = { navController.popBackStack() }
+                    ) {
+                        if (uiState.isSelectionMode) {
+                            if (uiState.selectedCount > 0) {
+                                // 좁은 화면·큰 글꼴에서 BackTopBar가 actions 폭을 제한하면 이 버튼이 남은 폭만 쓰고,
+                                // 문구만 말줄임해 선택 개수 "(n)"은 항상 보이게 한다 (#645)
+                                TextButton(
+                                    onClick = { viewModel.showDeleteDialog() },
+                                    modifier = Modifier.weight(1f, fill = false)
+                                ) {
+                                    Text(
+                                        when (uiState.selected) {
+                                            ActivityType.LIKE -> "좋아요 취소"
+                                            ActivityType.BOOKMARK -> "북마크 취소"
+                                            else -> "삭제"
+                                        },
+                                        modifier = Modifier.weight(1f, fill = false),
+                                        color = MaterialTheme.colorScheme.error,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        "(${uiState.selectedCount})",
+                                        color = MaterialTheme.colorScheme.error,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
                             TextButton(
-                                onClick = { viewModel.showDeleteDialog() },
-                                modifier = Modifier.weight(1f, fill = false)
+                                onClick = { viewModel.exitSelectionMode() }
                             ) {
                                 Text(
-                                    when (uiState.selected) {
-                                        ActivityType.LIKE -> "좋아요 취소"
-                                        ActivityType.BOOKMARK -> "북마크 취소"
-                                        else -> "삭제"
-                                    },
-                                    modifier = Modifier.weight(1f, fill = false),
-                                    color = MaterialTheme.colorScheme.error,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    "(${uiState.selectedCount})",
-                                    color = MaterialTheme.colorScheme.error,
+                                    "취소",
                                     style = MaterialTheme.typography.bodyMedium,
                                     maxLines = 1
                                 )
                             }
+                        } else {
+                            TextButton(
+                                onClick = { viewModel.toggleSelectionMode() }
+                            ) {
+                                Text(
+                                    "선택",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
-                        TextButton(
-                            onClick = { viewModel.exitSelectionMode() }
-                        ) {
-                            Text(
-                                "취소",
-                                style = MaterialTheme.typography.bodyMedium,
-                                maxLines = 1
-                            )
+                    }
+
+                    // 상단바는 화면 끝까지, 아래 내용은 이전처럼 좌우·아래 15dp 여백
+                    Column(modifier = Modifier.fillMaxSize().padding(start = 15.dp, end = 15.dp, bottom = 15.dp)) {
+                        TagGroup(list, init = listOf(uiState.selected), isMultiSelected = false) { selected ->
+                            viewModel.onSelectedChange(selected.get(0))
                         }
-                    } else {
-                        TextButton(
-                            onClick = { viewModel.toggleSelectionMode() }
-                        ) {
-                            Text(
-                                "선택",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.primary
+
+                        // 탭 목록 로딩은 목록 자리만 덮는다. 삭제 중이면 아래 화면 전체 덮개가 이미 덮으므로 겹쳐 그리지 않는다
+                        if (uiState.isLoading && !uiState.isDeleting) {
+                            LoadingBox()
+                        } else if (uiState.activities.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "커뮤니티 활동 내역이 없습니다.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                        } else {
+                            ContentList(
+                                lists = uiState.activities,
+                                isSelectionMode = uiState.isSelectionMode,
+                                selectedIds = uiState.selectedIds,
+                                onToggleSelection = { id -> viewModel.toggleItemSelection(id) },
+                                onClick = { targetId ->
+                                    viewModel.moveToCommunityDetail(targetId)
+                                }
                             )
                         }
                     }
                 }
 
-                // 상단바는 화면 끝까지, 아래 내용은 이전처럼 좌우·아래 15dp 여백
-                Column(modifier = Modifier.fillMaxSize().padding(start = 15.dp, end = 15.dp, bottom = 15.dp)) {
-                    TagGroup(list, init = listOf(uiState.selected), isMultiSelected = false) { selected ->
-                        viewModel.onSelectedChange(selected.get(0))
-                    }
-
-                    if (uiState.isLoadingShown) {
-                        LoadingBox()
-                    } else if (uiState.activities.isEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "커뮤니티 활동 내역이 없습니다.",
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                    } else {
-                        ContentList(
-                            lists = uiState.activities,
-                            isSelectionMode = uiState.isSelectionMode,
-                            selectedIds = uiState.selectedIds,
-                            onToggleSelection = { id -> viewModel.toggleItemSelection(id) },
-                            onClick = { targetId ->
-                                viewModel.moveToCommunityDetail(targetId)
-                            }
-                        )
-                    }
+                // 삭제 중에는 상단바·태그까지 덮어 "삭제(n)"·"취소"·태그 전환을 막는다 (#753)
+                // Dialog(LoadingDialog)가 아니라 화면 안 Box라 시스템 뒤로가기는 막지 않는다 → BackHandler(#748) 동작 유지
+                if (uiState.isDeleting) {
+                    LoadingBox()
                 }
             }
         }
