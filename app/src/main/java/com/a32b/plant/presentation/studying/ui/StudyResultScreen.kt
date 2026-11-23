@@ -57,7 +57,7 @@ import com.a32b.plant.domain.type.ItemType
 import com.a32b.plant.presentation.core.component.ConfettiOverlay
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadableScreen
-import com.a32b.plant.presentation.core.component.LoadingBox
+import com.a32b.plant.presentation.core.component.LoadingDialog
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.component.StudyGoalItem
 import com.a32b.plant.presentation.core.extension.resId
@@ -116,7 +116,7 @@ fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewMo
             }
 
             if (showConfetti) ConfettiOverlay(onFinished = {showConfetti = false})
-            if (uiState.isLoading) LoadingBox()
+            if (uiState.isLoading) LoadingDialog()
 
         }
     }

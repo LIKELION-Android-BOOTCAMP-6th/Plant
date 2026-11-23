@@ -100,7 +100,7 @@ import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyingSession
 import com.a32b.plant.presentation.core.component.ConfettiOverlay
 import com.a32b.plant.presentation.core.component.festiveConfettiParties
-import com.a32b.plant.presentation.core.component.LoadingBox
+import com.a32b.plant.presentation.core.component.LoadingDialog
 import com.a32b.plant.presentation.theme.LocalIsDarkTheme
 import com.a32b.plant.presentation.theme.deleteAccountButtonContentDark
 import com.a32b.plant.presentation.theme.homeItemLabel
@@ -346,7 +346,7 @@ fun HomeScreen(
         }
 
         if (uiState.isLoading){
-            LoadingBox()
+            LoadingDialog()
         }
         bonusBoxResult?.let { items ->
             BonusBoxResultDialog(

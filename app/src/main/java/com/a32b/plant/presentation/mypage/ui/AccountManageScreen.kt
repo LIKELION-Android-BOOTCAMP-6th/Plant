@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -22,8 +21,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
@@ -35,7 +32,7 @@ import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.presentation.core.component.BackTopBar
 import com.a32b.plant.presentation.core.component.ConfirmDialog
-import com.a32b.plant.presentation.core.component.LoadingBox
+import com.a32b.plant.presentation.core.component.LoadingDialog
 import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.mypage.viewmodel.DeleteAccountEvent
 import com.a32b.plant.presentation.mypage.viewmodel.DeleteAccountViewModel
@@ -140,15 +137,7 @@ fun AccountManageScreen(
     }
 
     if (deleteUiState.isLoading) {
-        Dialog(
-            onDismissRequest = {},
-            properties = DialogProperties(
-                dismissOnBackPress = false,
-                dismissOnClickOutside = false
-            )
-        ) {
-            LoadingBox(modifier = Modifier.size(80.dp))
-        }
+        LoadingDialog()
     }
 
     Scaffold(
