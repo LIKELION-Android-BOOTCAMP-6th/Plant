@@ -166,7 +166,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
     val studyingUsers = uiState.studyingUsers
     // 목표 입력 다이얼로그도 로컬 복구 전에는 띄우지 않도록 함께 감쌈 (복구 시 다이얼로그가 깜빡이는 현상 방지)
     LoadableScreen(viewModel) {
-        // 로딩이 끝나 학습 화면에 머무르는 것이 정해진 뒤에 확인 — 저장 안 된 종료 세션이라 바로 홈으로 돌아가는 경우에는
+        // 로딩(loaded()) 뒤에 확인 — 저장 안 된 종료 세션이라 loaded() 전에 홈으로 보내는 경우에는
         // 요청 창을 띄우지 않고, 보이지 않을 안내 때문에 그날 몫(하루 1번)이 기록되지 않게 함
         LaunchedEffect(Unit) {
             if (isNotificationAccessChecked) return@LaunchedEffect
@@ -352,7 +352,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
 /**
  * 학습 타이머 알림이 보일 수 있는 상태인지 확인 (#610)
  * 첫 거절과 다시 묻지 않음은 거절 직후의 shouldShowRequestPermissionRationale로 구분 (첫 거절 후 true, 다시 묻지 않음은 false)
- * 처음 요청 창을 선택 없이 닫은 경우도 false라 다시 묻지 않음으로 분류됨
+ * 처음 요청 창을 뒤로가기로 닫은 경우도 false라 다시 묻지 않음으로 분류됨
  */
 private fun checkNotificationAccess(context: Context, activity: Activity?, permissionGranted: Boolean): NotificationAccess {
     val manager = NotificationManagerCompat.from(context)
@@ -371,7 +371,7 @@ private fun checkNotificationAccess(context: Context, activity: Activity?, permi
 }
 
 /**
- * 앱 알림 설정 화면 열기 — 앱 알림 전체·채널을 모두 여기서 켤 수 있음
+ * 앱 알림 설정 화면 열기 (#610)
  * 기기에서 이 화면을 열지 못하면 앱 정보 화면으로 대신 이동
  */
 private fun openNotificationSettings(context: Context) {

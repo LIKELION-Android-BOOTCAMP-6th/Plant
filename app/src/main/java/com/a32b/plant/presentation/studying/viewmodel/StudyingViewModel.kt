@@ -813,7 +813,7 @@ class StudyingViewModel @Inject constructor(
     /**
      * 화면이 알림 상태를 확인한 결과 (#610) — 알림이 안 보여도 타이머·저장은 그대로 진행한다
      * - 첫 거절: 다음 진입 때 시스템이 다시 물으므로 짧게 이유만 알린다
-     * - 요청 창으로 켤 수 없음: 하루 1번만 설정 화면 안내 (같은 날 재진입·일시정지·복구 후에는 띄우지 않음)
+     * - 요청 창으로 켤 수 없다고 판단(BLOCKED): 하루 1번만 설정 화면 안내 (같은 날 재진입·일시정지·복구 후에는 띄우지 않음)
      */
     fun onNotificationAccessChecked(access: NotificationAccess) {
         when (access) {
