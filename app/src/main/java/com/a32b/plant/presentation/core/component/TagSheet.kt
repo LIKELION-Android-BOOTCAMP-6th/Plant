@@ -32,10 +32,7 @@ fun TagSheet(tags: List<Tag>, init : List<Tag> = emptyList(),
         selectedTags.clear()
         selectedTags.addAll(init)
     }
-    val order = listOf("중등", "고등", "대학교", "취업준비", "자기계발")
-
-    val groupedTags = tags.groupBy { it.parentId }.entries
-        .sortedBy { (parent, _) -> order.indexOf(parent) }
+    val groupedTags = groupTagsByParent(tags)
 
     Card(modifier = Modifier.padding(horizontal = 10.dp).fillMaxWidth(),
         shape = RoundedCornerShape(5.dp),
@@ -88,3 +85,16 @@ fun TagSheet(tags: List<Tag>, init : List<Tag> = emptyList(),
 fun SnapshotStateList<Tag>.toggle(tag: Tag) {
     if (contains(tag)) remove(tag) else add(tag)
 }
+
+// 상위 분류 표시 순서. Tags의 no는 분류마다 0부터 다시 매겨져 있어 분류끼리 순서를 정할 수 없다 (2026-11-24 운영 Tags 32개 기준, #650)
+private val PARENT_ORDER = listOf("중등", "고등", "대학교", "취업준비", "자기계발")
+
+/**
+ * 태그를 상위 분류(parentId)별로 묶고 [PARENT_ORDER] 순서로 정렬한다.
+ * 목록에 없는 분류는 맨 앞이 아니라 맨 뒤에 둔다 (#650). 그런 분류가 여럿이면 받은 목록에 먼저 나온 분류가 앞에 온다 (sortedBy는 안정 정렬).
+ * 분류 안 태그 순서는 받은 목록 순서를 그대로 둔다.
+ */
+internal fun groupTagsByParent(tags: List<Tag>): List<Pair<String, List<Tag>>> =
+    tags.groupBy { it.parentId }
+        .map { (parent, group) -> parent to group }
+        .sortedBy { (parent, _) -> PARENT_ORDER.indexOf(parent).takeIf { it >= 0 } ?: Int.MAX_VALUE }
