@@ -1,26 +1,17 @@
 package com.a32b.plant.presentation.mypage.ui
 
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.a32b.plant.R
+import com.a32b.plant.presentation.core.component.BackTopBar
 import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
 import com.mikepenz.aboutlibraries.ui.compose.m3.libraryColors
@@ -34,32 +25,14 @@ import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
  * - 항목을 누르면 라이선스 전문이 다이얼로그로 열린다. 전문이 없는 항목(Google SDK 약관 등)은 라이선스 주소를 브라우저로 연다
  */
 @Composable
-@OptIn(ExperimentalMaterial3Api::class)
 fun OpenSourceLicenseScreen(navController: NavController) {
     val libraries by produceLibraries(R.raw.aboutlibraries)
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                windowInsets = WindowInsets(top = 0.dp),
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
-                ),
-                title = {
-                    Text("오픈소스 라이선스", style = MaterialTheme.typography.displayLarge)
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_backbtn),
-                            contentDescription = "뒤로가기",
-                            modifier = Modifier.size(19.dp)
-                        )
-                    }
-                }
+            BackTopBar(
+                title = "오픈소스 라이선스",
+                onBack = { navController.popBackStack() }
             )
         },
         containerColor = MaterialTheme.colorScheme.background

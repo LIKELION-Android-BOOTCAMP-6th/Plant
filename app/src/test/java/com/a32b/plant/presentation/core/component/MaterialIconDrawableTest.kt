@@ -9,7 +9,8 @@ import org.junit.Test
 import java.io.File
 
 /**
- * material-icons 라이브러리를 빼면서 res/drawable로 옮긴 아이콘 7종이 원래 아이콘과 같은 모양인지 확인 (#651).
+ * material-icons 라이브러리를 빼면서 res/drawable로 옮긴 아이콘이 원래 아이콘과 같은 모양인지 확인 (#651).
+ * 처음 옮긴 7종 중 ic_arrow_back은 글쓰기 뒤로가기가 ic_backbtn으로 바뀌면서 지웠다 (#645).
  *
  * 기대값은 material-icons-core/extended 1.7.8 소스의 materialIcon { materialPath { ... } } 명령을 그대로 옮긴 것.
  * 원래 아이콘의 공통 속성(materialIcon·materialPath 기본값): 24dp, 뷰포트 24, 검은색 채우기, NonZero 채우기 규칙.
@@ -86,27 +87,6 @@ class MaterialIconDrawableTest {
         lineTo(19.0f, 17.59f)
         lineTo(13.41f, 12.0f)
         close()
-    }
-
-    @Test
-    fun `ic_arrow_back은 Filled ArrowBack과 같다`() = assertSameAsMaterialIcon("ic_arrow_back") {
-        moveTo(20.0f, 11.0f)
-        horizontalLineTo(7.83f)
-        lineToRelative(5.59f, -5.59f)
-        lineTo(12.0f, 4.0f)
-        lineToRelative(-8.0f, 8.0f)
-        lineToRelative(8.0f, 8.0f)
-        lineToRelative(1.41f, -1.41f)
-        lineTo(7.83f, 13.0f)
-        horizontalLineTo(20.0f)
-        verticalLineToRelative(-2.0f)
-        close()
-    }
-
-    @Test
-    fun `ic_arrow_back은 원래 아이콘처럼 RTL에서 뒤집히지 않는다`() {
-        // 교체 전 Icons.Default.ArrowBack은 AutoMirrored가 아닌 Filled 버전이라 autoMirror = false
-        assertFalse(drawable("ic_arrow_back").contains("android:autoMirrored"))
     }
 
     @Test

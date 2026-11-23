@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.a32b.plant.presentation.core.component.BackTopBar
 import com.a32b.plant.presentation.core.component.LoadableScreen
 import com.a32b.plant.presentation.core.component.TagSheet
 import com.a32b.plant.domain.model.Tag
@@ -73,10 +74,12 @@ fun NewBornTreeScreen(navController: NavController,
             // Scaffold 전체에 줘야 하단 완료 버튼도 키보드 위로 올라간다.
             modifier = Modifier.imePadding(),
             topBar = {
-                Text(
-                    text = "Plant",
-                    modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.headlineMedium,
+                // 저장 중에는 상단바 뒤로가기만 막는다 (시스템 뒤로가기는 이전처럼 막지 않음)
+                BackTopBar(
+                    title = "새 화분 만들기",
+                    // 연타해도 아래 화면까지 닫히지 않도록 이 화면만 대상으로 pop
+                    onBack = { navController.popBackStack<Routes.NewBornTree>(inclusive = true) },
+                    backEnabled = !isUploading
                 )
               },
             bottomBar = {
