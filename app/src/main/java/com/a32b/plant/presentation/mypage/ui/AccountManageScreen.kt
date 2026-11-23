@@ -79,8 +79,9 @@ fun AccountManageScreen(
 
                 is DeleteAccountEvent.RequestGoogleReauth -> {
                     coroutineScope.launch {
+                        // Android 12+ 토스트는 두 줄까지만 보여, 큰 글꼴에서도 두 줄에 들어가게 짧게 나눔 (#681)
                         context.showToast(
-                            "본인 확인을 위해 Google 계정을\n한 번 더 확인합니다.",
+                            "본인 확인을 위해\nGoogle 계정을 확인합니다.",
                             Toast.LENGTH_LONG
                         )
                         val googleIdOption =
