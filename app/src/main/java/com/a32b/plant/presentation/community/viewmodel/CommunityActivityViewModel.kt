@@ -22,7 +22,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 data class CommunityActivityUiState(
+    // 탭 목록을 불러오는 중. 목록이 오거나 구독이 끝나면 해제된다
     val isLoading: Boolean = false,
+    // 선택 항목을 삭제하는 중. 삭제 결과가 나와야 해제된다.
+    // isLoading과 따로 두는 이유: 삭제한 activity가 구독 중인 목록에서 빠지며 목록이 삭제 도중에 다시 오므로,
+    // 같은 값을 쓰면 목록 도착이 삭제 중 로딩을 풀고, 삭제 종료가 다른 탭의 로딩을 푼다 (#754)
+    val isDeleting: Boolean = false,
     val selected: String = ActivityType.POST,
     val activities: List<CommunityActivity> = emptyList(),
     val isSelectionMode: Boolean = false,
@@ -33,6 +38,10 @@ data class CommunityActivityUiState(
     // Firestore 삭제는 로컬에서 먼저 반영되므로, 서버가 거절해 항목이 다시 나타나도 선택이 유지되어야 함
     val selectedCount: Int
         get() = activities.count { it.id in selectedIds }
+
+    // 로딩 표시(LoadingBox) 여부: 탭 로딩 또는 삭제 중
+    val isLoadingShown: Boolean
+        get() = isLoading || isDeleting
 }
 sealed class CommunityActivityEvent {
     data class NavigateToCommunityDetail(val postId: String) : CommunityActivityEvent()
@@ -106,21 +115,23 @@ class CommunityActivityViewModel @Inject constructor(
 
     fun deleteSelected() {
         val toDelete = _uiState.value.activities.filter { it.id in _uiState.value.selectedIds }
-        if (toDelete.isEmpty()) return
+        // 삭제가 겹쳐 시작되면 먼저 끝난 쪽이 isDeleting을 풀어 버리므로, 진행 중이면 새로 시작하지 않는다 (#754)
+        if (toDelete.isEmpty() || _uiState.value.isDeleting) return
 
+        // 위의 진행 중 확인과 같은 흐름에서 바로 켜지도록 launch 밖에 둔다
+        _uiState.update { it.copy(isDeleting = true) }
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
             // NonCancellable: 응답 전에 화면을 나가도 남은 항목을 끝까지 처리하고, 성공한 묶음마다 목록에 알리기 위함 (#712)
             // 목록 알림은 UseCase 안에서 보낸다. 이탈 후에도 블록 밖 상태 갱신은 실행되지만(NonCancellable은 dispatcher를 바꾸지 않고
             // UseCase가 자식 코루틴을 모두 끝낸 뒤 돌아오므로, withContext가 끝날 때 바깥 취소를 확인하지 않음)
             // 화면이 없어 영향이 없고, Toast는 취소된 viewModelScope의 launch라 나가지 않는다
             withContext(NonCancellable) { deleteActivitiesUseCase(toDelete) }
                 .onSuccess {
-                    _uiState.update { it.copy(isLoading = false, isSelectionMode = false, selectedIds = emptySet()) }
+                    _uiState.update { it.copy(isDeleting = false, isSelectionMode = false, selectedIds = emptySet()) }
                     sendToast("삭제되었습니다.")
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isLoading = false) }
+                    _uiState.update { it.copy(isDeleting = false) }
                     when (e) {
                         is AppError.UnknownUser -> Unit // UseCase 내부 ensureCurrentUserUseCase에서 이미 세션 만료 알림 발송
                         else -> sendToast(e.message)

@@ -10,8 +10,10 @@ import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.CommunityRepository
 import com.a32b.plant.domain.result.Result
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 
 /**
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.map
  * 나머지 함수(내 활동의 댓글 삭제에 쓰는 함수 포함)는 호출되면 실패한다.
  * 게시글 상세·댓글 조회는 [postDetailResult]·[commentsResult]를 넣었을 때만 쓸 수 있다 (넣지 않으면 호출 시 실패).
  * [deletePostGate]를 넣으면 게시글 삭제는 게이트가 완료될 때까지 끝나지 않는다 (응답 대기 재현).
+ * [pendingActivityTypes]에 넣은 유형은 내 활동 목록을 구독해도 목록이 오지 않는다 (탭 로딩 대기 재현).
  */
 class FakeCommunityRepository(
     var isPostExistResult: Result<Boolean> = Result.Success(true),
@@ -29,7 +32,8 @@ class FakeCommunityRepository(
     var deletePostGate: CompletableDeferred<Unit>? = null,
     var postDetailResult: Result<Post?>? = null,
     var commentsResult: Result<List<Comment>>? = null,
-    val activities: MutableStateFlow<List<CommunityActivity>> = MutableStateFlow(emptyList())
+    val activities: MutableStateFlow<List<CommunityActivity>> = MutableStateFlow(emptyList()),
+    var pendingActivityTypes: Set<String> = emptySet()
 ) : CommunityRepository {
 
     val deletedPostIds = mutableListOf<String>()
@@ -73,7 +77,8 @@ class FakeCommunityRepository(
     override suspend fun updateComment(postId: String, commentId: String, newContent: String, activityId: String): Result<SaveResult> = unused()
     override suspend fun deleteComment(postId: String, commentId: String): Result<Boolean> = unused()
     override fun observeActivity(selected: String): Flow<List<CommunityActivity>> =
-        activities.map { list -> list.filter { it.type == selected } }
+        if (selected in pendingActivityTypes) flow { awaitCancellation() }
+        else activities.map { list -> list.filter { it.type == selected } }
     override suspend fun deleteOrphanedActivity(activityId: String): Result<Unit> = unused()
     override suspend fun findCommentItByActivityId(postId: String, activityId: String): Result<String?> = unused()
 
