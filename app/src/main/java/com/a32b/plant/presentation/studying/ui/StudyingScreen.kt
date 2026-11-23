@@ -95,7 +95,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
     // ViewModel은 시작 시각이 비어 있을 때만 반영 — 백업에서 복원한 시작 시각은 덮어쓰지 않음
     viewModel.onStartedAtChange(startTime)
 
-    // 알림 권한은 들어올 때마다 요청 (#610) — 13 이상에서 두 번 거절하면 시스템이 창을 더 띄우지 않고 바로 거절로 끝남
+    // 알림 권한은 들어올 때마다 로딩 뒤에 요청 (#610, 아래 LoadableScreen 안) — 13 이상에서 두 번 거절하면 시스템이 창을 더 띄우지 않고 바로 거절로 끝남
     // 결과로 알림이 보이는지 확인해 안내 — 알림이 안 보여도 타이머(포그라운드 서비스)·저장은 그대로 진행됨
     val activity = LocalActivity.current
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
@@ -103,7 +103,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
     ) { granted ->
         viewModel.onNotificationAccessChecked(checkNotificationAccess(context, activity, granted))
     }
-    // 화면 회전 등으로 다시 그려져도 한 화면에서 한 번만 확인 — 설정에서 돌아왔을 때도 다시 확인하지 않아 안내가 바로 다시 뜨지 않음
+    // Activity가 다시 만들어지거나(구성 변경) 프로세스 종료 뒤 복원돼도 한 화면에서 한 번만 확인 — 설정에서 돌아왔을 때도 다시 확인하지 않아 안내가 바로 다시 뜨지 않음
     var isNotificationAccessChecked by rememberSaveable { mutableStateOf(false) }
 
     val uiState by viewModel.uiState.collectAsState()
@@ -166,8 +166,8 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
     val studyingUsers = uiState.studyingUsers
     // 목표 입력 다이얼로그도 로컬 복구 전에는 띄우지 않도록 함께 감쌈 (복구 시 다이얼로그가 깜빡이는 현상 방지)
     LoadableScreen(viewModel) {
-        // 로딩 뒤(목표 입력 창이 먼저 뜬 뒤)에 확인 — 다시 묻지 않음 상태는 요청 창 없이 결과가 바로 오므로,
-        // 로딩 전에 안내 창이 먼저 뜨면 나중에 뜬 목표 입력 창이 안내 창을 가릴 수 있음
+        // 로딩이 끝나 학습 화면에 머무르는 것이 정해진 뒤에 확인 — 저장 안 된 종료 세션이라 바로 홈으로 돌아가는 경우에는
+        // 요청 창을 띄우지 않고, 보이지 않을 안내 때문에 그날 몫(하루 1번)이 기록되지 않게 함
         LaunchedEffect(Unit) {
             if (isNotificationAccessChecked) return@LaunchedEffect
             isNotificationAccessChecked = true
@@ -352,6 +352,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
 /**
  * 학습 타이머 알림이 보일 수 있는 상태인지 확인 (#610)
  * 첫 거절과 다시 묻지 않음은 거절 직후의 shouldShowRequestPermissionRationale로 구분 (첫 거절 후 true, 다시 묻지 않음은 false)
+ * 처음 요청 창을 선택 없이 닫은 경우도 false라 다시 묻지 않음으로 분류됨
  */
 private fun checkNotificationAccess(context: Context, activity: Activity?, permissionGranted: Boolean): NotificationAccess {
     val manager = NotificationManagerCompat.from(context)

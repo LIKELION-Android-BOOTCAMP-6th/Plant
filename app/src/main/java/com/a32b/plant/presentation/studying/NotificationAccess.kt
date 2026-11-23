@@ -10,7 +10,10 @@ enum class NotificationAccess {
     /** 13 이상에서 권한을 거절했지만 시스템이 다음에 요청 창을 다시 띄울 수 있음 — 짧게 이유만 안내 */
     DENIED_CAN_ASK_AGAIN,
 
-    /** 요청 창으로는 켤 수 없음 (다시 묻지 않음, 앱 알림 꺼짐, 학습 타이머 채널 꺼짐) — 설정 화면으로 안내 */
+    /**
+     * 요청 창으로는 켤 수 없음 (다시 묻지 않음, 앱 알림 꺼짐, 학습 타이머 채널 꺼짐) — 설정 화면으로 안내
+     * 처음 뜬 요청 창을 선택 없이 닫아도(뒤로가기) 다시 묻지 않음과 구분되지 않아 여기로 분류된다
+     */
     BLOCKED
 }
 
@@ -19,7 +22,7 @@ enum class NotificationAccess {
  *
  * @param permissionGranted POST_NOTIFICATIONS 허용 여부. 12 이하는 런타임 권한이 없으므로 true를 넘긴다
  * @param shouldShowRationale 거절 직후의 shouldShowRequestPermissionRationale 값 — true면 첫 거절(다시 요청 가능),
- * false면 다시 묻지 않음 상태(요청 창이 안 뜨고 바로 거절)
+ * false면 다시 묻지 않음 상태(요청 창이 안 뜨고 바로 거절) — 처음 뜬 요청 창을 선택 없이 닫은 경우도 false
  * @param notificationsEnabled 앱 알림 전체가 켜져 있는지 (NotificationManagerCompat.areNotificationsEnabled)
  * @param timerChannelBlocked 학습 타이머 채널이 꺼져 있는지 — 채널이 아직 없으면(서비스를 한 번도 시작하지 않음) false
  */
