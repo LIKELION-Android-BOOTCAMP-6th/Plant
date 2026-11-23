@@ -11,6 +11,7 @@ import com.a32b.plant.domain.model.UnseenStudyReward
 import com.a32b.plant.domain.repository.StudyingRepository
 import com.a32b.plant.domain.result.Result
 import kotlinx.coroutines.flow.Flow
+import java.time.LocalDate
 
 /** 테스트 공용 [StudyingRepository]. 테스트에서 쓰지 않는 함수는 호출되면 실패한다. */
 class FakeStudyingRepository(
@@ -48,6 +49,20 @@ class FakeStudyingRepository(
     override suspend fun updateLocalSessionTime(sessionId: String, time: Long): Result<Unit> {
         updatedLocalSessionTimes += sessionId to time
         return Result.Success(Unit)
+    }
+
+    /** readNotificationGuideShownDate가 돌려줄 값 */
+    var notificationGuideShownDateResult: Result<LocalDate?> = Result.Success(null)
+    var saveNotificationGuideShownDateResult: Result<Unit> = Result.Success(Unit)
+
+    /** saveNotificationGuideShownDate로 저장한 날짜 (저장한 순서대로) */
+    val savedNotificationGuideShownDates = mutableListOf<LocalDate>()
+
+    override suspend fun readNotificationGuideShownDate(): Result<LocalDate?> = notificationGuideShownDateResult
+
+    override suspend fun saveNotificationGuideShownDate(date: LocalDate): Result<Unit> {
+        savedNotificationGuideShownDates += date
+        return saveNotificationGuideShownDateResult
     }
 
     override fun observeStudyingUser(tag: String): Flow<List<StudyingUser>> = studyingUsers ?: error("Unused")

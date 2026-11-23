@@ -1,8 +1,14 @@
 package com.a32b.plant.presentation.studying.ui
 
 import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -39,8 +45,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -53,6 +61,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -60,6 +70,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyingUser
 import com.a32b.plant.presentation.core.component.ConfirmDialog
@@ -68,6 +79,9 @@ import com.a32b.plant.presentation.core.component.LoadingDialog
 import com.a32b.plant.presentation.core.component.ProfileImage
 import com.a32b.plant.presentation.core.extension.showToast
 import com.a32b.plant.presentation.core.type.StudyingGoalCheckMode
+import com.a32b.plant.presentation.studying.NotificationAccess
+import com.a32b.plant.presentation.studying.classifyNotificationAccess
+import com.a32b.plant.presentation.studying.service.StudyingTimerService
 import com.a32b.plant.presentation.studying.viewmodel.StudyingEvent
 import com.a32b.plant.presentation.studying.viewmodel.StudyingViewModel
 import com.a32b.plant.presentation.theme.LocalIsDarkTheme
@@ -81,14 +95,16 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
     // ViewModel은 시작 시각이 비어 있을 때만 반영 — 백업에서 복원한 시작 시각은 덮어쓰지 않음
     viewModel.onStartedAtChange(startTime)
 
+    // 알림 권한은 들어올 때마다 로딩 뒤에 요청 (#610, 아래 LoadableScreen 안) — 13 이상에서 두 번 거절하면 시스템이 창을 더 띄우지 않고 바로 거절로 끝남
+    // 결과로 알림이 보이는지 확인해 안내 — 알림이 안 보여도 타이머(포그라운드 서비스)·저장은 그대로 진행됨
+    val activity = LocalActivity.current
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) {}
-    LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
+    ) { granted ->
+        viewModel.onNotificationAccessChecked(checkNotificationAccess(context, activity, granted))
     }
+    // Activity가 다시 만들어지거나(구성 변경) 프로세스 종료 뒤 복원돼도 한 화면에서 한 번만 확인 — 설정에서 돌아왔을 때도 다시 확인하지 않아 안내가 바로 다시 뜨지 않음
+    var isNotificationAccessChecked by rememberSaveable { mutableStateOf(false) }
 
     val uiState by viewModel.uiState.collectAsState()
     val timerButtonText = if (uiState.isStudying) "일시정지" else "학습하기"
@@ -140,6 +156,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
                 }
 
                 is StudyingEvent.ShowToast -> context.showToast(event.message, event.duration)
+                is StudyingEvent.OpenNotificationSettings -> openNotificationSettings(context)
             }
         }
     }
@@ -149,6 +166,18 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
     val studyingUsers = uiState.studyingUsers
     // 목표 입력 다이얼로그도 로컬 복구 전에는 띄우지 않도록 함께 감쌈 (복구 시 다이얼로그가 깜빡이는 현상 방지)
     LoadableScreen(viewModel) {
+        // 로딩(loaded()) 뒤에 확인 — 저장 안 된 종료 세션이라 loaded() 전에 홈으로 보내는 경우에는
+        // 요청 창을 띄우지 않고, 보이지 않을 안내 때문에 그날 몫(하루 1번)이 기록되지 않게 함
+        LaunchedEffect(Unit) {
+            if (isNotificationAccessChecked) return@LaunchedEffect
+            isNotificationAccessChecked = true
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                // 12 이하는 런타임 권한이 없음 — 앱 알림·채널이 꺼졌는지만 확인
+                viewModel.onNotificationAccessChecked(checkNotificationAccess(context, activity, permissionGranted = true))
+            }
+        }
         Surface(modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
@@ -289,6 +318,16 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
                 }
             )
         }
+        // 다른 다이얼로그(목표 입력·확인) 위에 뜨도록 마지막에 둠
+        if (uiState.isNotificationGuideShown) {
+            ConfirmDialog(
+                text = "학습 알림이 꺼져 있어요",
+                semiText = "알림을 켜면 다른 앱을 쓰는 중에도 알림창에서 학습 시간을 볼 수 있어요.\n알림이 꺼져 있어도 학습 시간은 기록돼요.",
+                confirmBtnText = "설정으로 이동",
+                onDismiss = viewModel::onNotificationGuideDismiss,
+                onConfirm = viewModel::onNotificationGuideSettingsClick
+            )
+        }
     }
 
     if (uiState.isLoading)
@@ -308,6 +347,39 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
     if (!uiState.isLocalSaved){
         //TODO 배너나 알림 창 같은 거 조그맣게 띄위기
     }
+}
+
+/**
+ * 학습 타이머 알림이 보일 수 있는 상태인지 확인 (#610)
+ * 첫 거절과 다시 묻지 않음은 거절 직후의 shouldShowRequestPermissionRationale로 구분 (첫 거절 후 true, 다시 묻지 않음은 false)
+ * 처음 요청 창을 뒤로가기로 닫은 경우도 false라 다시 묻지 않음으로 분류됨
+ */
+private fun checkNotificationAccess(context: Context, activity: Activity?, permissionGranted: Boolean): NotificationAccess {
+    val manager = NotificationManagerCompat.from(context)
+    val shouldShowRationale = !permissionGranted &&
+        activity != null &&
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.POST_NOTIFICATIONS)
+    // 채널은 타이머 서비스가 처음 시작될 때 만들어지므로, 아직 없으면(null) 꺼진 것으로 보지 않음
+    val timerChannel = manager.getNotificationChannelCompat(StudyingTimerService.CHANNEL_ID)
+    return classifyNotificationAccess(
+        permissionGranted = permissionGranted,
+        shouldShowRationale = shouldShowRationale,
+        notificationsEnabled = manager.areNotificationsEnabled(),
+        timerChannelBlocked = timerChannel?.importance == NotificationManagerCompat.IMPORTANCE_NONE
+    )
+}
+
+/**
+ * 앱 알림 설정 화면 열기 (#610)
+ * 기기에서 이 화면을 열지 못하면 앱 정보 화면으로 대신 이동
+ */
+private fun openNotificationSettings(context: Context) {
+    val notificationSettings = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+    val appDetails = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
+    safeRunCatching { context.startActivity(notificationSettings) }
+        .onFailure { safeRunCatching { context.startActivity(appDetails) } }
 }
 
 @Composable

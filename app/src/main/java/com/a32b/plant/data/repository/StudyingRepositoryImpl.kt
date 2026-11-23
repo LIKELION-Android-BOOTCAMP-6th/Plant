@@ -9,6 +9,7 @@ import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.mapper.toDto
 import com.a32b.plant.data.mapper.toRewardStatus
 import com.a32b.plant.data.model.StudySaveStateDto
+import com.a32b.plant.data.source.local.SettingsLocalDataSource
 import com.a32b.plant.data.source.local.StudyingLocalDataSource
 import com.a32b.plant.data.source.remote.studying.StudyingRemoteDataSource
 import com.a32b.plant.domain.error.AppError
@@ -30,6 +31,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import java.io.IOException
+import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.seconds
@@ -39,6 +41,7 @@ import kotlin.time.Duration.Companion.seconds
 class StudyingRepositoryImpl @Inject constructor(
     private val studyingRemoteDataSource: StudyingRemoteDataSource,
     private val local: StudyingLocalDataSource,
+    private val settingsLocal: SettingsLocalDataSource,
     private val db : FirebaseFirestore
 ): StudyingRepository {
     override fun observeStudyingUser(tag: String): Flow<List<StudyingUser>> {
@@ -297,6 +300,26 @@ class StudyingRepositoryImpl @Inject constructor(
         onFailure = { e ->
             Log.e("studying", "학습 목표 임시 글 삭제", e)
             Result.Failure(AppError.Local("임시 글 삭제 실패"))
+        }
+    )
+
+    override suspend fun readNotificationGuideShownDate(): Result<LocalDate?> = safeRunCatching {
+        settingsLocal.readNotificationGuideShownEpochDay()
+    }.fold(
+        onSuccess = { epochDay -> Result.Success(epochDay?.let(LocalDate::ofEpochDay)) },
+        onFailure = { e ->
+            Log.e("studying", "알림 안내 날짜 읽기", e)
+            Result.Failure(AppError.Local("불러오기 실패"))
+        }
+    )
+
+    override suspend fun saveNotificationGuideShownDate(date: LocalDate): Result<Unit> = safeRunCatching {
+        settingsLocal.saveNotificationGuideShownEpochDay(date.toEpochDay())
+    }.fold(
+        onSuccess = { Result.Success(Unit) },
+        onFailure = { e ->
+            Log.e("studying", "알림 안내 날짜 저장", e)
+            Result.Failure(AppError.Local())
         }
     )
 

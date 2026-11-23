@@ -22,6 +22,7 @@ import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.type.StudySaveRejection
 import com.a32b.plant.domain.type.StudyingSessionStatus
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
+import com.a32b.plant.domain.usecase.studying.ClaimDailyNotificationGuideUseCase
 import com.a32b.plant.domain.usecase.studying.FinishStudyingUseCase
 import com.a32b.plant.domain.usecase.studying.GetRecoverySessionUseCase
 import com.a32b.plant.domain.usecase.studying.GetStudyingGoalDraftUseCase
@@ -31,6 +32,7 @@ import com.a32b.plant.domain.usecase.studying.SaveStudyingUserUseCase
 import com.a32b.plant.domain.usecase.studying.StartStudyingSessionUseCase
 import com.a32b.plant.domain.usecase.studying.UpdateLocalStudyingSessionUseCase
 import com.a32b.plant.presentation.core.type.StudyingGoalCheckMode
+import com.a32b.plant.presentation.studying.NotificationAccess
 import com.a32b.plant.presentation.studying.StudyingConstants.LOCAL_BACKUP_INTERVAL_MS
 import com.a32b.plant.presentation.studying.StudyingConstants.MAX_STUDY_LOG_SIZE
 import com.a32b.plant.presentation.studying.StudyingConstants.STUDY_LOG_LIMIT_MESSAGE
@@ -79,6 +81,7 @@ data class StudyingUiState(
     // 목표 입력 창에서 작성 중인 글 — 창 안 remember에 두면 화면 재생성·닫기로 사라지므로 ViewModel이 들고 있음
     val goalDraft: List<String> = listOf(""),
     val isGoalDiscardConfirmShown: Boolean = false, // 작성 중인 글이 있는 상태에서 닫기를 눌렀을 때 버릴지 확인
+    val isNotificationGuideShown: Boolean = false, // 알림이 꺼져 있어 설정 화면으로 안내 (#610)
 )
 
 sealed class StudyingEvent{
@@ -98,6 +101,7 @@ sealed class StudyingEvent{
 
     object NavigateToHome : StudyingEvent()
     data class ShowToast(val message: String, val duration: Int) : StudyingEvent()
+    object OpenNotificationSettings : StudyingEvent()
 }
 @HiltViewModel
 class StudyingViewModel @Inject constructor(
@@ -113,6 +117,7 @@ class StudyingViewModel @Inject constructor(
     private val saveStudyingGoalDraftUseCase: SaveStudyingGoalDraftUseCase,
     private val getStudyingGoalDraftUseCase: GetStudyingGoalDraftUseCase,
     private val observeStudyingUsersUseCase: ObserveStudyingUsersUseCase,
+    private val claimDailyNotificationGuideUseCase: ClaimDailyNotificationGuideUseCase,
     savedStateHandle: SavedStateHandle
 ) : BaseViewModel() {
     private val _eventChannel = Channel<StudyingEvent>(Channel.BUFFERED)
@@ -805,6 +810,33 @@ class StudyingViewModel @Inject constructor(
         viewModelScope.launch { _eventChannel.send(StudyingEvent.NavigateToHome) }
     }
 
+    /**
+     * 화면이 알림 상태를 확인한 결과 (#610) — 알림이 안 보여도 타이머·저장은 그대로 진행한다
+     * - 첫 거절: 다음 진입 때 시스템이 다시 물으므로 짧게 이유만 알린다
+     * - 요청 창으로 켤 수 없다고 판단(BLOCKED): 하루 1번만 설정 화면 안내 (같은 날 재진입·일시정지·복구 후에는 띄우지 않음)
+     */
+    fun onNotificationAccessChecked(access: NotificationAccess) {
+        when (access) {
+            NotificationAccess.ALLOWED -> Unit
+            NotificationAccess.DENIED_CAN_ASK_AGAIN -> sendToast(NOTIFICATION_DENIED_MESSAGE, Toast.LENGTH_LONG)
+            NotificationAccess.BLOCKED -> viewModelScope.launch {
+                if (claimDailyNotificationGuideUseCase()) {
+                    _uiState.update { it.copy(isNotificationGuideShown = true) }
+                }
+            }
+        }
+    }
+
+    fun onNotificationGuideDismiss() {
+        _uiState.update { it.copy(isNotificationGuideShown = false) }
+    }
+
+    /** 설정에서 돌아와도 다시 확인하지 않으므로, 허용하지 않고 돌아와도 안내가 바로 다시 뜨지 않는다 */
+    fun onNotificationGuideSettingsClick() {
+        _uiState.update { it.copy(isNotificationGuideShown = false) }
+        viewModelScope.launch { _eventChannel.send(StudyingEvent.OpenNotificationSettings) }
+    }
+
     private fun sendToast(message: String, duration: Int = Toast.LENGTH_SHORT) {
         viewModelScope.launch { _eventChannel.send(StudyingEvent.ShowToast(message, duration)) }
     }
@@ -815,6 +847,7 @@ class StudyingViewModel @Inject constructor(
         // 일시정지 후 "공부 중" 표시를 지우기까지 기다리는 시간 (#667)
         private const val STUDYING_USER_DELETE_DELAY_MS = 10_000L
         private const val SAVE_PENDING_MESSAGE = "네트워크에 연결되면 학습 기록이 자동으로 저장돼요."
+        private const val NOTIFICATION_DENIED_MESSAGE = "알림을 허용하면 다른 앱을 쓰는 중에도 학습 시간을 볼 수 있어요."
     }
 
 }
