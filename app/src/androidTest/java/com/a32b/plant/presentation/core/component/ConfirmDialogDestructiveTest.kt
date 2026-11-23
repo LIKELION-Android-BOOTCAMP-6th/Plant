@@ -4,10 +4,15 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.performClick
+import androidx.test.espresso.Espresso
 import androidx.core.graphics.ColorUtils
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.a32b.plant.presentation.theme.DarkColorScheme
@@ -22,9 +27,10 @@ import org.junit.runner.RunWith
 /**
  * [ConfirmDialog] isDestructive 확인 버튼 색 (#647)
  *
- * - 배경: 확인 버튼 캡처의 왼쪽 가장자리 세로 가운데 픽셀(모서리 둥근 부분·글자를 피한 곳)이 기대 배경색인지
- * - 글자: 캡처 안에 글자색과 정확히 같은 픽셀이 있는지 (글자 안쪽은 안티앨리어싱 없이 글자색 그대로 칠해짐)
+ * - 배경: 확인 버튼 캡처의 왼쪽 가장자리(x = 2px) 세로 가운데 픽셀이 기대 배경색인지
+ * - 글자: 캡처 안에 글자색과 정확히 같은 픽셀이 1개 이상 있는지
  * - 대비: 스킴의 error / onError 대비가 WCAG AA 일반 글자 기준(4.5:1) 이상인지
+ * - 로딩: isDestructive와 isLoading을 함께 켜도 로딩 표시가 뜨고, 확인 버튼·뒤로가기가 막히는지
  */
 @RunWith(AndroidJUnit4::class)
 class ConfirmDialogDestructiveTest {
@@ -53,7 +59,7 @@ class ConfirmDialogDestructiveTest {
         composeRule.waitForIdle()
 
         val pixels = composeRule
-            .onNode(hasClickAction() and hasText(confirmText), useUnmergedTree = false)
+            .onNode(hasClickAction() and hasText(confirmText))
             .captureToImage()
             .toPixelMap()
 
@@ -99,5 +105,34 @@ class ConfirmDialogDestructiveTest {
         val dark = ColorUtils.calculateContrast(DarkColorScheme.onError.toArgb(), DarkColorScheme.error.toArgb())
         assertTrue("라이트 대비 $light", light >= 4.5)
         assertTrue("다크 대비 $dark", dark >= 4.5)
+    }
+
+    @Test
+    fun destructiveLoading_showsProgressAndBlocksConfirmAndBack() {
+        var confirmCalls = 0
+        var dismissCalls = 0
+        composeRule.setContent {
+            PlantTheme(darkTheme = false) {
+                ConfirmDialog(
+                    text = "기록 삭제",
+                    onDismiss = { dismissCalls++ },
+                    onConfirm = { confirmCalls++ },
+                    confirmBtnText = "삭제",
+                    isDestructive = true,
+                    isLoading = true
+                )
+            }
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onAllNodes(hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate)).assertCountEquals(1)
+
+        composeRule.onNode(hasClickAction() and hasText("삭제")).performClick()
+        composeRule.waitForIdle()
+        assertEquals("로딩 중 확인 버튼이 눌림", 0, confirmCalls)
+
+        Espresso.pressBackUnconditionally()
+        composeRule.waitForIdle()
+        assertEquals("로딩 중 뒤로가기로 닫힘", 0, dismissCalls)
     }
 }
