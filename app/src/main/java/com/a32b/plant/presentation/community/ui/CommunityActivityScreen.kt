@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -101,7 +102,12 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
             color = MaterialTheme.colorScheme.background
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                Column(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        // 아래 덮개는 터치만 막으므로, 삭제 중에는 TalkBack이 덮개 아래 버튼·태그·목록을 실행하지 못하게 비운다 (#753)
+                        .then(if (uiState.isDeleting) Modifier.clearAndSetSemantics { } else Modifier)
+                ) {
                     BackTopBar(
                         title = "내 활동",
                         onBack = { navController.popBackStack() }
@@ -189,7 +195,7 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                     }
                 }
 
-                // 삭제 중에는 상단바·태그까지 덮어 "삭제(n)"·"취소"·태그 전환을 막는다 (#753)
+                // 삭제 중에는 상단바·태그까지 덮어 "삭제(n)"·"취소"·태그 전환 터치를 막는다 (#753)
                 // Dialog(LoadingDialog)가 아니라 화면 안 Box라 시스템 뒤로가기는 막지 않는다 → BackHandler(#748) 동작 유지
                 if (uiState.isDeleting) {
                     LoadingBox()

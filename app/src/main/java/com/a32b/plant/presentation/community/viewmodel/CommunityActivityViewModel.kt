@@ -24,7 +24,7 @@ import kotlinx.coroutines.withContext
 data class CommunityActivityUiState(
     // 탭 목록을 불러오는 중. 목록이 오거나 구독이 끝나면 해제된다
     val isLoading: Boolean = false,
-    // 선택 항목을 삭제하는 중. 삭제 결과가 나와야 해제된다. 화면은 이 동안 상단바까지 덮어 조작을 막는다 (#753)
+    // 선택 항목을 삭제하는 중. 삭제 결과가 나와야 해제된다. 화면은 이 동안 상단바까지 덮어 터치를 막고 TalkBack 실행도 막는다 (#753)
     // isLoading과 따로 두는 이유: 삭제한 activity가 구독 중인 목록에서 빠지며 목록이 삭제 도중에 다시 오므로,
     // 같은 값을 쓰면 목록 도착이 삭제 중 로딩을 풀고, 삭제 종료가 다른 탭의 로딩을 푼다 (#754)
     val isDeleting: Boolean = false,

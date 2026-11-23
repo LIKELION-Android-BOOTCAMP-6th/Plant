@@ -3,9 +3,11 @@ package com.a32b.plant.presentation.community.ui
 import android.graphics.Color as AndroidColor
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasAnyAncestor
@@ -16,7 +18,9 @@ import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.compose.rememberNavController
 import androidx.test.espresso.Espresso
@@ -55,8 +59,10 @@ import org.junit.runner.RunWith
 /**
  * 내 활동 선택 삭제 중 화면 조작 막기 확인 (#753)
  *
- * 게시글 삭제 응답을 gate로 붙잡아 "삭제 중" 상태를 만들고, 실제 터치(performClick)로 누른다.
- * - 상단바 "취소"·"삭제(n)", 태그가 눌려도 아무 일이 일어나지 않는지, 삭제가 끝나면 다시 눌리는지
+ * 게시글 삭제 응답을 gate로 붙잡아 "삭제 중" 상태를 만든다.
+ * - 터치: 상단바 "삭제(n)"·"취소", 태그를 좌표로 눌러도 아무 일이 일어나지 않는지, 삭제가 끝나면 다시 눌리는지
+ *   (삭제 중에는 접근성 노드가 없어 글자로 찾을 수 없으므로, 덮기 전에 좌표를 잡아 둔다)
+ * - 접근성: 삭제 중에는 덮개 아래 버튼·태그·목록이 접근성 트리에서 빠지는지 (TalkBack 실행 경로 차단)
  * - 시스템 뒤로가기는 막히지 않는지 (#748: 처음엔 선택 모드 해제, 다음엔 화면 나감)
  * - 덮개가 상단바까지 scrim 한 겹으로 덮는지, 로딩 표시가 하나뿐인지 (라이트·다크)
  */
@@ -96,19 +102,20 @@ class CommunityActivityDeleteBlockTest {
     @Test
     fun topBarAndTagsDoNothingWhileDeletingAndWorkAfter() {
         showScreen(darkTheme = false)
-        startDeleting()
+        enterSelection()
+        val deleteButton = centerOf(hasText("(1)"))
+        val cancelButton = centerOf(hasText("취소"))
+        val commentTag = centerOf(hasText(ActivityType.COMMENT))
+        startDeleting(alreadySelected = true)
 
         // 하나가 눌리면 뒤 버튼이 사라질 수 있어(취소 → 삭제(n) 숨김) 누를 때마다 바로 확인한다
-        composeRule.onNode(hasText("(1)")).performClick()
-        composeRule.waitForIdle()
+        touchAt(deleteButton)
         assertFalse("삭제(n)이 눌려 확인 창이 뜸", viewModel.uiState.value.isDeleteDialogShown)
 
-        composeRule.onNodeWithText("취소").performClick()
-        composeRule.waitForIdle()
+        touchAt(cancelButton)
         assertTrue("취소가 눌려 선택 모드가 풀림", viewModel.uiState.value.isSelectionMode)
 
-        composeRule.onNodeWithText(ActivityType.COMMENT).performClick()
-        composeRule.waitForIdle()
+        touchAt(commentTag)
         assertEquals("태그가 눌려 탭이 바뀜", ActivityType.POST, viewModel.uiState.value.selected)
 
         assertTrue("삭제 중이 아님", viewModel.uiState.value.isDeleting)
@@ -118,10 +125,30 @@ class CommunityActivityDeleteBlockTest {
         waitUntilDeleteEnds()
         composeRule.waitForIdle()
 
-        // 반증: 같은 방법으로 누르면 삭제가 끝난 뒤에는 동작한다
-        composeRule.onNodeWithText(ActivityType.COMMENT).performClick()
-        composeRule.waitForIdle()
+        // 반증: 같은 좌표를 누르면 삭제가 끝난 뒤에는 동작한다
+        touchAt(commentTag)
         assertEquals("삭제 후 태그가 눌리지 않음", ActivityType.COMMENT, viewModel.uiState.value.selected)
+    }
+
+    @Test
+    fun contentIsHiddenFromAccessibilityWhileDeleting() {
+        showScreen(darkTheme = false)
+        startDeleting()
+
+        // 노드가 없으면 TalkBack이 포커스를 주거나 클릭(OnClick)을 실행할 수 없다
+        listOf("(1)", "취소", "내 활동", ActivityType.COMMENT, "제목").forEach { text ->
+            composeRule.onNode(hasText(text)).assertDoesNotExist()
+        }
+        composeRule.onNode(hasContentDescription("뒤로가기")).assertDoesNotExist()
+
+        gate.complete(Unit)
+        waitUntilDeleteEnds()
+        composeRule.waitForIdle()
+
+        // 반증: 삭제가 끝나면 다시 접근성 트리에 나타난다 (성공이라 선택 모드는 풀려 "선택"이 보임)
+        listOf("선택", "내 활동", ActivityType.COMMENT, "제목").forEach { text ->
+            composeRule.onNode(hasText(text)).assertExists()
+        }
     }
 
     @Test
@@ -134,15 +161,15 @@ class CommunityActivityDeleteBlockTest {
         assertFalse("첫 뒤로가기에 선택 모드가 풀리지 않음", viewModel.uiState.value.isSelectionMode)
         assertTrue("뒤로가기로 삭제 상태가 풀림", viewModel.uiState.value.isDeleting)
         assertFalse("첫 뒤로가기에 화면이 닫힘", composeRule.activity.isFinishing)
+        // 선택 모드가 풀려 나타난 "선택"도 덮개 아래라 접근성 트리에 없다
+        composeRule.onNode(hasText("선택")).assertDoesNotExist()
 
         // 화면이 닫힌 뒤에는 composeRule.activity로 읽을 수 없어 미리 잡아 둔다
         val activity = composeRule.activity
         Espresso.pressBackUnconditionally()
+        // 이 테스트에는 NavHost가 없어 두 번째 뒤로가기는 액티비티 종료로 확인한다.
+        // ViewModel은 테스트가 직접 만들어 화면이 닫혀도 정리되지 않으므로, 이탈 후 삭제 완료(#712)는 단위 테스트가 확인한다
         assertTrue("두 번째 뒤로가기에 화면이 닫히지 않음", activity.isFinishing || activity.isDestroyed)
-
-        gate.complete(Unit)
-        waitUntilDeleteEnds()
-        assertEquals(listOf("post-1"), repository.deletedPostIds)
     }
 
     @Test
@@ -158,10 +185,12 @@ class CommunityActivityDeleteBlockTest {
     private fun assertOverlayCoversTopBar(darkTheme: Boolean) {
         showScreen(darkTheme)
         enterSelection()
-        val before = topBarPixel()
+        // 삭제 중에는 접근성 노드가 없어 위치를 찾을 수 없으므로 덮기 전에 잡아 둔다
+        val point = topBarEmptyPoint()
+        val before = pixelAt(point)
 
         startDeleting(alreadySelected = true)
-        val during = topBarPixel()
+        val during = pixelAt(point)
 
         val scrim = (if (darkTheme) DarkColorScheme else LightColorScheme).scrim.toArgb()
         val expected = overlay(before, scrim)
@@ -196,6 +225,15 @@ class CommunityActivityDeleteBlockTest {
         assertTrue("삭제 응답 대기 상태가 아님", viewModel.uiState.value.isDeleting)
     }
 
+    private fun centerOf(matcher: SemanticsMatcher): Offset =
+        composeRule.onNode(matcher).fetchSemanticsNode().boundsInRoot.center
+
+    /** 접근성 노드가 아니라 화면 좌표를 누른다 (덮개가 있으면 덮개가 받는다) */
+    private fun touchAt(point: Offset) {
+        composeRule.onRoot().performTouchInput { click(point) }
+        composeRule.waitForIdle()
+    }
+
     // 삭제 결과 처리는 메인 스레드 코루틴에서 돈다. 화면을 나간 뒤에도 쓸 수 있게 Compose 대기 대신 상태를 직접 기다린다
     private fun waitUntilDeleteEnds() {
         val deadline = SystemClock.uptimeMillis() + 3_000
@@ -205,14 +243,15 @@ class CommunityActivityDeleteBlockTest {
         }
     }
 
-    /** 상단바에서 뒤로가기 버튼과 제목 사이 빈 곳의 색 */
-    private fun topBarPixel(): Int {
+    /** 상단바에서 뒤로가기 버튼과 제목 사이 빈 곳 */
+    private fun topBarEmptyPoint(): Offset {
         val back = composeRule.onNode(hasContentDescription("뒤로가기")).fetchSemanticsNode().boundsInRoot
         val title = composeRule.onNodeWithText("내 활동").fetchSemanticsNode().boundsInRoot
-        val x = ((back.right + title.left) / 2).roundToInt()
-        val y = title.center.y.roundToInt()
-        return composeRule.onRoot().captureToImage().asAndroidBitmap().getPixel(x, y)
+        return Offset((back.right + title.left) / 2, title.center.y)
     }
+
+    private fun pixelAt(point: Offset): Int =
+        composeRule.onRoot().captureToImage().asAndroidBitmap().getPixel(point.x.roundToInt(), point.y.roundToInt())
 
     /** 배경 위에 scrim을 [LOADING_SCRIM_ALPHA]로 한 번 덮은 색 */
     private fun overlay(background: Int, scrim: Int): Int {
