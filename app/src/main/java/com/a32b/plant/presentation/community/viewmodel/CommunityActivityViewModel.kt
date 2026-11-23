@@ -24,7 +24,7 @@ import kotlinx.coroutines.withContext
 data class CommunityActivityUiState(
     // 탭 목록을 불러오는 중. 목록이 오거나 구독이 끝나면 해제된다
     val isLoading: Boolean = false,
-    // 선택 항목을 삭제하는 중. 삭제 결과가 나와야 해제된다.
+    // 선택 항목을 삭제하는 중. 삭제 결과가 나와야 해제된다. 화면은 이 동안 상단바까지 덮어 터치를 막고 TalkBack 실행도 막는다 (#753)
     // isLoading과 따로 두는 이유: 삭제한 activity가 구독 중인 목록에서 빠지며 목록이 삭제 도중에 다시 오므로,
     // 같은 값을 쓰면 목록 도착이 삭제 중 로딩을 풀고, 삭제 종료가 다른 탭의 로딩을 푼다 (#754)
     val isDeleting: Boolean = false,
@@ -38,10 +38,6 @@ data class CommunityActivityUiState(
     // Firestore 삭제는 로컬에서 먼저 반영되므로, 서버가 거절해 항목이 다시 나타나도 선택이 유지되어야 함
     val selectedCount: Int
         get() = activities.count { it.id in selectedIds }
-
-    // 로딩 표시(LoadingBox) 여부: 탭 로딩 또는 삭제 중
-    val isLoadingShown: Boolean
-        get() = isLoading || isDeleting
 }
 sealed class CommunityActivityEvent {
     data class NavigateToCommunityDetail(val postId: String) : CommunityActivityEvent()

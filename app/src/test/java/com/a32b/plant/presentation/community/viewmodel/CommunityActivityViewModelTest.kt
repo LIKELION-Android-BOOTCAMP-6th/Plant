@@ -60,7 +60,7 @@ class CommunityActivityViewModelTest {
         selectAndDelete(viewModel, "a1")
 
         assertEquals(listOf("post-1"), notifier.deleted)
-        assertFalse(viewModel.uiState.value.isLoadingShown)
+        assertFalse(viewModel.uiState.value.isDeleting)
         assertFalse(viewModel.uiState.value.isSelectionMode)
         assertTrue(viewModel.uiState.value.selectedIds.isEmpty())
         assertEquals(listOf<CommunityActivityEvent>(CommunityActivityEvent.ShowToast("삭제되었습니다.")), events)
@@ -73,20 +73,20 @@ class CommunityActivityViewModelTest {
         repository.activities.value = listOf(activity("a1", "post-1"), activity("a2", "post-2"))
         runCurrent()
         selectAndDelete(viewModel, "a1", "a2")
-        assertTrue(viewModel.uiState.value.isLoadingShown)
+        assertTrue(viewModel.uiState.value.isDeleting)
 
         // 한 항목의 activity가 먼저 지워져 목록이 다시 온 상황 (다른 항목은 아직 응답 대기)
         repository.activities.value = listOf(activity("a2", "post-2"))
         runCurrent()
 
         assertEquals(listOf("a2"), viewModel.uiState.value.activities.map { it.id })
-        assertTrue(viewModel.uiState.value.isLoadingShown)
+        assertTrue(viewModel.uiState.value.isDeleting)
         assertTrue(events.isEmpty())
 
         gate.complete(Unit)
         runCurrent()
 
-        assertFalse(viewModel.uiState.value.isLoadingShown)
+        assertFalse(viewModel.uiState.value.isDeleting)
         assertFalse(viewModel.uiState.value.isSelectionMode)
         assertEquals(listOf<CommunityActivityEvent>(CommunityActivityEvent.ShowToast("삭제되었습니다.")), events)
     }
@@ -96,7 +96,7 @@ class CommunityActivityViewModelTest {
         repository.deletePostResult = Result.Failure(AppError.Unknown("게시글 삭제에 실패했습니다."))
         selectAndDelete(viewModel, "a1")
 
-        assertFalse(viewModel.uiState.value.isLoadingShown)
+        assertFalse(viewModel.uiState.value.isDeleting)
         assertTrue(viewModel.uiState.value.isSelectionMode)
         assertEquals(setOf("a1"), viewModel.uiState.value.selectedIds)
         assertEquals(listOf<CommunityActivityEvent>(CommunityActivityEvent.ShowToast("1개 중 1개 삭제에 실패했습니다.")), events)
@@ -115,7 +115,7 @@ class CommunityActivityViewModelTest {
         gate.complete(Unit)
         runCurrent()
 
-        assertFalse(viewModel.uiState.value.isLoadingShown)
+        assertFalse(viewModel.uiState.value.isDeleting)
         assertEquals(listOf<CommunityActivityEvent>(CommunityActivityEvent.ShowToast("삭제되었습니다.")), events)
     }
 
@@ -133,7 +133,6 @@ class CommunityActivityViewModelTest {
 
         assertFalse(viewModel.uiState.value.isDeleting)
         assertTrue(viewModel.uiState.value.isLoading)
-        assertTrue(viewModel.uiState.value.isLoadingShown)
     }
 
     @Test
@@ -141,14 +140,14 @@ class CommunityActivityViewModelTest {
         repository.pendingActivityTypes = setOf(ActivityType.COMMENT)
         viewModel.onSelectedChange(ActivityType.COMMENT)
         runCurrent()
-        assertTrue(viewModel.uiState.value.isLoadingShown)
+        assertTrue(viewModel.uiState.value.isLoading)
 
         repository.pendingActivityTypes = emptySet()
         viewModel.onSelectedChange(ActivityType.POST)
         runCurrent()
 
         assertEquals(listOf("a1"), viewModel.uiState.value.activities.map { it.id })
-        assertFalse(viewModel.uiState.value.isLoadingShown)
+        assertFalse(viewModel.uiState.value.isLoading)
     }
 
     @Test
