@@ -30,6 +30,7 @@ import org.junit.Test
 /**
  * '내 활동' 선택 삭제 중 화면을 나가도 목록에 삭제 신호가 가는지 확인한다 (#712).
  * 화면 이탈은 ViewModel이 정리될 때처럼 viewModelScope를 취소해 재현한다.
+ * 선택 모드 해제(exitSelectionMode)가 모드를 끄기만 하는지도 확인한다 (#748).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class CommunityActivityViewModelTest {

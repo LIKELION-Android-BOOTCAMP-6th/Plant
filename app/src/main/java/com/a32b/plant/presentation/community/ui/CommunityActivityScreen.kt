@@ -68,8 +68,7 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
     }
 
     // 선택 모드면 시스템 뒤로가기도 상단바 "취소"처럼 모드만 해제한다 (#748)
-    // 삭제 중(isLoading)에는 가로채지 않아 지금처럼 화면을 나갈 수 있다. 삭제는 NonCancellable로 끝까지 진행 (#712)
-    BackHandler(enabled = uiState.isSelectionMode && !uiState.isLoading) {
+    BackHandler(enabled = uiState.isSelectionMode) {
         viewModel.exitSelectionMode()
     }
 
