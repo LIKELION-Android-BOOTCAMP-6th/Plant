@@ -198,9 +198,9 @@ private fun ConfirmDialogIconLightPreview() {
     }
 }
 
-@Preview(showBackground = true, name = "아이콘 - 다크·큰 글꼴", fontScale = 2f, widthDp = 320)
+@Preview(showBackground = true, name = "아이콘 - 다크")
 @Composable
-private fun ConfirmDialogIconDarkLargeFontPreview() {
+private fun ConfirmDialogIconDarkPreview() {
     PlantTheme(darkTheme = true) {
         ConfirmDialog(
             text = "비료 1개를 획득했습니다!",
