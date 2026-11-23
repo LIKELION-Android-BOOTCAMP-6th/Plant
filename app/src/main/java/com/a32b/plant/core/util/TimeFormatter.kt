@@ -9,9 +9,9 @@ import java.util.Locale
 object TimeFormatter {
     /**
      흘러가는 시간 표시 : fun formatToDigitalClock(millis: Long): String
-     -> HH:mm:ss 고정 (1시간 미만도 시 자리 포함, 예: 00:47:12) — 공부 중 타이머·타이머 알림·공부 결과·학습 기록 한 건
+     -> HH:mm:ss 고정 (1시간 미만도 시 자리 포함, 예: 00:47:12)
      누적·요약 시간 표시 : fun formatToHoursMinutes(millis: Long): String
-     -> n시간 n분 (초는 버림, 예: 2시간 25분·38시간 25분·5시간·47분) — 홈 오늘 학습 시간·내 화분·마이페이지·리포트·같이 공부 중
+     -> n시간 n분 (초는 버림, 예: 2시간 25분·38시간 25분·5시간·47분)
         0 이하는 "0분", 1초 이상 1분 미만은 "1분 미만" (#649)
 
      로컬 시간 날짜만 표시 : fun formatToKoreanDate(dateTime: LocalDateTime): String

@@ -195,7 +195,7 @@ class SmallScreenLargeFontTest {
         )
     }
 
-    /** 결과 화면 큰 시간(1시간 이상 HH:mm:ss): 한 줄, 잘리지 않음 */
+    /** 결과 화면 큰 시간(1시간 = "01:00:00"): 한 줄, 잘리지 않음 */
     @Test
     fun resultTime_neverClipped() {
         forEachCombo(content = { ResultContent() }) { width, fontScale ->
