@@ -367,7 +367,7 @@ private fun GoldRewardLabel(text: String, modifier: Modifier = Modifier) {
  * 출석판 원 안의 날짜 숫자·"✓"
  *
  * 좁은 화면·큰 글꼴에서 원이 작아지면 글자가 잘렸다 (#755, SM-N986N 계측 테스트 로그로 확인)
- * - 두 자리 숫자: 300dp·글꼴 2.0에서 한 줄 폭 70px가 원 폭(칸에 따라 69px 또는 70px)보다 넓은 칸만
+ * - 두 자리 숫자: 300dp·글꼴 2.0에서 보통 글꼴(bodySmall) 한 줄 폭 70px가 원 폭(칸에 따라 69px 또는 70px)보다 넓은 칸만
  *   두 줄로 줄바꿈되고, 원 높이를 넘는 둘째 줄이 잘려 첫 글자만 보였다 ("10"·"15"·"22"는 69px 칸, "18"·"27"은 70px 칸)
  *   → [GoldRewardLabel]과 같이 한 줄에 들어가면 그대로, 안 들어갈 때만 [CIRCLE_TEXT_MIN_FONT_SIZE]까지 줄여 한 줄로 맞춘다
  *   (항상 autoSize를 켜지 않는 이유·말줄임을 쓰지 않는 이유도 [GoldRewardLabel]과 같음)

@@ -41,6 +41,7 @@ import kotlin.math.abs
  * - 화면 폭·글꼴 배율을 바꾸는 방법은 [AttendanceGoldLabelLargeFontTest]와 같음 (Dialog 대신 내용물을 Box 폭으로 그림)
  * - 출석 9칸 완료 상태로 그린다: 1~9일은 "✓", 다음 칸 10일은 두 자리 굵은 글꼴(titleSmall), 나머지 숫자 칸은 bodySmall
  * - 폭: 280dp(이슈의 더 좁은 화면 예), 300dp(이슈 재현 조건), 320dp·340dp(300~360dp 사이), 360dp, 411dp(SM-N986N 폭)
+ * - 줄 폭·줄 위치만 본다. 원 테두리(내용 위에 그려짐)나 원 모양에 글자 일부가 가려지는지는 보지 않음 (캡처로 확인)
  */
 @RunWith(AndroidJUnit4::class)
 class AttendanceDayNumberLargeFontTest {
@@ -116,28 +117,30 @@ class AttendanceDayNumberLargeFontTest {
     }
 
     /**
-     * "✓"가 원 가운데에 있고 기준선이 원 안에 있음
-     * - 원 위치·크기: 같은 행 숫자 칸 "11"로 구함 (숫자는 줄 높이가 원보다 작아 원 가운데에 놓이고, 원 폭 = 높이)
-     * - 수정 전 300dp·글꼴 2.0: "✓" 줄 높이 91px > 원 69px라 원 높이로 줄어든 채 위쪽부터 그려져 기준선(73px)이 원 밖 (임시 계측 로그)
+     * "✓" 줄 전체가 원 가운데에 있고 기준선이 원 안에 있음
+     * - 가운데는 노드 크기가 아니라 줄 높이(multiParagraph.height)로 구한다.
+     *   수정 전에는 노드가 원 높이로 줄어 노드 가운데는 원 가운데와 같았지만, 글자는 노드 위쪽부터 그려졌다
+     *   (수정 전 300dp·글꼴 2.0: "✓" 줄 높이 91px > 원 69px, 노드 41 x 69px, 기준선 73px로 원 밖 — 임시 계측 로그)
+     * - 원 세로 가운데: 같은 행 숫자 칸 "11"로 구함 (숫자 칸도 CircleText 안에서 원 가운데에 놓임)
+     * - 원 크기: "✓" 칸 자신의 폭 제약으로 구함 (원은 aspectRatio(1f)). 같은 행이라도 칸마다 원 폭이 1px 다를 수 있어 가운데는 1px 오차 허용
      */
     @Test
     fun checkMark_centeredInCircle() {
         forEachCombo { width, fontScale ->
             val label = "폭 $width, 글꼴 $fontScale"
             val ref = nodeOf("11")
-            val refLayout = layoutOf(ref)
-            // 높이 제약은 wrapContentHeight(unbounded = true)로 풀려 있어 폭으로 구함 (원은 aspectRatio(1f))
-            val circleSize = refLayout.layoutInput.constraints.maxWidth
+            // 높이 제약은 wrapContentHeight(unbounded = true)로 풀려 있어 폭으로 구함
+            val refCircleSize = layoutOf(ref).layoutInput.constraints.maxWidth
             val circleCenterY = ref.positionInRoot.y + ref.size.height / 2f
-            val circleBottom = circleCenterY + circleSize / 2f
             // 같은 행(2행)의 "✓": 8일·9일
             val checks = composeRule.onAllNodesWithText("✓", useUnmergedTree = true).fetchSemanticsNodes()
-                .filter { abs(it.positionInRoot.y + it.size.height / 2f - circleCenterY) < circleSize }
+                .filter { abs(it.positionInRoot.y + it.size.height / 2f - circleCenterY) < refCircleSize }
             assertEquals("$label: 2행 ✓ 개수", 2, checks.size)
             for (check in checks) {
                 val r = layoutOf(check)
-                val centerY = check.positionInRoot.y + check.size.height / 2f
-                assertEquals("$label: ✓ 세로 가운데가 원 가운데와 다름", circleCenterY, centerY, 1f)
+                val centerY = check.positionInRoot.y + r.multiParagraph.height / 2f
+                assertEquals("$label: ✓ 줄의 세로 가운데가 원 가운데와 다름", circleCenterY, centerY, 1f)
+                val circleBottom = circleCenterY + r.layoutInput.constraints.maxWidth / 2f
                 val baseline = check.positionInRoot.y + r.firstBaseline
                 assertTrue("$label: ✓ 기준선 ${baseline}px가 원 아래 ${circleBottom}px 밖", baseline <= circleBottom)
             }
