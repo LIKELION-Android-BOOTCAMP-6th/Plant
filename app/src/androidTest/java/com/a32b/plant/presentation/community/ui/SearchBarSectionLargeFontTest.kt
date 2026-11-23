@@ -170,8 +170,9 @@ class SearchBarSectionLargeFontTest {
     }
 
     /**
-     * 빈 검색어 → 이모지 입력 → 지우기에서 검색창 높이가 늘었다가 처음 값으로 돌아오고,
-     * 그동안 바로 아래 요소가 검색창에 가려지지 않는다 (#749)
+     * 빈 검색어 → 이모지 입력 → 지우기에서 검색창 높이가 늘었다가 처음 값으로 돌아온다 (#749)
+     * - 아래 요소와의 겹침·위치 검사는 Column 배치 안에서 하므로, 실제 화면의 Scaffold topBar 배치는 검증하지 않는다
+     *   (실제 화면에서 목록이 가려지지 않는 근거는 Scaffold가 topBar 높이로 본문 여백을 정하는 동작)
      */
     @Test
     fun heightFollowsQueryWithoutOverlap() {
