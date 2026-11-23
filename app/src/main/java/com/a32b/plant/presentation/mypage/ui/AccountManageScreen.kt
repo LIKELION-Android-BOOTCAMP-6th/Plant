@@ -132,7 +132,10 @@ fun AccountManageScreen(
                 } else {
                     isDeleteSecondConfirm = true
                 }
-            }
+            },
+            // 2차 확인에서만 빨간 "탈퇴" 버튼으로 강조 (#647). 1차는 안내 문구("'예'를 눌러주세요")와 맞춰 일반 "예" 유지
+            confirmBtnText = if (isDeleteSecondConfirm) "탈퇴" else "예",
+            isDestructive = isDeleteSecondConfirm
         )
     }
 
