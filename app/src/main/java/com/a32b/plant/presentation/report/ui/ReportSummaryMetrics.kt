@@ -39,22 +39,19 @@ fun ReportSummaryMetrics(
             ReportSummaryMetricChip(
                 iconRes = R.drawable.ic_report_total_time,
                 label = "총 시간",
-                value = TimeFormatter.formatToDigitalClock(totalMillis),
-                spokenValue = TimeFormatter.formatToKoreanDuration(totalMillis),
+                value = TimeFormatter.formatToHoursMinutes(totalMillis),
                 modifier = Modifier.weight(1f)
             )
             ReportSummaryMetricChip(
                 iconRes = R.drawable.ic_report_study_count,
                 label = "학습 횟수",
                 value = "${studyCount}회",
-                spokenValue = "${studyCount}회",
                 modifier = Modifier.weight(1f)
             )
             ReportSummaryMetricChip(
                 iconRes = R.drawable.ic_report_streak,
                 label = streakLabel,
                 value = "${streakDays}일",
-                spokenValue = "${streakDays}일",
                 modifier = Modifier.weight(1f)
             )
         }
@@ -67,12 +64,12 @@ private fun ReportSummaryMetricChip(
     iconRes: Int,
     label: String,
     value: String,
-    spokenValue: String,
     modifier: Modifier = Modifier
 ) {
     Card(
+        // 화면 글자와 읽는 글자가 같다 — 예전에는 총 시간이 "02:25:00"이라 읽기용 문구를 따로 받았음 (#649)
         modifier = modifier.clearAndSetSemantics {
-            contentDescription = "$label, $spokenValue"
+            contentDescription = "$label, $value"
         },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = reportCardContainerColor()),

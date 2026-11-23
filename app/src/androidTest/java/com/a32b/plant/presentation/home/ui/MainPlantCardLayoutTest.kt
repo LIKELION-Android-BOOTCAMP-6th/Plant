@@ -52,7 +52,7 @@ class MainPlantCardLayoutTest {
                         hasNoPot = hasNoPot,
                         todayStudyTime = "1시간 20분",
                         levelUpProgress = 0.4f,
-                        levelUpProgressText = "40% (120분/300분)",
+                        levelUpProgressText = "40% (2시간/5시간)",
                         levelUpReady = false,
                         isLoading = false,
                         onStartClick = {},

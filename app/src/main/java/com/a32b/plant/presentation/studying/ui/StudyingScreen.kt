@@ -493,7 +493,7 @@ fun StudyingUserItem(user: StudyingUser){
             Text(text = user.nickname, style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(top = 3.dp, start = 3.dp),
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(text = " ${TimeFormatter.formatToMinute(user.studyingTime)} 째 공부중!", style = MaterialTheme.typography.bodyMedium,)
+            Text(text = studyingUserTimeText(user.studyingTime), style = MaterialTheme.typography.bodyMedium,)
         }
     }
 }

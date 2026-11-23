@@ -3,7 +3,7 @@ package com.a32b.plant.presentation.mypage.viewmodel
 import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.LegalUrls
-import com.a32b.plant.core.util.TimeFormatter.formatToDigitalClock
+import com.a32b.plant.core.util.TimeFormatter.formatToHoursMinutes
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.result.onFailure
 import com.a32b.plant.domain.result.onSuccess
@@ -38,7 +38,7 @@ data class MyPageUiState(
     val isDarkModeUpdating: Boolean = false,
     val isLoading: Boolean = false,
     val nicknameError: String? = null,
-    val totalStudyTime: String = "0시간 0분",
+    val totalStudyTime: String = "0분", // 누적·요약 시간의 0 표기 (#649)
 )
 
 sealed class MyPageEvent {
@@ -69,7 +69,7 @@ class MyPageViewModel @Inject constructor(
                 it.copy(
                     nickname = user.nickname,
                     profileImg = user.profileImg,
-                    totalStudyTime = formatToDigitalClock(user.totalStudyTime)
+                    totalStudyTime = formatToHoursMinutes(user.totalStudyTime)
                 )
             }
             observeCurrentUserProfile()

@@ -182,7 +182,7 @@ fun PotGridItem(
             overflow = TextOverflow.Ellipsis
         )
         Text(
-            text = TimeFormatter.formatToDigitalClock(totalStudyingTime),
+            text = TimeFormatter.formatToHoursMinutes(totalStudyingTime),
             style = MaterialTheme.typography.bodySmall,
             // outline(LightGray)은 테두리용이라 화면 배경 위 글자 대비가 약 1.5:1 → 서브 폰트 색 (#643)
             color = MaterialTheme.colorScheme.onSecondary

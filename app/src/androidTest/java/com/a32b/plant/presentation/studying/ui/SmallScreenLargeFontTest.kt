@@ -285,7 +285,7 @@ class SmallScreenLargeFontTest {
             val label = "폭 $width, 글꼴 $fontScale"
             assertTrue("$label: 카드 높이 200dp 미만", height(card) >= 200f - TOLERANCE.value)
             users.forEachIndexed { index, user ->
-                // StudyingUserItem의 공부 시간 글자 (formatToMinute: 60_000ms × n → "n분")
+                // StudyingUserItem의 공부 시간 글자 (studyingUserTimeText: 60_000ms × n → " n분 째 공부중!")
                 val timeText = " ${index + 1}분 째 공부중!"
                 for (text in listOf(user.nickname, timeText)) {
                     assertInside("$label $text", textBounds(text), card)
@@ -304,7 +304,7 @@ class SmallScreenLargeFontTest {
     fun studyingUserCard_longNickname() {
         // onNodeWithText는 글자가 똑같은 노드를 찾으므로 세 닉네임은 마지막 글자만 다르게 함
         val users = listOf("차", "카", "타").mapIndexed { index, last ->
-            StudyingUser("u$index", "가나다라마바사아자$last", "0", "면접", 132 * 60_000L, null)
+            StudyingUser("u$index", "가나다라마바사아자$last", "0", "면접", LONG_TIME_MS, null)
         }
         forEachCombo(content = {
             Box(modifier = Modifier.testTag(TAG)) { StudyingUserCard(users, "면접") }
@@ -312,7 +312,7 @@ class SmallScreenLargeFontTest {
             val card = composeRule.onNodeWithTag(TAG).getUnclippedBoundsInRoot()
             val label = "폭 $width, 글꼴 $fontScale"
             assertTrue("$label: 카드 높이 200dp 미만", height(card) >= 200f - TOLERANCE.value)
-            // 세 줄이 같은 글자라 첫 번째 사람의 공부 시간만 확인 (formatToMinute: 132분)
+            // 세 줄이 같은 글자라 첫 번째 사람의 공부 시간만 확인 (studyingUserTimeText: 10시간 59분)
             val time = composeRule.onAllNodesWithText(LONG_TIME_TEXT, useUnmergedTree = true)
             time.assertCountEquals(3)
             users.forEach { user ->
@@ -392,7 +392,9 @@ class SmallScreenLargeFontTest {
         const val PAUSED_TEXT = "일시정지"
         const val TIMESTAMP = "2026년 11월 22일 일요일 09:58 ~ 09:59"
         const val MENU_TEXT = "오픈소스 라이선스"
-        const val LONG_TIME_TEXT = " 132분 째 공부중!"
+        // 긴 문구 확인용: 시간·분이 모두 두 자리 (#649)
+        const val LONG_TIME_MS = (10 * 60 + 59) * 60_000L
+        const val LONG_TIME_TEXT = " 10시간 59분 째 공부중!"
         const val DEBUG_TEXT = "+1h [DEBUG]"
         const val ONE_HOUR_MS = 3_600_000L
         const val TEN_HOURS_MS = 36_000_000L
