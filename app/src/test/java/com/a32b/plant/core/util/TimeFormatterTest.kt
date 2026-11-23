@@ -28,7 +28,7 @@ class TimeFormatterTest {
     }
 
     @Test
-    fun 요약_시간_1초_이상_1분_미만은_1분_미만() {
+    fun 요약_시간_0_초과_1분_미만은_1분_미만() {
         assertEquals("1분 미만", TimeFormatter.formatToHoursMinutes(1L))
         assertEquals("1분 미만", TimeFormatter.formatToHoursMinutes(59 * SECOND))
         assertEquals("1분 미만", TimeFormatter.formatToHoursMinutes(MINUTE - 1))

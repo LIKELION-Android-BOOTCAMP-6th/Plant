@@ -20,11 +20,13 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.a32b.plant.presentation.theme.PlantTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -61,6 +63,9 @@ class ReportSummaryMetricsLargeFontTest {
         }
     }
 
+    private fun textBounds(text: String): DpRect =
+        composeRule.onNodeWithText(text, useUnmergedTree = true).getUnclippedBoundsInRoot()
+
     private fun layoutOf(text: String): TextLayoutResult {
         val node = composeRule.onNodeWithText(text, useUnmergedTree = true).fetchSemanticsNode()
         val results = mutableListOf<TextLayoutResult>()
@@ -68,11 +73,21 @@ class ReportSummaryMetricsLargeFontTest {
         return results.first()
     }
 
-    /** 줄 수 제한에 걸린 글자가 없고 모든 글자가 배치됨 */
+    /** 줄 수 제한에 걸린 글자가 없고, 모든 글자가 배치되고, 글자 높이가 받은 높이 안에 들어감 */
     private fun assertNotClipped(label: String, text: String) {
         val r = layoutOf(text)
         assertFalse("$label: 줄 수 제한에 걸려 잘림", r.multiParagraph.didExceedMaxLines)
         assertEquals("$label: 배치되지 않은 글자 있음", text.length, r.getLineEnd(r.lineCount - 1, visibleEnd = true))
+        // 칩 높이를 IntrinsicSize.Min으로 정하므로, 받은 높이보다 글자가 높으면 아래가 잘림
+        assertFalse("$label: 높이 넘침 ${r.multiParagraph.height}/${r.size.height}px", r.didOverflowHeight)
+    }
+
+    private fun assertInside(label: String, inner: DpRect, outer: DpRect) {
+        assertTrue(
+            "$label: $inner 이(가) $outer 밖으로 나감",
+            inner.left.value >= outer.left.value - TOLERANCE && inner.right.value <= outer.right.value + TOLERANCE &&
+                inner.top.value >= outer.top.value - TOLERANCE && inner.bottom.value <= outer.bottom.value + TOLERANCE
+        )
     }
 
     /** 하루 최대에 가까운 값과 한 달 최대에 가까운 값: 어느 조합에서도 잘리지 않음, 글꼴 1.0에서는 한 줄 */
@@ -99,18 +114,29 @@ class ReportSummaryMetricsLargeFontTest {
         }
     }
 
-    /** 총 시간이 두 줄이 되어도 세 칩 높이가 같음 */
+    /** 총 시간이 두 줄이 되어도 세 칩 높이가 같고, 칩마다 값·라벨 글자가 칩 안에 있음 */
     @Test
-    fun chips_sameHeight() {
+    fun chips_sameHeight_contentInside() {
         forEachCombo(content = {
             ReportSummaryMetrics(totalMillis = DAY_MAX_MS, studyCount = 99, streakDays = 30, streakLabel = "연속")
         }) { width, fontScale ->
-            val heights = listOf("총 시간, $DAY_MAX_TEXT", "학습 횟수, 99회", "연속, 30일").map {
-                val b = composeRule.onNodeWithContentDescription(it).getUnclippedBoundsInRoot()
-                (b.bottom - b.top).value
-            }
+            val label = "폭 $width, 글꼴 $fontScale"
+            // (칩 읽기 문구, 값, 라벨)
+            val chips = listOf(
+                Triple("총 시간, $DAY_MAX_TEXT", DAY_MAX_TEXT, "총 시간"),
+                Triple("학습 횟수, 99회", "99회", "학습 횟수"),
+                Triple("연속, 30일", "30일", "연속")
+            )
+            val cards = chips.map { composeRule.onNodeWithContentDescription(it.first).getUnclippedBoundsInRoot() }
+            val heights = cards.map { (it.bottom - it.top).value }
             heights.drop(1).forEach {
-                assertEquals("폭 $width, 글꼴 $fontScale: 칩 높이 $heights", heights.first(), it, TOLERANCE)
+                assertEquals("$label: 칩 높이 $heights", heights.first(), it, TOLERANCE)
+            }
+            chips.zip(cards).forEach { (chip, card) ->
+                val value = keepWordsTogether(chip.second)
+                assertNotClipped("$label [${chip.second}]", value)
+                assertInside("$label [${chip.second}]", textBounds(value), card)
+                assertInside("$label [${chip.third}]", textBounds(chip.third), card)
             }
         }
     }

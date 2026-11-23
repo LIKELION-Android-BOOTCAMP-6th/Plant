@@ -12,7 +12,7 @@ object TimeFormatter {
      -> HH:mm:ss 고정 (1시간 미만도 시 자리 포함, 예: 00:47:12)
      누적·요약 시간 표시 : fun formatToHoursMinutes(millis: Long): String
      -> n시간 n분 (초는 버림, 예: 2시간 25분·38시간 25분·5시간·47분)
-        0 이하는 "0분", 1초 이상 1분 미만은 "1분 미만" (#649)
+        0 이하는 "0분", 0 초과 1분 미만(1ms~59,999ms)은 "1분 미만" (#649)
 
      로컬 시간 날짜만 표시 : fun formatToKoreanDate(dateTime: LocalDateTime): String
      -> yyyy년 MM월 dd일

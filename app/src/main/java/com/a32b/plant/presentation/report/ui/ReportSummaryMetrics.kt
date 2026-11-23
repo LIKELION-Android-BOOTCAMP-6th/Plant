@@ -75,7 +75,7 @@ private fun ReportSummaryMetricChip(
     modifier: Modifier = Modifier
 ) {
     Card(
-        // 화면 글자(value)를 그대로 읽는다 (#649)
+        // 보이는 글자와 같은 원래 값(value)을 읽는다 — 화면 문자열에는 줄바꿈 금지 문자가 들어 있음 (#649)
         modifier = modifier.clearAndSetSemantics {
             contentDescription = "$label, $value"
         },
@@ -99,7 +99,7 @@ private fun ReportSummaryMetricChip(
             BasicText(
                 text = keepWordsTogether(value),
                 style = valueStyle.copy(textAlign = TextAlign.Center),
-                // 큰 글꼴에서 긴 시간이 잘리지 않게 두 줄까지 허용 (#649, 한 줄일 때 360dp·글꼴 2.0에서 "23시간 59분"의 끝 글자가 잘렸음)
+                // 큰 글꼴에서 긴 시간이 잘리지 않게 두 줄까지 허용 (#649, 한 줄일 때 360dp 화면·글꼴 2.0에서 "23시간 59분"의 끝 글자가 잘렸음)
                 maxLines = 2,
                 autoSize = TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = valueStyle.fontSize)
             )
@@ -116,10 +116,10 @@ private fun ReportSummaryMetricChip(
 
 /**
  * 띄어쓰기에서만 줄이 나뉘게 단어 안 글자 사이에 WORD JOINER(U+2060)를 넣는다 (#649)
- * 한글은 음절 사이에서도 줄이 나뉘어 "743시간 59" / "분"처럼 쪼개졌음 (에뮬레이터 측정)
+ * 띄어쓰기가 없어도 숫자·한글 글자 사이에서 줄이 나뉘어 "743시간 59" / "분"처럼 쪼개졌음 (에뮬레이터 측정)
  * 화면 표시용 — 읽기 문구(contentDescription)는 원래 값을 쓴다
  */
 internal fun keepWordsTogether(text: String): String =
     text.split(' ').joinToString(" ") { word -> word.toList().joinToString(WORD_JOINER) }
 
-private const val WORD_JOINER = "⁠"
+private const val WORD_JOINER = "\u2060"
