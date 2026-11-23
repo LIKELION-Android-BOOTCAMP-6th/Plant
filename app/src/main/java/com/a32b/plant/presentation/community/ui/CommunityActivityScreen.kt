@@ -157,7 +157,7 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                         viewModel.onSelectedChange(selected.get(0))
                     }
 
-                    if (uiState.isLoading) {
+                    if (uiState.isLoadingShown) {
                         LoadingBox()
                     } else if (uiState.activities.isEmpty()) {
                         Box(
