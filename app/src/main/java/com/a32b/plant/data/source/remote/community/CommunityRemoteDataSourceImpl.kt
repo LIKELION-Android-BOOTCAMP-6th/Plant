@@ -106,13 +106,11 @@ class CommunityRemoteDataSourceImpl @Inject constructor(
     }
 
     override suspend fun getTags(): List<TagDto> {
-        val order = listOf("중등", "고등", "대학교", "취업준비", "자기계발")
         return db.collection("Tags")
             .orderBy("no")
             .get()
             .await()
             .toObjects(TagDto::class.java)
-            .sortedBy { order.indexOf(it.id) }
     }
 
     override fun savePost(post: PostDto, activity: CommunityActivityDto): PostCreateWrite {
