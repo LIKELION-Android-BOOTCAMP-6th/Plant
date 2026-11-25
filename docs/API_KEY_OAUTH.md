@@ -1,17 +1,17 @@
 # Android API 키 앱 제한과 OAuth 동의 화면 (#664)
 
-> `google-services.json`에 들어 있는 Android API 키에 **앱 제한(패키지명 + SHA-1)** 을 걸어, 다른 앱이 이 키를 쓰지 못하게 한다.
-> 키 자체는 비밀이 아니다. Firebase 문서도 Firebase용 API 키는 코드나 설정 파일에 넣어도 된다고 한다. 실제 보호는 보안 규칙과 App Check([APP_CHECK.md](APP_CHECK.md))가 맡는다. 앱 제한은 콘솔 설정만으로 거는 추가 방어다.
+> `google-services.json`에 들어 있는 Android API 키에 **앱 제한(패키지명 + SHA-1)** 을 걸어, Firebase SDK를 쓰는 다른 앱(다른 서명)이 이 키를 쓰지 못하게 한다 (아래 "확인 결과"의 반대 확인). 앱 밖의 스크립트까지 막는지는 확인하지 않았다 (미확인).
+> 키 자체는 비밀이 아니다. Firebase 문서도 Firebase용 API 키는 코드나 설정 파일에 넣어도 된다고 한다. 실제 보호는 보안 규칙이 맡고, App Check([APP_CHECK.md](APP_CHECK.md))는 강제를 켠 뒤부터 함께 막는다 (2026-11-26 기준 강제는 꺼져 있음, #608). 앱 제한은 콘솔 설정만으로 거는 추가 방어다.
 > Google 로그인 동의 화면(Google 인증 플랫폼)이 팀원이 아닌 계정도 로그인할 수 있는 상태인지도 함께 점검한다.
 
 ## 현재 설정 (2026-11-25)
 
 | 항목 | 적용 전 | 지금 |
 |---|---|---|
-| Android 키 애플리케이션 제한 | 없음 (콘솔에 "현재 이 키는 모든 애플리케이션에서 사용할 수 있습니다" 경고) | Android 앱: `com.a32b.plant` + SHA-1 7개 |
+| Android 키 애플리케이션 제한 | 없음 (콘솔에 "현재 이 키는 모든 애플리케이션에서 사용할 수 있습니다" 경고) | Android 앱: `com.a32b.plant` + SHA-1 7개 (콘솔에 입력한 값 기준. 저장 후 화면은 캡처하지 않았고, 제한이 걸린 것은 반대 확인으로 확인) |
 | Android 키 API 제한 | API 25개 (Firebase가 키를 만들 때 건 것으로 보임) | 그대로 유지 (아래 "API 제한" 참고) |
 | OAuth 게시 상태 / 사용자 유형 | 프로덕션 / 외부 | 변경 없음 |
-| OAuth 브랜딩 | 앱 이름·지원 이메일만 있고 홈페이지·처리방침·개발자 연락처가 비어 있었음 | 아래 "OAuth 동의 화면" 표의 값으로 채움. 로고 없음 |
+| OAuth 브랜딩 | 앱 이름·지원 이메일만 있고 홈페이지·처리방침·약관 링크와 개발자 연락처가 비어 있었음. 승인된 도메인은 `plant-82b09.firebaseapp.com`뿐이었음 | 아래 "OAuth 동의 화면" 표의 값으로 채움. 로고 없음 |
 
 ## 등록해야 하는 SHA-1
 
@@ -59,7 +59,7 @@ API 키 앱 제한에는 **Firebase 프로젝트 설정에 등록된 SHA-1을 �
 1. 프로젝트 루트 `local.properties`에 `RELEASE_STORE_FILE`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`를 넣는다 (#621)
    - 경로는 `/`로 쓴다. 이 파일에서 `\`는 특수문자라 `C:\...`로 쓰면 경로가 틀어져 "파일 없음" 경고가 난다
    - 별칭은 `keytool -list -keystore <키 파일>`의 `PrivateKeyEntry` 줄 맨 앞 값이다
-2. `./gradlew :app:assembleRelease` → `app/build/outputs/apk/release/app-release.apk` (이름에 `-unsigned`가 붙으면 서명 값이 덜 들어간 것)
+2. `./gradlew :app:assembleRelease` → `app/build/outputs/apk/release/app-release.apk` (이름에 `-unsigned`가 붙으면 서명이 빠진 것. Gradle 출력의 `릴리스 서명 설정이 불완전해 release 서명을 생략합니다. 확인할 항목: …` 경고에 빠진 값이나 `RELEASE_STORE_FILE(파일 없음)`이 나온다)
 3. 기기에서 앱을 지운 뒤 `adb install app/build/outputs/apk/release/app-release.apk`
 
 - 이 설치본은 Play Integrity를 통과하지 못했다. Play에서 설치한 앱이 아니기 때문으로 보인다. 2026-11-25 확인 때 Logcat에 `Error getting App Check token; using placeholder token instead. ... 403 body: App attestation failed.`가 나왔다. App Check 강제가 꺼져 있어 동작에는 영향이 없었지만, **강제가 켜지면 이 설치본은 서버 요청이 거부될 것**으로 보인다 ([APP_CHECK.md](APP_CHECK.md#콘솔play-console-설정-처음-한-번)). 키 제한을 다시 확인할 일이 있으면 강제 전에 하거나, 실패 원인이 키 제한인지 App Check인지 Logcat으로 나눠 본다
@@ -77,7 +77,7 @@ API 키 앱 제한에는 **Firebase 프로젝트 설정에 등록된 SHA-1을 �
 
 - 세 빌드 모두 앱 Logcat에 `API key`, `blocked`, `PERMISSION_DENIED`, `API_KEY` 문구가 없었다
 - 나머지 팀원 2명의 디버그 빌드는 팀원이 직접 확인했다 (팀원 보고: 문제없음. 확인한 동작의 범위는 따로 받지 않음)
-- **Crashlytics 보고 (2026-11-26, 로컬 릴리스)**: `adb shell am crash <pid>`로 크래시를 낸 뒤 앱을 다시 실행했다. Logcat에 `Making request to: https://crashlyticsreports-pa.googleapis.com/v1/firelog/legacy/batchlog` → `Status Code: 200`이 나왔다. Crashlytics가 쓰는 키(`google_crash_reporting_api_key`)는 앱 키와 같은 값이다(빌드가 만든 `values.xml`에서 확인). Crashlytics 콘솔 문제 목록에도 `ActivityThread.throwRemoteServiceException` (`CrashedByAdbException - shell-induced crash`, 버전 1.0.0, 이벤트 2, 사용자 1)로 들어왔다 (2026-11-26 확인)
+- **Crashlytics 보고 (2026-11-26, 로컬 릴리스)**: `adb shell am crash com.a32b.plant`로 크래시를 냈다 (보안 폴더(user 150) 권한 오류가 출력되지만 user 0의 앱은 종료됐다. `am_crash` 로그로 확인). 몇 초 뒤 Crashlytics 전송 작업이 별도 프로세스로 실행되어 Logcat에 `Making request to: https://crashlyticsreports-pa.googleapis.com/v1/firelog/legacy/batchlog` → `Status Code: 200`이 나왔다. 그 프로세스를 `am crash <pid>`로 한 번 더 종료해 크래시는 모두 2번이다. Crashlytics가 쓰는 키(`google_crash_reporting_api_key`)는 앱 키와 같은 값이다(빌드가 만든 `values.xml`에서 확인). Crashlytics 콘솔 문제 목록에도 `ActivityThread.throwRemoteServiceException` (`CrashedByAdbException - shell-induced crash`, 버전 1.0.0, 이벤트 2, 사용자 1)로 들어왔다 (2026-11-26 확인)
 - **반대 확인 (2026-11-26)**: 7개 목록에 없는 임시 키(`DE:4D:85:CB…`)로 서명한 디버그 빌드를 설치했다
   - 앱을 켜자마자 Firebase Installations 요청이 `403 PERMISSION_DENIED` (`Permission denied on the service.`)를 받았다. 등록된 세 빌드에서는 나오지 않은 오류라, 키의 애플리케이션 제한이 실제로 걸려 있다고 본다
   - Google 로그인은 계정을 고른 뒤 실패했다. 다만 원인은 키 제한이 아니라 Firebase 로그인 요청 전 단계인 OAuth다 (`Auth.Api.Credentials`: `[status=UNREGISTERED_ON_API_CONSOLE]`, `Auth`: "This android application is not registered to use OAuth2.0"). 이 SHA-1의 Android OAuth 클라이언트가 없기 때문이다 (이 SHA-1은 Firebase에도 등록하지 않았다. Firebase 등록과 클라이언트 생성의 관계는 미확인)
@@ -94,7 +94,7 @@ API 키 앱 제한에는 **Firebase 프로젝트 설정에 등록된 SHA-1을 �
 
 - 이 상태로 로그인, Firestore 읽기·쓰기, Crashlytics 보고 전송이 됐다 (위 "확인 결과"). Analytics와 Callable 함수는 확인하지 않았다 (미확인)
 - 목록에는 이 앱이 쓰지 않는 API(예: Cloud SQL Admin, Firebase AI Logic, Phone Number Verification)도 있다. 줄이지 않은 이유:
-  - 앱 제한을 건 뒤에는 다른 앱이 이 키를 쓰지 못하므로, 목록을 줄여서 얻는 방어가 작다
+  - 앱 제한으로 다른 서명의 앱은 막혔고(반대 확인), 이 키로 할 수 있는 일은 보안 규칙이 다시 막고 App Check 강제(#608)를 켜면 그것도 막으므로, 목록을 줄여서 얻는 방어가 작다고 판단했다
   - Firebase 문서는 Firebase용 키에서 **Firebase에 필요한 API를 빼지 않도록 조심하라**고 한다. 지표만 보고 줄이면 드물게 쓰는 기능이 조용히 깨질 수 있다
 - 나중에 줄이려면: Cloud 콘솔 → **API 및 서비스 → 사용 설정된 API 및 서비스**에서 며칠 동안 API별 요청을 보고, 요청이 있는 API와 Firebase 문서의 "Firebase에 필요한 API" 표를 대조한 뒤 줄인다. 줄인 뒤 "확인할 것"을 다시 하고, 문제가 생기면 **API 제한부터 되돌린다**
 
@@ -109,7 +109,7 @@ Cloud 콘솔 → API 및 서비스 → **OAuth 동의 화면**을 누르면 Goog
 | 앱 이름 | 브랜딩 | `Plant` |
 | 사용자 지원 이메일 | 브랜딩 | 입력돼 있음 |
 | 로고 | 브랜딩 | **넣지 않음** |
-| 애플리케이션 홈페이지 | 브랜딩 | `https://plant-82b09.web.app/` (저장소의 `hosting/public/index.html`이 Firebase Hosting 기본 페이지 그대로다) |
+| 애플리케이션 홈페이지 | 브랜딩 | `https://plant-82b09.web.app/` (저장소의 `hosting/public/index.html`이 Firebase Hosting 기본 페이지 그대로다. 운영 사이트의 페이지를 옮겨 온 것이라고 [LEGAL_HOSTING.md](LEGAL_HOSTING.md) 구조 표에 적혀 있다) |
 | 개인정보처리방침 링크 | 브랜딩 | `https://plant-82b09.web.app/privacy-policy.html` ([LEGAL_HOSTING.md](LEGAL_HOSTING.md)) |
 | 서비스 약관 링크 | 브랜딩 | `https://plant-82b09.web.app/terms.html` |
 | 승인된 도메인 | 브랜딩 | `plant-82b09.firebaseapp.com`, `plant-82b09.web.app` |
