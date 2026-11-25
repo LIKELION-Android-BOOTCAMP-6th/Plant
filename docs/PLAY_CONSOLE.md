@@ -29,14 +29,14 @@
 
 | 동작 | 코드 |
 |------|------|
-| 시작: 세션을 시작할 때 목표 입력 창을 닫으면("완료", 또는 "닫기" — 작성한 글이 있으면 "버리기"까지), 일시정지 뒤 "학습하기"를 누를 때, 공부 중에 연 종료 확인 창을 종료하지 않고 닫을 때, 시스템이 백그라운드에서 앱 프로세스를 끝낸 뒤 앱으로 돌아와 학습 화면이 그대로 복원될 때(일시정지 상태가 아니던 세션). 앱을 새로 시작하면 홈의 복구 창("저장"·"폐기")이 먼저 떠서 이어서 공부하지 않음 | `startStopwatch()` → `ACTION_START` → `startForeground(...)` (목표 입력 창 닫기: `onStudyingStatusChange(restore)`, 종료 확인 창 닫기: `onStudyingStatusChange(true)`, 복원: `restoreFromLocalBackup`) |
+| 시작: 세션을 시작할 때 목표 입력 창을 닫으면("완료", 또는 "닫기" — 작성한 글이 있으면 "버리기"까지), 일시정지 뒤 "학습하기"를 누를 때, 공부 중에 연 종료 확인 창을 종료하지 않고 닫을 때, 학습 화면에 들어갈 때 같은 화분의 공부 중 백업이 남아 있을 때(일시정지 상태가 아니던 세션). 마지막 경우는 주로 시스템이 백그라운드에서 앱 프로세스를 끝낸 뒤 앱으로 돌아와 학습 화면이 복원될 때다. 앱을 새로 시작하면 보통은 홈의 복구 창이 먼저 떠서 이어서 공부하지 않지만, 쌓인 시간이 0인 백업은 복구 창 대상이 아니라(`isRecoverableBy`: `time > 0L`, 밀리초) 학습 화면에 들어가면 바로 이어짐(목표도 없는 0 백업은 목표 입력 창만 다시 띄움) | `startStopwatch()` → `ACTION_START` → `startForeground(...)` (목표 입력 창 닫기: `onStudyingStatusChange(restore)`, 종료 확인 창 닫기: `onStudyingStatusChange(true)`, 복원: `restoreFromLocalBackup`) |
 | 디버그 빌드 전용: 공부 중 "+1h" 버튼은 서비스에 늘어난 시간을 다시 보냄 | `addDebugTime()` → `ACTION_START` (develop 기준 `BuildConfig.DEBUG`일 때만 버튼 표시, #590) |
 | 실행 중 알림의 경과 시간을 1초마다 갱신 | `ms - lastNotificationMs >= 1_000L`일 때 `updateNotification(ms)` |
 | 실행 중 30초마다 기기에 학습 시간 백업 (강제 종료 뒤 복원용) | `ms - lastSaveMs >= LOCAL_BACKUP_INTERVAL_MS`(`30_000L`)일 때 `saveTime(ms)` |
-| 알림을 누르면 앱이 열림. 학습 화면이 남아 있으면 학습 화면으로 돌아오고, 최근 앱에서 밀어서 닫은 뒤라면 로그인 상태일 때 홈이 열려 아래 "홈 화면이 보일 때마다" 줄처럼 서비스가 정리되고 복구 창이 뜸 (세션 만료면 로그인 화면, 업데이트가 필요하면 업데이트 안내가 열리고 같은 줄의 다른 경로로 서비스가 정리됨) | `setContentIntent(contentIntent)` (`MainActivity`를 `FLAG_ACTIVITY_SINGLE_TOP or FLAG_ACTIVITY_NEW_TASK`로 엶) |
+| 알림을 누르면 앱이 열림. 학습 화면이 남아 있으면 학습 화면으로 돌아오고, 최근 앱에서 밀어서 닫은 뒤라면 로그인 상태일 때 홈이 열려 아래 "홈 화면이 보일 때마다" 줄처럼 서비스가 정리되고 복구 창이 뜸 (세션 만료면 로그인 화면, 업데이트가 필요하면 업데이트 안내가 열리고 같은 줄의 다른 경로로 서비스가 정리됨. 자동 로그인 결과가 로그인 안 됨·실패면 로그인 화면이 열리지만 `SplashViewModel`이 `startSignIn()`만 불러 서비스·알림이 남고, 로그인해 홈이 보일 때 정리됨. 로그인하지 않고 나가면 계속 남음) | `setContentIntent(contentIntent)` (`MainActivity`를 `FLAG_ACTIVITY_SINGLE_TOP or FLAG_ACTIVITY_NEW_TASK`로 엶) |
 | 일시정지(일시정지 버튼, 공부 중에 종료 확인 창 열기: "학습종료" 버튼·뒤로 가기) → 서비스와 알림 종료 | `stopStopwatch()` → `ACTION_PAUSE` → `stopForeground(STOP_FOREGROUND_REMOVE)` + `stopSelf(startId)` |
 | 학습 종료, 시작한 지 7일이 지난 세션(`stopIfSessionTooOld`), 오류 창 확인(`onErrorConfirmClicked`) → 서비스와 알림 종료 | `ACTION_STOP` → `stopForeground(STOP_FOREGROUND_REMOVE)` + `stopSelf()` |
-| 세션 만료, 업데이트 필요 화면, 홈 화면이 보일 때마다(처음 들어올 때 포함) → 남아 있는 서비스 정리. 예: 공부 중 최근 앱에서 밀어서 닫으면 프로세스·서비스·알림은 남고 화면만 사라지며, 그 뒤 알림을 누르면 홈이 열려 서비스·알림이 정리되고 복구 창("이전 학습 기록 발견")이 뜸. 복구 창의 시간은 마지막으로 백업한 시간이라 직전 알림 시간보다 짧을 수 있음 (백업은 학습 화면이 가려질 때 `onScreenStopped`와 실행 중 서비스의 주기 저장에서 씀) (2026-11-25 SM-N986N Android 13, develop `4d24fa5c` debug 빌드로 확인. 다른 기기·OS는 미확인) | `StudyingTimerServiceController.stop()` → `stopService(...)` (`MainActivity`, `HomeViewModel.onHomeResumed`) |
+| 세션 만료, 업데이트 필요 화면, 홈 화면이 보일 때마다(처음 들어올 때 포함) → 남아 있는 서비스 정리. 예: 공부 중 최근 앱에서 밀어서 닫으면 프로세스·서비스·알림은 남고 화면만 사라지며, 그 뒤 알림을 누르면 홈이 열려 서비스·알림이 정리되고 복구 창("이전 학습 기록 발견")이 뜸. 복구 창의 시간은 마지막으로 백업한 시간이라 직전 알림 시간보다 짧을 수 있음 (이 경우 마지막 백업은 학습 화면이 가려질 때 `onScreenStopped`가 쓴 값이거나 그 뒤 서비스의 주기 저장 값) (2026-11-25 SM-N986N Android 13, develop `4d24fa5c` debug 빌드로 확인. 다른 기기·OS는 미확인) | `StudyingTimerServiceController.stop()` → `stopService(...)` (`MainActivity`, `HomeViewModel.onHomeResumed`) |
 | 시스템이 서비스를 끝내도 다시 시작하지 않음 | `START_NOT_STICKY` |
 
 ### 콘솔 설명 초안 (영어)
@@ -53,7 +53,7 @@ Plant is a study app where users grow a virtual plant with the time they spend s
 - 준비: Android 13 이상은 학습 화면에 처음 들어갈 때 알림 권한을 묻는다(`StudyingScreen`의 `POST_NOTIFICATIONS` 요청). 허용해야 알림이 보이므로, 녹화 전에 허용해 두거나 영상에서 허용하는 장면을 넣는다
 - 순서: 학습 화면에 들어가 목표 입력 창에서 "완료" → 타이머 시작 → 홈 버튼으로 앱 나가기 → 알림창에서 시간이 올라가는 것 보여 주기 → 알림 눌러 복귀 → "일시정지"를 누르면 알림이 사라지는 것 보여 주기 → "학습하기"로 다시 시작 → 종료. 녹화 중 최근 앱에서 Plant를 밀어서 닫지 않는다 (밀어서 닫은 뒤 알림을 누르면 학습 화면이 아니라 홈이 열림, 1절 실제 동작 표)
 - 링크: YouTube "일부 공개" 등 로그인 없이 볼 수 있는 링크 (미확인: 콘솔이 받는 링크 형식)
-- 녹화 빌드: 영상은 앱 동작이 선언과 같은지 보여 주는 용도라, 타이머·알림 코드가 심사에 올릴 버전과 같으면 된다. 가장 확실한 건 올릴 AAB와 같은 커밋으로 만든 빌드
+- 녹화 빌드: release 빌드로 찍는다 (debug 빌드는 학습 화면에 "+1h [DEBUG]" 버튼이 보임). 영상은 앱 동작이 선언과 같은지 보여 주는 용도라, 타이머·알림 코드가 심사에 올릴 버전과 같으면 된다. 가장 확실한 건 올릴 AAB와 같은 커밋으로 만든 빌드
 
 ### 거절되면
 
@@ -138,9 +138,9 @@ Firebase [Play 데이터 공개 안내](https://firebase.google.com/docs/android
 
 - [ ] 계정 삭제 안내 페이지가 배포되어 로그인 없이 열린다
 - [ ] 운영 Firestore에 `users/{uid}/blocks` 규칙이 배포되어 있다 (사용자 차단 설명 전에)
-- [ ] 최신 처리방침(2026년 11월 25일 시행본 이후, #781 반영본)이 배포되어 있고, 데이터 보안 답변과 항목이 같다
+- [ ] 최신 처리방침(2026년 11월 26일 시행본 이후, #781 반영본)이 배포되어 있고, 데이터 보안 답변과 항목이 같다
 - [ ] 포그라운드 서비스 영상 링크가 로그인 없이 열린다
 - [ ] #781(IP 주소·App Check 토큰의 처리방침 반영)이 끝났다 (데이터 보안 양식 입력 전에)
-- [ ] #778(메일로 받은 삭제 요청 처리 도구)이 준비되어 있다 (계정 삭제 URL을 등록하면 메일 요청을 받게 되므로)
+- [ ] #778(메일로 받은 삭제 요청 처리 도구)이 준비되어 있다 (처리방침 9절이 2026년 11월 21일 시행본부터 가입을 마치지 않은 계정의 메일 삭제 요청을 안내하고, 11월 26일 시행본은 4절·6절에서 앱 없이 삭제하려는 경우까지 넓히며, 계정 삭제 URL을 등록하면 더 늘어남)
 - [ ] 스토어 등록 정보의 앱 이름·개발자 이름이 계정 삭제 안내 페이지의 이름과 맞다 (미확인: Play가 요구하는 일치 범위)
 - [ ] 다른 이용자의 차단 목록에 남는 기록(#779)을 고쳤다면 처리방침 3절 첫 문단의 "다만 …(아래 가의 ※)" 문장, 처리방침 3절 가 ※, 계정 삭제 안내 3절 가 ※를 함께 고쳤다
