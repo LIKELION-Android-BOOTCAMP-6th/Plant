@@ -22,28 +22,37 @@
 - 서비스: `StudyingTimerService`, `foregroundServiceType="specialUse"`
 - 서브타입(`PROPERTY_SPECIAL_USE_FGS_SUBTYPE`): "User-initiated study stopwatch that keeps counting elapsed time and shows it in an ongoing notification while the timer is running"
 
-### 실제 동작 (코드, `StudyingTimerService.kt`)
+### 실제 동작 (코드, `StudyingTimerService.kt`·`StudyingViewModel.kt`)
+
+서비스를 시작·중지하는 곳을 앱 전체에서 검색해 나열했다 (`ACTION_START`·`ACTION_PAUSE`·`ACTION_STOP`·`stopService`·`StudyingTimerServiceController.stop()`). 디버그 빌드 전용 경로는 따로 표시했다.
 
 | 동작 | 코드 |
 |------|------|
-| 사용자가 학습 화면에서 타이머를 시작·재개하면 시작 | `ACTION_START` → `startForeground(...)` |
+| 시작: 세션을 시작할 때 목표 입력 창을 닫으면("완료", 또는 "닫기" — 작성한 글이 있으면 "버리기"까지), 일시정지 뒤 "학습하기"를 누를 때, 공부 중에 연 종료 확인 창을 종료하지 않고 닫을 때, 시스템이 백그라운드에서 앱 프로세스를 끝낸 뒤 앱으로 돌아와 학습 화면이 그대로 복원될 때(일시정지 상태가 아니던 세션). 앱을 새로 시작하면 홈의 복구 창("저장"·"폐기")이 먼저 떠서 이어서 공부하지 않음 | `startStopwatch()` → `ACTION_START` → `startForeground(...)` (목표 입력 창 닫기: `onStudyingStatusChange(restore)`, 종료 확인 창 닫기: `onStudyingStatusChange(true)`, 복원: `restoreFromLocalBackup`) |
+| 디버그 빌드 전용: 공부 중 "+1h" 버튼은 서비스에 늘어난 시간을 다시 보냄 | `addDebugTime()` → `ACTION_START` (develop 기준 `BuildConfig.DEBUG`일 때만 버튼 표시, #590) |
 | 실행 중 알림의 경과 시간을 1초마다 갱신 | `ms - lastNotificationMs >= 1_000L`일 때 `updateNotification(ms)` |
+| 실행 중 30초마다 기기에 학습 시간 백업 (강제 종료 뒤 복원용) | `ms - lastSaveMs >= LOCAL_BACKUP_INTERVAL_MS`(`30_000L`)일 때 `saveTime(ms)` |
 | 알림을 누르면 앱으로 돌아옴 | `setContentIntent(contentIntent)` |
-| 일시정지하면 서비스와 알림 종료 | `ACTION_PAUSE` → `stopForeground(STOP_FOREGROUND_REMOVE)` + `stopSelf(startId)` |
-| 학습 종료 시 서비스와 알림 종료 | `ACTION_STOP` → `stopForeground(STOP_FOREGROUND_REMOVE)` + `stopSelf()` |
+| 일시정지(일시정지 버튼, 공부 중에 종료 확인 창 열기: "학습종료" 버튼·뒤로 가기) → 서비스와 알림 종료 | `stopStopwatch()` → `ACTION_PAUSE` → `stopForeground(STOP_FOREGROUND_REMOVE)` + `stopSelf(startId)` |
+| 학습 종료, 시작한 지 7일이 지난 세션(`stopIfSessionTooOld`), 오류 창 확인(`onErrorConfirmClicked`) → 서비스와 알림 종료 | `ACTION_STOP` → `stopForeground(STOP_FOREGROUND_REMOVE)` + `stopSelf()` |
+| 세션 만료, 업데이트 필요 화면, 홈 화면이 보일 때마다(처음 들어올 때 포함) → 남아 있는 서비스 정리 | `StudyingTimerServiceController.stop()` → `stopService(...)` (`MainActivity`, `HomeViewModel.onHomeResumed`) |
 | 시스템이 서비스를 끝내도 다시 시작하지 않음 | `START_NOT_STICKY` |
 
 ### 콘솔 설명 초안 (영어)
 
 > 아래 문단을 그대로 붙여 넣고, 콘솔이 요구하는 글자 수에 맞춰 줄인다
 
-Plant is a study app where users grow a virtual plant with the time they spend studying. When the user taps the start button on the study screen, the app starts a stopwatch. The foreground service keeps counting the elapsed study time and shows it in an ongoing notification while the user switches to other apps (for example, to read study materials). Tapping the notification returns to the study screen. The service runs only while the user-started timer is running and stops immediately when the user pauses or ends the session. No other foreground service type fits this use: the session has no fixed upper time limit, and it is not media playback, location, data sync, or a phone call.
+Plant is a study app where users grow a virtual plant with the time they spend studying. The user starts a study session on the study screen: the stopwatch starts when the user finishes or closes the study-goal input dialog at the beginning of a session, or taps the resume button after pausing. Opening the end-session confirmation dialog pauses a running stopwatch, and closing that dialog without ending the session resumes it. While the stopwatch is running, the foreground service keeps counting the elapsed study time and shows it in an ongoing notification while the user switches to other apps (for example, to read study materials). It also periodically saves the elapsed time on the device. Tapping the notification returns to the study screen. The service runs only while the user's stopwatch is running: it stops when the user pauses or ends the session, and the system does not restart it. A study session can last for hours (up to 7 days), and the use is not media playback, location, phone calls, or network data transfer.
+
+- 확인 필요 (미확인): 콘솔에 넣기 전에 Android 공식 문서의 포그라운드 서비스 유형 목록을 읽고, 시간 제한이 있는 유형(예: shortService)이나 다른 유형이 맞지 않는 이유를 한 문장 덧붙일지 정한다
+- 영상에서 "완료"·"학습하기" 버튼이 보이게 찍어, 위 설명의 "finishes the study-goal input dialog", "resume button"과 맞춰 볼 수 있게 한다
 
 ### 영상 (Todo)
 
-- 순서: 학습 화면에서 시작 → 홈 버튼으로 앱 나가기 → 알림창에서 시간이 올라가는 것 보여 주기 → 알림 눌러 복귀 → 종료하면 알림이 사라지는 것 보여 주기
+- 순서: 학습 화면에 들어가 목표 입력 창에서 "완료" → 타이머 시작 → 홈 버튼으로 앱 나가기 → 알림창에서 시간이 올라가는 것 보여 주기 → 알림 눌러 복귀 → "일시정지"를 누르면 알림이 사라지는 것 보여 주기 → "학습하기"로 다시 시작 → 종료
 - 링크: YouTube "일부 공개" 등 로그인 없이 볼 수 있는 링크 (미확인: 콘솔이 받는 링크 형식)
 - 녹화 빌드: 영상은 앱 동작이 선언과 같은지 보여 주는 용도라, 타이머·알림 코드가 심사에 올릴 버전과 같으면 된다. 가장 확실한 건 올릴 AAB와 같은 커밋으로 만든 빌드
+
 ### 거절되면
 
 거절 사유를 보고 앱 수정 이슈를 새로 만든다. 검토할 대안:
@@ -55,7 +64,7 @@ Plant is a study app where users grow a virtual plant with the time they spend s
 
 ## 2. 데이터 보안(Data safety)
 
-처리방침 1절·2절과 1:1로 맞춘다. 콘솔의 데이터 유형 이름은 콘솔에서 확인 (미확인).
+처리방침 1절의 항목은 모두 아래 "수집 항목" 표 중 한 줄에 넣거나, "넣지 않은 항목" 표에 이유를 적는다. 콘솔의 데이터 유형 이름과 분류는 콘솔에서 확인한다 (미확인). "(분류 미확인)"이 붙은 줄은 어느 유형에 넣을지 콘솔 도움말을 보고 정한다.
 
 ### 수집 항목
 
@@ -64,13 +73,28 @@ Plant is a study app where users grow a virtual plant with the time they spend s
 | 개인 정보 > 이메일 주소 | Google 계정 이메일 | 계정 관리 | 처리방침 1절 가 |
 | 개인 정보 > 이름 | 닉네임 | 앱 기능 (커뮤니티 표시 이름) | 처리방침 1절 나. Play 도움말의 "이름" 정의에 nickname이 들어 있음 |
 | 개인 정보 > 사용자 ID | Firebase UID | 계정 관리 | 처리방침 1절 가 |
-| 앱 활동 > 앱 상호작용 | 학습 시간, 좋아요·북마크, 출석, 차단 목록, 실시간 학습 현황, 프로필 이미지 선택값(앱이 제공하는 이미지 중 고른 값이라 "사진"이 아님) | 앱 기능 | 처리방침 1절 다 |
-| 앱 활동 > 기타 사용자 제작 콘텐츠 | 게시글·댓글, 학습 일지, 신고 상세 내용, 버그 제보·개선 제안 | 앱 기능, 서비스 개선 | 처리방침 1절 다·라 |
-| 앱 정보 및 성능 > 비정상 종료 로그·진단 | Crashlytics 오류 보고서·사용 세션 정보, 버그 제보의 기기 모델·Android 버전 | 분석 | 처리방침 1절 라·바 |
+| 앱 활동 > 앱 상호작용 | 학습 시간, 좋아요·북마크, 출석 체크 기록, 차단 목록(차단 시각 포함), 실시간 학습 현황, 프로필 이미지 선택값(앱이 제공하는 이미지 중 고른 값이라 "사진"이 아님) | 앱 기능 | 처리방침 1절 나·다 |
+| 앱 활동 > 앱 상호작용 | Firebase Analytics가 기록하는 앱 사용 이벤트, 앱 실행 횟수·세션 시간 | 분석 | 처리방침 1절 마 |
+| 앱 활동 > 기타 사용자 제작 콘텐츠 | 게시글·댓글(게시글에 공유한 학습 기록 포함), 학습 일지, 신고(대상·사유·상세 내용, 신고 일시·처리 상태 포함), 버그 제보·개선 제안(분류·내용·재현 방법, 작성 일시 포함) | 앱 기능, 서비스 개선 | 처리방침 1절 다·라 |
+| 앱 활동 (분류 미확인) | 화분(학습 계획) 데이터, 골드·아이템 보유량, 보너스 박스 열기 결과 기록, 가입 동의 기록, 가입·최근 로그인 시각 | 앱 기능, 계정 관리 | 처리방침 1절 가·다 |
+| 앱 정보 및 성능 > 비정상 종료 로그·진단 | Crashlytics 오류 보고서·사용 세션 정보·전송 환경 정보(언어·국가 설정, 통신사 국가 코드 제외), 버그 제보·개선 제안의 앱 버전, 버그 제보의 기기 모델·Android 버전, Analytics의 기기 정보(OS 버전·기기 모델) | 분석 | 처리방침 1절 라·마·바 |
 | 기기 또는 기타 ID | 앱 인스턴스 ID, 광고 ID, Firebase 설치 ID, Crashlytics 설치 식별자 | 분석 | 처리방침 1절 마·바 |
+| 기기 또는 기타 ID (분류 미확인) | 로그인 세션 식별값 | 계정 관리 (다른 기기 로그인 시 이전 기기 로그아웃) | 처리방침 1절 다 |
 
-- 사진·위치·연락처·금융 정보: 수집하지 않음 (처리방침에 없음)
-- 기기에만 저장되는 정보(처리방침 1절 사)는 서버로 보내지 않으므로 "수집"에 넣지 않음 (미확인: 콘솔의 "수집" 정의와 맞는지)
+### 넣지 않은 항목
+
+| 항목 | 이유 |
+|------|------|
+| 기기에만 저장되는 정보 (처리방침 1절 사) | 서버로 보내지 않음 (미확인: 콘솔의 "수집" 정의와 맞는지) |
+| 국가 및 언어 설정 (처리방침 1절 마), Crashlytics 전송 환경 정보 중 언어·국가 설정과 통신사 국가 코드 (1절 바) | 미확인: "대략적인 위치" 등 어느 유형에 해당하는지 콘솔 도움말로 확인한 뒤 위 표로 옮긴다. 1절 바의 나머지 전송 환경 정보는 위 진단 줄에 넣었다 |
+| 사진·위치·연락처·금융 정보 | 수집하지 않음 (처리방침에 없음) |
+
+### 처리방침에 아직 없는 것 (#781)
+
+Firebase [Play 데이터 공개 안내](https://firebase.google.com/docs/android/play-data-disclosure) 기준으로, 앱이 쓰는 SDK가 아래를 수집한다. 처리방침과 위 표에 넣을지 #781에서 정하고, **데이터 보안 양식 입력 전에** 끝낸다.
+
+- IP 주소: Authentication(가입·인증 중 보안·남용 방지), Cloud Functions 클라이언트(함수 호출 시)
+- Play Integrity 무결성 토큰: App Check (release 빌드가 쓰는 Play Integrity 제공자 `PlayIntegrityAppCheckProviderFactory`, `app/src/release/.../AppCheckProvider.kt`)
 
 ### 그 밖의 질문
 
@@ -95,7 +119,7 @@ Plant is a study app where users grow a virtual plant with the time they spend s
 | 개인정보처리방침 URL | https://plant-82b09.web.app/privacy-policy.html | `LegalUrls.PRIVACY_POLICY` |
 | 광고 포함 | 아니오 | 광고 SDK 없음 (코드: `app/build.gradle.kts`) |
 | 광고 ID | 사용함, 용도 "분석" | #707 결정. `firebase-analytics`가 `AD_ID` 권한을 추가함 (이슈 본문 참고) |
-| 앱 액세스 권한 | 로그인 필요. Google 로그인만 있으므로 심사용 Google 계정 또는 안내를 제공 (결정 필요) | 첫 로그인 때 만 14세 이상 확인·약관 동의·닉네임 설정이 필요함을 함께 적기 |
+| 앱 액세스 권한 | 로그인 필요. 심사용 Google 계정을 제공 (계정 준비됨. 이메일·비밀번호는 콘솔에만 적고 레포·이슈에 남기지 않음) | 첫 로그인 때 만 14세 이상 확인·약관 동의·닉네임 설정이 필요하고, 다른 기기에서 같은 계정으로 로그인하면 이전 기기는 로그아웃된다는 점을 함께 적기 |
 | 타겟층 | 결정 필요. 약관상 만 14세 이상만 가입 | `docs/legal/terms.md` 제4조 2항 |
 | 콘텐츠 등급 설문 | 사용자 간 소통(게시글·댓글) 있음, 사용자 제작 콘텐츠 있음, 실제 돈으로 사는 상품 없음(골드는 앱 안 보상으로만 얻음) | 결제 SDK 없음 (코드) |
 | 사용자 제작 콘텐츠 관리 | 게시글·댓글 신고, 신고 5건 이상이면 블라인드, 사용자 차단(차단한 사람의 글·댓글 숨김, 마이페이지 > 차단 목록에서 해제) | (코드) `Post.kt`의 `BLIND_REPORT_THRESHOLD = 5`, #660 |
@@ -113,3 +137,7 @@ Plant is a study app where users grow a virtual plant with the time they spend s
 - [ ] 운영 Firestore에 `users/{uid}/blocks` 규칙이 배포되어 있다 (사용자 차단 설명 전에)
 - [ ] 처리방침 수정본(#607)이 배포되어 있고, 데이터 보안 답변과 항목이 같다
 - [ ] 포그라운드 서비스 영상 링크가 로그인 없이 열린다
+- [ ] #781(IP 주소·App Check 토큰의 처리방침 반영)이 끝났다 (데이터 보안 양식 입력 전에)
+- [ ] #778(메일로 받은 삭제 요청 처리 도구)이 준비되어 있다 (계정 삭제 URL을 등록하면 메일 요청을 받게 되므로)
+- [ ] 스토어 등록 정보의 앱 이름·개발자 이름이 계정 삭제 안내 페이지의 이름과 맞다 (미확인: Play가 요구하는 일치 범위)
+- [ ] 다른 이용자의 차단 목록에 남는 기록(#779)을 고쳤다면 처리방침 3절 첫 문단의 "다만 …(아래 가의 ※)" 문장, 처리방침 3절 가 ※, 계정 삭제 안내 3절 가 ※를 함께 고쳤다
