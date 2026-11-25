@@ -23,7 +23,7 @@
 
 앱에서 여는 곳: 마이페이지(`MyPageViewModel`), 첫 로그인 닉네임 설정 다이얼로그의 "보기"(`SignInViewModel`, #661). 두 곳 모두 `core/util/LegalUrls.kt`의 상수를 쓴다.
 
-파일 이름(주소)을 바꾸거나 페이지를 추가하면 `hosting/build-legal.mjs`의 `PAGES`, 앱의 주소 상수, `.gitignore`(변환 결과 HTML)를 함께 고친다. `.gitignore`에 넣지 않으면 변환 결과가 커밋되어, 커밋된 HTML을 손으로 고쳐도 배포 때 md 내용으로 덮어써진다.
+파일 이름(주소)을 바꾸거나 페이지를 추가하면 `hosting/build-legal.mjs`의 `PAGES`, 앱의 주소 상수, `.gitignore`(변환 결과 HTML)를 함께 고친다. 처리방침·약관 주소는 Google 인증 플랫폼 브랜딩(OAuth 동의 화면)에도 들어가 있으므로 그곳도 고친다 ([API_KEY_OAUTH.md](API_KEY_OAUTH.md#oauth-동의-화면-google-인증-플랫폼)). `.gitignore`에 넣지 않으면 변환 결과가 커밋되어, 커밋된 HTML을 손으로 고쳐도 배포 때 md 내용으로 덮어써진다.
 
 ## 문서 수정 절차
 

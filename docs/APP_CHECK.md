@@ -62,4 +62,4 @@
 ## 로컬 에뮬레이터·CI
 
 - 앱은 Firebase 에뮬레이터에 연결하지 않는다 (`useEmulator` 없음, [FIREBASE_EMULATOR.md](FIREBASE_EMULATOR.md) 참고). 앱의 App Check 설치는 에뮬레이터 테스트(`rules-test`, `functions/test`)에 영향이 없다
-- PR CI의 `Android Build Check`는 `assembleDebug`·`testDebugUnitTest`만 돌리므로 App Check 토큰이 필요 없다
+- PR CI의 `Android Build Check`는 `assembleDebug`·`testDebugUnitTest`·`assembleDebugAndroidTest`만 돌리고 앱을 실행하지 않으므로 App Check 토큰이 필요 없다
