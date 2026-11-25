@@ -11,9 +11,11 @@ import {fileURLToPath} from "node:url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 // 앱의 주소 상수(core/util/LegalUrls.kt)와 파일 이름이 같아야 한다
+// account-deletion.html은 앱의 주소 상수가 없다(앱에서 직접 열지 않음). Play Console "계정 삭제" URL에 등록하고, 처리방침 4절·6절에서 링크한다 (#632)
 const PAGES = [
   {source: "docs/legal/privacy.md", output: "hosting/public/privacy-policy.html", title: "Plant - 개인정보처리방침"},
   {source: "docs/legal/terms.md", output: "hosting/public/terms.html", title: "Plant - 서비스 이용약관"},
+  {source: "docs/legal/account-deletion.md", output: "hosting/public/account-deletion.html", title: "Plant - 계정 삭제 안내"},
 ];
 
 // 운영 중이던 privacy-policy.html(2026-10-20 시행본)의 스타일을 그대로 쓴다
