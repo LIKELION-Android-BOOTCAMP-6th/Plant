@@ -12,7 +12,8 @@
 |-----------|---------------|
 | 수집 항목·SDK 추가/설정 변경 | 처리방침(`docs/legal/privacy.md`), 이 문서 2절(데이터 보안), 4절(광고 ID) |
 | 탈퇴 처리(`functions/index.js`의 `deleteUserData`), 탈퇴 화면 문구 | 계정 삭제 안내(`docs/legal/account-deletion.md`), 처리방침 3절, 이 문서 3절 |
-| `StudyingTimerService`의 서비스 유형·서브타입 | `AndroidManifest.xml`, 이 문서 1절 |
+| `StudyingTimerService`의 서비스 유형·서브타입, 서비스 동작(`onStartCommand`, `START_NOT_STICKY`, 알림 갱신·주기 저장 간격) | `AndroidManifest.xml`, 이 문서 1절 |
+| 학습 타이머 서비스를 시작·중지하는 곳(`StudyingViewModel`의 `sendServiceIntent` 호출, `StudyingTimerServiceController.stop()` 호출, 알림을 눌렀을 때 여는 화면) | 이 문서 1절 실제 동작 표와 영어 설명 |
 
 ## 1. 포그라운드 서비스 권한
 
@@ -32,24 +33,25 @@
 | 디버그 빌드 전용: 공부 중 "+1h" 버튼은 서비스에 늘어난 시간을 다시 보냄 | `addDebugTime()` → `ACTION_START` (develop 기준 `BuildConfig.DEBUG`일 때만 버튼 표시, #590) |
 | 실행 중 알림의 경과 시간을 1초마다 갱신 | `ms - lastNotificationMs >= 1_000L`일 때 `updateNotification(ms)` |
 | 실행 중 30초마다 기기에 학습 시간 백업 (강제 종료 뒤 복원용) | `ms - lastSaveMs >= LOCAL_BACKUP_INTERVAL_MS`(`30_000L`)일 때 `saveTime(ms)` |
-| 알림을 누르면 앱으로 돌아옴 | `setContentIntent(contentIntent)` |
+| 알림을 누르면 앱이 열림. 학습 화면이 남아 있으면 학습 화면으로 돌아오고, 최근 앱에서 밀어서 닫은 뒤라면 로그인 상태일 때 홈이 열려 아래 "홈 화면이 보일 때마다" 줄처럼 서비스가 정리되고 복구 창이 뜸 (세션 만료면 로그인 화면, 업데이트가 필요하면 업데이트 안내가 열리고 같은 줄의 다른 경로로 서비스가 정리됨) | `setContentIntent(contentIntent)` (`MainActivity`를 `FLAG_ACTIVITY_SINGLE_TOP or FLAG_ACTIVITY_NEW_TASK`로 엶) |
 | 일시정지(일시정지 버튼, 공부 중에 종료 확인 창 열기: "학습종료" 버튼·뒤로 가기) → 서비스와 알림 종료 | `stopStopwatch()` → `ACTION_PAUSE` → `stopForeground(STOP_FOREGROUND_REMOVE)` + `stopSelf(startId)` |
 | 학습 종료, 시작한 지 7일이 지난 세션(`stopIfSessionTooOld`), 오류 창 확인(`onErrorConfirmClicked`) → 서비스와 알림 종료 | `ACTION_STOP` → `stopForeground(STOP_FOREGROUND_REMOVE)` + `stopSelf()` |
-| 세션 만료, 업데이트 필요 화면, 홈 화면이 보일 때마다(처음 들어올 때 포함) → 남아 있는 서비스 정리 | `StudyingTimerServiceController.stop()` → `stopService(...)` (`MainActivity`, `HomeViewModel.onHomeResumed`) |
+| 세션 만료, 업데이트 필요 화면, 홈 화면이 보일 때마다(처음 들어올 때 포함) → 남아 있는 서비스 정리. 예: 공부 중 최근 앱에서 밀어서 닫으면 프로세스·서비스·알림은 남고 화면만 사라지며, 그 뒤 알림을 누르면 홈이 열려 서비스·알림이 정리되고 복구 창("이전 학습 기록 발견")이 뜸. 복구 창의 시간은 마지막으로 백업한 시간이라 직전 알림 시간보다 짧을 수 있음 (백업은 학습 화면이 가려질 때 `onScreenStopped`와 실행 중 서비스의 주기 저장에서 씀) (2026-11-25 SM-N986N Android 13, develop `4d24fa5c` debug 빌드로 확인. 다른 기기·OS는 미확인) | `StudyingTimerServiceController.stop()` → `stopService(...)` (`MainActivity`, `HomeViewModel.onHomeResumed`) |
 | 시스템이 서비스를 끝내도 다시 시작하지 않음 | `START_NOT_STICKY` |
 
 ### 콘솔 설명 초안 (영어)
 
 > 아래 문단을 그대로 붙여 넣고, 콘솔이 요구하는 글자 수에 맞춰 줄인다
 
-Plant is a study app where users grow a virtual plant with the time they spend studying. The user starts a study session on the study screen: the stopwatch starts when the user finishes or closes the study-goal input dialog at the beginning of a session, or taps the resume button after pausing. Opening the end-session confirmation dialog pauses a running stopwatch, and closing that dialog without ending the session resumes it. While the stopwatch is running, the foreground service keeps counting the elapsed study time and shows it in an ongoing notification while the user switches to other apps (for example, to read study materials). It also periodically saves the elapsed time on the device. Tapping the notification returns to the study screen. The service runs only while the user's stopwatch is running: it stops when the user pauses or ends the session, and the system does not restart it. A study session can last for hours (up to 7 days), and the use is not media playback, location, phone calls, or network data transfer.
+Plant is a study app where users grow a virtual plant with the time they spend studying. The user starts a study session on the study screen: the stopwatch starts when the user finishes or closes the study-goal input dialog at the beginning of a session, or taps the resume button after pausing. Opening the end-session confirmation dialog pauses a running stopwatch, and closing that dialog without ending the session resumes it. While the stopwatch is running, the foreground service keeps counting the elapsed study time and shows it in an ongoing notification while the user switches to other apps (for example, to read study materials). It also periodically saves the elapsed time on the device. Tapping the notification opens the app (the study screen if it is still open). The service runs only while the user's stopwatch is running: it stops when the user pauses or ends the session, and the system does not restart it. A study session can last for hours (up to 7 days), and the use is not media playback, location, phone calls, or network data transfer.
 
 - 확인 필요 (미확인): 콘솔에 넣기 전에 Android 공식 문서의 포그라운드 서비스 유형 목록을 읽고, 시간 제한이 있는 유형(예: shortService)이나 다른 유형이 맞지 않는 이유를 한 문장 덧붙일지 정한다
 - 영상에서 "완료"·"학습하기" 버튼이 보이게 찍어, 위 설명의 "finishes the study-goal input dialog", "resume button"과 맞춰 볼 수 있게 한다
 
 ### 영상 (Todo)
 
-- 순서: 학습 화면에 들어가 목표 입력 창에서 "완료" → 타이머 시작 → 홈 버튼으로 앱 나가기 → 알림창에서 시간이 올라가는 것 보여 주기 → 알림 눌러 복귀 → "일시정지"를 누르면 알림이 사라지는 것 보여 주기 → "학습하기"로 다시 시작 → 종료
+- 준비: Android 13 이상은 학습 화면에 처음 들어갈 때 알림 권한을 묻는다(`StudyingScreen`의 `POST_NOTIFICATIONS` 요청). 허용해야 알림이 보이므로, 녹화 전에 허용해 두거나 영상에서 허용하는 장면을 넣는다
+- 순서: 학습 화면에 들어가 목표 입력 창에서 "완료" → 타이머 시작 → 홈 버튼으로 앱 나가기 → 알림창에서 시간이 올라가는 것 보여 주기 → 알림 눌러 복귀 → "일시정지"를 누르면 알림이 사라지는 것 보여 주기 → "학습하기"로 다시 시작 → 종료. 녹화 중 최근 앱에서 Plant를 밀어서 닫지 않는다 (밀어서 닫은 뒤 알림을 누르면 학습 화면이 아니라 홈이 열림, 1절 실제 동작 표)
 - 링크: YouTube "일부 공개" 등 로그인 없이 볼 수 있는 링크 (미확인: 콘솔이 받는 링크 형식)
 - 녹화 빌드: 영상은 앱 동작이 선언과 같은지 보여 주는 용도라, 타이머·알림 코드가 심사에 올릴 버전과 같으면 된다. 가장 확실한 건 올릴 AAB와 같은 커밋으로 만든 빌드
 
@@ -101,7 +103,7 @@ Firebase [Play 데이터 공개 안내](https://firebase.google.com/docs/android
 | 질문 | 답변 초안 | 근거 |
 |------|----------|------|
 | 전송 중 암호화 | 예 | 처리방침 8절 (Firebase는 HTTPS) |
-| 사용자가 데이터 삭제를 요청할 수 있음 | 예 (앱 내 탈퇴 + 계정 삭제 안내 페이지) | 3절 |
+| 사용자가 데이터 삭제를 요청할 수 있음 | 예 (앱 내 탈퇴 + 계정 삭제 안내 페이지) | 이 문서 3절 |
 | 제3자와 공유 | 아니오. Play 도움말은 개발자를 대신해 처리하는 "서비스 제공자"(Firebase)로의 전송을 공유로 보지 않음 | 처리방침 5절 |
 | 커뮤니티 게시글이 다른 이용자에게 공개됨 | 미확인: 이용자가 스스로 공개하는 것이 "공유"에 해당하는지 콘솔 도움말로 확인 | 처리방침 1절 다 |
 
@@ -110,7 +112,8 @@ Firebase [Play 데이터 공개 안내](https://firebase.google.com/docs/android
 - 계정 삭제 URL: https://plant-82b09.web.app/account-deletion.html (원본 `docs/legal/account-deletion.md`, 배포 절차 `docs/LEGAL_HOSTING.md`)
 - 앱 안 경로: 마이페이지 > 계정 관리 > 회원탈퇴 → 확인 2번 → Google 계정 재확인 (코드: `AccountManageScreen.kt`)
 - 앱 없이 요청: 문의 메일 (안내 페이지 2절)
-- 일부 데이터만 삭제 요청 받기: 따로 제공하지 않음 (신고·제보 내용 속 개인정보는 메일로 요청, 안내 페이지 3절 나)
+- 계정을 유지한 채 일부만 삭제: 앱에서 직접 지울 수 있는 것은 내 게시글·댓글, 좋아요·북마크(해제), 화분·학습 기록, 커뮤니티 활동 내역(선택 삭제), 차단(해제). 신고·제보 내용 속 개인정보는 메일로 요청 (안내 페이지 3절 나). 콘솔에 일부 삭제 방법을 따로 적는 칸이 있는지는 콘솔에서 확인 (미확인)
+  - 코드: `CommunityDetailViewModel.deletePost`·`deleteComment`·`ToggleLikeUseCase`·`ToggleBookmarkUseCase`, `StudyPlanDetailViewModel`(`DeleteEntirePotUseCase`·`DeleteStudyLogUseCase`), `CommunityActivityViewModel.deleteSelected`, `BlockedUsersViewModel`(`UnblockUserUseCase`)
 
 ## 4. 그 밖의 선언
 
@@ -122,7 +125,7 @@ Firebase [Play 데이터 공개 안내](https://firebase.google.com/docs/android
 | 앱 액세스 권한 | 로그인 필요. 심사용 Google 계정을 제공 (계정 준비됨. 이메일·비밀번호는 콘솔에만 적고 레포·이슈에 남기지 않음) | 첫 로그인 때 만 14세 이상 확인·약관 동의·닉네임 설정이 필요하고, 다른 기기에서 같은 계정으로 로그인하면 이전 기기는 로그아웃된다는 점을 함께 적기 |
 | 타겟층 | 결정 필요. 약관상 만 14세 이상만 가입 | `docs/legal/terms.md` 제4조 2항 |
 | 콘텐츠 등급 설문 | 사용자 간 소통(게시글·댓글) 있음, 사용자 제작 콘텐츠 있음, 실제 돈으로 사는 상품 없음(골드는 앱 안 보상으로만 얻음) | 결제 SDK 없음 (코드) |
-| 사용자 제작 콘텐츠 관리 | 게시글·댓글 신고, 신고 5건 이상이면 블라인드, 사용자 차단(차단한 사람의 글·댓글 숨김, 마이페이지 > 차단 목록에서 해제) | (코드) `Post.kt`의 `BLIND_REPORT_THRESHOLD = 5`, #660 |
+| 사용자 제작 콘텐츠 관리 | 게시글·댓글 신고, 신고 5건 이상이면 블라인드, 사용자 차단(차단한 사용자의 글·댓글을 내 화면에서 숨김, 마이페이지 > 차단 목록에서 해제) | (코드) `Post.kt`의 `BLIND_REPORT_THRESHOLD = 5`, #660 |
 | 정부 앱·금융 기능·건강 앱 | 해당 없음 | |
 
 ## 5. 비공개 테스트 트랙
@@ -135,7 +138,7 @@ Firebase [Play 데이터 공개 안내](https://firebase.google.com/docs/android
 
 - [ ] 계정 삭제 안내 페이지가 배포되어 로그인 없이 열린다
 - [ ] 운영 Firestore에 `users/{uid}/blocks` 규칙이 배포되어 있다 (사용자 차단 설명 전에)
-- [ ] 처리방침 수정본(#607)이 배포되어 있고, 데이터 보안 답변과 항목이 같다
+- [ ] 최신 처리방침(2026년 11월 25일 시행본 이후, #781 반영본)이 배포되어 있고, 데이터 보안 답변과 항목이 같다
 - [ ] 포그라운드 서비스 영상 링크가 로그인 없이 열린다
 - [ ] #781(IP 주소·App Check 토큰의 처리방침 반영)이 끝났다 (데이터 보안 양식 입력 전에)
 - [ ] #778(메일로 받은 삭제 요청 처리 도구)이 준비되어 있다 (계정 삭제 URL을 등록하면 메일 요청을 받게 되므로)

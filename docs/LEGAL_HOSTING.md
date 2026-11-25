@@ -28,7 +28,7 @@
 
 계정 삭제 안내는 Play Console > 앱 콘텐츠 > 데이터 보안의 "계정 삭제 URL"에 등록하는 페이지다 (#632). 앱 탈퇴 화면 문구·순서나 탈퇴 처리(`functions/index.js`의 `deleteUserData`), 처리방침 3절을 바꾸면 이 페이지도 함께 고친다. Play Console 답변 초안은 `docs/PLAY_CONSOLE.md`에 있다.
 
-파일 이름(주소)을 바꾸거나 페이지를 추가하면 `hosting/build-legal.mjs`의 `PAGES`, 앱의 주소 상수, `.gitignore`(변환 결과 HTML)를 함께 고친다. `.gitignore`에 넣지 않으면 변환 결과가 커밋되어, 커밋된 HTML을 손으로 고쳐도 배포 때 md 내용으로 덮어써진다.
+파일 이름(주소)을 바꾸거나 페이지를 추가하면 `hosting/build-legal.mjs`의 `PAGES`, 앱의 주소 상수, `.gitignore`(변환 결과 HTML)를 함께 고친다. `.gitignore`에 넣지 않으면 변환 결과가 커밋되어, 커밋된 HTML을 손으로 고쳐도 배포 때 md 내용으로 덮어써진다. 계정 삭제 안내 주소를 바꾸면 처리방침 4절·6절의 링크, 이 문서의 주소 표, `docs/PLAY_CONSOLE.md` 3절의 URL, Play Console에 등록한 URL도 함께 바꾼다.
 
 ## 문서 수정 절차
 
