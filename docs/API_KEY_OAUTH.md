@@ -77,7 +77,7 @@ API 키 앱 제한에는 **Firebase 프로젝트 설정에 등록된 SHA-1을 �
 
 - 세 빌드 모두 앱 Logcat에 `API key`, `blocked`, `PERMISSION_DENIED`, `API_KEY` 문구가 없었다
 - 나머지 팀원 2명의 디버그 빌드는 팀원이 직접 확인했다 (팀원 보고: 문제없음. 확인한 동작의 범위는 따로 받지 않음)
-- **Crashlytics 보고 (2026-11-26, 로컬 릴리스)**: `adb shell am crash <pid>`로 크래시를 낸 뒤 앱을 다시 실행했다. Logcat에 `Making request to: https://crashlyticsreports-pa.googleapis.com/v1/firelog/legacy/batchlog` → `Status Code: 200`이 나왔다. Crashlytics가 쓰는 키(`google_crash_reporting_api_key`)는 앱 키와 같은 값이다(빌드가 만든 `values.xml`에서 확인). Crashlytics 콘솔에 도착했는지는 확인하지 않았다 (미확인)
+- **Crashlytics 보고 (2026-11-26, 로컬 릴리스)**: `adb shell am crash <pid>`로 크래시를 낸 뒤 앱을 다시 실행했다. Logcat에 `Making request to: https://crashlyticsreports-pa.googleapis.com/v1/firelog/legacy/batchlog` → `Status Code: 200`이 나왔다. Crashlytics가 쓰는 키(`google_crash_reporting_api_key`)는 앱 키와 같은 값이다(빌드가 만든 `values.xml`에서 확인). Crashlytics 콘솔 문제 목록에도 `ActivityThread.throwRemoteServiceException` (`CrashedByAdbException - shell-induced crash`, 버전 1.0.0, 이벤트 2, 사용자 1)로 들어왔다 (2026-11-26 확인)
 - **반대 확인 (2026-11-26)**: 7개 목록에 없는 임시 키(`DE:4D:85:CB…`)로 서명한 디버그 빌드를 설치했다
   - 앱을 켜자마자 Firebase Installations 요청이 `403 PERMISSION_DENIED` (`Permission denied on the service.`)를 받았다. 등록된 세 빌드에서는 나오지 않은 오류라, 키의 애플리케이션 제한이 실제로 걸려 있다고 본다
   - Google 로그인은 계정을 고른 뒤 실패했다. 다만 원인은 키 제한이 아니라 Firebase 로그인 요청 전 단계인 OAuth다 (`Auth.Api.Credentials`: `[status=UNREGISTERED_ON_API_CONSOLE]`, `Auth`: "This android application is not registered to use OAuth2.0"). 이 SHA-1의 Android OAuth 클라이언트가 없기 때문이다 (이 SHA-1은 Firebase에도 등록하지 않았다. Firebase 등록과 클라이언트 생성의 관계는 미확인)
