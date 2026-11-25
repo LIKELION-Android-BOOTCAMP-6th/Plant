@@ -12,10 +12,12 @@ API 키 앱 제한에는 **Firebase 프로젝트 설정에 등록된 SHA-1을 �
 |---|---|---|
 | 팀원 각자의 debug SHA-1 | 각자 PC에서 `./gradlew :app:signingReport` → `Variant: debug`의 `SHA1` | PC(=`~/.android/debug.keystore`)마다 다르다 |
 | 업로드 키 SHA-1 | Play Console의 앱 서명 화면 → 업로드 키 인증서 (#621에서 SHA를 가져온 곳) | 로컬 release 빌드(`bundleRelease`)가 이 키로 서명된다 (#621) |
-| Play 앱 서명 키 SHA-1 | 같은 화면 → 앱 서명 키 인증서 | Play에서 설치한 앱(내부 테스트 트랙 등)이 이 키로 서명된다 (#621) |
+| Play 앱 서명 키 SHA-1 (화면에 나오는 것 전부) | 같은 화면 → 앱 서명 키 인증서 | Play에서 설치한 앱(내부 테스트 트랙 등)이 이 키로 서명된다 (#621). 키를 업그레이드했으면 이전 키와 지금 키가 함께 나오고, 양자 내성 키가 따로 나올 수도 있다 |
 
 - 기준 목록은 Firebase 콘솔 → 프로젝트 설정 → 내 앱 → Android 앱(`com.a32b.plant`)의 "SHA 인증서 지문"이다. API 키 앱 제한의 SHA-1 목록을 이 목록과 1:1로 맞춘다
-- `google-services.json`의 `oauth_client` 중 `client_type: 1`(Android) 항목마다 `certificate_hash`가 하나씩 있다. 이 값이 Firebase에 등록된 SHA-1과 같다 (소문자, `:` 없음)
+  - 2026-11-25 기준 SHA-1은 7개다: 팀원 debug 3개, 업로드 키 1개, 앱 서명 키 3개(이전 키, 지금 키, 양자 내성 키)
+  - 앱 서명 키가 여러 개인 경우 Play가 기기마다 어느 키로 서명한 앱을 내려주는지는 확인하지 않았다 (미확인). 그래서 화면에 나온 앱 서명 키 SHA-1은 **모두** 넣는다. 빠뜨리면 그 키로 서명된 설치본이 막힐 수 있다
+- `google-services.json`의 SHA-1(`oauth_client` 중 `client_type: 1` 항목의 `certificate_hash`)은 기준으로 쓰지 않는다. 2026-11-25에 확인한 로컬 파일에는 5개만 있어 Firebase 콘솔의 7개와 달랐다
 - API 키 앱 제한에는 SHA-1을 넣는다. SHA-256은 App Check 등록에 쓴다 ([APP_CHECK.md](APP_CHECK.md#콘솔play-console-설정-처음-한-번))
 
 ## 앱 제한 적용 절차
@@ -67,7 +69,7 @@ Cloud 콘솔 → **Google 인증 플랫폼**에서 확인한다.
 | 개인정보처리방침 URL | 브랜딩 | #607 사이트의 처리방침 주소 ([LEGAL_HOSTING.md](LEGAL_HOSTING.md)) |
 | 로고 | 브랜딩 | **넣지 않음** |
 | 사용 범위 | 데이터 액세스 | 기본 범위(`email`, `profile`, `openid`)만 |
-| Android OAuth 클라이언트 | 클라이언트 | Firebase에 등록한 SHA-1마다 하나씩 있음 |
+| Android OAuth 클라이언트 | 클라이언트 | Firebase에 등록한 SHA-1마다 하나씩 있음 (`google-services.json`에는 5개만 있었으므로 7개 모두 있는지 특히 확인) |
 
 - "테스트" 상태에서는 등록한 테스트 사용자(최대 100명)만 쓸 수 있고 승인이 7일 뒤 만료된다. 다만 Google 문서는 이름·이메일·프로필 범위만 요청하는 앱은 예외라고 적는다. 이 앱은 기본 범위만 쓰므로 "테스트" 상태여도 로그인이 될 수 있지만, 비공개 테스트에서는 혼동을 없애기 위해 "프로덕션"으로 둔다 (출처: <https://support.google.com/cloud/answer/15549945>)
 - 로고를 넣으면 앱 이름·로고가 표시되기 전에 확인(심사)을 받아야 할 수 있으므로 넣지 않는다 (#664 기준)
