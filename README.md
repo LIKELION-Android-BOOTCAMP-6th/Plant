@@ -148,6 +148,7 @@ UI (Composable) → ViewModel → Repository → DataSource (Firebase)
 ## ⚙️ 환경 설정
  
 - `google-services.json` 파일이 필요합니다.
+  - 새 팀원·새 PC는 debug SHA-1을 Firebase와 Android API 키 앱 제한(#664) 두 곳에 추가해야 디버그 빌드가 동작합니다 ([docs/API_KEY_OAUTH.md](docs/API_KEY_OAUTH.md#새-팀원새-pc가-생기면)).
 - 로컬 키는 커밋하지 않고 별도 설정 파일로 관리합니다.
 - Firestore 복합 인덱스가 필요한 쿼리가 있으며, 최초 실행 시 Logcat에 출력되는 링크를 통해 Firebase Console에서 인덱스를 등록해야 합니다.
  
