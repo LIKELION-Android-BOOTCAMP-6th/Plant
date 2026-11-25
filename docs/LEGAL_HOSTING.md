@@ -8,9 +8,11 @@
 |------|------|
 | `docs/legal/privacy.md` | 개인정보처리방침 원본 |
 | `docs/legal/terms.md` | 서비스 이용약관 원본 |
+| `docs/legal/account-deletion.md` | 계정 삭제 안내 원본 (#632, Play Console 계정 삭제 URL용) |
 | `hosting/build-legal.mjs` | md → HTML 변환 스크립트 (외부 패키지 없음) |
 | `hosting/public/privacy-policy.html` | 변환 결과. 커밋하지 않음 (`.gitignore`) |
 | `hosting/public/terms.html` | 변환 결과. 커밋하지 않음 (`.gitignore`) |
+| `hosting/public/account-deletion.html` | 변환 결과. 커밋하지 않음 (`.gitignore`) |
 | `hosting/public/index.html`, `404.html` | 운영 사이트에 있던 Firebase 기본 페이지를 그대로 옮김 (아래 "기존 파일 보존") |
 | `firebase.json`의 `hosting` | `hosting/public`을 배포하고, 배포 직전(`predeploy`)에 변환 스크립트를 실행 |
 
@@ -20,8 +22,11 @@
 |------|------|---------------|
 | 개인정보처리방침 | https://plant-82b09.web.app/privacy-policy.html | `LegalUrls.PRIVACY_POLICY` |
 | 서비스 이용약관 | https://plant-82b09.web.app/terms.html | `LegalUrls.TERMS_OF_SERVICE` |
+| 계정 삭제 안내 | https://plant-82b09.web.app/account-deletion.html | 없음 (앱에서 열지 않음) |
 
 앱에서 여는 곳: 마이페이지(`MyPageViewModel`), 첫 로그인 닉네임 설정 다이얼로그의 "보기"(`SignInViewModel`, #661). 두 곳 모두 `core/util/LegalUrls.kt`의 상수를 쓴다.
+
+계정 삭제 안내는 Play Console > 앱 콘텐츠 > 데이터 보안의 "계정 삭제 URL"에 등록하는 페이지다 (#632). 앱 탈퇴 화면 문구·순서나 탈퇴 처리(`functions/index.js`의 `deleteUserData`), 처리방침 3절을 바꾸면 이 페이지도 함께 고친다. Play Console 답변 초안은 `docs/PLAY_CONSOLE.md`에 있다.
 
 파일 이름(주소)을 바꾸거나 페이지를 추가하면 `hosting/build-legal.mjs`의 `PAGES`, 앱의 주소 상수, `.gitignore`(변환 결과 HTML)를 함께 고친다. `.gitignore`에 넣지 않으면 변환 결과가 커밋되어, 커밋된 HTML을 손으로 고쳐도 배포 때 md 내용으로 덮어써진다.
 
@@ -63,7 +68,7 @@ firebase deploy --only hosting --project plant-82b09
 ```
 
 - `predeploy`가 `node hosting/build-legal.mjs`를 먼저 실행하므로, 배포되는 HTML은 그 시점 폴더의 md 파일과 같다 (위 확인을 거쳤다면 develop의 md 파일과 같다)
-- 배포 후 확인: 브라우저에서 두 주소를 열어 시행일·내용 확인 → 앱 마이페이지의 "개인정보처리방침", "서비스 이용약관"을 눌러 같은 페이지가 열리는지 확인
+- 배포 후 확인: 브라우저에서 위 표의 세 주소를 열어 시행일·내용 확인 (계정 삭제 안내는 로그인하지 않은 브라우저에서도 열리는지 확인) → 앱 마이페이지의 "개인정보처리방침", "서비스 이용약관"을 눌러 같은 페이지가 열리는지 확인
   - 운영 응답 헤더가 `Cache-Control: max-age=3600`이라, 전에 연 적이 있는 브라우저는 배포 후 최대 1시간 동안 이전 페이지를 보여 줄 수 있다. 이전 내용이 보이면 새로고침한다
 - 되돌리기: Firebase 콘솔 > Hosting의 출시 기록에서 이전 버전으로 롤백할 수 있다
 
