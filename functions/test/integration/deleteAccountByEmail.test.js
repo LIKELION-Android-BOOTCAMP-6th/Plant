@@ -305,8 +305,8 @@ describe("deleteAccountByEmail 운영자 스크립트 (#778)", () => {
     const other = uniqueId("other");
     const email = await createAuthUser(uid);
     const refs = await seedCompletedUser(uid, other);
-    // users 문서만 먼저 없어지고 나머지 데이터·Auth 계정은 그대로인, 가장 불리한 상태로
-    // 재실행을 확인한다 (실제 중간 실패는 users 문서를 마지막에 지우므로 이보다 남은 것이 적다)
+    // users 문서만 먼저 없어진 상태에서도 나머지를 이어서 지우는지 확인한다
+    // (deleteUserData는 users 문서를 읽지 않고 uid로 찾는다)
     await refs.userRef.delete();
 
     const retried = await run(email);

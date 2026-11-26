@@ -93,7 +93,7 @@ describe("promptForUid", () => {
     assert.strictEqual(await answerWith("user-1\n"), "user-1");
   });
 
-  it("입력 없이 끝나면 빈 값을 돌려준다 (취소로 처리되어 종료 코드 0으로 끝나지 않게)", async () => {
+  it("입력 없이 끝나면 빈 값을 돌려준다 (취소로 처리되도록)", async () => {
     assert.strictEqual(await answerWith(""), "");
   });
 

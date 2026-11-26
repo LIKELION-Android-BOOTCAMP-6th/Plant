@@ -121,13 +121,15 @@ async function findAccount(db, auth, email) {
  * @return {string[]}
  */
 function describeAccount(account) {
+  // 앱과 같은 기준: isFirstLogin이 true일 때만 가입 전으로 본다
+  // (CheckAutoLoginUseCase·ResolveUserSessionUseCase의 isFirstLogin == true)
   let signUp;
   if (!account.userDocExists) {
     signUp = "users 문서 없음 (가입을 마치지 않음)";
-  } else if (account.isFirstLogin === false) {
-    signUp = "가입 완료";
-  } else {
+  } else if (account.isFirstLogin === true) {
     signUp = "users 문서는 있으나 닉네임 설정 전 (가입을 마치지 않음)";
+  } else {
+    signUp = "가입 완료";
   }
   return [
     `  uid          : ${account.uid}`,
