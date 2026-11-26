@@ -12,7 +12,7 @@
 |-----------|---------------|
 | 수집 항목·SDK 추가/설정 변경 | 처리방침(`docs/legal/privacy.md`), 이 문서 2절(데이터 보안), 4절(광고 ID) |
 | Firebase BoM·Firebase SDK 버전 변경 | Firebase [Play 데이터 공개 안내](https://firebase.google.com/docs/android/play-data-disclosure)와 release 의존성을 다시 대조해 2절 "#781 확인 내용" 표 갱신 (예: `firebase-functions`가 끌어오는 `firebase-iid`가 빠지거나 바뀌면 처리방침 1절 사의 인스턴스 ID 토큰 문장 확인) |
-| 탈퇴 처리(`functions/index.js`의 `deleteUserData`), 계정 삭제 안내 1절이 인용하는 탈퇴 경로 문구(`BottomBar.kt` "마이페이지", `MypageScreen.kt` "계정 관리", `AccountManageScreen.kt` 회원탈퇴·확인 창 문구·버튼, `DeleteAccountViewModel.kt` 완료 안내) | 계정 삭제 안내(`docs/legal/account-deletion.md`), 처리방침 3절, 이 문서 3절 |
+| 탈퇴 처리(`functions/accountDeletion.js`의 `deleteUserData`), 계정 삭제 안내 1절이 인용하는 탈퇴 경로 문구(`BottomBar.kt` "마이페이지", `MypageScreen.kt` "계정 관리", `AccountManageScreen.kt` 회원탈퇴·확인 창 문구·버튼, `DeleteAccountViewModel.kt` 완료 안내) | 계정 삭제 안내(`docs/legal/account-deletion.md`), 처리방침 3절, 이 문서 3절 |
 | `StudyingTimerService`의 서비스 유형·서브타입, 서비스 동작(`onStartCommand`, `START_NOT_STICKY`, 알림 갱신·주기 저장 간격) | `AndroidManifest.xml`, 이 문서 1절 |
 | 학습 타이머 서비스를 시작·중지하는 곳(`StudyingViewModel`의 `sendServiceIntent` 호출, `StudyingTimerServiceController.stop()` 호출, 알림을 눌렀을 때 여는 화면) | 이 문서 1절 실제 동작 표와 영어 설명 |
 
@@ -139,7 +139,7 @@ Google 계정 이름·사진 주소: 앱 코드는 읽지 않음(코드: `displa
 
 - 계정 삭제 URL: https://plant-82b09.web.app/account-deletion.html (원본 `docs/legal/account-deletion.md`, 배포 절차 `docs/LEGAL_HOSTING.md`)
 - 앱 안 경로: 마이페이지 > 계정 관리 > 회원탈퇴 → 확인 2번 → Google 계정 재확인 (코드: `AccountManageScreen.kt`)
-- 앱 없이 요청: 문의 메일 (안내 페이지 2절)
+- 앱 없이 요청: 문의 메일 (안내 페이지 2절). 운영자 처리 절차: `docs/ACCOUNT_DELETION_REQUEST.md` (#778)
 - 계정을 유지한 채 일부만 삭제: 앱에서 직접 지울 수 있는 것은 내 게시글·댓글, 좋아요·북마크(해제), 화분·학습 기록, 커뮤니티 활동 내역(선택 삭제), 차단(해제). 신고·제보 내용 속 개인정보는 메일로 요청 (안내 페이지 3절 나). 콘솔에 일부 삭제 방법을 따로 적는 칸이 있는지는 콘솔에서 확인 (미확인)
   - 코드: `CommunityDetailViewModel.deletePost`·`deleteComment`·`ToggleLikeUseCase`·`ToggleBookmarkUseCase`, `StudyPlanDetailViewModel`(`DeleteEntirePotUseCase`·`DeleteStudyLogUseCase`), `CommunityActivityViewModel.deleteSelected`, `BlockedUsersViewModel`(`UnblockUserUseCase`)
 

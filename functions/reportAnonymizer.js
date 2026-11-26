@@ -1,5 +1,6 @@
 // 회원탈퇴 시 신고 익명화 (#606)
-// index.js의 deleteUserData가 쓰고, 테스트가 에뮬레이터 Firestore에 직접 불러 경쟁 상황을 확인한다.
+// accountDeletion.js의 deleteUserData가 쓰고,
+// 테스트가 에뮬레이터 Firestore에 직접 불러 경쟁 상황을 확인한다.
 // 에뮬레이터는 같은 함수 요청을 하나씩 실행해서 Callable 호출로는 두 탈퇴 호출이 겹치는 상황을
 // 만들 수 없기 때문에 따로 뺐다 → Firestore 인스턴스(db)는 인자로 받는다 (initializeApp 하지 않음)
 
