@@ -76,7 +76,7 @@ API 키 앱 제한에는 **Firebase 프로젝트 설정에 등록된 SHA-1을 �
 | 로컬 릴리스, 처음 쓰는 계정 | `E4:B0:17:A8` | 됨 (닉네임 설정 화면까지 이동) | — | — |
 
 - 세 빌드 모두 앱 Logcat에 `API key`, `blocked`, `PERMISSION_DENIED`, `API_KEY` 문구가 없었다
-- 나머지 팀원 2명의 디버그 빌드는 팀원이 직접 확인했다 (팀원 보고: 문제없음. 확인한 동작의 범위는 따로 받지 않음)
+- 나머지 팀원 2명의 디버그 빌드는 팀원이 직접 확인했다 (팀원 보고: 로그아웃 → 로그인, 좋아요 → 취소 모두 정상, 2026-11-26. 각 PC의 debug SHA-1은 2026-11-25에 Firebase 목록과 대조함)
 - **Crashlytics 보고 (2026-11-26, 로컬 릴리스)**: `adb shell am crash com.a32b.plant`로 크래시를 냈다 (보안 폴더(user 150) 권한 오류가 출력되지만 user 0의 앱은 종료됐다. `am_crash` 로그로 확인). 몇 초 뒤 Crashlytics 전송 작업이 별도 프로세스로 실행되어 Logcat에 `Making request to: https://crashlyticsreports-pa.googleapis.com/v1/firelog/legacy/batchlog` → `Status Code: 200`이 나왔다. 그 프로세스를 `am crash <pid>`로 한 번 더 종료해 크래시는 모두 2번이다. Crashlytics 보고 전송은 앱의 API 키가 아니라 SDK에 들어 있는 별도 키를 쓴다 (firebase-crashlytics 20.0.4 소스 `DataTransportCrashlyticsReportSender`의 `CRASHLYTICS_API_KEY`). 그래서 이 결과는 키 제한의 근거가 아니라, 키 제한 뒤에도 Crashlytics가 동작한다는 확인이다. Crashlytics 콘솔 문제 목록에도 `ActivityThread.throwRemoteServiceException` (`CrashedByAdbException - shell-induced crash`, 버전 1.0.0, 이벤트 2, 사용자 1)로 들어왔다 (2026-11-26 확인)
 - **반대 확인 (2026-11-26)**: 7개 목록에 없는 임시 키(`DE:4D:85:CB…`)로 서명한 디버그 빌드를 설치했다
   - 앱을 켜자마자 Firebase Installations 요청이 `403 PERMISSION_DENIED` (`Permission denied on the service.`)를 받았다. 등록된 세 빌드에서는 나오지 않은 오류라, 키의 애플리케이션 제한이 실제로 걸려 있다고 본다
@@ -128,7 +128,7 @@ Cloud 콘솔 → API 및 서비스 → **OAuth 동의 화면**을 누르면 Goog
 
 - **개요 → 프로젝트 진단 → 앱 보안 "보안 흐름 사용" 경고**: "다음 Android 클라이언트의 앱 소유권이 확인되지 않았습니다"라며 Android 클라이언트 13개 전부를 가리킨다. 처리 방법은 확인하지 않았다 (미확인). #783에서 진행한다
 - **Android OAuth 클라이언트 13개 정리**: 지금 SHA-1은 7개인데 Android 클라이언트는 13개다. 예전 팀원·강사 SHA-1의 클라이언트가 남은 것으로 보인다 (미확인). 지우면 로그인이 깨질 수 있으므로 클라이언트마다 SHA-1을 대조한 뒤 정리하고, 그다음 남은 클라이언트의 소유권 확인을 한다. 정리는 #782, 소유권 확인은 #783에서 진행한다
-  - 7개 SHA-1마다 클라이언트가 있는지는 하나씩 대조하지 않았다. 이 기기에서 확인한 세 빌드의 서명 `2A:F4:10:84…`, `74:A7:58:34…`, `E4:B0:17:A8…`는 로그아웃 → 로그인이 됐으므로 클라이언트가 있다고 본다. 나머지 4개(팀원 debug 2개, 앱 서명 키 2개)는 #782에서 대조한다
+  - 7개 SHA-1마다 클라이언트가 있는지는 하나씩 대조하지 않았다. 이 기기에서 확인한 세 빌드의 서명 `2A:F4:10:84…`, `74:A7:58:34…`, `E4:B0:17:A8…`와 팀원 2명의 debug SHA-1은 로그아웃 → 로그인이 됐으므로 클라이언트가 있다고 본다. 나머지 2개(앱 서명 키 3개 중 `74:A7…`가 아닌 2개)는 #782에서 대조한다
 
 ## 새 팀원·새 PC가 생기면
 
