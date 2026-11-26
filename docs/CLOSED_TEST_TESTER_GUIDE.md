@@ -58,12 +58,12 @@ Plant는 공부한 시간만큼 나만의 화분이 자라는 학습 관리 앱�
    - 오늘 아직 출석하지 않았으면 홈에 들어올 때 출석체크 창이 먼저 뜰 수 있어요. 7번에서 해 볼 거라 지금은 닫아도 돼요.
 4. **학습 타이머 (한 번에 1시간 이상, 1번 이상)**: 홈의 "공부 시작" → 목표 입력 창(입력칸에 "오늘의 학습 목표를 기록해보세요!"가 보여요)에 목표를 적고 "완료" → 1시간 이상 공부 → "학습종료" → 확인 창에서 "종료". 따로 저장 버튼은 없고, "종료"를 누르면 기록이 저장돼요.
    - 중간에 "일시정지"한 동안은 학습 시간에 들어가지 않아요. 보상은 타이머에 보이는 시간이 1시간 이상일 때 받아요.
-   - 학습을 시작할 때 알림 권한을 물으면 허용해 주세요. 학습 중에 앱을 나가도 알림에 시간이 보여요.
+   - 학습을 시작할 때 알림 권한을 물으면 허용해 주세요. 학습 중에 앱을 나가도 알림에 시간이 보여요. 일시정지 등으로 타이머가 멈춰 있는 동안에는 알림이 사라지고, 다시 시작하면 보여요.
    - 학습 중 홈 버튼으로 앱을 나갔다가 알림을 눌러 돌아오는 것도 해 봐 주세요. 최근 앱 목록에서 앱을 밀어서 닫은 경우는 6절 "공부를 마칠 때"를 봐 주세요.
 5. **보상 확인**: 한 번에 1시간 이상 공부한 기록을 저장하면, 이어서 나오는 결과 화면의 "획득 보상"에 받은 아이템과 보너스 박스가 보여요. 홈으로 돌아가 아래 아이템 칸의 개수도 늘었는지 봐 주세요.
    - 인터넷이 끊긴 상태에서 저장했거나 보상 지급이 늦어지면, 나중에 결과 화면이나 홈의 "학습 보상이 도착했어요!" 창으로 알려 줘요.
 6. **리포트**: 하단의 "리포트" 탭에서 공부한 기록이 보이는지 봐 주세요.
-7. **출석체크**: 홈 위쪽 출석체크 아이콘 → "출석하기". 하루에 한 번만 할 수 있고, 인터넷이 연결되어 있어야 해요. 며칠에 걸쳐 해 봐 주세요.
+7. **출석체크**: 홈 위쪽 출석체크 아이콘 → "출석하기". 하루에 한 번만 할 수 있고, 인터넷이 연결되어 있어야 해요. 며칠에 걸쳐 해 봐 주세요. 출석 횟수는 달마다 새로 세서, 달이 바뀌면 출석판이 처음부터 시작해요.
 8. **보너스 박스**: 홈 아래 아이템 칸의 "보너스 박스"를 눌러 열어요. 인터넷이 연결되어 있어야 해요. 받은 아이템과 남은 박스 개수가 맞는지 봐 주세요. 남은 박스 수는 연 개수만큼 줄고, 박스에서 보너스 박스가 나오면 그만큼 다시 늘어요.
 9. **커뮤니티**: 하단의 "커뮤니티" 탭에서
    - 글 쓰기, 댓글 달기, 좋아요 누르기
@@ -92,7 +92,7 @@ Plant는 공부한 시간만큼 나만의 화분이 자라는 학습 관리 앱�
 
 - **카테고리**: UI 버그, 기능 오류, 기타 중에서 골라요.
 - **설명**: 무엇이 이상했는지 적어요. 언제쯤 일어났는지(예: 오늘 오후 3시쯤)도 함께 적어 주세요.
-- **재현 경로**: 그 문제가 생기기까지 한 일을 순서대로 적어요. (예: 홈 → 학습 시작 → 앱 나가기 → 알림 눌러 돌아옴 → 시간이 0으로 보임)
+- **재현 경로**: 그 문제가 생기기까지 한 일을 순서대로 적어요. (예: 홈 → 공부 시작 → 앱 나가기 → 알림 눌러 돌아옴 → 시간이 0으로 보임)
 - 기기 모델, Android 버전, 앱 버전은 자동으로 함께 보내져요. Android 버전은 "34"처럼 Android 내부 번호로 보여요(예: Android 14는 34). 문제가 아니에요.
 - 앱 안 제보에는 화면 캡처를 붙일 수 없어요. 캡처가 있으면 아래 이메일로 보내 주세요.
 
@@ -111,7 +111,7 @@ Plant는 공부한 시간만큼 나만의 화분이 자라는 학습 관리 앱�
 4. 한 일 순서
 5. 화면 캡처 (있으면)
 
-Play 스토어의 앱 페이지에서도 비공개 의견을 보낼 수 있어요. 테스트 버전에는 공개 리뷰를 남길 수 없어요.
+Play 스토어에서도 비공개 의견을 보낼 수 있어요. 테스트 버전에는 공개 리뷰를 남길 수 없어요.
 
 ### 6. 꼭 알아 두실 것
 
@@ -183,10 +183,10 @@ Play 스토어의 앱 페이지에서도 비공개 의견을 보낼 수 있어�
 
 ## Play Console 설정 (완료 조건 3)
 
-앱 콘텐츠 선언과 비공개 테스트 트랙 업로드(국가, 스토어 등록 정보, #621 서명 AAB)는 `docs/PLAY_CONSOLE.md` 5절에 있다. 여기에는 테스터·피드백 설정만 적는다. 계정 종류를 확인하면 `PLAY_CONSOLE.md` 5절의 "(미확인)"도 함께 고친다.
+앱 콘텐츠 선언은 `docs/PLAY_CONSOLE.md` 1~4절, 비공개 테스트 트랙 업로드(국가, 스토어 등록 정보, #621 서명 AAB)는 같은 문서 5절에 있다. 여기에는 테스터·피드백 설정만 적는다. 계정 종류를 확인하면 `PLAY_CONSOLE.md` 5절의 "(미확인)"도 함께 고친다.
 
 - [ ] 비공개 테스트 트랙 테스터 목록: 이메일 목록 또는 Google 그룹 (방식: `[작성 필요]`)
-  - 이메일 목록은 CSV로 올리면 기존 목록을 덮어씀. CSV는 BOM 없는 UTF-8 (9845334)
+  - 이메일 목록은 CSV로 올리면 기존 목록을 덮어씀. BOM이 붙은 UTF-8 CSV는 받지 않음 (9845334)
 - [ ] 피드백 이메일 또는 URL 입력 (1부 5절과 같은 값)
 - [ ] 테스터 모집 인원: `[작성 필요]`명 (12명 조건이면 중도 이탈을 생각해 여유 있게)
 
@@ -201,13 +201,13 @@ Play 스토어의 앱 페이지에서도 비공개 의견을 보낼 수 있어�
 | 개선사항 제안 | `MypageScreen.kt` "개선사항 제안" → `Routes.ImprovementSuggestion` |
 | 한 번에 1시간 이상이면 보상 | `functions/calculations.js` `STUDY_REWARD_TIERS` (가장 낮은 단계 `hours: 1`), `computeStudyReward`가 기록 하나의 `studyingTime`으로 단계를 고름. 저장되는 시간은 타이머 값(`StudyingViewModel.onFinishStudyingClick()`의 `time = state.timer`)이고, "일시정지"(`StudyingScreen.kt`)하면 `stopStopwatch()`가 서비스 타이머를 멈췄다가 다시 시작할 때 쌓인 시간부터 이어 셈(`EXTRA_ACCUMULATED`) → 일시정지한 시간은 빠짐 |
 | 보상이 보이는 곳 | 온라인 저장: `StudyResultScreen.kt` "획득 보상". 홈 창 "학습 보상이 도착했어요!"(`HomeScreen.kt`)는 결과 화면에서 보여 주지 못한 보상만 (결과 화면이 보여 준 보상은 `StudyResultViewModel.markRewardSeen()`이 확인 표시, 홈은 `StudyingRemoteDataSourceImpl`에서 `rewardSeen == false`인 기록만 구독). 오프라인 저장 뒤 결과 화면을 보는 중에 연결되면 결과 화면에서 보여 주고, 지급이 늦어지면 결과 화면에 "지급되면 홈에서 알려드릴게요." (`StudyResultScreen.kt`) — 그래서 안내문은 "결과 화면이나 홈 창" |
-| 출석 하루 1번, 인터넷 필요 | 서버 `functions/index.js` `checkAttendance`. 오프라인 안내 `HomeViewModel.kt` `ATTENDANCE_OFFLINE_MESSAGE` |
+| 출석 하루 1번, 인터넷 필요, 달마다 새로 셈 | 서버 `functions/index.js` `checkAttendance`. 오프라인 안내 `HomeViewModel.kt` `ATTENDANCE_OFFLINE_MESSAGE`. 서버 `functions/calculations.js` `decideAttendance`가 한국 시간 날짜 키(`todayKey`)의 연·월이 지난 출석과 다르면 횟수를 0부터 셈 (안내문에는 시간대를 쓰지 않음) |
 | 보너스 박스 인터넷 필요 | 서버 함수 호출 `ItemRepositoryImpl.openBonusBoxes()`. 실패하면 `HomeViewModel.kt`가 오류 문구를 토스트로 표시 (오프라인 문구는 인용하지 않음) |
 | 박스에서 박스가 나오면 남은 수가 늘어남 | `functions/index.js` `BONUS_BOX_DROP_TABLE`에 `BOX` 항목, `functions/calculations.js` `computeBonusBoxDeltas`(연 개수만큼 빼고 나온 박스만큼 더함) |
-| 골드를 볼 화면 없음 | 골드를 주는 곳: 출석 7·14·21·28번째(`AttendanceRewardTable.kt`), 박스 `GOLD_300`·`GOLD_500`·`GOLD_1000`(`BONUS_BOX_DROP_TABLE`). 화면에 골드가 나오는 곳은 획득 안내(출석 "…골드를 획득했습니다!", 박스 결과 창 "300골드 x1 획득!" — 이름은 `ItemType.kor`)와 출석판 보상 표시뿐이고, `presentation`에서 `User.gold`를 읽는 곳은 없음 (2026-11-26 `presentation` 전체에서 `gold`·`coin`·"골드" 검색). 관련 이슈는 찾지 못해 안내문에 일정은 쓰지 않음 |
+| 골드를 볼 화면 없음 | 골드를 주는 곳: 출석 7·14·21·28번째(지급 원본은 서버 `functions/index.js` `ATTENDANCE_REWARD_TABLE`, 앱의 `AttendanceRewardTable.kt`는 출석판 표시용 사본), 박스 `GOLD_300`·`GOLD_500`·`GOLD_1000`(`BONUS_BOX_DROP_TABLE`). 화면에 골드가 나오는 곳은 획득 안내(출석 "…골드를 획득했습니다!", 박스 결과 창 "300골드 x1 획득!" — 이름은 `ItemType.kor`)와 출석판 보상 표시뿐이고, `presentation`에서 `User.gold`를 읽는 곳은 없음 (2026-11-26 `presentation` 전체에서 `gold`·`coin`·"골드" 검색). 관련 이슈는 찾지 못해 안내문에 일정은 쓰지 않음 |
 | 홈 진입 때 출석 창 | `HomeViewModel.maybeShowAutomaticAttendanceDialog()` (오늘 출석 전, 복구 창 없음, 이 ViewModel에서 그날 처음일 때. 앱을 새로 열면 다시 뜰 수 있음) |
 | 화분 생성·공부 시작 버튼 | `HomeScreen.kt` "화분 생성"(화분 없을 때), "공부 시작". `NewBornTreeScreen.kt` "화분 이름", "완료" |
-| 학습 시작·종료 흐름 | 목표 창이 먼저 뜸(`StudyingUiState.isGoalInputDialogShown` 기본값 true), `StudyingGoalInputDialog.kt` 입력칸 placeholder "오늘의 학습 목표를 기록해보세요!"·버튼 "완료". 종료 `StudyingScreen.kt` "학습종료" → `StudyingGoalCheckDialog.kt` "종료" → `StudyingViewModel.onIsStudyFinishChange()` → `onFinishStudyingClick()`에서 저장 (별도 저장 버튼 없음) |
+| 학습 시작·종료 흐름 | 목표 창이 먼저 뜸(`StudyingUiState.isGoalInputDialogShown` 기본값 true), `StudyingGoalInputDialog.kt` 입력칸 placeholder "오늘의 학습 목표를 기록해보세요!"·버튼 "완료". 종료 `StudyingScreen.kt` "학습종료" → `StudyingGoalCheckDialog.kt` "종료" → `StudyingViewModel.onIsStudyFinishChange()` → `onFinishStudyingClick()`에서 저장 (별도 저장 버튼 없음). 타이머가 멈추면(일시정지 버튼, 종료 확인 창 열기 등 — `docs/PLAY_CONSOLE.md` 1절) `StudyingTimerService.pauseTimer()`가 `stopForeground(STOP_FOREGROUND_REMOVE)`로 알림을 지우고, 다시 시작하면 `startForeground`로 알림을 다시 띄움 |
 | 신고 취소 불가, 5명이면 숨김, 내 글에는 아이콘 없음 | 신고·차단은 글자 없는 아이콘(`CommunityDetailScreen.kt` `contentDescription` "신고"·"사용자 차단"). 내 게시글은 수정·삭제만(`author.id == uiState.currentUid` 분기), 내 댓글은 `!isOwner` 조건으로 신고·차단 아이콘 없음. 앱에 신고 취소 기능 없음(`CommunityReportRepository`에 `createReport`만 있음), 한 사람은 같은 대상에 한 번만 신고(`firestore.rules` `reports` 문서 ID = 신고자 uid + 대상 id), `Post.kt` `BLIND_REPORT_THRESHOLD = 5` (게시글·댓글 공통) |
 | 초기화 뒤 로그인 화면 | 경로가 여러 개라 안내문은 "창이 함께 뜰 때도 있어요"로만 씀. 프로세스가 살아 있으면 `UserRepositoryImpl.kt` 리스너 `USER_NOT_FOUND` → `MainActivity.kt` "로그인한 유저의 정보를 찾을 수 없습니다." / 새로 실행하면 `CheckAutoLoginUseCase.kt`(서버에서 문서 없음을 확인하면 로그아웃 후 로그인 화면) / 오프라인이면 캐시로 홈에 들어갔다가 연결 뒤 감지 / 다시 로그인: `ResolveUserSessionUseCase.kt`(문서 새로 만듦) → 닉네임 설정. 같은 창은 초기화가 아니어도 `USER_NOT_FOUND`로 뜰 수 있어 "안내가 없었는데 뜨면 제보"로 씀 |
 | 한 계정 한 기기 | 마지막으로 세션 토큰을 쓴 기기만 남음(로그인 `ResolveUserSessionUseCase`, 서버 응답을 받은 자동 로그인 `CheckAutoLoginUseCase`). 리스너가 도는 기기에서 `UserRepositoryImpl.kt` `DUPLICATE_LOGIN` → `MainActivity.kt` "다른 기기에서 로그인되었습니다." 어느 쪽이 남는지는 상황에 따라 달라 안내문은 "한쪽이"로만 씀 |
