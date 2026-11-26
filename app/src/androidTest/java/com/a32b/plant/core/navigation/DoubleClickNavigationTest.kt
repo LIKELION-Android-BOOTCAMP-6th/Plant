@@ -98,13 +98,17 @@ class DoubleClickNavigationTest {
         assertEquals(listOf(A, C, B), routes())
     }
 
-    /** 예측 뒤로가기를 시작했다가 진행 이벤트 없이 취소한다. NavHost가 맨 위 화면을 STARTED로 둔 채 끝나는 경우 (navigation-compose 2.9.8) */
+    /**
+     * 예측 뒤로가기를 시작했다가 진행 이벤트 없이 취소한다. NavHost가 맨 위 화면을 STARTED로 둔 채 끝나는 경우 (navigation-compose 2.9.8)
+     * 실제 제스처처럼 시작과 취소를 따로 보내고 그 사이 메인 스레드가 한 번 돌게 한다 (시작 때 NavHost가 띄우는 코루틴이 먼저 실행되도록)
+     */
     private fun startAndCancelPredictiveBack() {
         val dispatcher = composeRule.activity.onBackPressedDispatcher
         composeRule.runOnUiThread {
             dispatcher.dispatchOnBackStarted(BackEventCompat(10f, 500f, 0f, BackEventCompat.EDGE_LEFT))
-            dispatcher.dispatchOnBackCancelled()
         }
+        composeRule.waitForIdle()
+        composeRule.runOnUiThread { dispatcher.dispatchOnBackCancelled() }
         composeRule.waitForIdle()
     }
 
@@ -140,6 +144,19 @@ class DoubleClickNavigationTest {
         composeRule.onNodeWithText("safe-to-c").performClick()
 
         assertEquals(listOf(A, B), routes())
+    }
+
+    @Test
+    fun plainNavigate_otherButtonDuringExitTransition_navigates() {
+        // 위 테스트의 대조군: 같은 시점(100ms 뒤)의 클릭이 나가는 화면의 버튼에 실제로 닿는지 확인한다
+        setNavHost()
+        composeRule.mainClock.autoAdvance = false
+
+        composeRule.onNodeWithText("safe-to-b").performClick()
+        composeRule.mainClock.advanceTimeBy(100)
+        composeRule.onNodeWithText("to-c").performClick()
+
+        assertEquals(listOf(A, B, C), routes())
     }
 
     @Test
@@ -203,7 +220,7 @@ class DoubleClickNavigationTest {
         composeRule.onNodeWithText("safe-to-b").performClick()
         composeRule.waitForIdle()
         startAndCancelPredictiveBack()
-        // 라이브러리가 바뀌어 RESUMED로 돌아오면 이 상황 자체가 생기지 않으므로 건너뛴다
+        // STARTED가 재현되지 않으면(라이브러리 변경 등) 확인할 상황이 없으므로 건너뛴다 — 건너뛴 테스트 수를 함께 볼 것
         assumeTrue(topState() == Lifecycle.State.STARTED)
 
         composeRule.onNodeWithText("b-to-c").performClick()
@@ -217,7 +234,7 @@ class DoubleClickNavigationTest {
         composeRule.onNodeWithText("safe-to-b").performClick()
         composeRule.waitForIdle()
         startAndCancelPredictiveBack()
-        // 라이브러리가 바뀌어 RESUMED로 돌아오면 이 상황 자체가 생기지 않으므로 건너뛴다
+        // STARTED가 재현되지 않으면(라이브러리 변경 등) 확인할 상황이 없으므로 건너뛴다 — 건너뛴 테스트 수를 함께 볼 것
         assumeTrue(topState() == Lifecycle.State.STARTED)
 
         composeRule.onNodeWithText("safe-back").performClick()
