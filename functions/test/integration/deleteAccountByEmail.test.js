@@ -300,7 +300,7 @@ describe("deleteAccountByEmail 운영자 스크립트 (#778)", () => {
     assert.strictEqual((await auth.getUser(uid)).uid, uid);
   });
 
-  it("중간에 실패한 뒤 다시 실행하면 남은 데이터를 지우고, 끝난 뒤 다시 실행하면 계정 없음", async () => {
+  it("users 문서가 먼저 없어진 상태에서 재실행해도 남은 데이터를 지우고, 그 뒤엔 계정 없음", async () => {
     const uid = uniqueId("user");
     const other = uniqueId("other");
     const email = await createAuthUser(uid);

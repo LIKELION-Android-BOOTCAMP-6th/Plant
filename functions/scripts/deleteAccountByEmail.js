@@ -196,10 +196,17 @@ async function deleteAccountByEmail({
     if (error.code !== "auth/user-not-found") throw error;
     authRemains = false;
   }
-  if (userSnapshot.exists || authRemains) {
+  if (authRemains) {
     throw new Error(
         `삭제 후에도 남아 있음 (users 문서: ${userSnapshot.exists}, ` +
-        `Auth 계정: ${authRemains}). 같은 명령을 다시 실행하세요.`,
+        "Auth 계정: true). 같은 명령을 다시 실행하세요.",
+    );
+  }
+  if (userSnapshot.exists) {
+    // Auth가 이미 없어 다시 실행해도 이메일로 찾을 수 없다 → 절차 문서 4절 나
+    throw new Error(
+        `Auth 계정은 지워졌지만 users 문서가 남아 있음 (uid: ${account.uid}). ` +
+        "다시 실행해도 이메일로 찾을 수 없으므로 절차 문서 4절 나를 따르세요.",
     );
   }
   print(`삭제 완료: ${account.uid} (Auth 계정·users 문서 없음 확인)`);
