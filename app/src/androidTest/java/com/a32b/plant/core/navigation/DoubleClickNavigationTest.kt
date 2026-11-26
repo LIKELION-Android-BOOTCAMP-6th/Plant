@@ -181,7 +181,7 @@ class DoubleClickNavigationTest {
 
     @Test
     fun popBackStackSafely_afterTransitionEnds_popsAgain() {
-        // 연타가 아니라 전환이 끝난 뒤 다시 누르면 정상적으로 한 번 더 뒤로 간다 (항상 막는 것이 아님)
+        // 한 번 뒤로 간 뒤에도 막힌 채로 남지 않는다: 전환이 끝난 뒤 다시 들어온 화면에서 누르면 정상적으로 뒤로 간다
         setNavHost()
         openBOverC()
 
