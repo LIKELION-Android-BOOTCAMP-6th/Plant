@@ -109,7 +109,7 @@ class BlockRepositoryImpl @Inject constructor(
         is FirebaseFirestoreException -> when (e.code) {
             FirebaseFirestoreException.Code.UNAVAILABLE,
             FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
-            // 정상 사용 중에는 규칙이 막는 쓰기(자기 자신 차단 등)를 보내지 않으므로 나머지와 같은 안내
+            // 규칙 거부(탈퇴한 사용자 차단 등, #779)도 나머지와 같은 안내
             else -> AppError.Custom("${action}에 실패했어요.")
         }
         else -> AppError.Unknown()
