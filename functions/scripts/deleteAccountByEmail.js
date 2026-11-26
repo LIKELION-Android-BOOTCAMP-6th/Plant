@@ -163,7 +163,7 @@ async function deleteAccountByEmail({
 }) {
   const account = await findAccount(db, auth, email);
   if (!account) {
-    print(`계정 없음: ${email} 로 가입한 계정을 찾지 못했습니다. 아무것도 지우지 않았습니다.`);
+    print(`계정 없음: ${email}(으)로 가입한 계정을 찾지 못했습니다. 아무것도 지우지 않았습니다.`);
     return {status: "not-found", uid: undefined};
   }
 
@@ -177,7 +177,7 @@ async function deleteAccountByEmail({
 
   const answer = (await confirm(account)).trim();
   if (answer !== account.uid) {
-    print("입력한 값이 uid와 달라 취소했습니다. 아무것도 지우지 않았습니다.");
+    print("입력이 없거나 uid와 달라 취소했습니다. 아무것도 지우지 않았습니다.");
     return {status: "cancelled", uid: account.uid};
   }
 
@@ -205,21 +205,30 @@ async function deleteAccountByEmail({
 
 /**
  * 터미널에서 uid 입력을 받는다.
+ * 입력이 닫히거나(파이프 끝 등) Ctrl+C를 누르면 빈 값을 돌려준다 → 취소(종료 코드 3).
+ * (입력이 닫히는 경우는 유닛 테스트로 확인, 콘솔의 Ctrl+C·Ctrl+Z는 직접 확인하지 않음)
+ * rl.question은 입력이 닫혀도 끝나지 않아, 그대로 두면 아무 출력 없이 종료 코드 0으로 끝난다
  * @param {string} target describeTarget의 결과
  * @param {string} project
+ * @param {Object} [io] 테스트용 입출력 스트림
+ * @param {NodeJS.ReadableStream} [io.input]
+ * @param {NodeJS.WritableStream} [io.output]
  * @return {function(Object): Promise<string>}
  */
-function promptForUid(target, project) {
+function promptForUid(target, project, {
+  input = process.stdin, output = process.stdout,
+} = {}) {
   return async (account) => {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
+    const rl = readline.createInterface({input, output});
     try {
-      return await rl.question(
-          `\n[${target} / ${project}] 위 계정을 삭제합니다. 되돌릴 수 없습니다.\n` +
-          `계속하려면 uid(${account.uid})를 그대로 입력하세요: `,
-      );
+      return await new Promise((resolve, reject) => {
+        rl.once("close", () => resolve(""));
+        rl.once("SIGINT", () => rl.close());
+        rl.question(
+            `\n[${target} / ${project}] 위 계정을 삭제합니다. 되돌릴 수 없습니다.\n` +
+            `계속하려면 uid(${account.uid})를 그대로 입력하세요: `,
+        ).then(resolve, reject);
+      });
     } finally {
       rl.close();
     }
@@ -264,6 +273,7 @@ if (require.main === module) {
 module.exports = {
   parseArgs,
   describeTarget,
+  promptForUid,
   findAccount,
   deleteAccountByEmail,
 };

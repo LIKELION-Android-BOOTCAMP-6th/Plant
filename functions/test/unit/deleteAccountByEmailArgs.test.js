@@ -2,10 +2,29 @@
 // 에뮬레이터 없이 실행된다: npm --prefix functions run test:unit
 const {describe, it} = require("node:test");
 const assert = require("node:assert");
+const {PassThrough} = require("node:stream");
 const {
   describeTarget,
   parseArgs,
+  promptForUid,
 } = require("../../scripts/deleteAccountByEmail");
+
+/**
+ * promptForUid에 text를 넣고 입력을 닫은 뒤 돌려받은 값을 준다.
+ * @param {string} text 입력할 글자 (빈 문자열이면 아무것도 넣지 않고 닫음)
+ * @return {Promise<string>}
+ */
+async function answerWith(text) {
+  const input = new PassThrough();
+  const output = new PassThrough();
+  output.resume(); // 질문 문구는 읽지 않고 버린다
+  const answer = promptForUid("에뮬레이터", "demo-plant", {input, output})(
+      {uid: "user-1"},
+  );
+  if (text) input.write(text);
+  input.end();
+  return answer;
+}
 
 describe("parseArgs", () => {
   it("프로젝트·이메일을 읽고 앞뒤 공백을 지운다", () => {
@@ -66,5 +85,19 @@ describe("describeTarget", () => {
         () => describeTarget({FIREBASE_AUTH_EMULATOR_HOST: "127.0.0.1:9099"}),
         /하나만/,
     );
+  });
+});
+
+describe("promptForUid", () => {
+  it("한 줄을 입력하면 그 값을 돌려준다", async () => {
+    assert.strictEqual(await answerWith("user-1\n"), "user-1");
+  });
+
+  it("입력 없이 끝나면 빈 값을 돌려준다 (취소로 처리되어 종료 코드 0으로 끝나지 않게)", async () => {
+    assert.strictEqual(await answerWith(""), "");
+  });
+
+  it("줄바꿈 없이 입력이 끝나면 빈 값을 돌려준다 (uid가 맞아도 취소)", async () => {
+    assert.strictEqual(await answerWith("user-1"), "");
   });
 });

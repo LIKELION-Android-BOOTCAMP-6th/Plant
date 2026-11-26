@@ -305,8 +305,8 @@ describe("deleteAccountByEmail 운영자 스크립트 (#778)", () => {
     const other = uniqueId("other");
     const email = await createAuthUser(uid);
     const refs = await seedCompletedUser(uid, other);
-    // 지난 실행이 users 문서까지 지우고 Auth 계정을 지우기 전에 끊긴 상태
-    // (화분·댓글 등 앞 단계 데이터 일부도 남아 있다고 본다)
+    // users 문서만 먼저 없어지고 나머지 데이터·Auth 계정은 그대로인, 가장 불리한 상태로
+    // 재실행을 확인한다 (실제 중간 실패는 users 문서를 마지막에 지우므로 이보다 남은 것이 적다)
     await refs.userRef.delete();
 
     const retried = await run(email);

@@ -111,7 +111,7 @@ Firebase [Play 데이터 공개 안내](https://firebase.google.com/docs/android
 
 - 계정 삭제 URL: https://plant-82b09.web.app/account-deletion.html (원본 `docs/legal/account-deletion.md`, 배포 절차 `docs/LEGAL_HOSTING.md`)
 - 앱 안 경로: 마이페이지 > 계정 관리 > 회원탈퇴 → 확인 2번 → Google 계정 재확인 (코드: `AccountManageScreen.kt`)
-- 앱 없이 요청: 문의 메일 (안내 페이지 2절)
+- 앱 없이 요청: 문의 메일 (안내 페이지 2절). 운영자 처리 절차: `docs/ACCOUNT_DELETION_REQUEST.md` (#778)
 - 계정을 유지한 채 일부만 삭제: 앱에서 직접 지울 수 있는 것은 내 게시글·댓글, 좋아요·북마크(해제), 화분·학습 기록, 커뮤니티 활동 내역(선택 삭제), 차단(해제). 신고·제보 내용 속 개인정보는 메일로 요청 (안내 페이지 3절 나). 콘솔에 일부 삭제 방법을 따로 적는 칸이 있는지는 콘솔에서 확인 (미확인)
   - 코드: `CommunityDetailViewModel.deletePost`·`deleteComment`·`ToggleLikeUseCase`·`ToggleBookmarkUseCase`, `StudyPlanDetailViewModel`(`DeleteEntirePotUseCase`·`DeleteStudyLogUseCase`), `CommunityActivityViewModel.deleteSelected`, `BlockedUsersViewModel`(`UnblockUserUseCase`)
 
