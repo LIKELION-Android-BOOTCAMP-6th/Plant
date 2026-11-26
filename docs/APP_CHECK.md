@@ -46,7 +46,7 @@
 
 - 어떤 키의 SHA-256을 넣을지: 이슈 #608 기준으로 **Play 앱 서명 키**. 공식 문서는 "앱 서명 인증서"라고만 적고 앱 서명 키·업로드 키 중 어느 것인지는 적지 않는다. 등록 후 스토어 설치본 요청이 "확인됨"으로 집계되는지 지표로 확인한다
 
-- Play에서 설치하지 않은 release 빌드(로컬에서 서명해 adb로 설치한 APK 등)는 Play Integrity 검증을 통과하지 못해, 강제 후에는 서버 요청이 거부될 것으로 보인다 (#608 기준, 직접 확인하지 않음). release 빌드를 직접 설치해 확인하는 일은 강제 전에 한다
+- Play에서 설치하지 않은 release 빌드(로컬에서 서명해 adb로 설치한 APK 등)는 #608 기준으로 Play Integrity 검증을 통과하지 못하는 것으로 보고, 강제 후에는 서버 요청이 거부될 것으로 보인다 (검증 실패(`App attestation failed`)는 2026-11-25 로컬 릴리스에서 관찰했다([API_KEY_OAUTH.md](API_KEY_OAUTH.md#로컬-릴리스-설치본-만들기)). 원인이 Play에서 설치하지 않아서인지, 등록한 SHA-256과 서명 키가 달라서인지는 확인하지 않음. 강제 후 거부도 확인하지 않음). release 빌드를 직접 설치해 확인하는 일은 강제 전에 한다
 - 토큰 유효 시간(TTL)은 앱 등록 설정에서 정한다 (기본 1시간, 30분~7일). SDK가 만료 전에 알아서 새로 받으므로 매 요청마다 Play Integrity를 부르지 않는다
 
 ## 강제(enforce) 진행 순서
@@ -62,4 +62,4 @@
 ## 로컬 에뮬레이터·CI
 
 - 앱은 Firebase 에뮬레이터에 연결하지 않는다 (`useEmulator` 없음, [FIREBASE_EMULATOR.md](FIREBASE_EMULATOR.md) 참고). 앱의 App Check 설치는 에뮬레이터 테스트(`rules-test`, `functions/test`)에 영향이 없다
-- PR CI의 `Android Build Check`는 `assembleDebug`·`testDebugUnitTest`만 돌리므로 App Check 토큰이 필요 없다
+- PR CI의 `Android Build Check`는 `assembleDebug`·`testDebugUnitTest`·`assembleDebugAndroidTest`만 돌리고 앱을 실행하지 않으므로 App Check 토큰이 필요 없다
