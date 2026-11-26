@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
@@ -85,7 +86,8 @@ fun NewBornTreeScreen(navController: NavController,
             bottomBar = {
                 // 하단 버튼
                 Button(
-                    onClick = {
+                    // 저장이 끝나 화면이 닫히는 전환 중에 다시 눌러도 무시한다 (#672). 저장 중 연타는 ViewModel이 막는다
+                    onClick = dropUnlessResumed {
                         selectedTag?.let { tag ->
                             viewModel.createPot(tag, potName) { notice ->
                                 // 오프라인이면 "연결되면 자동으로 처리됩니다" 안내 후 닫기 (#640)

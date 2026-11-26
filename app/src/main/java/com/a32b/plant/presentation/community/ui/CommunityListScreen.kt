@@ -46,6 +46,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
+import androidx.lifecycle.compose.dropUnlessResumed
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -200,7 +201,7 @@ fun CommunityListScreen(
                         ) {
                             TabTopBar(title = "커뮤니티") {
                                 TextButton(
-                                    onClick = { navController.navigate(Routes.CommunityActivity) }
+                                    onClick = dropUnlessResumed { navController.navigate(Routes.CommunityActivity) }
                                 ) {
                                     Text(
                                         "내 활동",
@@ -279,7 +280,7 @@ fun CommunityListScreen(
                                                 post = post,
                                                 isLiked = post.isLiked,
                                                 isBookmarked = post.isBookmarked,
-                                                onClick = {
+                                                onClick = dropUnlessResumed {
                                                     navController.navigate(
                                                         Routes.CommunityDetail(
                                                             postId = post.postId
@@ -334,7 +335,7 @@ fun CommunityListScreen(
 
                         // 로딩 오버레이가 덮어 클릭을 막을 수 있도록 같은 Box 안에 배치
                         FloatingActionButton(
-                            onClick = { navController.navigate(Routes.CommunityPost()) },
+                            onClick = dropUnlessResumed { navController.navigate(Routes.CommunityPost()) },
                             containerColor = MaterialTheme.colorScheme.secondary,
                             shape = CircleShape,
                             modifier = Modifier

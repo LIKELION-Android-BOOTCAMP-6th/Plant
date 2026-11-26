@@ -278,14 +278,45 @@ class MyPageViewModelTest {
         }
     }
 
-    private fun createViewModel(users: FakeUserRepository): MyPageViewModel {
+    // 로그아웃 확인 연타 (#672): 토큰 쓰기를 기다리는 동안 다시 눌러도 한 번만 실행되고 이동 이벤트도 한 번만 간다
+    @Test
+    fun `logout pressed twice while clearing token runs once`() = runTest {
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        try {
+            Dispatchers.setMain(dispatcher)
+            val tokenGate = CompletableDeferred<Unit>()
+            val users = FakeUserRepository(testUser(), updateSessionTokenGate = tokenGate)
+            val auth = FakeAuthRepository()
+            val viewModel = createViewModel(users, auth)
+            val events = collectEvents(viewModel, dispatcher)
+
+            viewModel.logout()
+            viewModel.logout()   // 토큰 쓰기 대기 중 (게이트 미완료)
+            runCurrent()
+            tokenGate.complete(Unit)
+            runCurrent()
+            viewModel.logout()   // 끝난 뒤(화면 이동 전) 한 번 더
+            runCurrent()
+
+            assertEquals(listOf("uid-1" to null), users.sessionTokenUpdates)
+            assertEquals(1, auth.signOutCalls)
+            assertEquals(listOf<MyPageEvent>(MyPageEvent.NavigateToSignIn), events)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    private fun createViewModel(
+        users: FakeUserRepository,
+        auth: FakeAuthRepository = FakeAuthRepository()
+    ): MyPageViewModel {
         val notifier = NoopSessionExpiredNotifier
         // 끝나는 Flow면 ObserveDarkModeUseCase가 5초 뒤 재구독을 예약해, 테스트 종료 후 Main이 복원된 뒤 남은 지연이 실행된다.
         users.darkModeFlow = flow { awaitCancellation() }
         return MyPageViewModel(
             ensureCurrentUserUseCase = EnsureCurrentUserUseCase(users, notifier),
             getProfileImageLevelListUseCase = GetProfileImageLevelListUseCase(EnsureCurrentUserUseCase(users, notifier)),
-            signOutUseCase = SignOutUseCase(FakeAuthRepository(), users),
+            signOutUseCase = SignOutUseCase(auth, users),
             userRepository = users,
             updateProfileUseCase = UpdateProfileUseCase(users, EnsureCurrentUserUseCase(users, notifier)),
             observeDarkModeUseCase = ObserveDarkModeUseCase(users)

@@ -179,7 +179,13 @@ class MyPageViewModel @Inject constructor(
         }
     }
 
+    // 로그아웃 진행 중 — 확인 연타로 토큰 지우기·로그아웃이 두 번 실행되지 않게 한다 (#672).
+    // 실패 경로가 없고(토큰 쓰기 실패는 무시) 끝나면 로그인 화면으로 이동하므로 되돌리지 않는다
+    private var isLoggingOut = false
+
     fun logout() {
+        if (isLoggingOut) return
+        isLoggingOut = true
         viewModelScope.launch {
             signOutUseCase.invokeWithTokenClear()
             _eventChannel.send(MyPageEvent.NavigateToSignIn)

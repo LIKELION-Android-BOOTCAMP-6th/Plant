@@ -87,10 +87,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.navigation.NavController
 import kotlinx.coroutines.flow.first
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.core.navigation.popBackStackSafely
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.domain.model.Comment
@@ -284,7 +286,7 @@ fun CommunityDetailScreen(
                                             Text("다시 시도", style = MaterialTheme.typography.bodyMedium)
                                         }
                                     }
-                                    TextButton(onClick = { navController.popBackStack() }) {
+                                    TextButton(onClick = { navController.popBackStackSafely() }) {
                                         Text("돌아가기", style = MaterialTheme.typography.bodyMedium)
                                     }
                                 }
@@ -308,7 +310,7 @@ fun CommunityDetailScreen(
                                 color = MaterialTheme.colorScheme.onSecondary
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            TextButton(onClick = { navController.popBackStack() }) {
+                            TextButton(onClick = { navController.popBackStackSafely() }) {
                                 Text("돌아가기", style = MaterialTheme.typography.labelLarge)
                             }
                         }
@@ -350,7 +352,7 @@ fun CommunityDetailScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     IconButton(
-                                        onClick = { navController.popBackStack() },
+                                        onClick = { navController.popBackStackSafely() },
                                         modifier = Modifier
                                             .size(30.dp)
                                             .align(Alignment.CenterStart)
@@ -489,7 +491,7 @@ fun CommunityDetailScreen(
                                     if (currentPost.author.id == uiState.currentUid) {
                                         // 블라인드된 게시글은 수정 화면에서 원래 제목/본문이 다시 보이므로 수정 진입 차단 (삭제는 허용)
                                         if (!isPostBlind) {
-                                            IconButton(onClick = {
+                                            IconButton(onClick = dropUnlessResumed {
                                                 navController.navigate(Routes.CommunityPost(postId = currentPost.postId))
                                             }) {
                                                 Icon(

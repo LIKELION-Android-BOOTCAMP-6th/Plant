@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.a32b.plant.core.navigation.popBackStackSafely
 import com.a32b.plant.domain.type.BugCategory
 import com.a32b.plant.presentation.community.ui.PostInputField
 import com.a32b.plant.presentation.core.component.BackTopBar
@@ -60,7 +61,7 @@ fun BugReportScreen(
         topBar = {
             BackTopBar(
                 title = "버그 제보",
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
                 backEnabled = !uiState.isLoading
             )
         }

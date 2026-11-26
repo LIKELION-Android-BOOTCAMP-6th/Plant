@@ -33,8 +33,11 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.core.navigation.popBackStackSafely
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.domain.type.ActivityType
@@ -54,12 +57,17 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val list = listOf(ActivityType.POST, ActivityType.COMMENT, ActivityType.LIKE, ActivityType.BOOKMARK)
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     LaunchedEffect(Unit) {
         viewModel.event.collect { event ->
             when (event) {
                 is CommunityActivityEvent.NavigateToCommunityDetail -> {
-                    navController.navigate(Routes.CommunityDetail(event.postId))
+                    // 항목 연타로 이벤트가 두 번 와도 상세 화면은 한 번만 쌓는다 (#672).
+                    // 첫 이동으로 이 화면이 RESUMED가 아니게 되므로 두 번째 이벤트는 무시된다
+                    if (lifecycleOwner.lifecycle.currentState == Lifecycle.State.RESUMED) {
+                        navController.navigate(Routes.CommunityDetail(event.postId))
+                    }
                 }
                 is CommunityActivityEvent.ShowToast -> {
                     context.showToast(event.message)
@@ -110,7 +118,7 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                 ) {
                     BackTopBar(
                         title = "내 활동",
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStackSafely() }
                     ) {
                         if (uiState.isSelectionMode) {
                             if (uiState.selectedCount > 0) {

@@ -75,6 +75,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
@@ -249,7 +250,8 @@ fun HomeScreen(
                         levelUpProgressText = uiState.levelUpProgressText,
                         levelUpReady = uiState.levelUpReady,
                         isLoading = uiState.isLoading,
-                        onStartClick = {
+                        // 화면 이동은 이 화면이 RESUMED일 때만 — 연타·전환 중 클릭으로 같은 화면이 두 번 쌓이지 않게 한다 (#672)
+                        onStartClick = dropUnlessResumed {
                             if (!hasNoPot) {
                                 navController.navigate(
                                     Routes.Studying(
@@ -265,14 +267,14 @@ fun HomeScreen(
                         onLevelUpClick = viewModel::onLevelUpClick,
 
                         //화분 생성 이동 or 화분 변경 다이얼로그 오픈
-                        onChangeOrMakeClick = {
+                        onChangeOrMakeClick = dropUnlessResumed {
                             if (hasNoPot) {
                                 navController.navigate(Routes.NewBornTree)
                             } else {
                                 viewModel.setShowPotChangeDialog(true)
                             }
                         },
-                        onRecordClick = {
+                        onRecordClick = dropUnlessResumed {
                             if (!hasNoPot) {
                                 navController.navigate(
                                     Routes.StudyPlanDetail(
@@ -319,7 +321,7 @@ fun HomeScreen(
                     onConfirm ={
                         viewModel.confirmPotChange()
                     },
-                    onCreateNewClick = {
+                    onCreateNewClick = dropUnlessResumed {
                         viewModel.setShowPotChangeDialog(false)
                         navController.navigate(Routes.NewBornTree)
                     }
