@@ -8,6 +8,13 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
+    <!-- 광고 ID 관련 권한 제거 (#785). firebase-analytics가 끌어오는 라이브러리(play-services-measurement-*, play-services-ads-identifier)가 넣는 권한을 병합 매니페스트에서 뺀다.
+         광고가 없어 쓰지 않고, 타겟층에 13~15세·16~17세를 넣으면 Play 가족 정책(어린이·나이를 모르는 사용자의 광고 ID 전송 금지)이 적용될 수 있다.
+         AD_ID: Google Play 서비스 광고 ID / ACCESS_ADSERVICES_AD_ID: Privacy Sandbox 광고 ID API / ACCESS_ADSERVICES_ATTRIBUTION: Privacy Sandbox 광고 기여 분석 API -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove"/>
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_AD_ID" tools:node="remove"/>
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION" tools:node="remove"/>
+
     <application
         android:name=".PlantApplication"
         android:allowBackup="false"
@@ -22,6 +29,10 @@
         <meta-data
             android:name="firebase_crashlytics_collection_enabled"
             android:value="${crashlyticsCollectionEnabled}" />
+        <!-- Analytics 광고 ID 수집 끄기 (#785). 앱 인스턴스 ID·이벤트 수집은 그대로. 빌드 타입 구분 없이 항상 false -->
+        <meta-data
+            android:name="google_analytics_adid_collection_enabled"
+            android:value="false" />
 
         <activity
             android:name=".presentation.MainActivity"
