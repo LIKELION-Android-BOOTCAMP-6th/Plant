@@ -6,7 +6,8 @@
 //   node scripts/deleteAccountByEmail.js \
 //     --project <프로젝트ID> --email <주소> [--dry-run]
 // - --dry-run: 대상 계정만 보여 주고 아무것도 지우지 않는다
-// - 실제 삭제는 대상 uid를 그대로 입력해야 진행된다 (다른 값을 넣으면 취소)
+// - 실제 삭제는 대상 uid를 그대로 입력해야 진행된다
+//   (다른 값을 넣거나 입력 없이 끝나면 취소)
 // - 운영 접속: 서비스 계정 키 파일 경로를 GOOGLE_APPLICATION_CREDENTIALS에 넣고 실행한다
 // - 에뮬레이터 접속: FIRESTORE_EMULATOR_HOST와 FIREBASE_AUTH_EMULATOR_HOST를 둘 다 넣는다
 //   (하나만 넣으면 Firestore와 Auth가 서로 다른 곳을 가리키므로 실행하지 않는다)

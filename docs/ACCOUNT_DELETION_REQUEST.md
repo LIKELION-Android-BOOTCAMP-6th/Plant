@@ -16,9 +16,10 @@
 npm --prefix functions ci
 ```
 
-2. 서비스 계정 키를 받는다: Firebase 콘솔 > 프로젝트 설정 > 서비스 계정 > "새 비공개 키 생성"
-   - 받은 JSON 파일은 **레포 밖**(예: 사용자 폴더의 별도 폴더)에 둔다. 레포 안에 두거나 커밋하지 않는다 (이 파일 하나로 운영 DB 전체를 읽고 쓸 수 있다)
-   - 다 쓰고 나면 Google Cloud 콘솔 > IAM 및 관리자 > 서비스 계정 > 해당 계정 > 키 탭에서 그 키를 삭제하고 파일도 지우는 것을 권장한다 (요청이 올 때마다 새로 받는다)
+2. 서비스 계정 키를 받는다: Firebase 콘솔 > Settings > Service accounts 탭 > "Generate New Private Key" → "Generate Key" ([Admin SDK 설정](https://firebase.google.com/docs/admin/setup) 문서 기준. 한국어 화면의 메뉴 이름은 확인하지 않았다)
+   - 받은 JSON 파일은 **레포 밖**(예: 사용자 폴더의 별도 폴더)에 둔다. 레포 안에 두거나 커밋하지 않는다. 이 키로 Admin SDK가 운영 프로젝트의 Firebase 서버 API를 호출하며, 공식 문서도 서비스 계정 키는 매우 높은 보안 주의가 필요하다고 경고한다
+   - 다 쓰고 나면 Google Cloud 콘솔에서 그 키를 삭제하고 파일도 지우는 것을 권장한다 (요청이 올 때마다 새로 받는다). 키를 삭제하는 메뉴 위치(IAM 및 관리자 > 서비스 계정 > 키 탭으로 보임)는 확인하지 않았다
+   - 이 키로 운영에 접속해 스크립트를 실행해 본 적은 아직 없다 (에뮬레이터로만 확인)
 3. 연습은 에뮬레이터로 먼저 한다 (아래 7절)
 
 ## 2. 접수
@@ -41,7 +42,7 @@ npm --prefix functions ci
 - "원본 보기" 화면 이름·위치는 Gmail 화면 기준이며, 이 문서를 쓸 때 실제 요청 메일로 확인하지는 않았다 (미확인). 화면이 다르면 메일 헤더의 `Authentication-Results` 줄에서 `spf=pass`, `dkim=pass`, `dmarc=pass`를 찾는다
 - Google 계정을 잃어 그 주소로 메일을 보낼 수 없다는 요청: 다른 주소에서 온 요청은 처리하지 않는다. 먼저 [Google 계정 복구](https://accounts.google.com/signin/recovery)로 계정을 되찾은 뒤 그 주소로 다시 보내 달라고 회신한다 (5절 "계정 분실" 회신). 계정 삭제 안내 2절·처리방침 4절·6절이 이렇게 안내한다
   - 다른 확인 방법(닉네임·화분 이름·가입 시기 등)을 두지 않은 이유: 닉네임은 커뮤니티에 공개되어 있어 남이 알 수 있고, 잘못 확인하면 남의 계정을 되돌릴 수 없게 지운다. Google 계정 복구는 Google이 본인 확인을 한다
-  - 복구하지 못하면 메일로는 삭제할 수 없다. 그 계정은 아무도 로그인할 수 없으므로 데이터는 그대로 남는다
+  - 복구하지 못하면 메일로는 삭제할 수 없고, 계정과 데이터는 그대로 남는다
 
 ## 4. 실행
 
@@ -158,7 +159,7 @@ $env:FIRESTORE_EMULATOR_HOST = "127.0.0.1:8080"; $env:FIREBASE_AUTH_EMULATOR_HOS
 - 환경 변수를 둘 중 하나만 넣으면 스크립트가 실행하지 않는다 (Firestore와 Auth가 서로 다른 곳을 가리키게 되므로)
 - 끝나면 `Remove-Item Env:FIRESTORE_EMULATOR_HOST, Env:FIREBASE_AUTH_EMULATOR_HOST`로 지운다. 남아 있으면 운영 실행이 에뮬레이터로 간다 (출력의 `접속 대상`으로 확인)
 
-자동 테스트: `functions/test/integration/deleteAccountByEmail.test.js` (가입 완료·미완료·계정 없음·dry-run·입력 불일치·중간 실패 후 재실행), `functions/test/unit/deleteAccountByEmailArgs.test.js` (인자·접속 대상). `npm --prefix functions test`로 실행한다.
+자동 테스트: `functions/test/integration/deleteAccountByEmail.test.js` (가입 완료·미완료·계정 없음·dry-run·입력 불일치·중간 실패 후 재실행), `functions/test/unit/deleteAccountByEmailArgs.test.js` (인자·접속 대상·uid 입력). `npm --prefix functions test`로 실행한다.
 
 ## 8. 주의
 
