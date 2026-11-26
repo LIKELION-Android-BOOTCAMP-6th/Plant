@@ -175,9 +175,9 @@ async function deleteUserData(db, uid) {
     await db.recursiveDelete(userRef, writer);
 
     // 12. 남의 차단 목록에 있는 나 (users/{다른 uid}/blocks/{uid}, #779)
-    //     users/{uid}를 지운 뒤에 찾는다: 보안 규칙(isValidBlock)이 차단 대상의 users 문서가
-    //     있어야 차단을 허용하므로, 이 조회 뒤에는 새 차단 문서가 생기지 않는다
-    //     (그 전에 쓴 문서는 이 조회에 잡힘). 지운 문서는 다시 조회되지 않아 재시도해도 안전하다
+    //     users/{uid}를 지운 뒤에 찾는다: 그 전에 반영된 차단 문서는 이 조회에 잡히고,
+    //     users 문서가 지워진 뒤 도착한 차단 쓰기는 보안 규칙(isValidBlock)이 거부한다
+    //     지운 문서는 다시 조회되지 않아 재시도해도 안전하다
     //     blockedUid 필드가 없는 예전 형식 문서는 찾지 못한다 (비공개 테스트 전 데이터 초기화로 이행 생략)
     const blockedByOthers = await db.collectionGroup("blocks")
         .where("blockedUid", "==", uid).get();
