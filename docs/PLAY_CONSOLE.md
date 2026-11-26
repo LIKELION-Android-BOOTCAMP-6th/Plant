@@ -94,7 +94,7 @@ Plant is a study app where users grow a virtual plant with the time they spend s
 |------|------|
 | 기기에만 저장되는 정보 (처리방침 1절 아) | 서버로 보내지 않음 (미확인: 콘솔의 "수집" 정의와 맞는지) |
 | 국가 및 언어 설정 (처리방침 1절 마), Crashlytics 전송 환경 정보 중 언어·국가 설정과 통신사 국가 코드 (1절 바) | 미확인: "대략적인 위치" 등 어느 유형에 해당하는지 콘솔 도움말로 확인한 뒤 위 표로 옮긴다. 1절 바의 나머지 전송 환경 정보는 위 진단 줄에 넣었다 |
-| IP 주소 (Authentication·Cloud Functions, 처리방침 1절 사) | Play 데이터 유형 목록에 IP 주소 항목이 따로 없고, Play 도움말 FAQ는 "용도에 따라" 신고하라고 함. 앱은 이 IP로 위치를 정하지 않음(코드: 앱·`functions/`에서 IP를 읽는 곳 없음). 미확인: 보안 목적의 IP 수집을 어느 유형에 넣어야 하는지 콘솔 도움말로 확인 |
+| IP 주소 (Authentication·Cloud Functions, 처리방침 1절 사) | Play 데이터 유형 목록에 IP 주소 항목이 따로 없고, Play 도움말 FAQ는 IP 주소를 "based on their particular usage and practices" 신고하라고 함. 앱은 이 IP로 위치를 정하지 않음(코드: 앱·`functions/`에서 IP를 읽는 곳 없음). 미확인: 보안 목적의 IP 수집을 어느 유형에 넣어야 하는지 콘솔 도움말로 확인 |
 | Firebase 사용 환경 정보 (처리방침 1절 사) | Firebase 안내: 이용자·기기 식별값과 연결하지 않음. 미확인: 신고 대상인지 |
 | Google 계정의 프로필 사진 주소 (처리방침 1절 가) | 이미지가 아니라 Google이 준 사진 주소(URL)이고, 앱은 읽거나 표시하지 않음. 미확인: Play의 "사진" 유형에 해당하는지 콘솔 도움말로 확인한 뒤 해당하면 위 표로 옮긴다 |
 | 사진·정확한 위치·연락처·금융 정보 | 수집하지 않음 (프로필 사진 주소는 위 행 참고) |
@@ -110,7 +110,7 @@ Firebase [Play 데이터 공개 안내](https://firebase.google.com/docs/android
 | `firebase-appcheck-playintegrity` 19.0.2 (`firebase-appcheck` 19.0.2) | Firebase user agent, Play Integrity 무결성 토큰 | 1절 사. Play Integrity [데이터 보안 안내](https://developer.android.com/google/play/integrity/terms#data-safety)의 "항상 수집" 항목 중 앱 정보, 라이선스 상태, 기기 인증 정보를 적음. 요청 값(`requestHash`·`nonce`)은 App Check가 만든 요청 값이라 제외. 환경 정보 선택 수집 항목은 앱이 켰는지 미확인이라 적지 않음. debug 빌드의 디버그 제공자는 출시 빌드에 없음 |
 | `firebase-firestore` 26.1.1 | Firebase user agent, 요청에 사용자 ID | 1절 사(사용 환경 정보). 사용자 ID는 1절 가 |
 | `firebase-analytics` 23.0.0 | Firebase 페이지에 표 없음 → [Analytics 도움말](https://support.google.com/analytics/answer/11582702): 앱 인스턴스 ID, 광고 ID, 일부 가린 IP로 추정한 대략적인 위치, 인앱 구매, 앱 수명 주기 이벤트, (설정 시) User-ID·Google 신호 계정 정보 | 1절 마에 대략적인 위치 추가. 인앱 구매 없음(결제 SDK 없음), `setUserId` 호출 없음(코드 검색). Google 신호 사용 여부는 미확인 (Analytics 관리 화면에서 확인) |
-| `firebase-crashlytics` 20.0.4, `firebase-sessions` 3.0.4, `firebase-installations` 19.1.0 | 처리방침 1절 바에 이미 반영. `firebase-installations`는 Firebase user agent도 수집 | Firebase user agent는 1절 사(사용 환경 정보, "앱을 실행할 때부터 전송될 수 있음"). 나머지는 변경 없음 |
+| `firebase-crashlytics` 20.0.4, `firebase-sessions` 3.0.4, `firebase-installations` 19.1.0 | 처리방침 1절 바에 이미 반영. `firebase-installations`는 Firebase user agent도 수집 | Firebase user agent는 1절 사(사용 환경 정보, "로그인하기 전 앱을 실행할 때부터 전송될 수 있습니다"). 나머지는 변경 없음 |
 | `com.google.android.play:integrity` 1.4.0 (`firebase-appcheck-playintegrity`가 1.4.0, `firebase-auth`와 `recaptcha`가 1.3.0을 요청해 1.4.0으로 맞춰짐) | Firebase 안내에 별도 항목 없음. Play Integrity 데이터 보안 안내 기준 | 위 App Check 행과 같음 |
 | `com.google.android.recaptcha:recaptcha` 18.6.1 (`firebase-auth`가 끌어옴) | Firebase 안내 Authentication 절: reCAPTCHA Enterprise로 Authentication 흐름을 보호할 때 토큰 수집 | 적지 않음: 앱은 이메일·전화 인증이 없고 Google 로그인만 씀. 미확인: Firebase 콘솔 Authentication의 reCAPTCHA 설정(켜져 있으면 처리방침 1절 사·2절·9절, 계정 삭제 안내 3절 다, 개정 이력을 함께 고침) |
 | `firebase-iid` 21.1.0 (`firebase-functions`가 끌어옴) | Firebase 안내에 별도 항목 없음 | 위 `firebase-functions` 행의 인스턴스 ID 토큰 출처 |
