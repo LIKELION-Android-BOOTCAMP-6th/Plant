@@ -113,6 +113,7 @@ Plant는 학습 시간을 바탕으로 나만의 식물을 키우며 학습하�
 - **User Flow**: [USER_FLOW](docs/USER_FLOW.md)
 - **화면 명세서**: [화면명세서](docs/SCREEN_SPEC.pdf)
 - **데이터 모델**: [데이터 모델](docs/DATA_MODEL.md)
+- **비공개 테스트 테스터 안내문**: [테스터 안내문](docs/CLOSED_TEST_TESTER_GUIDE.md)
 - **기술 스택 및 선정 근거**: [Wiki](https://github.com/LIKELION-Android-BOOTCAMP-6th/Plant/wiki/기술-스택-및-선정-근거)
 
 ---
