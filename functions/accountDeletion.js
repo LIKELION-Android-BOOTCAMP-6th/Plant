@@ -5,7 +5,7 @@
 // → Firestore·Auth 인스턴스(db, auth)는 인자로 받는다 (initializeApp 하지 않음)
 // - 모든 단계는 다시 실행해도 안전하다(멱등). 중간에 실패하면 같은 함수를 다시 부르면 되고,
 //   이미 지운 문서는 조회되지 않으므로 남은 단계부터 이어서 처리된다
-// - 순서: 데이터 → 닉네임 → users/{uid} → Auth 계정
+// - 순서: 데이터 → 닉네임 → users/{uid} → 남의 차단 목록 속 나 → Auth 계정
 //   Auth 계정이 먼저 사라지면 앱이 다시 호출할 수 없으므로 반드시 마지막에 지운다
 // - Admin SDK는 보안 규칙의 영향을 받지 않는다 → #431에서 탈퇴용으로 열어둔 규칙 예외를 제거함
 const logger = require("firebase-functions/logger");
@@ -170,8 +170,18 @@ async function deleteUserData(db, uid) {
         .where("uid", "==", uid).get();
     await deleteRefs(writer, myNicknames.docs.map((doc) => doc.ref));
 
-    // 11. users/{uid}는 데이터 중 마지막 (남은 하위 컬렉션이 있으면 함께 삭제)
+    // 11. users/{uid}는 내 데이터 중 마지막 (남은 하위 컬렉션이 있으면 함께 삭제)
+    //     내가 만든 차단 목록(users/{uid}/blocks)도 여기서 지워진다
     await db.recursiveDelete(userRef, writer);
+
+    // 12. 남의 차단 목록에 있는 나 (users/{다른 uid}/blocks/{uid}, #779)
+    //     users/{uid}를 지운 뒤에 찾는다: 보안 규칙(isValidBlock)이 차단 대상의 users 문서가
+    //     있어야 차단을 허용하므로, 이 조회 뒤에는 새 차단 문서가 생기지 않는다
+    //     (그 전에 쓴 문서는 이 조회에 잡힘). 지운 문서는 다시 조회되지 않아 재시도해도 안전하다
+    //     blockedUid 필드가 없는 예전 형식 문서는 찾지 못한다 (비공개 테스트 전 데이터 초기화로 이행 생략)
+    const blockedByOthers = await db.collectionGroup("blocks")
+        .where("blockedUid", "==", uid).get();
+    await deleteRefs(writer, blockedByOthers.docs.map((doc) => doc.ref));
   } finally {
     await writer.close();
   }
