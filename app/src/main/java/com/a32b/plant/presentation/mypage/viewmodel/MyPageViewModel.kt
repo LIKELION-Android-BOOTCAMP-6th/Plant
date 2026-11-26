@@ -39,6 +39,8 @@ data class MyPageUiState(
     val isLoading: Boolean = false,
     val nicknameError: String? = null,
     val totalStudyTime: String = "0분", // 누적·요약 시간의 0 표기 (#649)
+    // 로그아웃 진행 중 — 확인 다이얼로그를 로딩 상태로 유지해 하단 탭·뒤로가기로 화면을 나가지 못하게 한다 (#791)
+    val isLoggingOut: Boolean = false,
 )
 
 sealed class MyPageEvent {
@@ -179,13 +181,13 @@ class MyPageViewModel @Inject constructor(
         }
     }
 
-    // 로그아웃 진행 중 — 확인 연타로 토큰 지우기·로그아웃이 두 번 실행되지 않게 한다 (#672).
+    // 확인 연타로 토큰 지우기·로그아웃이 두 번 실행되지 않게 한다 (#672).
+    // 하단 탭·뒤로가기로 마이페이지가 스택에서 빠지면 이 ViewModel이 정리되어, 토큰 쓰기 대기 중인 로그아웃이 취소될 수 있으므로,
+    // 화면은 isLoggingOut 동안 확인 다이얼로그를 로딩 상태로 유지해 나가는 경로를 막는다 (#791).
     // 실패 경로가 없고(토큰 쓰기 실패는 무시) 끝나면 로그인 화면으로 이동하므로 되돌리지 않는다
-    private var isLoggingOut = false
-
     fun logout() {
-        if (isLoggingOut) return
-        isLoggingOut = true
+        if (uiState.value.isLoggingOut) return
+        _uiState.update { it.copy(isLoggingOut = true) }
         viewModelScope.launch {
             signOutUseCase.invokeWithTokenClear()
             _eventChannel.send(MyPageEvent.NavigateToSignIn)
