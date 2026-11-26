@@ -11,6 +11,7 @@
 | 바뀌는 것 | 함께 확인할 곳 |
 |-----------|---------------|
 | 수집 항목·SDK 추가/설정 변경 | 처리방침(`docs/legal/privacy.md`), 이 문서 2절(데이터 보안), 4절(광고 ID) |
+| Firebase BoM·Firebase SDK 버전 변경 | Firebase [Play 데이터 공개 안내](https://firebase.google.com/docs/android/play-data-disclosure)와 release 의존성을 다시 대조해 2절 "#781 확인 내용" 표 갱신 (예: `firebase-functions`가 끌어오는 `firebase-iid`가 빠지거나 바뀌면 처리방침 1절 사의 인스턴스 ID 토큰 문장 확인) |
 | 탈퇴 처리(`functions/accountDeletion.js`의 `deleteUserData`), 계정 삭제 안내 1절이 인용하는 탈퇴 경로 문구(`BottomBar.kt` "마이페이지", `MypageScreen.kt` "계정 관리", `AccountManageScreen.kt` 회원탈퇴·확인 창 문구·버튼, `DeleteAccountViewModel.kt` 완료 안내) | 계정 삭제 안내(`docs/legal/account-deletion.md`), 처리방침 3절, 이 문서 3절 |
 | `StudyingTimerService`의 서비스 유형·서브타입, 서비스 동작(`onStartCommand`, `START_NOT_STICKY`, 알림 갱신·주기 저장 간격) | `AndroidManifest.xml`, 이 문서 1절 |
 | 학습 타이머 서비스를 시작·중지하는 곳(`StudyingViewModel`의 `sendServiceIntent` 호출, `StudyingTimerServiceController.stop()` 호출, 알림을 눌렀을 때 여는 화면) | 이 문서 1절 실제 동작 표와 영어 설명 |
@@ -74,6 +75,7 @@ Plant is a study app where users grow a virtual plant with the time they spend s
 |------------------------|-------------|------|------|
 | 개인 정보 > 이메일 주소 | Google 계정 이메일 | 계정 관리 | 처리방침 1절 가 |
 | 개인 정보 > 이름 | 닉네임 | 앱 기능 (커뮤니티 표시 이름) | 처리방침 1절 나. Play 도움말의 "이름" 정의에 nickname이 들어 있음 |
+| 개인 정보 > 이름 | Google 계정의 이름 (Firebase Auth 사용자 기록) | 계정 관리 (앱은 읽지 않음, 미확인: 콘솔의 목적 선택지 중 무엇이 맞는지) | 처리방침 1절 가. Firebase 문서 "Users in Firebase Projects": Google 같은 제공자로 가입하면 제공자가 준 정보로 이름·사진 주소를 채움. 실기기에서 로그인 정보(`FirebaseAuth.currentUser`)에 값이 있는 것을 확인함 (아래 "실기기 확인") |
 | 개인 정보 > 사용자 ID | Firebase UID | 계정 관리 | 처리방침 1절 가 |
 | 앱 활동 > 앱 상호작용 | 학습 시간, 좋아요·북마크, 출석 체크 기록, 차단 목록(차단 시각 포함), 실시간 학습 현황, 프로필 이미지 선택값(앱이 제공하는 이미지 중 고른 값이라 "사진"이 아님) | 앱 기능 | 처리방침 1절 나·다 |
 | 앱 활동 > 앱 상호작용 | Firebase Analytics가 기록하는 앱 사용 이벤트, 앱 실행 횟수·세션 시간 | 분석 | 처리방침 1절 마 |
@@ -82,21 +84,47 @@ Plant is a study app where users grow a virtual plant with the time they spend s
 | 앱 정보 및 성능 > 비정상 종료 로그·진단 | Crashlytics 오류 보고서·사용 세션 정보·전송 환경 정보(언어·국가 설정, 통신사 국가 코드 제외), 버그 제보·개선 제안의 앱 버전, 버그 제보의 기기 모델·Android 버전, Analytics의 기기 정보(OS 버전·기기 모델) | 분석 | 처리방침 1절 라·마·바 |
 | 기기 또는 기타 ID | 앱 인스턴스 ID, 광고 ID, Firebase 설치 ID, Crashlytics 설치 식별자 | 분석 | 처리방침 1절 마·바 |
 | 기기 또는 기타 ID (분류 미확인) | 로그인 세션 식별값 | 계정 관리 (다른 기기 로그인 시 이전 기기 로그아웃) | 처리방침 1절 다 |
+| 기기 또는 기타 ID (목적 미확인) | Firebase 인스턴스 ID 토큰 (함수 호출 때 `Firebase-Instance-ID-Token` 헤더) | 앱 기능 (앱 서버 코드는 쓰지 않음) | 처리방침 1절 사. 아래 "#781 확인 내용" |
+| 위치 > 대략적인 위치 | Analytics가 IP 주소 일부를 가린 값으로 추정한 위치 | 분석 | 처리방침 1절 마. Play 도움말 FAQ: IP 주소로 위치를 정하면 그 위치 유형으로 신고 |
+| 앱 정보 및 성능 > 기타 앱 성능 데이터 (분류 미확인) | 앱 무결성 확인 정보 (App Check·Play Integrity 토큰) | 사기 예방, 보안, 규정 준수 | 처리방침 1절 사 |
 
 ### 넣지 않은 항목
 
 | 항목 | 이유 |
 |------|------|
-| 기기에만 저장되는 정보 (처리방침 1절 사) | 서버로 보내지 않음 (미확인: 콘솔의 "수집" 정의와 맞는지) |
+| 기기에만 저장되는 정보 (처리방침 1절 아) | 서버로 보내지 않음 (미확인: 콘솔의 "수집" 정의와 맞는지) |
 | 국가 및 언어 설정 (처리방침 1절 마), Crashlytics 전송 환경 정보 중 언어·국가 설정과 통신사 국가 코드 (1절 바) | 미확인: "대략적인 위치" 등 어느 유형에 해당하는지 콘솔 도움말로 확인한 뒤 위 표로 옮긴다. 1절 바의 나머지 전송 환경 정보는 위 진단 줄에 넣었다 |
-| 사진·위치·연락처·금융 정보 | 수집하지 않음 (처리방침에 없음) |
+| IP 주소 (Authentication·Cloud Functions, 처리방침 1절 사) | Play 데이터 유형 목록에 IP 주소 항목이 따로 없고, Play 도움말 FAQ는 IP 주소를 "based on their particular usage and practices" 신고하라고 함. 앱은 이 IP로 위치를 정하지 않음(코드: 앱·`functions/`에서 IP를 읽는 곳 없음). 미확인: 보안 목적의 IP 수집을 어느 유형에 넣어야 하는지 콘솔 도움말로 확인 |
+| Firebase 사용 환경 정보 (처리방침 1절 사) | Firebase 안내: 이용자·기기 식별값과 연결하지 않음. 미확인: 신고 대상인지 |
+| Google 계정의 프로필 사진 주소 (처리방침 1절 가) | 이미지가 아니라 Google이 준 사진 주소(URL)이고, 앱은 읽거나 표시하지 않음. 미확인: Play의 "사진" 유형에 해당하는지 콘솔 도움말로 확인한 뒤 해당하면 위 표로 옮긴다 |
+| 사진·정확한 위치·연락처·금융 정보 | 수집하지 않음 (프로필 사진 주소는 위 행 참고) |
 
-### 처리방침에 아직 없는 것 (#781)
+### #781 확인 내용
 
-Firebase [Play 데이터 공개 안내](https://firebase.google.com/docs/android/play-data-disclosure) 기준으로, 앱이 쓰는 SDK가 아래를 수집한다. 처리방침과 위 표에 넣을지 #781에서 정하고, **데이터 보안 양식 입력 전에** 끝낸다.
+Firebase [Play 데이터 공개 안내](https://firebase.google.com/docs/android/play-data-disclosure)(2026-11-19 갱신본, 2026-11-26 원문 확인)와 앱의 release 의존성(`./gradlew :app:dependencies --configuration releaseRuntimeClasspath`, firebase-bom 34.10.0)을 대조했다.
 
-- IP 주소: Authentication(가입·인증 중 보안·남용 방지), Cloud Functions 클라이언트(함수 호출 시)
-- Play Integrity 무결성 토큰: App Check (release 빌드가 쓰는 Play Integrity 제공자 `PlayIntegrityAppCheckProviderFactory`, `app/src/release/.../AppCheckProvider.kt`)
+| SDK (release에 들어가는 것) | Firebase 안내의 수집 항목 | 처리 |
+|------|------|------|
+| `firebase-auth` 24.0.1 | IP 주소(가입·인증 보안·남용 방지), Firebase user agent, Auth SDK user agent 문자열, Firebase Android App ID, 표시 이름(개발자가 넣은 경우), 이메일, 사용자 ID, 사용 방식에 따라: 전화번호, Phone Auth용 Play Integrity 토큰, reCAPTCHA Enterprise 토큰, 제3자 로그인 제공자의 연락처 정보, Game Center ID | 전화번호·Phone Auth용 토큰·Game Center ID는 해당 없음(앱의 로그인은 `AuthRemoteDataSourceImpl`의 `signInWithCredential`(Google) 한 곳뿐). reCAPTCHA는 아래 `recaptcha` 행. 제3자 로그인 제공자(Google)의 정보는 1절 가(이메일, 이름·사진 주소). 처리방침 1절 가(이름·사진 주소. Google 로그인 때 제공자 정보로 채워지는 것은 Firebase 문서 "Users in Firebase Projects"와 아래 실기기 확인)·사(IP, Firebase user agent는 사용 환경 정보). Auth SDK user agent 문자열(FirebaseUI 사용 여부, SDK 버전, 플랫폼)은 내용이 사용 환경 정보와 겹쳐 따로 적지 않음 (미확인: 안내에 이용자와 연결하는지는 적혀 있지 않음). App ID는 앱 식별값이라 제외 |
+| `firebase-functions` 22.1.0 | 함수 이름, IP 주소, FCM 토큰("collected independently of whether the app includes or uses the FCM SDK") | 1절 사. 앱에 `firebase-messaging`은 없지만 `firebase-functions`가 `firebase-iid` 21.1.0을 직접 끌어옴. 라이브러리 바이트코드에서 `FirebaseContextProvider`가 `FirebaseInstanceIdInternal.getToken()`을 읽고, `FirebaseFunctions`가 값이 있으면 `Firebase-Instance-ID-Token` 헤더로 보내는 것을 확인. 실기기(아래 "실기기 확인")에서 토큰 저장 파일이 없던 상태에서 함수를 한 번 부른 뒤 저장 파일에 토큰 항목이 생김 → 토큰이 없을 때의 호출에는 값이 없고, 발급이 끝난 뒤의 호출부터 실림(바이트코드 기준. 헤더 자체는 네트워크로 보지 않음). 함수 이름은 개인 정보가 아니라 제외 |
+| `firebase-appcheck-playintegrity` 19.0.2 (`firebase-appcheck` 19.0.2) | Firebase user agent, Play Integrity 무결성 토큰 | 1절 사. Play Integrity [데이터 보안 안내](https://developer.android.com/google/play/integrity/terms#data-safety)의 "Always collected" 항목 중 앱 정보, 라이선스 상태, 기기 인증 정보를 적음. 요청 값(`requestHash`·`nonce`)은 App Check가 만든 요청 값이라 제외. 환경 정보 선택 수집 항목은 앱이 켰는지 미확인이라 적지 않음. debug 빌드의 디버그 제공자는 출시 빌드에 없음 |
+| `firebase-firestore` 26.1.1 | Firebase user agent, 요청에 사용자 ID | 1절 사(사용 환경 정보). 사용자 ID는 1절 가 |
+| `firebase-analytics` 23.0.0 | Firebase 페이지에 표 없음 → [Analytics 도움말](https://support.google.com/analytics/answer/11582702): 앱 인스턴스 ID, 광고 ID, 일부 가린 IP로 추정한 대략적인 위치, 인앱 구매, 앱 수명 주기 이벤트, (설정 시) User-ID·Google 신호 계정 정보 | 1절 마에 대략적인 위치 추가. 인앱 구매 없음(결제 SDK 없음), `setUserId` 호출 없음(코드 검색). Google 신호 사용 여부는 미확인 (Analytics 관리 화면에서 확인) |
+| `firebase-crashlytics` 20.0.4, `firebase-sessions` 3.0.4, `firebase-installations` 19.1.0 | 처리방침 1절 바에 이미 반영. `firebase-installations`는 Firebase user agent도 수집 | Firebase user agent는 1절 사(사용 환경 정보, "로그인하기 전 앱을 실행할 때부터 전송될 수 있습니다"). 나머지는 변경 없음 |
+| `com.google.android.play:integrity` 1.4.0 (`firebase-appcheck-playintegrity`가 1.4.0, `firebase-auth`와 `recaptcha`가 1.3.0을 요청해 1.4.0으로 맞춰짐) | Firebase 안내에 별도 항목 없음. Play Integrity 데이터 보안 안내 기준 | 위 App Check 행과 같음 |
+| `com.google.android.recaptcha:recaptcha` 18.6.1 (`firebase-auth`가 끌어옴) | Firebase 안내 Authentication 절: reCAPTCHA Enterprise로 Authentication 흐름을 보호할 때 토큰 수집 | 적지 않음: 앱은 이메일·전화 인증이 없고 Google 로그인만 씀. 미확인: Firebase 콘솔 Authentication의 reCAPTCHA 설정(켜져 있으면 처리방침 1절 사·2절·9절, 계정 삭제 안내 3절 다, 개정 이력을 함께 고침) |
+| `firebase-iid` 21.1.0 (`firebase-functions`가 끌어옴) | Firebase 안내에 별도 항목 없음 | 위 `firebase-functions` 행의 인스턴스 ID 토큰 출처 |
+| `firebase-messaging` | — | release 의존성에 없음 |
+| `firebase-appcheck-debug` | — | `debugImplementation`이라 release에 없음 |
+| `androidx.credentials:credentials`, `credentials-play-services-auth`, `googleid` (Google 로그인 화면) | Firebase 안내 대상 아님 | 제외: Google 계정 로그인 화면 자체는 Google이 처리 (이 문서 범위 밖) |
+
+Google 계정 이름·사진 주소: 앱 코드는 읽지 않음(코드: `displayName`·`photoUrl` 사용 없음). Firebase 문서 "Users in Firebase Projects"는 Google 같은 제공자로 가입하면 제공자가 준 정보로 사용자 기록의 이름·사진 주소를 채운다고 적음(문서 기준). 실기기에서 로그인 정보(`FirebaseAuth.currentUser`)에 값이 있는 것을 확인함(아래 "실기기 확인". Firebase 콘솔·Admin SDK로 서버 사용자 기록을 직접 보지는 않음). 탈퇴 시 `deleteAuthUser`(`functions/index.js`)가 `getAuth().deleteUser(uid)`로 사용자 기록을 지우므로 함께 삭제됨.
+
+실기기 확인 (2026-11-26, SM-N986N Android 13, 앱 코드는 develop `9c6921fe`와 같은 debug 빌드에 임시 로그를 넣어 확인한 뒤 코드는 되돌림, 운영 Firebase, Google 로그인 계정 1개):
+
+- `checkAttendance` 호출 직전 `FirebaseAuth.currentUser`의 `displayName`·`photoUrl`과 `providerData`(`firebase`, `google.com`)의 같은 값이 모두 비어 있지 않음 (값은 로그에 남기지 않고 있음/없음만 기록)
+- 토큰 저장 파일(`shared_prefs/com.google.android.gms.appid.xml`)이 없던 상태에서 출석 체크로 함수를 한 번 호출한 뒤 파일이 생기고 토큰 항목(`|T|<발신자 번호>|*`)이 생김 (`run-as`로 항목 이름과 항목 값 안에 `token` 키가 있는 것까지만 확인, 토큰 값은 보지 않음)
+- 미확인: 다른 계정(Google 계정에 이름·사진이 없는 경우), release 빌드. 이 두 값은 Auth 서버·`firebase-iid`가 채우는 것이라 빌드 종류와는 관계없어 보임(미확인)
 
 ### 그 밖의 질문
 
@@ -138,7 +166,8 @@ Firebase [Play 데이터 공개 안내](https://firebase.google.com/docs/android
 
 - [ ] 계정 삭제 안내 페이지가 배포되어 로그인 없이 열린다
 - [ ] 운영 Firestore에 `users/{uid}/blocks` 규칙이 배포되어 있다 (사용자 차단 설명 전에)
-- [ ] 최신 처리방침(2026년 11월 26일 시행본 이후, #781 반영본)이 배포되어 있고, 데이터 보안 답변과 항목이 같다
+- [ ] 2절의 "(분류 미확인)"·"(목적 미확인)"·"미확인" 줄(IP 주소, 앱 무결성 확인 정보, Firebase 인스턴스 ID 토큰, Firebase 사용 환경 정보, Google 계정 프로필 사진 주소, Google 계정 이름의 목적 등)을 콘솔 도움말로 확인해 정했다 (괄호 안 항목은 #781에서 정하지 못하고 넘긴 것)
+- [ ] 최신 처리방침(#781 반영본, 2026년 11월 26일 시행)이 배포되어 있고, 데이터 보안 답변과 항목이 같다
 - [ ] 포그라운드 서비스 영상 링크가 로그인 없이 열린다
 - [ ] #781(IP 주소·App Check 토큰의 처리방침 반영)이 끝났다 (데이터 보안 양식 입력 전에)
 - [ ] #778(메일로 받은 삭제 요청 처리 도구)이 준비되어 있다 (처리방침 9절이 2026년 11월 21일 시행본부터 가입을 마치지 않은 계정의 메일 삭제 요청을 안내하고, 11월 26일 시행본은 4절·6절에서 앱 없이 삭제하려는 경우까지 넓히며, 계정 삭제 URL을 등록하면 더 늘어남)
