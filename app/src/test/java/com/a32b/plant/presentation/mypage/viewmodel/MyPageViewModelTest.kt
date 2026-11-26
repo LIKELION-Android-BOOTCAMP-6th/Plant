@@ -306,6 +306,34 @@ class MyPageViewModelTest {
         }
     }
 
+    // 로그아웃 대기 중 화면 이탈 방지 (#791): 화면은 isLoggingOut 동안 확인 다이얼로그를 로딩 상태로 유지한다.
+    // 토큰 쓰기를 기다리는 동안 켜져 있어야 하고, 끝난 뒤에도 로그인 화면으로 이동할 때까지 꺼지지 않아야 한다
+    @Test
+    fun `isLoggingOut stays true from confirm until navigating to sign in`() = runTest {
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        try {
+            Dispatchers.setMain(dispatcher)
+            val tokenGate = CompletableDeferred<Unit>()
+            val users = FakeUserRepository(testUser(), updateSessionTokenGate = tokenGate)
+            val viewModel = createViewModel(users)
+            val events = collectEvents(viewModel, dispatcher)
+
+            assertEquals(false, viewModel.uiState.value.isLoggingOut)
+
+            viewModel.logout()
+            runCurrent()
+            assertEquals(true, viewModel.uiState.value.isLoggingOut)   // 토큰 쓰기 대기 중
+            assertEquals(emptyList<MyPageEvent>(), events)
+
+            tokenGate.complete(Unit)
+            runCurrent()
+            assertEquals(true, viewModel.uiState.value.isLoggingOut)   // 끝난 뒤(화면 이동 전)
+            assertEquals(listOf<MyPageEvent>(MyPageEvent.NavigateToSignIn), events)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     private fun createViewModel(
         users: FakeUserRepository,
         auth: FakeAuthRepository = FakeAuthRepository()

@@ -46,9 +46,11 @@ class BlockRemoteDataSourceImpl @Inject constructor(
     }
 
     // 문서 ID를 차단한 uid로 고정 → 다시 차단해도 문서가 늘지 않고 덮어쓴다 (보안 규칙이 허용 필드·자기 자신 차단을 검사)
+    // blockedUid 필드: 문서 ID와 같은 값. 상대가 탈퇴할 때 서버(deleteUserData)가 이 필드로 찾아 지운다 (#779, 규칙이 문서 ID와 같은지 검사)
     override fun blockUser(uid: String, blockedUid: String, nickname: String, profileImg: String): Task<Void> =
         blocks(uid).document(blockedUid).set(
             mapOf(
+                "blockedUid" to blockedUid,
                 "nickname" to nickname,
                 "profileImg" to profileImg,
                 "createdAt" to FieldValue.serverTimestamp()
