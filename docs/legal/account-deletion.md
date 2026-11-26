@@ -61,9 +61,9 @@
 | 서버 처리 기록(로그, UID와 요청을 보낸 IP 주소가 포함될 수 있음) | 기본 30일 |
 | Firebase Analytics 통계(앱 인스턴스 ID, 광고 ID 포함) | 이벤트 데이터 2개월, 사용자 단위 데이터는 마지막 앱 사용 후 14개월 |
 | Firebase Crashlytics 오류 보고서(설치 식별자 포함)·사용 세션 정보 | 오류 보고서의 스택트레이스와 관련 식별자는 90일이 지나면 삭제 절차 시작, 그 밖의 오류 보고서 정보와 사용 세션 정보는 Google(Firebase) 정책에 따름 |
-| 로그인, 서버 기능 실행, 앱 보안 확인 과정에서 Google(Firebase)과 Google Play가 수집하는 정보(IP 주소, Firebase 인스턴스 ID 토큰, 앱 무결성 확인 정보, Firebase 사용 환경 정보) | Google(Firebase)과 Google Play 정책에 따름 |
+| Firebase·Google Play 기능을 이용하는 과정에서 Google(Firebase)과 Google Play가 수집하는 정보(IP 주소, Firebase 인스턴스 ID 토큰, 앱 무결성 확인 정보, Firebase 사용 환경 정보) | Google(Firebase)과 Google Play 정책에 따름 |
 
-Firebase Analytics 통계와 Crashlytics 오류 보고서·사용 세션 정보는 계정과 연결되어 있지 않아 탈퇴할 때 따로 삭제되지 않습니다. 로그인, 서버 기능 실행, 앱 보안 확인 과정에서 수집되는 정보는 앱이 따로 저장하지 않아 탈퇴할 때 앱이 삭제하는 대상에 들어가지 않습니다.
+Firebase Analytics 통계와 Crashlytics 오류 보고서·사용 세션 정보는 계정과 연결되어 있지 않아 탈퇴할 때 따로 삭제되지 않습니다. Firebase·Google Play 기능을 이용하는 과정에서 수집되는 정보는 앱이 따로 저장하지 않아 탈퇴할 때 앱이 삭제하는 대상에 들어가지 않습니다.
 
 ## 4. 문의처
 

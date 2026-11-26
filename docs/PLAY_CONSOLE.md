@@ -11,6 +11,7 @@
 | 바뀌는 것 | 함께 확인할 곳 |
 |-----------|---------------|
 | 수집 항목·SDK 추가/설정 변경 | 처리방침(`docs/legal/privacy.md`), 이 문서 2절(데이터 보안), 4절(광고 ID) |
+| Firebase BoM·Firebase SDK 버전 변경 | Firebase [Play 데이터 공개 안내](https://firebase.google.com/docs/android/play-data-disclosure)와 release 의존성을 다시 대조해 2절 "#781 확인 내용" 표 갱신 (예: `firebase-functions`가 끌어오는 `firebase-iid`가 빠지거나 바뀌면 처리방침 1절 사의 인스턴스 ID 토큰 문장 확인) |
 | 탈퇴 처리(`functions/index.js`의 `deleteUserData`), 계정 삭제 안내 1절이 인용하는 탈퇴 경로 문구(`BottomBar.kt` "마이페이지", `MypageScreen.kt` "계정 관리", `AccountManageScreen.kt` 회원탈퇴·확인 창 문구·버튼, `DeleteAccountViewModel.kt` 완료 안내) | 계정 삭제 안내(`docs/legal/account-deletion.md`), 처리방침 3절, 이 문서 3절 |
 | `StudyingTimerService`의 서비스 유형·서브타입, 서비스 동작(`onStartCommand`, `START_NOT_STICKY`, 알림 갱신·주기 저장 간격) | `AndroidManifest.xml`, 이 문서 1절 |
 | 학습 타이머 서비스를 시작·중지하는 곳(`StudyingViewModel`의 `sendServiceIntent` 호출, `StudyingTimerServiceController.stop()` 호출, 알림을 눌렀을 때 여는 화면) | 이 문서 1절 실제 동작 표와 영어 설명 |
@@ -95,7 +96,8 @@ Plant is a study app where users grow a virtual plant with the time they spend s
 | 국가 및 언어 설정 (처리방침 1절 마), Crashlytics 전송 환경 정보 중 언어·국가 설정과 통신사 국가 코드 (1절 바) | 미확인: "대략적인 위치" 등 어느 유형에 해당하는지 콘솔 도움말로 확인한 뒤 위 표로 옮긴다. 1절 바의 나머지 전송 환경 정보는 위 진단 줄에 넣었다 |
 | IP 주소 (Authentication·Cloud Functions, 처리방침 1절 사) | Play 데이터 유형 목록에 IP 주소 항목이 따로 없고, Play 도움말 FAQ는 "용도에 따라" 신고하라고 함. 앱은 이 IP로 위치를 정하지 않음(코드: 앱·`functions/`에서 IP를 읽는 곳 없음). 미확인: 보안 목적의 IP 수집을 어느 유형에 넣어야 하는지 콘솔 도움말로 확인 |
 | Firebase 사용 환경 정보 (처리방침 1절 사) | Firebase 안내: 이용자·기기 식별값과 연결하지 않음. 미확인: 신고 대상인지 |
-| 사진·정확한 위치·연락처·금융 정보 | 수집하지 않음 (처리방침에 없음) |
+| Google 계정의 프로필 사진 주소 (처리방침 1절 가) | 이미지가 아니라 Google이 준 사진 주소(URL)이고, 앱은 읽거나 표시하지 않음. 미확인: Play의 "사진" 유형에 해당하는지 콘솔 도움말로 확인한 뒤 해당하면 위 표로 옮긴다 |
+| 사진·정확한 위치·연락처·금융 정보 | 수집하지 않음 (프로필 사진 주소는 위 행 참고) |
 
 ### #781 확인 내용
 
@@ -103,12 +105,12 @@ Firebase [Play 데이터 공개 안내](https://firebase.google.com/docs/android
 
 | SDK (release에 들어가는 것) | Firebase 안내의 수집 항목 | 처리 |
 |------|------|------|
-| `firebase-auth` 24.0.1 | IP 주소(가입·인증 보안·남용 방지), Firebase user agent, Auth SDK user agent 문자열, Firebase Android App ID, 표시 이름(제공자가 준 경우), 이메일, 사용자 ID | 처리방침 1절 가(이름·사진 주소)·사(IP·사용 환경 정보). App ID는 앱 식별값이라 제외 |
+| `firebase-auth` 24.0.1 | IP 주소(가입·인증 보안·남용 방지), Firebase user agent, Auth SDK user agent 문자열, Firebase Android App ID, 표시 이름(개발자가 넣은 경우), 이메일, 사용자 ID | 처리방침 1절 가(이름·사진 주소. Google 로그인 때 제공자 정보로 채워지는 것은 Firebase 문서 "Users in Firebase Projects"와 아래 실기기 확인)·사(IP, Firebase user agent는 사용 환경 정보). Auth SDK user agent 문자열(FirebaseUI 사용 여부, SDK 버전, 플랫폼)은 내용이 사용 환경 정보와 겹쳐 따로 적지 않음 (미확인: 안내에 이용자와 연결하는지는 적혀 있지 않음). App ID는 앱 식별값이라 제외 |
 | `firebase-functions` 22.1.0 | 함수 이름, IP 주소, FCM 토큰("FCM SDK 포함 여부와 관계없이") | 1절 사. 앱에 `firebase-messaging`은 없지만 `firebase-functions`가 `firebase-iid` 21.1.0을 직접 끌어옴. 라이브러리 바이트코드에서 `FirebaseContextProvider`가 `FirebaseInstanceIdInternal.getToken()`을 읽고, `FirebaseFunctions`가 값이 있으면 `Firebase-Instance-ID-Token` 헤더로 보내는 것을 확인. 실기기(아래 "실기기 확인")에서 다시 설치한 뒤 함수를 처음 부르자 그때 토큰이 발급·저장됨 → 첫 호출에는 값이 없을 수 있고 그 뒤 호출부터 실림(헤더 자체는 네트워크로 보지 않음). 함수 이름은 개인 정보가 아니라 제외 |
 | `firebase-appcheck-playintegrity` 19.0.2 (`firebase-appcheck` 19.0.2) | Firebase user agent, Play Integrity 무결성 토큰 | 1절 사. Play Integrity [데이터 보안 안내](https://developer.android.com/google/play/integrity/terms#data-safety)의 "항상 수집" 항목(앱 정보, 라이선스 상태, 기기 인증 정보)을 적음. 환경 정보 선택 수집 항목은 앱이 켰는지 미확인이라 적지 않음. debug 빌드의 디버그 제공자는 출시 빌드에 없음 |
 | `firebase-firestore` 26.1.1 | Firebase user agent, 요청에 사용자 ID | 1절 사(사용 환경 정보). 사용자 ID는 1절 가 |
 | `firebase-analytics` 23.0.0 | Firebase 페이지에 표 없음 → [Analytics 도움말](https://support.google.com/analytics/answer/11582702): 앱 인스턴스 ID, 광고 ID, 일부 가린 IP로 추정한 대략적인 위치, 인앱 구매, 앱 수명 주기 이벤트, (설정 시) User-ID·Google 신호 계정 정보 | 1절 마에 대략적인 위치 추가. 인앱 구매 없음(결제 SDK 없음), `setUserId` 호출 없음(코드 검색). Google 신호 사용 여부는 미확인 (Analytics 관리 화면에서 확인) |
-| `firebase-crashlytics` 20.0.4, `firebase-sessions` 3.0.4, `firebase-installations` 19.1.0 | 처리방침 1절 바에 이미 반영 | 변경 없음 |
+| `firebase-crashlytics` 20.0.4, `firebase-sessions` 3.0.4, `firebase-installations` 19.1.0 | 처리방침 1절 바에 이미 반영. `firebase-installations`는 Firebase user agent도 수집 | Firebase user agent는 1절 사(사용 환경 정보, "앱을 실행할 때부터 전송될 수 있음"). 나머지는 변경 없음 |
 
 Google 계정 이름·사진 주소: 앱 코드는 읽지 않음(코드: `displayName`·`photoUrl` 사용 없음). Firebase 문서 "Users in Firebase Projects"는 Google 같은 제공자로 가입하면 제공자가 준 정보로 사용자 기록의 이름·사진 주소를 채운다고 적음(문서 기준). 실기기에서 실제로 채워진 것을 확인함(아래 "실기기 확인"). 탈퇴 시 `deleteAuthUser`(`functions/index.js`)가 `getAuth().deleteUser(uid)`로 사용자 기록을 지우므로 함께 삭제됨.
 
@@ -158,7 +160,8 @@ Google 계정 이름·사진 주소: 앱 코드는 읽지 않음(코드: `displa
 
 - [ ] 계정 삭제 안내 페이지가 배포되어 로그인 없이 열린다
 - [ ] 운영 Firestore에 `users/{uid}/blocks` 규칙이 배포되어 있다 (사용자 차단 설명 전에)
-- [ ] 최신 처리방침(2026년 11월 26일 시행본 이후, #781 반영본)이 배포되어 있고, 데이터 보안 답변과 항목이 같다
+- [ ] 2절의 "(분류 미확인)"·"(목적 미확인)"·"미확인" 줄(IP 주소, 앱 무결성 확인 정보, Firebase 인스턴스 ID 토큰, Firebase 사용 환경 정보, Google 계정 프로필 사진 주소, Google 계정 이름의 목적 등)을 콘솔 도움말로 확인해 정했다 (괄호 안 항목은 #781에서 정하지 못하고 넘긴 것)
+- [ ] 최신 처리방침(#781 반영본, 2026년 11월 26일 시행)이 배포되어 있고, 데이터 보안 답변과 항목이 같다
 - [ ] 포그라운드 서비스 영상 링크가 로그인 없이 열린다
 - [ ] #781(IP 주소·App Check 토큰의 처리방침 반영)이 끝났다 (데이터 보안 양식 입력 전에)
 - [ ] #778(메일로 받은 삭제 요청 처리 도구)이 준비되어 있다 (처리방침 9절이 2026년 11월 21일 시행본부터 가입을 마치지 않은 계정의 메일 삭제 요청을 안내하고, 11월 26일 시행본은 4절·6절에서 앱 없이 삭제하려는 경우까지 넓히며, 계정 삭제 URL을 등록하면 더 늘어남)
