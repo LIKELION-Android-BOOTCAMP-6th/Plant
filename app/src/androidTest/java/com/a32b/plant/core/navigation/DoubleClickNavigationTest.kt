@@ -28,8 +28,10 @@ import org.junit.runner.RunWith
 /**
  * 버튼 연타 시 화면 중복 이동·두 번 뒤로가기 방지 (#672)
  *
- * 가로 slide 전환(TRANSITION_MS)을 둔 NavHost에서, mainClock.autoAdvance = false로 시간을 멈추고 같은 버튼을 두 번 누른다.
- * 대조군(일반 navigate·popBackStack)은 같은 조건에서 두 번 일어나는 것을 함께 확인해, 테스트가 연타를 실제로 재현하는지 보인다.
+ * 가로 slide 전환(TRANSITION_MS)을 둔 NavHost에서 확인한다.
+ * - 연타: mainClock.autoAdvance = false로 시간을 멈추고 같은 버튼을 두 번 누른다. 대조군(일반 navigate·popBackStack)은 같은 조건에서 두 번 일어난다
+ * - 나가는 전환 중 다른 버튼·다시 누르기: 시간을 조금 진행한 뒤 누른다 (다른 버튼은 대조군으로 클릭이 닿는지 함께 확인)
+ * - 전환이 끝난 뒤 다시 들어온 화면의 뒤로가기, 예측 뒤로가기를 진행 없이 취소한 뒤의 버튼 동작
  */
 @RunWith(AndroidJUnit4::class)
 class DoubleClickNavigationTest {
@@ -100,7 +102,7 @@ class DoubleClickNavigationTest {
 
     /**
      * 예측 뒤로가기를 시작했다가 진행 이벤트 없이 취소한다. NavHost가 맨 위 화면을 STARTED로 둔 채 끝나는 경우 (navigation-compose 2.9.8)
-     * 실제 제스처처럼 시작과 취소를 따로 보내고 그 사이 메인 스레드가 한 번 돌게 한다 (시작 때 NavHost가 띄우는 코루틴이 먼저 실행되도록)
+     * 실제 제스처처럼 시작과 취소를 따로 보내고 그 사이 메인 스레드가 한 번 돌게 한다 (시작 때 PredictiveBackHandler가 띄우는 코루틴에서 NavHost의 처리가 먼저 실행되도록)
      */
     private fun startAndCancelPredictiveBack() {
         val dispatcher = composeRule.activity.onBackPressedDispatcher
