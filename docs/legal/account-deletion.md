@@ -61,7 +61,7 @@
 |--------|----------|
 | 장애 복구용 데이터베이스 백업 | 탈퇴 후 최대 7일 |
 | 서버 처리 기록(로그, UID와 요청을 보낸 IP 주소가 포함될 수 있음) | 기본 30일 |
-| Firebase Analytics 통계(앱 인스턴스 ID 포함, 이전 버전의 앱에서 수집된 광고 ID 포함) | 이벤트 데이터 2개월, 사용자 단위 데이터는 마지막 앱 사용 후 14개월 |
+| Firebase Analytics 통계(앱 인스턴스 ID 포함, 광고 ID 수집을 중단하기 전에 배포된 앱 버전이 보낸 광고 ID 포함) | 이벤트 데이터 2개월, 사용자 단위 데이터는 마지막 앱 사용 후 14개월 |
 | Firebase Crashlytics 오류 보고서(설치 식별자 포함)·사용 세션 정보 | 오류 보고서의 스택트레이스와 관련 식별자는 90일이 지나면 삭제 절차 시작, 그 밖의 오류 보고서 정보와 사용 세션 정보는 Google(Firebase) 정책에 따름 |
 | Firebase·Google Play 기능을 이용하는 과정에서 Google(Firebase)과 Google Play가 수집하는 정보(IP 주소, Firebase 인스턴스 ID 토큰, 앱 무결성 확인 정보, Firebase 사용 환경 정보) | Google(Firebase)과 Google Play 정책에 따름 |
 

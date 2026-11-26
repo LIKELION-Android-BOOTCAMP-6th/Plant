@@ -150,7 +150,7 @@ Google 계정 이름·사진 주소: 앱 코드는 읽지 않음(코드: `displa
 |------|----------|----------|
 | 개인정보처리방침 URL | https://plant-82b09.web.app/privacy-policy.html | `LegalUrls.PRIVACY_POLICY` |
 | 광고 포함 | 아니오 | 광고 SDK 없음 (코드: `app/build.gradle.kts`) |
-| 광고 ID | 사용 안 함 | #785 결정 (#707의 "사용함, 분석"을 바꿈). Play 가족 정책상 어린이·나이를 모르는 사용자의 광고 ID를 보내면 안 되어 수집을 끔. `AndroidManifest.xml`에서 `google_analytics_adid_collection_enabled`를 `false`로 두고, `firebase-analytics`가 넣는 `com.google.android.gms.permission.AD_ID`·`android.permission.ACCESS_ADSERVICES_AD_ID`·`android.permission.ACCESS_ADSERVICES_ATTRIBUTION`을 `tools:node="remove"`로 뺌. 수집을 끈 AAB를 올린 뒤에 선언을 바꾼다 |
+| 광고 ID | 사용 안 함 | #785 결정 (#707의 "사용함, 분석"을 바꿈). 타겟층에 13~15세·16~17세를 넣으면 Play 가족 정책(어린이·나이를 모르는 사용자의 광고 ID 전송 금지)이 적용될 수 있어 수집을 끔. `AndroidManifest.xml`에서 `google_analytics_adid_collection_enabled`를 `false`로 두고, `firebase-analytics`가 넣는 `com.google.android.gms.permission.AD_ID`·`android.permission.ACCESS_ADSERVICES_AD_ID`·`android.permission.ACCESS_ADSERVICES_ATTRIBUTION`을 `tools:node="remove"`로 뺌. 수집을 끈 AAB를 올린 뒤에 선언을 바꾼다 |
 | 앱 액세스 권한 | 로그인 필요. 심사용 Google 계정을 제공 (계정 준비됨. 이메일·비밀번호는 콘솔에만 적고 레포·이슈에 남기지 않음) | 첫 로그인 때 만 14세 이상 확인·약관 동의·닉네임 설정이 필요하고, 다른 기기에서 같은 계정으로 로그인하면 이전 기기는 로그아웃된다는 점을 함께 적기 |
 | 타겟층 | 13~15세, 16~17세, 18세 이상 | 약관상 만 14세 이상만 가입 (`docs/legal/terms.md` 제4조 2항). 13~15세·16~17세 구간은 Play 가족 정책 요구사항이 적용될 수 있어 광고 ID 수집을 끔 (위 "광고 ID" 행, #785) |
 | 콘텐츠 등급 설문 | 사용자 간 소통(게시글·댓글) 있음, 사용자 제작 콘텐츠 있음, 실제 돈으로 사는 상품 없음(골드는 앱 안 보상으로만 얻음) | 결제 SDK 없음 (코드) |
@@ -168,7 +168,8 @@ Google 계정 이름·사진 주소: 앱 코드는 읽지 않음(코드: `displa
 - [ ] 계정 삭제 안내 페이지가 배포되어 로그인 없이 열린다
 - [ ] 운영 Firestore에 `users/{uid}/blocks` 규칙이 배포되어 있다 (사용자 차단 설명 전에)
 - [ ] 2절의 "(분류 미확인)"·"(목적 미확인)"·"미확인" 줄(IP 주소, 앱 무결성 확인 정보, Firebase 인스턴스 ID 토큰, Firebase 사용 환경 정보, Google 계정 프로필 사진 주소, Google 계정 이름의 목적 등)을 콘솔 도움말로 확인해 정했다 (괄호 안 항목은 #781에서 정하지 못하고 넘긴 것)
-- [ ] 최신 처리방침(#781 반영본, 2026년 11월 26일 시행)이 배포되어 있고, 데이터 보안 답변과 항목이 같다
+- [ ] 최신 처리방침(#785 반영본, 2026년 11월 27일 시행)이 배포되어 있고, 데이터 보안 답변과 항목이 같다
+- [ ] 광고 ID 선언을 "사용 안 함"으로 바꾸기 전에, 광고 ID 수집을 끈 AAB(#785)를 올렸다 (4절 "광고 ID" 행)
 - [ ] 포그라운드 서비스 영상 링크가 로그인 없이 열린다
 - [ ] #781(IP 주소·App Check 토큰의 처리방침 반영)이 끝났다 (데이터 보안 양식 입력 전에)
 - [ ] #778(메일로 받은 삭제 요청 처리 도구)이 준비되어 있다 (처리방침 9절이 2026년 11월 21일 시행본부터 가입을 마치지 않은 계정의 메일 삭제 요청을 안내하고, 11월 26일 시행본은 4절·6절에서 앱 없이 삭제하려는 경우까지 넓히며, 계정 삭제 URL을 등록하면 더 늘어남)
