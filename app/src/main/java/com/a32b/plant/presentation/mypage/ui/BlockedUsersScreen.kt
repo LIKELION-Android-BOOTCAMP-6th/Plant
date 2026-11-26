@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.a32b.plant.core.navigation.popBackStackSafely
+import com.a32b.plant.core.navigation.rememberPopBackStackSafely
 import com.a32b.plant.domain.model.BlockedUser
 import com.a32b.plant.presentation.core.component.BackTopBar
 import com.a32b.plant.presentation.core.component.ConfirmDialog
@@ -46,6 +46,7 @@ fun BlockedUsersScreen(
     navController: NavController,
     viewModel: BlockedUsersViewModel = hiltViewModel()
 ) {
+    val popBackStackSafely = rememberPopBackStackSafely(navController)
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
@@ -72,7 +73,7 @@ fun BlockedUsersScreen(
         topBar = {
             BackTopBar(
                 title = "차단 목록",
-                onBack = { navController.popBackStackSafely() }
+                onBack = { popBackStackSafely() }
             )
         },
         containerColor = MaterialTheme.colorScheme.background

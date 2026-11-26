@@ -30,7 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
-import com.a32b.plant.core.navigation.popBackStackSafely
+import com.a32b.plant.core.navigation.rememberPopBackStackSafely
 import com.a32b.plant.presentation.core.component.BackTopBar
 import com.a32b.plant.presentation.core.component.ConfirmDialog
 import com.a32b.plant.presentation.core.component.LoadingDialog
@@ -49,6 +49,7 @@ fun AccountManageScreen(
     navController: NavController,
     deleteViewModel: DeleteAccountViewModel = hiltViewModel()
 ) {
+    val popBackStackSafely = rememberPopBackStackSafely(navController)
     val deleteUiState by deleteViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -149,7 +150,7 @@ fun AccountManageScreen(
         topBar = {
             BackTopBar(
                 title = "계정 관리",
-                onBack = { navController.popBackStackSafely() },
+                onBack = { popBackStackSafely() },
                 backEnabled = !deleteUiState.isLoading
             )
         }

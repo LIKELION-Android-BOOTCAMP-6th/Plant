@@ -50,7 +50,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.extension.isCompletedAt
-import com.a32b.plant.core.navigation.popBackStackSafely
+import com.a32b.plant.core.navigation.rememberPopBackStackSafely
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.StudyReward
 import com.a32b.plant.presentation.studying.viewmodel.StudyRewardUi
@@ -68,6 +68,7 @@ import com.a32b.plant.presentation.studying.viewmodel.StudyResultViewModel
 
 @Composable
 fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewModel = hiltViewModel()) {
+    val popBackStackSafely = rememberPopBackStackSafely(navController)
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val capture = captureBitmap {
@@ -93,7 +94,7 @@ fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewMo
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { navController.popBackStackSafely() }) {
+                        IconButton(onClick = { popBackStackSafely() }) {
                             Image(painter = painterResource(R.drawable.ic_study_result_close),
                                 contentDescription = "닫기",
                                 modifier = Modifier.size(24.dp))

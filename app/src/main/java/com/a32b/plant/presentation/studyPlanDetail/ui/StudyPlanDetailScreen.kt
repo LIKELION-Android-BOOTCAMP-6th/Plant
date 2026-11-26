@@ -15,12 +15,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.dropUnlessResumed
+import androidx.lifecycle.compose.dropUnlessStarted
 import androidx.navigation.NavController
 import com.a32b.plant.presentation.studyPlanDetail.viewmodel.StudyPlanDetailEvent
 import com.a32b.plant.presentation.studyPlanDetail.viewmodel.StudyPlanDetailViewModel
 import com.a32b.plant.R
-import com.a32b.plant.core.navigation.popBackStackSafely
+import com.a32b.plant.core.navigation.rememberPopBackStackSafely
 import com.a32b.plant.domain.model.StudyLog
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.platform.LocalContext
@@ -45,6 +45,7 @@ fun StudyPlanDetailScreen(
     navController: NavController,
     viewModel: StudyPlanDetailViewModel = hiltViewModel()
 ) {
+    val popBackStackSafely = rememberPopBackStackSafely(navController)
     val potInfo by viewModel.potDetail.collectAsState()
     val logs by viewModel.studyLogs.collectAsState()
 
@@ -116,7 +117,7 @@ fun StudyPlanDetailScreen(
                         color = MaterialTheme.colorScheme.onSecondary
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    TextButton(onClick = { navController.popBackStackSafely() }) {
+                    TextButton(onClick = { popBackStackSafely() }) {
                         Text("돌아가기", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
@@ -131,7 +132,7 @@ fun StudyPlanDetailScreen(
                     // 공유 모드에서는 뒤로가기 자리가 X(공유 취소)로 바뀐다
                     onBack = {
                         if(isShareMode) viewModel.setShareMode(false)
-                        else navController.popBackStackSafely()
+                        else popBackStackSafely()
                     },
                     backIcon = painterResource(
                         id = if(isShareMode) R.drawable.ic_study_result_close
@@ -150,8 +151,8 @@ fun StudyPlanDetailScreen(
                                 )
                             }
                         }
-                        // 확인(글쓰기 화면 이동) 연타로 글쓰기 화면이 두 번 쌓이지 않도록 RESUMED일 때만 처리 (#672)
-                        IconButton(onClick = dropUnlessResumed { if (!isShareMode) {
+                        // 글쓰기 화면으로 이동해 이 화면이 나가는 중에 누른 공유·확인 클릭은 무시한다 (#672)
+                        IconButton(onClick = dropUnlessStarted { if (!isShareMode) {
                             viewModel.setShareMode(true)
                         } else {
                             // 2. 이미 공유 모드라면 데이터 전송(화면 이동) 수행

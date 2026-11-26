@@ -37,7 +37,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
 import com.a32b.plant.core.navigation.Routes
-import com.a32b.plant.core.navigation.popBackStackSafely
+import com.a32b.plant.core.navigation.rememberPopBackStackSafely
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.domain.model.CommunityActivity
 import com.a32b.plant.domain.type.ActivityType
@@ -53,6 +53,7 @@ import com.a32b.plant.presentation.core.extension.showToast
 
 @Composable
 fun CommunityActivityScreen(navController: NavController, viewModel: CommunityActivityViewModel = hiltViewModel()) {
+    val popBackStackSafely = rememberPopBackStackSafely(navController)
 
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
@@ -64,8 +65,8 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
             when (event) {
                 is CommunityActivityEvent.NavigateToCommunityDetail -> {
                     // 항목 연타로 이벤트가 두 번 와도 상세 화면은 한 번만 쌓는다 (#672).
-                    // 첫 이동으로 이 화면이 RESUMED가 아니게 되므로 두 번째 이벤트는 무시된다
-                    if (lifecycleOwner.lifecycle.currentState == Lifecycle.State.RESUMED) {
+                    // 첫 이동으로 이 화면이 CREATED가 되므로 두 번째 이벤트는 무시된다 (dropUnlessStarted와 같은 기준)
+                    if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
                         navController.navigate(Routes.CommunityDetail(event.postId))
                     }
                 }
@@ -118,7 +119,7 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                 ) {
                     BackTopBar(
                         title = "내 활동",
-                        onBack = { navController.popBackStackSafely() }
+                        onBack = { popBackStackSafely() }
                     ) {
                         if (uiState.isSelectionMode) {
                             if (uiState.selectedCount > 0) {

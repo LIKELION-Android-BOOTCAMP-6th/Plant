@@ -63,7 +63,6 @@ class NewBornTreeViewModel @Inject constructor(private val potRepository: PotRep
             _errorMessage.value = "사용자 정보가 없습니다. 다시 로그인해주세요."
             return
         }
-        // launch 전에 켜서, 코루틴이 시작되기 전에 들어온 호출도 위 확인에 걸리게 한다
         _isUploading.value = true
         viewModelScope.launch {
             // 이름 변경과 같은 규칙으로 앞뒤 공백을 지운 뒤 저장 (#563)

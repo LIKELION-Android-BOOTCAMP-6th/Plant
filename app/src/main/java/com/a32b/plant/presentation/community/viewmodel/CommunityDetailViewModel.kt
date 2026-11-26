@@ -479,8 +479,8 @@ class CommunityDetailViewModel @Inject constructor(
                 // NonCancellable: 응답 전에 화면을 나가도(느림 안내를 보고 뒤로가기) 삭제 성공 시 목록에 알리기 위함 (#712)
                 // 알림은 블록 안에 둔다. NonCancellable은 dispatcher를 바꾸지 않아, 블록 안에 끝나지 않은 자식 코루틴이 없으면
                 // withContext는 끝날 때 바깥 취소를 확인하지 않고 이어지지만(블록 밖 코드도 이탈 후 실행됨) 이 동작에 기대지 않기 위함.
-                // 이탈 후 블록 밖에서는 Toast가 취소된 viewModelScope의 launch라 나가지 않고,
-                // 화면 이동 이벤트는 받을 화면이 없어 아무 일도 일어나지 않는다
+                // 이탈해 ViewModel이 정리된 뒤에는 블록 밖의 Toast가 취소된 viewModelScope의 launch라 나가지 않는다.
+                // 화면 이동 이벤트(NavigateBack)는 화면이 맨 위일 때만 pop하므로, 이미 뒤로가기로 나갔으면 무시된다 (#672)
                 withContext(NonCancellable) {
                     withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
                         repository.deletePost(postId, _post.value?.activityId ?: "")
