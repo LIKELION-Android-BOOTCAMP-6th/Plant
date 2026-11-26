@@ -1,6 +1,6 @@
 # Android API 키 앱 제한과 OAuth 동의 화면 (#664)
 
-> `google-services.json`에 들어 있는 Android API 키에 **앱 제한(패키지명 + SHA-1)** 을 건다. 등록하지 않은 서명의 빌드에서 Firebase Installations 요청이 `403`으로 거부되는 것을 확인했다 (아래 "확인 결과"의 반대 확인. 키 제한 때문으로 본다. 다른 Firebase 요청은 미확인). 앱 밖의 스크립트까지 막는지는 확인하지 않았다 (미확인).
+> `google-services.json`에 들어 있는 Android API 키에 **앱 제한(패키지명 + SHA-1)** 을 건다. 등록하지 않은 서명의 빌드에서 Firebase Installations 요청이 `403 PERMISSION_DENIED`로 거부되는 것을 확인했다 (아래 "확인 결과"의 반대 확인. 키 제한 때문으로 본다. 다른 Firebase 요청은 미확인). 앱 밖의 스크립트까지 막는지는 확인하지 않았다 (미확인).
 > 키 자체는 비밀이 아니다. Firebase 문서도 Firebase용 API 키는 코드나 설정 파일에 넣어도 된다고 한다. 실제 보호는 보안 규칙이 맡고, App Check([APP_CHECK.md](APP_CHECK.md))는 강제를 켠 뒤부터 Functions·Firestore 요청을 함께 막는다 (2026-11-26 기준 강제는 꺼져 있음, #608). 앱 제한은 콘솔 설정만으로 거는 추가 방어다.
 > Google 로그인 동의 화면(Google 인증 플랫폼)이 팀원이 아닌 계정도 로그인할 수 있는 상태인지도 함께 점검한다.
 
@@ -51,7 +51,7 @@ API 키 앱 제한에는 **Firebase 프로젝트 설정에 등록된 SHA-1을 �
 | 등록되지 않은 SHA-1로 서명한 빌드 | 아래 "확인 결과"의 반대 확인 | 그 빌드만 실패. 키 제한에 없으면 Firebase Installations 요청이 `403 PERMISSION_DENIED`를 받았다 (다른 Firebase 요청은 미확인). 그 SHA-1의 Android OAuth 클라이언트도 없으면 Google 로그인은 Firebase 로그인 요청 전 단계에서 `UNREGISTERED_ON_API_CONSOLE`로 실패했다 (반대 확인은 Firebase·키 제한 둘 다 없는 경우만 봤다). Firebase와 키 제한에 SHA-1을 추가하면 해결될 것으로 보인다 |
 
 - 서명이 다른 빌드는 같은 기기에 덮어 설치할 수 없다. 빌드를 바꿀 때마다 앱을 지우고 설치한다 (기기의 로그인 상태·로컬 데이터가 지워진다)
-- 로그인은 이미 로그인된 상태가 아니라 **로그아웃 → 로그인**으로 확인한다. 쓰기는 서버에 붙지 않으면 실패하는 동작(예: 게시글 좋아요, 트랜잭션)으로 확인한다. 이건 앱이 정상인지 보는 확인이다. Firestore 요청에는 이 키가 실리지 않으므로(firebase-firestore 26.1.1 소스에 API 키를 붙이는 코드가 없음), 키 제한이 걸렸는지는 로그인과 Logcat의 Firebase Installations 오류(`403`) 여부로 본다
+- 로그인은 이미 로그인된 상태가 아니라 **로그아웃 → 로그인**으로 확인한다. 쓰기는 서버에 붙지 않으면 실패하는 동작(예: 게시글 좋아요, 트랜잭션)으로 확인한다. 이건 앱이 정상인지 보는 확인이다. Firestore 요청에는 이 키가 실리지 않으므로(firebase-firestore 26.1.1 소스에 API 키를 붙이는 코드가 없음), 키 제한에 막혔는지는 Logcat의 Firebase Installations `403 PERMISSION_DENIED`로 본다 (App Check의 `403 ... App attestation failed`와는 다른 오류다). 로그인 실패는 키가 아니라 OAuth 클라이언트 문제일 수도 있다 (위 표의 마지막 행)
 - 설치본의 서명은 `apksigner verify --print-certs <apk>`의 `certificate SHA-1 digest`로 확인할 수 있다
 
 ### 로컬 릴리스 설치본 만들기
@@ -62,7 +62,7 @@ API 키 앱 제한에는 **Firebase 프로젝트 설정에 등록된 SHA-1을 �
 2. `./gradlew :app:assembleRelease` → `app/build/outputs/apk/release/app-release.apk` (이름에 `-unsigned`가 붙으면 서명이 빠진 것. Gradle 출력의 `릴리스 서명 설정이 불완전해 release 서명을 생략합니다. 확인할 항목: …` 경고에 빠진 값이나 `RELEASE_STORE_FILE(파일 없음)`이 나온다. 네 값이 하나도 읽히지 않으면(키 이름 오타 등) 경고 없이 `-unsigned`만 붙는다)
 3. 기기에서 앱을 지운 뒤 `adb install app/build/outputs/apk/release/app-release.apk`
 
-- 이 설치본은 Play Integrity를 통과하지 못했다. Play에서 설치한 앱이 아니기 때문으로 보인다. 2026-11-25 확인 때 Logcat에 `Error getting App Check token; using placeholder token instead. ... 403 body: App attestation failed.`가 나왔다. App Check 강제가 꺼져 있어 동작에는 영향이 없었지만, **강제가 켜지면 이 설치본은 서버 요청이 거부될 것**으로 보인다 ([APP_CHECK.md](APP_CHECK.md#콘솔play-console-설정-처음-한-번)). 키 제한을 다시 확인할 일이 있으면 강제 전에 하거나, 실패 원인이 키 제한인지 App Check인지 Logcat으로 나눠 본다
+- 이 설치본은 Play Integrity를 통과하지 못했다. Play에서 설치한 앱이 아니기 때문이거나, App Check에는 #608 기준으로 Play 앱 서명 키의 SHA-256을 등록하므로 업로드 키로 서명한 이 설치본과 맞지 않기 때문으로 보인다 (어느 쪽인지 미확인). 2026-11-25 확인 때 Logcat에 `Error getting App Check token; using placeholder token instead. ... 403 body: App attestation failed.`가 나왔다. App Check 강제가 꺼져 있어 동작에는 영향이 없었지만, **강제가 켜지면 이 설치본은 서버 요청이 거부될 것**으로 보인다 ([APP_CHECK.md](APP_CHECK.md#콘솔play-console-설정-처음-한-번)). 키 제한을 다시 확인할 일이 있으면 강제 전에 하거나, 실패 원인이 키 제한인지 App Check인지 Logcat으로 나눠 본다
 
 ### 확인 결과
 
@@ -93,7 +93,7 @@ API 키 앱 제한에는 **Firebase 프로젝트 설정에 등록된 SHA-1을 �
 
   Cloud Datastore API, Cloud Firestore API, Cloud Logging API, Cloud SQL Admin API, Cloud Storage for Firebase API, FCM Registration API, Firebase AI Logic API, Firebase App Check API, Firebase App Distribution API, Firebase App Hosting API, Firebase App Testers API, Firebase Hosting API, Firebase In-App Messaging API, Firebase Installations API, Firebase Management API, Firebase ML API, Firebase Phone Number Verification API, Firebase Realtime Database Management API, Firebase Remote Config API, Firebase Remote Config Realtime API, Firebase Rules API, Firebase SQL Connect API, Identity Toolkit API, ML Kit API, Token Service API
 
-- 이 상태로 등록된 세 빌드에서 이 키를 쓰는 Firebase Installations 요청이 거부되지 않았고(`403` 로그 없음) 로그인도 됐다 (위 "확인 결과"). Firestore와 Crashlytics 전송은 이 키를 쓰지 않으므로(SDK 소스 기준) API 제한의 근거로 보지 않는다. Analytics와 Callable 함수는 확인하지 않았다 (미확인)
+- 이 상태로 등록된 세 빌드에서 이 키를 쓰는 Firebase Installations 요청이 거부되지 않았고(`PERMISSION_DENIED` 로그 없음) 로그인도 됐다 (위 "확인 결과"). Firestore와 Crashlytics 전송은 이 키를 쓰지 않으므로(SDK 소스 기준) API 제한의 근거로 보지 않는다. Analytics와 Callable 함수는 확인하지 않았다 (미확인)
 - 목록에는 이 앱이 쓰지 않는 API(예: Cloud SQL Admin, Firebase AI Logic, Phone Number Verification)도 있다. 줄이지 않은 이유:
   - 등록하지 않은 서명의 빌드에서 Installations 요청이 거부됐고(반대 확인, 다른 요청은 미확인), 이 키로 할 수 있는 일은 보안 규칙이 다시 막고 App Check 강제(#608)를 켜면 그것도 막으므로, 목록을 줄여서 얻는 방어가 작다고 판단했다
   - Firebase 문서는 Firebase용 키에서 **Firebase에 필요한 API를 빼지 않도록 조심하라**고 한다. 지표만 보고 줄이면 드물게 쓰는 기능이 조용히 깨질 수 있다
@@ -132,7 +132,7 @@ Cloud 콘솔 → API 및 서비스 → **OAuth 동의 화면**을 누르면 Goog
 
 ## 새 팀원·새 PC가 생기면
 
-debug SHA-1은 PC마다 다르다. 아래 2·3번 두 곳에 추가해야 그 PC의 디버그 빌드가 동작한다. 4번은 기기마다 하는 작업으로, App Check 강제가 꺼져 있는 동안은 없어도 동작하지만 미리 해 둔다 ([APP_CHECK.md](APP_CHECK.md#디버그-토큰-등록-팀원마다-기기마다)).
+debug SHA-1은 PC마다 다르다. 아래 2·3번 두 곳 모두에 있어야 한다 (둘 다 없으면 실패하는 것은 반대 확인으로 봤고, 추가한 뒤 풀리는지는 확인하지 않았다). 4번은 기기마다 하는 작업으로, App Check 강제가 꺼져 있는 동안은 없어도 동작하지만 미리 해 둔다 ([APP_CHECK.md](APP_CHECK.md#디버그-토큰-등록-팀원마다-기기마다)).
 Firebase SHA-1과 Cloud 키는 프로젝트 설정을 바꿀 권한이 있는 사람이 등록한다.
 
 1. `./gradlew :app:signingReport` → `Variant: debug`의 `SHA1` 확인
@@ -142,10 +142,11 @@ Firebase SHA-1과 Cloud 키는 프로젝트 설정을 바꿀 권한이 있는 �
    - 앱이 로그인에 쓰는 값은 `google-services.json`의 웹 클라이언트 ID(`default_web_client_id`)이고, SHA-1 목록은 앱에 들어가지 않는다. 그래서 새 `google-services.json`을 받아 팀원 PC와 CI 시크릿 `GOOGLE_SERVICES_JSON`을 바꾸는 것은 필수가 아니다 (파일을 콘솔과 맞춰 두고 싶을 때만)
 3. Cloud 콘솔 → 사용자 인증 정보 → Android 키 → 애플리케이션 제한사항에 `com.a32b.plant` + 같은 SHA-1 추가 (**빠뜨리면 그 PC 디버그 빌드만 키가 막힌다**)
 4. App Check 디버그 토큰 등록 ([APP_CHECK.md](APP_CHECK.md#디버그-토큰-등록-팀원마다-기기마다)) — 이건 SHA-1이 아니라 기기마다 한다
+5. 그 PC의 디버그 빌드에서 **로그아웃 → 로그인**, 게시글 좋아요 → 취소로 확인하고, Logcat에 Firebase Installations `403 PERMISSION_DENIED`가 없는지 본다 (위 "확인할 것"과 같은 방법. 좋아요는 Firestore 요청이라 키 제한을 빠뜨린 것은 Logcat으로 본다)
 
 같은 PC라도 SHA-1이 바뀌는 경우가 있다. `~/.android/debug.keystore`가 새로 만들어지면(폴더를 지움, 새 OS 계정 등) 위 절차를 다시 한다. Play 앱 서명 키를 업그레이드해 새 SHA-1이 생겨도 Firebase와 키 제한에 함께 넣는다.
 
-Play **내부 앱 공유**(Internal app sharing)를 쓰게 되면, Play 문서 기준으로 그 설치본은 업로드 키나 앱 서명 키가 아니라 Google이 만든 내부 앱 공유 키로 다시 서명된다 (<https://support.google.com/googleplay/android-developer/answer/9844679>). 이 키의 SHA-1은 위 7개에 없으므로, 쓰기 전에 Play Console의 내부 앱 공유 화면의 "Internal test certificate"(내부 테스트 인증서) 항목에서 지문을 확인해 Firebase와 키 제한에 넣어야 할 것으로 보인다 (미확인. 지금은 내부 앱 공유를 쓰지 않는다).
+Play **내부 앱 공유**(Internal app sharing)를 쓰게 되면, Play 문서 기준으로 그 설치본은 업로드 키나 앱 서명 키가 아니라 Google이 만든 내부 앱 공유 키로 다시 서명된다 (<https://support.google.com/googleplay/android-developer/answer/9844679>). 이 키의 SHA-1은 위 7개에 없으므로, 쓰기 전에 Play Console의 내부 앱 공유 화면의 "Internal test certificate"(내부 테스트 인증서) 항목에서 지문을 확인해 Firebase와 키 제한에 넣어야 할 것으로 보인다 (미확인. 이번에는 내부 앱 공유 설치본을 확인하지 않았다).
 
 팀원이 빠지면 Firebase SHA-1, 키 제한 SHA-1, 그 팀원의 App Check 디버그 토큰을 지운다. Google 인증 플랫폼 → 클라이언트에 그 SHA-1의 Android 클라이언트가 남아 있으면 #782와 같은 방법으로 정리한다.
 
