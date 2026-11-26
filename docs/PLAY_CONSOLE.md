@@ -106,7 +106,7 @@ Firebase [Play 데이터 공개 안내](https://firebase.google.com/docs/android
 | SDK (release에 들어가는 것) | Firebase 안내의 수집 항목 | 처리 |
 |------|------|------|
 | `firebase-auth` 24.0.1 | IP 주소(가입·인증 보안·남용 방지), Firebase user agent, Auth SDK user agent 문자열, Firebase Android App ID, 표시 이름(개발자가 넣은 경우), 이메일, 사용자 ID | 처리방침 1절 가(이름·사진 주소. Google 로그인 때 제공자 정보로 채워지는 것은 Firebase 문서 "Users in Firebase Projects"와 아래 실기기 확인)·사(IP, Firebase user agent는 사용 환경 정보). Auth SDK user agent 문자열(FirebaseUI 사용 여부, SDK 버전, 플랫폼)은 내용이 사용 환경 정보와 겹쳐 따로 적지 않음 (미확인: 안내에 이용자와 연결하는지는 적혀 있지 않음). App ID는 앱 식별값이라 제외 |
-| `firebase-functions` 22.1.0 | 함수 이름, IP 주소, FCM 토큰("FCM SDK 포함 여부와 관계없이") | 1절 사. 앱에 `firebase-messaging`은 없지만 `firebase-functions`가 `firebase-iid` 21.1.0을 직접 끌어옴. 라이브러리 바이트코드에서 `FirebaseContextProvider`가 `FirebaseInstanceIdInternal.getToken()`을 읽고, `FirebaseFunctions`가 값이 있으면 `Firebase-Instance-ID-Token` 헤더로 보내는 것을 확인. 실기기(아래 "실기기 확인")에서 다시 설치한 뒤 함수를 처음 부르자 그때 토큰이 발급·저장됨 → 첫 호출에는 값이 없을 수 있고 그 뒤 호출부터 실림(헤더 자체는 네트워크로 보지 않음). 함수 이름은 개인 정보가 아니라 제외 |
+| `firebase-functions` 22.1.0 | 함수 이름, IP 주소, FCM 토큰("FCM SDK 포함 여부와 관계없이") | 1절 사. 앱에 `firebase-messaging`은 없지만 `firebase-functions`가 `firebase-iid` 21.1.0을 직접 끌어옴. 라이브러리 바이트코드에서 `FirebaseContextProvider`가 `FirebaseInstanceIdInternal.getToken()`을 읽고, `FirebaseFunctions`가 값이 있으면 `Firebase-Instance-ID-Token` 헤더로 보내는 것을 확인. 실기기(아래 "실기기 확인")에서 토큰 저장 파일이 없던 상태에서 함수를 한 번 부른 뒤 토큰이 발급·저장됨 → 토큰이 없을 때의 호출에는 값이 없고, 발급이 끝난 뒤의 호출부터 실림(헤더 자체는 네트워크로 보지 않음). 함수 이름은 개인 정보가 아니라 제외 |
 | `firebase-appcheck-playintegrity` 19.0.2 (`firebase-appcheck` 19.0.2) | Firebase user agent, Play Integrity 무결성 토큰 | 1절 사. Play Integrity [데이터 보안 안내](https://developer.android.com/google/play/integrity/terms#data-safety)의 "항상 수집" 항목(앱 정보, 라이선스 상태, 기기 인증 정보)을 적음. 환경 정보 선택 수집 항목은 앱이 켰는지 미확인이라 적지 않음. debug 빌드의 디버그 제공자는 출시 빌드에 없음 |
 | `firebase-firestore` 26.1.1 | Firebase user agent, 요청에 사용자 ID | 1절 사(사용 환경 정보). 사용자 ID는 1절 가 |
 | `firebase-analytics` 23.0.0 | Firebase 페이지에 표 없음 → [Analytics 도움말](https://support.google.com/analytics/answer/11582702): 앱 인스턴스 ID, 광고 ID, 일부 가린 IP로 추정한 대략적인 위치, 인앱 구매, 앱 수명 주기 이벤트, (설정 시) User-ID·Google 신호 계정 정보 | 1절 마에 대략적인 위치 추가. 인앱 구매 없음(결제 SDK 없음), `setUserId` 호출 없음(코드 검색). Google 신호 사용 여부는 미확인 (Analytics 관리 화면에서 확인) |
@@ -117,7 +117,7 @@ Google 계정 이름·사진 주소: 앱 코드는 읽지 않음(코드: `displa
 실기기 확인 (2026-11-26, SM-N986N Android 13, 앱 코드는 develop `9c6921fe`와 같은 debug 빌드에 임시 로그를 넣어 확인한 뒤 코드는 되돌림, 운영 Firebase, Google 로그인 계정 1개):
 
 - `checkAttendance` 호출 직전 `FirebaseAuth.currentUser`의 `displayName`·`photoUrl`과 `providerData`(`firebase`, `google.com`)의 같은 값이 모두 비어 있지 않음 (값은 로그에 남기지 않고 있음/없음만 기록)
-- 다시 설치한 직후에는 `shared_prefs/com.google.android.gms.appid.xml`이 없었고, 출석 체크로 함수를 한 번 호출한 뒤 생겨 `|T|<발신자 번호>|*` 항목에 토큰이 저장됨 (`run-as`로 항목 이름만 확인)
+- 토큰 저장 파일(`shared_prefs/com.google.android.gms.appid.xml`)이 없던 상태에서 출석 체크로 함수를 한 번 호출한 뒤 파일이 생겨 `|T|<발신자 번호>|*` 항목에 토큰이 저장됨 (`run-as`로 항목 이름만 확인)
 - 미확인: 다른 계정(Google 계정에 이름·사진이 없는 경우), release 빌드. 이 두 값은 Auth 서버·`firebase-iid`가 채우는 것이라 빌드 종류와는 관계없어 보임(미확인)
 
 ### 그 밖의 질문
