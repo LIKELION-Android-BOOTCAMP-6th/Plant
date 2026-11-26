@@ -16,6 +16,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.dropUnlessStarted
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
@@ -53,7 +54,7 @@ fun PotListScreen(
                     // 공부 중 탭(selectedTab == 0)일 때만 플러스 버튼 노출
                     if (selectedTab == 0) {
                         IconButton(
-                            onClick = { navController.navigate(Routes.NewBornTree) }
+                            onClick = dropUnlessStarted { navController.navigate(Routes.NewBornTree) }
                         ) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_add),
@@ -124,7 +125,7 @@ fun PotListScreen(
                             potName = pot.name,
                             potLevel = pot.potLevel,
                             totalStudyingTime = pot.potTotalStudyingTime,
-                            onClick = {
+                            onClick = dropUnlessStarted {
                                 navController.navigate(Routes.StudyPlanDetail(potId = pot.id))
                             }
                         )

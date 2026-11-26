@@ -22,8 +22,18 @@ class FakePotRepository(
     /** getPots가 돌려줄 Flow — 넣지 않으면 호출 시 실패 */
     var pots: Flow<List<Pot>>? = null,
     /** getTodayStudyLogs 결과 — 넣지 않으면 호출 시 실패 */
-    var todayStudyLogsResult: Result<List<StudyLog>>? = null
+    var todayStudyLogsResult: Result<List<StudyLog>>? = null,
+    /** getAvailableTags가 돌려줄 Flow — 넣지 않으면 호출 시 실패 */
+    var tagsFlow: Flow<List<Tag>>? = null,
+    /** addPot 결과 — 넣지 않으면 호출 시 실패 */
+    var addPotResult: Result<SaveResult>? = null
 ) : PotRepository {
+    /** addPot 호출 기록 (uid, tag, name) */
+    val addedPots = mutableListOf<Triple<String, Tag, String>>()
+
+    /** 넣으면 addPot이 게이트가 완료될 때까지 끝나지 않는다 (저장 대기 재현) */
+    var addPotGate: CompletableDeferred<Unit>? = null
+
     val levelUps = mutableListOf<LevelUpRequest>()
 
     /** 넣으면 levelUpPot이 게이트가 완료될 때까지 끝나지 않는다 (처리 중 상태 확인용) */
@@ -55,8 +65,13 @@ class FakePotRepository(
     }
 
     override fun getPots(uid: String): Flow<List<Pot>> = pots ?: error("Unused")
-    override fun getAvailableTags(): Flow<List<Tag>> = error("Unused")
-    override suspend fun addPot(uid: String, tag: Tag, name: String): Result<SaveResult> = error("Unused")
+    override fun getAvailableTags(): Flow<List<Tag>> = tagsFlow ?: error("Unused")
+    override suspend fun addPot(uid: String, tag: Tag, name: String): Result<SaveResult> {
+        val result = addPotResult ?: error("Unused")
+        addedPots += Triple(uid, tag, name)
+        addPotGate?.await()
+        return result
+    }
     override suspend fun getUserPotById(uid: String, potId: String): Pot? = error("Unused")
     override suspend fun deleteEntirePot(uid: String, potId: String): Result<SaveResult> = error("Unused")
     override suspend fun completeStudyPlan(uid: String, potId: String): Result<SaveResult> = error("Unused")

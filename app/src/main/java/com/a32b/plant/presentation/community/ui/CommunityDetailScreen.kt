@@ -87,10 +87,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.dropUnlessStarted
 import androidx.navigation.NavController
 import kotlinx.coroutines.flow.first
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
+import com.a32b.plant.core.navigation.rememberPopBackStackSafely
 import com.a32b.plant.core.util.TimeFormatter
 import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.domain.model.Comment
@@ -118,6 +120,7 @@ private const val COMMENT_INPUT_ITEM_INDEX = 2
 fun CommunityDetailScreen(
     navController: NavController, viewModel: CommunityDetailViewModel = hiltViewModel()
 ) {
+    val popBackStackSafely = rememberPopBackStackSafely(navController)
 
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
@@ -197,7 +200,8 @@ fun CommunityDetailScreen(
         viewModel.event.collect { event ->
             when (event) {
                 is CommunityDetailEvent.ShowToast -> context.showToast(event.message)
-                is CommunityDetailEvent.NavigateBack -> navController.popBackStack()
+                // 삭제·차단 결과로 닫기 — 응답 전에 이미 뒤로가기로 나갔으면(나가는 전환 중 포함) 아래 목록 화면까지 닫지 않는다 (#672)
+                is CommunityDetailEvent.NavigateBack -> popBackStackSafely()
             }
         }
     }
@@ -284,7 +288,7 @@ fun CommunityDetailScreen(
                                             Text("다시 시도", style = MaterialTheme.typography.bodyMedium)
                                         }
                                     }
-                                    TextButton(onClick = { navController.popBackStack() }) {
+                                    TextButton(onClick = { popBackStackSafely() }) {
                                         Text("돌아가기", style = MaterialTheme.typography.bodyMedium)
                                     }
                                 }
@@ -308,7 +312,7 @@ fun CommunityDetailScreen(
                                 color = MaterialTheme.colorScheme.onSecondary
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            TextButton(onClick = { navController.popBackStack() }) {
+                            TextButton(onClick = { popBackStackSafely() }) {
                                 Text("돌아가기", style = MaterialTheme.typography.labelLarge)
                             }
                         }
@@ -350,7 +354,7 @@ fun CommunityDetailScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     IconButton(
-                                        onClick = { navController.popBackStack() },
+                                        onClick = { popBackStackSafely() },
                                         modifier = Modifier
                                             .size(30.dp)
                                             .align(Alignment.CenterStart)
@@ -489,7 +493,7 @@ fun CommunityDetailScreen(
                                     if (currentPost.author.id == uiState.currentUid) {
                                         // 블라인드된 게시글은 수정 화면에서 원래 제목/본문이 다시 보이므로 수정 진입 차단 (삭제는 허용)
                                         if (!isPostBlind) {
-                                            IconButton(onClick = {
+                                            IconButton(onClick = dropUnlessStarted {
                                                 navController.navigate(Routes.CommunityPost(postId = currentPost.postId))
                                             }) {
                                                 Icon(

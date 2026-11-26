@@ -57,6 +57,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.dropUnlessStarted
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
@@ -154,14 +155,14 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                 },
                 onTermsClick = { viewModel.onTermsOfServiceClick() },
                 onPrivacyClick = { viewModel.onPrivacyPolicyClick() },
-                onOpenSourceLicenseClick = { navController.navigate(Routes.OpenSourceLicense) },
-                onBugReportClick = { navController.navigate(Routes.BugReport) },
-                onImprovementSuggestionClick = { navController.navigate(Routes.ImprovementSuggestion) },
-                onBlockedUsersClick = { navController.navigate(Routes.BlockedUsers) },
+                onOpenSourceLicenseClick = dropUnlessStarted { navController.navigate(Routes.OpenSourceLicense) },
+                onBugReportClick = dropUnlessStarted { navController.navigate(Routes.BugReport) },
+                onImprovementSuggestionClick = dropUnlessStarted { navController.navigate(Routes.ImprovementSuggestion) },
+                onBlockedUsersClick = dropUnlessStarted { navController.navigate(Routes.BlockedUsers) },
                 onLogoutClick = {
                     showLogoutDialog = true
                 },
-                onAccountManageClick = { navController.navigate(Routes.AccountManage) }
+                onAccountManageClick = dropUnlessStarted { navController.navigate(Routes.AccountManage) }
             )
         }
     }

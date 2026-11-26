@@ -57,12 +57,14 @@ class NewBornTreeViewModel @Inject constructor(private val potRepository: PotRep
      * (미확인, 화분 삭제·완료 콜백과 같은 한계 — #629)
      */
     fun createPot(tag: Tag, name: String, onCreated: (notice: String?) -> Unit){
+        // 저장 중 연타 무시 (#672). 화면 버튼의 enabled는 화면이 다시 그려져야 반영되므로 ViewModel에서도 막는다
+        if (_isUploading.value) return
         if(currentUid.isEmpty()){
             _errorMessage.value = "사용자 정보가 없습니다. 다시 로그인해주세요."
             return
         }
+        _isUploading.value = true
         viewModelScope.launch {
-            _isUploading.value = true
             // 이름 변경과 같은 규칙으로 앞뒤 공백을 지운 뒤 저장 (#563)
             val result = potRepository.addPot(currentUid, tag, PotNameRule.normalize(name))
             _isUploading.value = false

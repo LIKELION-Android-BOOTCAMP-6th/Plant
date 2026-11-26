@@ -145,6 +145,8 @@ class CommunityDetailViewModel @Inject constructor(
     val postId: String = savedStateHandle.get<String>("postId") ?: ""
     private val _showDeleteDialog = mutableStateOf(false)
     val showDeleteDialog: State<Boolean> = _showDeleteDialog
+    // 게시글 삭제 요청 진행 중 (#672) — 화면에 보여 주지 않고 deletePost() 중복 호출만 막는다
+    private var isDeleting = false
 
     private val _post = MutableStateFlow<Post?>(null)
     val post: StateFlow<Post?> = _post.asStateFlow()
@@ -467,27 +469,37 @@ class CommunityDetailViewModel @Inject constructor(
     }
 
     fun deletePost() {
+        // 삭제 중 확인 연타 무시 — 삭제 요청과 NavigateBack이 두 번 가지 않게 한다 (#672).
+        // 다이얼로그는 isLoading으로 막지 않는다. 응답이 느릴 때 뒤로가기로 다이얼로그를 닫고 화면을 나갈 수 있어야 하고,
+        // 나가도 아래 NonCancellable 블록이 삭제와 목록 알림을 끝까지 처리한다 (#712)
+        if (isDeleting) return
+        isDeleting = true
         viewModelScope.launch {
-            // NonCancellable: 응답 전에 화면을 나가도(느림 안내를 보고 뒤로가기) 삭제 성공 시 목록에 알리기 위함 (#712)
-            // 알림은 블록 안에 둔다. NonCancellable은 dispatcher를 바꾸지 않아, 블록 안에 끝나지 않은 자식 코루틴이 없으면
-            // withContext는 끝날 때 바깥 취소를 확인하지 않고 이어지지만(블록 밖 코드도 이탈 후 실행됨) 이 동작에 기대지 않기 위함.
-            // 이탈 후 블록 밖에서는 Toast가 취소된 viewModelScope의 launch라 나가지 않고,
-            // 화면 이동 이벤트는 받을 화면이 없어 아무 일도 일어나지 않는다
-            withContext(NonCancellable) {
-                withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
-                    repository.deletePost(postId, _post.value?.activityId ?: "")
-                }
-                    // 목록은 상호작용이 없으면 60초 안의 복귀에서 다시 불러오지 않으므로, 삭제를 알려 바로 빼게 한다
-                    .onSuccess { postUpdateNotifier.notifyPostDeleted(postId) }
-            }
-                .onSuccess { _eventChannel.send(CommunityDetailEvent.NavigateBack) }
-                .onFailure { e ->
-                    when (e) {
-                        is AppError.UnknownUser -> ensureCurrentUserUseCase()
-                        else -> sendToast(e.message)
+            try {
+                // NonCancellable: 응답 전에 화면을 나가도(느림 안내를 보고 뒤로가기) 삭제 성공 시 목록에 알리기 위함 (#712)
+                // 알림은 블록 안에 둔다. NonCancellable은 dispatcher를 바꾸지 않아, 블록 안에 끝나지 않은 자식 코루틴이 없으면
+                // withContext는 끝날 때 바깥 취소를 확인하지 않고 이어지지만(블록 밖 코드도 이탈 후 실행됨) 이 동작에 기대지 않기 위함.
+                // 이탈해 ViewModel이 정리된 뒤에는 블록 밖의 Toast가 취소된 viewModelScope의 launch라 나가지 않는다.
+                // 화면 이동 이벤트(NavigateBack)는 화면이 맨 위일 때만 pop하므로, 이미 뒤로가기로 나갔으면 무시된다 (#672)
+                withContext(NonCancellable) {
+                    withSlowNotice(onSlow = { sendToast(NETWORK_SLOW_MESSAGE) }) {
+                        repository.deletePost(postId, _post.value?.activityId ?: "")
                     }
+                        // 목록은 상호작용이 없으면 60초 안의 복귀에서 다시 불러오지 않으므로, 삭제를 알려 바로 빼게 한다
+                        .onSuccess { postUpdateNotifier.notifyPostDeleted(postId) }
                 }
-            closeDeleteDialog()
+                    .onSuccess { _eventChannel.send(CommunityDetailEvent.NavigateBack) }
+                    .onFailure { e ->
+                        when (e) {
+                            is AppError.UnknownUser -> ensureCurrentUserUseCase()
+                            else -> sendToast(e.message)
+                        }
+                    }
+                closeDeleteDialog()
+            } finally {
+                // 실패하면 다시 삭제할 수 있도록, 화면을 나가 취소된 경우에도 풀어 둔다
+                isDeleting = false
+            }
         }
     }
 

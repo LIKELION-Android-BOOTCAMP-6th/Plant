@@ -75,6 +75,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.dropUnlessStarted
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
@@ -207,7 +208,8 @@ fun HomeScreen(
                     isAttendanceCompleted = attendanceUiState.isAttendanceCompleted,
                     // 중복 이동 방지용 안전장치: 맨 위가 이미 버그 제보 화면이면 새로 쌓지 않음
                     // (실기기 연타로는 두 번 쌓이는 현상이 재현되지 않았음)
-                    onBugReportClick = {
+                    // launchSingleTop은 맨 위가 같은 화면일 때만 막으므로, 다른 화면으로 나가는 전환 중 클릭은 dropUnlessStarted로 무시한다 (#672)
+                    onBugReportClick = dropUnlessStarted {
                         navController.navigate(Routes.BugReport) { launchSingleTop = true }
                     },
                     onShopClick = viewModel::onShopClick,
@@ -249,7 +251,8 @@ fun HomeScreen(
                         levelUpProgressText = uiState.levelUpProgressText,
                         levelUpReady = uiState.levelUpReady,
                         isLoading = uiState.isLoading,
-                        onStartClick = {
+                        // 화면 이동은 이 화면이 STARTED 이상일 때만 — 이동하면 이 화면은 바로 CREATED가 되어, 연타·나가는 전환 중 클릭으로 화면이 두 번 쌓이지 않는다 (#672)
+                        onStartClick = dropUnlessStarted {
                             if (!hasNoPot) {
                                 navController.navigate(
                                     Routes.Studying(
@@ -265,14 +268,14 @@ fun HomeScreen(
                         onLevelUpClick = viewModel::onLevelUpClick,
 
                         //화분 생성 이동 or 화분 변경 다이얼로그 오픈
-                        onChangeOrMakeClick = {
+                        onChangeOrMakeClick = dropUnlessStarted {
                             if (hasNoPot) {
                                 navController.navigate(Routes.NewBornTree)
                             } else {
                                 viewModel.setShowPotChangeDialog(true)
                             }
                         },
-                        onRecordClick = {
+                        onRecordClick = dropUnlessStarted {
                             if (!hasNoPot) {
                                 navController.navigate(
                                     Routes.StudyPlanDetail(
@@ -319,7 +322,7 @@ fun HomeScreen(
                     onConfirm ={
                         viewModel.confirmPotChange()
                     },
-                    onCreateNewClick = {
+                    onCreateNewClick = dropUnlessStarted {
                         viewModel.setShowPotChangeDialog(false)
                         navController.navigate(Routes.NewBornTree)
                     }

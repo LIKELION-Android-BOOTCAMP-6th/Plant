@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import com.a32b.plant.R
+import com.a32b.plant.core.navigation.rememberPopBackStackSafely
 import com.a32b.plant.presentation.core.component.BackTopBar
 import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
@@ -26,13 +27,14 @@ import com.mikepenz.aboutlibraries.ui.compose.LibraryDefaults
  */
 @Composable
 fun OpenSourceLicenseScreen(navController: NavController) {
+    val popBackStackSafely = rememberPopBackStackSafely(navController)
     val libraries by produceLibraries(R.raw.aboutlibraries)
 
     Scaffold(
         topBar = {
             BackTopBar(
                 title = "오픈소스 라이선스",
-                onBack = { navController.popBackStack() }
+                onBack = { popBackStackSafely() }
             )
         },
         containerColor = MaterialTheme.colorScheme.background
