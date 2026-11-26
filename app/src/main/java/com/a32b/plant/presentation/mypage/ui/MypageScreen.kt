@@ -110,17 +110,18 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
     }
 
     // 로그아웃 확인 다이얼로그
-    if (showLogoutDialog) {
+    // 확인 후에는 닫지 않고 로딩 상태로 둔다. 토큰 쓰기 대기(최대 1.5초) 중 하단 탭·뒤로가기로 마이페이지를 나가면
+    // ViewModel이 정리되어 로그아웃이 취소되므로, 다이얼로그 창이 바깥 터치와 뒤로가기를 받아 막는다 (#791).
+    // 로그아웃이 끝나면 로그인 화면으로 이동하며 이 화면째 사라진다
+    if (showLogoutDialog || uiState.isLoggingOut) {
         ConfirmDialog(
             text = "로그아웃 하시겠습니까?",
             onDismiss = {
                 showLogoutDialog = false
                 viewModel.clearProfileState()
             },
-            onConfirm = {
-                showLogoutDialog = false
-                viewModel.logout()
-            }
+            onConfirm = { viewModel.logout() },
+            isLoading = uiState.isLoggingOut
         )
     }
 
