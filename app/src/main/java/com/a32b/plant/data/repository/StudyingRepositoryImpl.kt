@@ -332,6 +332,6 @@ class StudyingRepositoryImpl @Inject constructor(
 
         /** 사유를 찾지 못한 저장 거부 안내 — 백업은 남아 홈 복구 창에서 다시 저장할 수 있다 */
         private const val UNRESOLVED_REJECTION_MESSAGE =
-            "학습 기록을 저장하지 못했어요. 기기 시간이 실제보다 빠르면 잠시 후 다시 저장해 주세요."
+            "저장하지 못했어요. 기기 시간이 빠르면 잠시 후 다시 저장해 주세요."
     }
 }
