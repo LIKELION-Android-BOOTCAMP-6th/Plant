@@ -63,7 +63,7 @@ class CommunityActivityViewModelTest {
         assertFalse(viewModel.uiState.value.isDeleting)
         assertFalse(viewModel.uiState.value.isSelectionMode)
         assertTrue(viewModel.uiState.value.selectedIds.isEmpty())
-        assertEquals(listOf<CommunityActivityEvent>(CommunityActivityEvent.ShowToast("삭제되었습니다.")), events)
+        assertEquals(listOf<CommunityActivityEvent>(CommunityActivityEvent.ShowToast("삭제되었어요.")), events)
     }
 
     @Test
@@ -88,18 +88,18 @@ class CommunityActivityViewModelTest {
 
         assertFalse(viewModel.uiState.value.isDeleting)
         assertFalse(viewModel.uiState.value.isSelectionMode)
-        assertEquals(listOf<CommunityActivityEvent>(CommunityActivityEvent.ShowToast("삭제되었습니다.")), events)
+        assertEquals(listOf<CommunityActivityEvent>(CommunityActivityEvent.ShowToast("삭제되었어요.")), events)
     }
 
     @Test
     fun `삭제가 실패하면 로딩을 해제하고 선택을 유지한 채 안내한다`() = runActivityTest { repository, _, viewModel, events ->
-        repository.deletePostResult = Result.Failure(AppError.Unknown("게시글 삭제에 실패했습니다."))
+        repository.deletePostResult = Result.Failure(AppError.Unknown("게시글 삭제에 실패했어요."))
         selectAndDelete(viewModel, "a1")
 
         assertFalse(viewModel.uiState.value.isDeleting)
         assertTrue(viewModel.uiState.value.isSelectionMode)
         assertEquals(setOf("a1"), viewModel.uiState.value.selectedIds)
-        assertEquals(listOf<CommunityActivityEvent>(CommunityActivityEvent.ShowToast("1개 중 1개 삭제에 실패했습니다.")), events)
+        assertEquals(listOf<CommunityActivityEvent>(CommunityActivityEvent.ShowToast("1개 중 1개 삭제에 실패했어요.")), events)
     }
 
     @Test
@@ -116,7 +116,7 @@ class CommunityActivityViewModelTest {
         runCurrent()
 
         assertFalse(viewModel.uiState.value.isDeleting)
-        assertEquals(listOf<CommunityActivityEvent>(CommunityActivityEvent.ShowToast("삭제되었습니다.")), events)
+        assertEquals(listOf<CommunityActivityEvent>(CommunityActivityEvent.ShowToast("삭제되었어요.")), events)
     }
 
     @Test

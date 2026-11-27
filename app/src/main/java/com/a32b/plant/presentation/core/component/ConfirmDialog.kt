@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -47,7 +48,7 @@ fun ConfirmDialog(
     isCancelable: Boolean = true,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
-    confirmBtnText: String = "예",
+    confirmBtnText: String = stringResource(R.string.common_yes),
     textStyle: TextStyle? = null,
     buttonTextStyle: TextStyle? = null,
     isLoading: Boolean = false,
@@ -110,7 +111,7 @@ fun ConfirmDialog(
                                 modifier = Modifier.heightIn(min = 30.dp).weight(1f),
                                 shape = RoundedCornerShape(8.dp),
                                 colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.outline)) {
-                                Text("취소", style = buttonTextStyle ?: MaterialTheme.typography.bodyMedium)
+                                Text(stringResource(R.string.common_cancel), style = buttonTextStyle ?: MaterialTheme.typography.bodyMedium)
                             }
                             Spacer(modifier = Modifier.width(10.dp))
                         }
@@ -155,7 +156,7 @@ private fun ConfirmDialogDestructiveLightPreview() {
             semiText = "정말로 이 학습 기록을 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.",
             onDismiss = {},
             onConfirm = {},
-            confirmBtnText = "삭제",
+            confirmBtnText = stringResource(R.string.common_delete),
             isDestructive = true
         )
     }
@@ -180,7 +181,7 @@ private fun ConfirmDialogDestructiveDarkPreview() {
 @Composable
 private fun ConfirmDialogDefaultDarkPreview() {
     PlantTheme(darkTheme = true) {
-        ConfirmDialog(text = "로그아웃 하시겠습니까?", onDismiss = {}, onConfirm = {})
+        ConfirmDialog(text = "로그아웃할까요?", onDismiss = {}, onConfirm = {})
     }
 }
 
@@ -189,7 +190,7 @@ private fun ConfirmDialogDefaultDarkPreview() {
 private fun ConfirmDialogIconLightPreview() {
     PlantTheme(darkTheme = false) {
         ConfirmDialog(
-            text = "100골드를 획득했습니다!",
+            text = "100골드를 획득했어요!",
             isSingleBtn = true,
             onDismiss = {},
             onConfirm = {},
@@ -203,7 +204,7 @@ private fun ConfirmDialogIconLightPreview() {
 private fun ConfirmDialogIconDarkPreview() {
     PlantTheme(darkTheme = true) {
         ConfirmDialog(
-            text = "비료 1개를 획득했습니다!",
+            text = "비료 1개를 획득했어요!",
             isSingleBtn = true,
             onDismiss = {},
             onConfirm = {},

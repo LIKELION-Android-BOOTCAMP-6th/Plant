@@ -31,6 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -259,7 +260,7 @@ private fun ReportFailure(message: String, onRetry: () -> Unit) {
     ReportCard {
         Text(message, style = MaterialTheme.typography.bodyMedium)
         Button(onClick = onRetry, modifier = Modifier.height(48.dp)) {
-            Text("다시 시도", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimary)
+            Text(stringResource(R.string.common_retry), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimary)
         }
     }
 }

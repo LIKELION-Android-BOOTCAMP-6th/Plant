@@ -864,7 +864,7 @@ class CommunityDetailViewModel @Inject constructor(
             )
                 .onSuccess {
                     _uiState.update { it.copy(showReportSheet = false) }
-                    sendToast("신고가 접수되었습니다.")
+                    sendToast("신고가 접수되었어요.")
                     refresh()
                 }
                 .onFailure { e ->

@@ -52,6 +52,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -115,7 +116,7 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
     // 로그아웃이 끝나면 로그인 화면으로 이동하며 이 화면째 사라진다
     if (showLogoutDialog || uiState.isLoggingOut) {
         ConfirmDialog(
-            text = "로그아웃 하시겠습니까?",
+            text = "로그아웃할까요?",
             onDismiss = {
                 showLogoutDialog = false
                 viewModel.clearProfileState()
@@ -152,7 +153,7 @@ fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hilt
                     viewModel.updateDarkMode(isDarkMode)
                 },
                 onGuideClick = {
-                    context.showToast("준비 중입니다.")
+                    context.showToast("준비 중이에요.")
                 },
                 onTermsClick = { viewModel.onTermsOfServiceClick() },
                 onPrivacyClick = { viewModel.onPrivacyPolicyClick() },
@@ -555,7 +556,7 @@ fun ProfileDialog(
                             )
                         ) {
                             Text(
-                                "취소",
+                                stringResource(R.string.common_cancel),
                                 style = MaterialTheme.typography.labelLarge
                             )
                         }
@@ -572,7 +573,7 @@ fun ProfileDialog(
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
                             )
-                        ) { Text("저장", style = MaterialTheme.typography.labelLarge) }
+                        ) { Text(stringResource(R.string.common_save), style = MaterialTheme.typography.labelLarge) }
                     }
                 }
             }

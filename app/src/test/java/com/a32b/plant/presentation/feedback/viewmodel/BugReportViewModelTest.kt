@@ -82,7 +82,7 @@ class BugReportViewModelTest {
             assertFalse(viewModel.uiState.value.isLoading)
             assertEquals(
                 listOf(
-                    BugReportEvent.ShowToast("버그 제보가 접수되었습니다."),
+                    BugReportEvent.ShowToast("버그 제보가 접수되었어요."),
                     BugReportEvent.NavigateBack
                 ),
                 events
@@ -121,7 +121,7 @@ class BugReportViewModelTest {
             assertEquals(2, repository.createCalls)
             assertEquals(
                 listOf(
-                    BugReportEvent.ShowToast("버그 제보가 접수되었습니다."),
+                    BugReportEvent.ShowToast("버그 제보가 접수되었어요."),
                     BugReportEvent.NavigateBack
                 ),
                 events.takeLast(2)

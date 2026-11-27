@@ -88,7 +88,7 @@ class DeleteAccountViewModel @Inject constructor(
         deleteAccountUseCase()
             .onSuccess {
                 _uiState.update { it.copy(isLoading = false) }
-                _eventChannel.send(DeleteAccountEvent.ShowToast("회원탈퇴가 완료되었습니다."))
+                _eventChannel.send(DeleteAccountEvent.ShowToast("회원탈퇴가 완료되었어요."))
                 _eventChannel.send(DeleteAccountEvent.NavigateToSignIn)
             }
             .onFailure { error ->

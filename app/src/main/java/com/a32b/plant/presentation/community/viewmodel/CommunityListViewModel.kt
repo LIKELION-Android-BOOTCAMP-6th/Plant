@@ -258,7 +258,7 @@ class CommunityListViewModel @Inject constructor(
             }.onFailure { e ->
                 Log.e("CommunityListVM", "loadInitial 실패: ${e.message}", e)
                 _uiState.update { it.copy(isLoadingMore = false, hasMore = false, hasLoadedOnce = true) }
-                _events.trySend(CommunityListEvent.ShowToast(e.message ?: "게시글 목록을 불러오지 못했습니다."))
+                _events.trySend(CommunityListEvent.ShowToast(e.message ?: "게시글 목록을 불러오지 못했어요."))
             }
 
             loaded() // BaseViewModel: 스플래시 종료 (성공/실패 모두 최초 시도 후 종료)
@@ -355,7 +355,7 @@ class CommunityListViewModel @Inject constructor(
             }.onFailure { e ->
                 Log.e("CommunityListVM", "refresh 실패: ${e.message}", e)
                 _uiState.update { it.copy(isRefreshing = false, isLoadingMore = false) }
-                _events.trySend(CommunityListEvent.ShowToast(e.message ?: "새로고침에 실패했습니다."))
+                _events.trySend(CommunityListEvent.ShowToast(e.message ?: "새로고침에 실패했어요."))
             }
         }
     }
@@ -401,7 +401,7 @@ class CommunityListViewModel @Inject constructor(
             }.onFailure { e ->
                 Log.e("CommunityListVM", "검색 실패: ${e.message}", e)
                 _uiState.update { it.copy(isSearchLoading = false) }
-                _events.trySend(CommunityListEvent.ShowToast(e.message ?: "검색에 실패했습니다."))
+                _events.trySend(CommunityListEvent.ShowToast(e.message ?: "검색에 실패했어요."))
             }
         }
     }

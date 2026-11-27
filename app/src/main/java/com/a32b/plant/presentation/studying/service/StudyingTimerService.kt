@@ -183,7 +183,7 @@ class StudyingTimerService : Service() {
             "학습 타이머",
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = "학습 중 경과 시간을 표시합니다"
+            description = "학습 중 경과 시간을 표시해요"
             setSound(null, null)
         }
         (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)

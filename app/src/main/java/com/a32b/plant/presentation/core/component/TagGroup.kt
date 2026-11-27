@@ -52,7 +52,7 @@ fun TagGroup(tags: List<String>, init: List<String> = emptyList(),
                                         .any { tags.getOrNull(it) in selectedTags } // 그것들이 셀렉티드에 있는지 확인
 
                             if (isConflicted)
-                                Toast.makeText(context, "학생 태그는 하나만 선택할 수 있습니다!", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "학생 태그는 하나만 선택할 수 있어요!", Toast.LENGTH_SHORT).show()
                             else selectedTags.toggle(tag)
                         } else {
                             selectedTags.toggle(tag)

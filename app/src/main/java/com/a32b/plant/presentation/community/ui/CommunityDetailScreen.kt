@@ -77,6 +77,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -212,7 +213,7 @@ fun CommunityDetailScreen(
             text = "게시글을 삭제하시겠습니까?",
             onDismiss = { viewModel.closeDeleteDialog() },
             onConfirm = { viewModel.deletePost() },
-            confirmBtnText = "삭제",
+            confirmBtnText = stringResource(R.string.common_delete),
             isDestructive = true
         )
     }
@@ -223,7 +224,7 @@ fun CommunityDetailScreen(
             text = "댓글을 삭제하시겠습니까?",
             onDismiss = { viewModel.closeCommentDeleteDialog() },
             onConfirm = { viewModel.deleteComment() },
-            confirmBtnText = "삭제",
+            confirmBtnText = stringResource(R.string.common_delete),
             isDestructive = true
         )
     }
@@ -273,7 +274,7 @@ fun CommunityDetailScreen(
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = if (uiState.isPostNotFound) "삭제된 게시글입니다." else "게시글을 불러오지 못했습니다.",
+                                    text = if (uiState.isPostNotFound) "삭제된 게시글이에요." else "게시글을 불러오지 못했어요.",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSecondary
                                 )
@@ -285,7 +286,7 @@ fun CommunityDetailScreen(
                                             onClick = { viewModel.refresh() },
                                             enabled = !uiState.isRefreshing
                                         ) {
-                                            Text("다시 시도", style = MaterialTheme.typography.bodyMedium)
+                                            Text(stringResource(R.string.common_retry), style = MaterialTheme.typography.bodyMedium)
                                         }
                                     }
                                     TextButton(onClick = { popBackStackSafely() }) {
@@ -764,14 +765,14 @@ fun CommentRow(
                                 )
                             ) {
                                 Text(
-                                    if (isEditSubmitting) "저장 중" else "저장",
+                                    if (isEditSubmitting) "저장 중" else stringResource(R.string.common_save),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                             TextButton(onClick = onEditCancel, enabled = !isEditSubmitting) {
                                 Text(
-                                    "취소",
+                                    stringResource(R.string.common_cancel),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )

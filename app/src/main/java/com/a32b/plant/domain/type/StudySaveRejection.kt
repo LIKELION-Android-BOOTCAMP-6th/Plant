@@ -9,16 +9,16 @@ import com.a32b.plant.domain.model.StudyLog
  */
 enum class StudySaveRejection(val message: String) {
     /** 이전 세션의 종료 시각(users.lastStudyEndedAt)보다 먼저 시작한 세션 */
-    OVERLAPPED("이전 학습 기록과 시간이 겹쳐 저장할 수 없습니다."),
+    OVERLAPPED("이전 학습 기록과 시간이 겹쳐 저장할 수 없어요."),
 
     /** 화분이 없음 (삭제됨) */
-    POT_NOT_FOUND("화분이 삭제되어 학습 기록을 저장할 수 없습니다."),
+    POT_NOT_FOUND("화분이 삭제되어 학습 기록을 저장할 수 없어요."),
 
     /** 이미 완료된 화분 */
-    POT_COMPLETED("이미 완료된 화분이라 학습 기록을 저장할 수 없습니다."),
+    POT_COMPLETED("이미 완료된 화분이라 학습 기록을 저장할 수 없어요."),
 
     /** 학습 시간이 0 이하이거나 24시간 초과 */
-    INVALID_TIME("학습 시간이 올바르지 않아 저장할 수 없습니다."),
+    INVALID_TIME("학습 시간이 올바르지 않아 저장할 수 없어요."),
 
     /** 학습을 시작한 지 오프라인 동기화 허용 기간(StudyLog.MAX_OFFLINE_SYNC_DAYS)이 지남 (#633) */
     TOO_OLD("학습을 시작한 지 ${StudyLog.MAX_OFFLINE_SYNC_DAYS}일이 지나 기록을 저장할 수 없어요.")

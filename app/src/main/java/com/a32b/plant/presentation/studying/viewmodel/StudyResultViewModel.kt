@@ -175,7 +175,7 @@ class StudyResultViewModel @Inject constructor(
             galleryRepository.saveImageToGallery(fileName, "image/png") { stream ->
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
             }
-                .onSuccess { _event.send(StudyResultEvent.ShowToast("이미지가 저장되었습니다.")) }
+                .onSuccess { _event.send(StudyResultEvent.ShowToast("이미지가 저장되었어요.")) }
                 .onFailure { error -> _event.send(StudyResultEvent.ShowToast(error.message)) }
             _uiState.update { it.copy(isLoading = false) }
         }

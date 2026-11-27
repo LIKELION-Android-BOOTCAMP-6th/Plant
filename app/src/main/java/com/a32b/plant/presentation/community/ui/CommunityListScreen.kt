@@ -699,7 +699,7 @@ fun EmptyStateView(hasQuery: Boolean = false) {
         item {
             Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = if (hasQuery) "검색어에 해당하는 게시글이 없어요 😭" else "찾으시는 게시글이 없어요 😭",
+                    text = if (hasQuery) "검색어에 해당하는 게시글이 없어요" else "찾으시는 게시글이 없어요",
                     style = MaterialTheme.typography.bodyMedium
                 )
             }

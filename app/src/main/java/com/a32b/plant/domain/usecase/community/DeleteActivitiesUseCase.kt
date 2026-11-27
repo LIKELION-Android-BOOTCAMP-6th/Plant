@@ -42,7 +42,7 @@ class DeleteActivitiesUseCase @Inject constructor(
             // 실패 로그는 각 Repository 메서드에서 이미 남김 (Domain 레이어는 Android 의존 없이 유지)
             Result.Failure(
                 AppError.Unknown(
-                    message = "${activities.size}개 중 ${failures.size}개 삭제에 실패했습니다."
+                    message = "${activities.size}개 중 ${failures.size}개 삭제에 실패했어요."
                 )
             )
         }
@@ -64,7 +64,7 @@ class DeleteActivitiesUseCase @Inject constructor(
         }
 
         // 모든 분기가 Result를 반환해야 결과에서 실패가 집계됨
-        // (when에 else가 없으면 문장으로 취급되어 값이 Unit이 되고, 실패가 "삭제되었습니다."로 묻힘)
+        // (when에 else가 없으면 문장으로 취급되어 값이 Unit이 되고, 실패가 "삭제되었어요."로 묻힘)
         val result = when (activity.type) {
             ActivityType.POST -> repository.deletePost(activity.targetId, activity.id)
                 .onSuccess { postUpdateNotifier.notifyPostDeleted(activity.targetId) }
@@ -90,7 +90,7 @@ class DeleteActivitiesUseCase @Inject constructor(
                     }
                 }?.map { } ?: Result.Failure(AppError.UnknownUser())
 
-            else -> Result.Failure(AppError.Unknown("알 수 없는 활동 유형입니다: ${activity.type}"))
+            else -> Result.Failure(AppError.Unknown("알 수 없는 활동 유형이에요: ${activity.type}"))
         }
         // 여러 개로 묶이는 건 좋아요/북마크뿐 — 한 번의 해제 결과가 묶음 안 activity 전부에 해당
         return group.map { result }

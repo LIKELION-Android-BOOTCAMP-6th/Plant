@@ -13,7 +13,7 @@ object NicknameRule {
     const val MIN_LENGTH = 2
     const val MAX_LENGTH = 10
     const val LENGTH_MESSAGE = "${MIN_LENGTH}~${MAX_LENGTH}자로 입력해주세요."
-    const val UNUSABLE_MESSAGE = "사용할 수 없는 닉네임입니다."
+    const val UNUSABLE_MESSAGE = "사용할 수 없는 닉네임이에요."
     const val BANNED_WORD_MESSAGE = "사용할 수 없는 단어가 포함되어 있어요."
 
     fun isValidLength(nickname: String): Boolean =

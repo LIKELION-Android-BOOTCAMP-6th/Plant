@@ -64,7 +64,7 @@ class CommunityRepositoryImpl @Inject constructor(
         onSuccess = { Result.Success(it) },
         onFailure = { e ->
             Log.e("Community", "게시글 페이지 조회 실패", e)
-            Result.Failure(handleError(e, "게시글 목록을 불러오지 못했습니다."))
+            Result.Failure(handleError(e, "게시글 목록을 불러오지 못했어요."))
         }
     )
 
@@ -78,7 +78,7 @@ class CommunityRepositoryImpl @Inject constructor(
         onSuccess = { Result.Success(it) },
         onFailure = { e ->
             Log.e("Community", "전체 게시글 조회 실패", e)
-            Result.Failure(handleError(e, "게시글 검색에 실패했습니다."))
+            Result.Failure(handleError(e, "게시글 검색에 실패했어요."))
         }
     )
 
@@ -88,7 +88,7 @@ class CommunityRepositoryImpl @Inject constructor(
         onSuccess = { Result.Success(it) },
         onFailure = { e ->
             Log.e("Community", "게시글 상세 조회 실패", e)
-            Result.Failure(handleError(e, "게시글을 불러오지 못했습니다."))
+            Result.Failure(handleError(e, "게시글을 불러오지 못했어요."))
         }
     )
 
@@ -98,7 +98,7 @@ class CommunityRepositoryImpl @Inject constructor(
         onSuccess = { Result.Success(it) },
         onFailure = { e ->
             Log.e("Community", "댓글 목록 조회 실패", e)
-            Result.Failure(handleError(e, "댓글을 불러오지 못했습니다."))
+            Result.Failure(handleError(e, "댓글을 불러오지 못했어요."))
         }
     )
 
@@ -108,7 +108,7 @@ class CommunityRepositoryImpl @Inject constructor(
         onSuccess = { Result.Success(it) },
         onFailure = { e ->
             Log.e("Community", "태그 목록 조회 실패", e)
-            Result.Failure(handleError(e, "태그를 불러오지 못했습니다."))
+            Result.Failure(handleError(e, "태그를 불러오지 못했어요."))
         }
     )
 
@@ -173,7 +173,7 @@ class CommunityRepositoryImpl @Inject constructor(
             onSuccess = { it },
             onFailure = { e ->
                 Log.e("Community", "게시글 삭제 실패", e)
-                return Result.Failure(handleError(e, "게시글 삭제에 실패했습니다.", isWrite = true))
+                return Result.Failure(handleError(e, "게시글 삭제에 실패했어요.", isWrite = true))
             }
         )
 
@@ -197,7 +197,7 @@ class CommunityRepositoryImpl @Inject constructor(
             onSuccess = { Result.Success(it) },
             onFailure = { e ->
                 Log.e("Community", "좋아요 처리 실패", e)
-                return Result.Failure(handleError(e, "좋아요 처리에 실패했습니다.", isWrite = true))
+                return Result.Failure(handleError(e, "좋아요 처리에 실패했어요.", isWrite = true))
             }
         ).let { (it as Result.Success).data }
 
@@ -219,7 +219,7 @@ class CommunityRepositoryImpl @Inject constructor(
             onSuccess = { Result.Success(it) },
             onFailure = { e ->
                 Log.e("Community", "북마크 처리 실패", e)
-                return Result.Failure(handleError(e, "북마크 처리에 실패했습니다.", isWrite = true))
+                return Result.Failure(handleError(e, "북마크 처리에 실패했어요.", isWrite = true))
             }
         ).let { (it as Result.Success).data }
 
@@ -270,7 +270,7 @@ class CommunityRepositoryImpl @Inject constructor(
                 },
                 onFailure = { e ->
                     Log.e("Community", "$label 취소 실패", e)
-                    return Result.Failure(handleError(e, "$label 취소에 실패했습니다.", isWrite = true))
+                    return Result.Failure(handleError(e, "$label 취소에 실패했어요.", isWrite = true))
                 }
             )
 
@@ -280,7 +280,7 @@ class CommunityRepositoryImpl @Inject constructor(
                 onSuccess = { Result.Success(removal.countAfter) },
                 onFailure = { e ->
                     Log.e("Community", "$label activity 삭제 실패 (${label}는 해제됨): postId=$postId", e)
-                    Result.Failure(handleError(e, "$label 취소에 실패했습니다.", isWrite = true))
+                    Result.Failure(handleError(e, "$label 취소에 실패했어요.", isWrite = true))
                 }
             )
     }
@@ -291,7 +291,7 @@ class CommunityRepositoryImpl @Inject constructor(
         onSuccess = { Result.Success(Unit) },
         onFailure = { e ->
             Log.e("Community", "댓글 등록 실패", e)
-            Result.Failure(handleError(e, "댓글 등록에 실패했습니다.", isWrite = true))
+            Result.Failure(handleError(e, "댓글 등록에 실패했어요.", isWrite = true))
         }
     )
 
@@ -329,7 +329,7 @@ class CommunityRepositoryImpl @Inject constructor(
                     return commentGoneFailure(commentId)
                 }
                 Log.e("Community", "댓글 수정 실패", e)
-                Result.Failure(handleError(e, "댓글 수정에 실패했습니다.", isWrite = true))
+                Result.Failure(handleError(e, "댓글 수정에 실패했어요.", isWrite = true))
             }
         }
     }
@@ -376,7 +376,7 @@ class CommunityRepositoryImpl @Inject constructor(
             onSuccess = { Result.Success(it) },
             onFailure = { e ->
                 Log.e("Community", "댓글 삭제 실패", e)
-                Result.Failure(handleError(e, "댓글 삭제에 실패했습니다.", isWrite = true))
+                Result.Failure(handleError(e, "댓글 삭제에 실패했어요.", isWrite = true))
             }
         )
     }
@@ -397,7 +397,7 @@ class CommunityRepositoryImpl @Inject constructor(
         onSuccess = { Result.Success(Unit)},
         onFailure = { e ->
             Log.e("Community", "커뮤니티 활동 삭제 실패", e)
-            Result.Failure(handleError(e, "오류가 발생했습니다.\n잠시 후 다시 시도해주세요."))
+            Result.Failure(handleError(e, "오류가 발생했어요.\n잠시 후 다시 시도해주세요."))
 
         }
     )
@@ -414,7 +414,7 @@ class CommunityRepositoryImpl @Inject constructor(
                 Result.Success(Unit)
             } else {
                 Log.e("Community", "고아 activity 삭제 실패", e)
-                Result.Failure(handleError(e, "오류가 발생했습니다.\n잠시 후 다시 시도해주세요."))
+                Result.Failure(handleError(e, "오류가 발생했어요.\n잠시 후 다시 시도해주세요."))
             }
         }
     )
@@ -425,7 +425,7 @@ class CommunityRepositoryImpl @Inject constructor(
         onSuccess = { Result.Success(it)},
         onFailure = { e ->
             Log.e("Community", "게시물 존재 여부 조회 실패", e)
-            Result.Failure(handleError(e, "오류가 발생했습니다, \n잠시 후 다시 시도해주세요."))
+            Result.Failure(handleError(e, "오류가 발생했어요.\n잠시 후 다시 시도해주세요."))
         }
     )
 
@@ -435,7 +435,7 @@ class CommunityRepositoryImpl @Inject constructor(
         onSuccess = { Result.Success(it)},
         onFailure = { e ->
             Log.e("Community", "commentId 조회 실패", e)
-            Result.Failure(handleError(e, "알 수 없는 오류가 발생했습니다."))
+            Result.Failure(handleError(e, "알 수 없는 오류가 발생했어요."))
         }
     )
 
@@ -456,7 +456,7 @@ class CommunityRepositoryImpl @Inject constructor(
     companion object {
         /** 게시글 등록·수정, 댓글 수정 제한 시간 — 화분 쓰기(PotRepositoryImpl.WRITE_TIMEOUT)와 같은 5초 (#641) */
         private val WRITE_TIMEOUT = 5.seconds
-        private const val SAVE_POST_ERROR_MESSAGE = "게시글 등록에 실패했습니다."
-        private const val UPDATE_POST_ERROR_MESSAGE = "게시글 수정에 실패했습니다."
+        private const val SAVE_POST_ERROR_MESSAGE = "게시글 등록에 실패했어요."
+        private const val UPDATE_POST_ERROR_MESSAGE = "게시글 수정에 실패했어요."
     }
 }

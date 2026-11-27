@@ -67,7 +67,7 @@ class CommunityReportRepositoryImplTest {
             assertEquals(reason.firestoreKey, remote.lastReason)
             assertEquals(
                 "사유: $reason",
-                "이미 신고한 콘텐츠입니다.",
+                "이미 신고한 콘텐츠예요.",
                 (result as Result.Failure).error.message
             )
         }

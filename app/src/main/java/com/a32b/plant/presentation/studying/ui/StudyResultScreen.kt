@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
@@ -96,7 +97,7 @@ fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewMo
                         verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { popBackStackSafely() }) {
                             Image(painter = painterResource(R.drawable.ic_study_result_close),
-                                contentDescription = "닫기",
+                                contentDescription = stringResource(R.string.common_close),
                                 modifier = Modifier.size(24.dp))
                         }
                         // 갤러리 저장을 지원하지 않는 기기(Android 9 이하)에서는 저장 버튼 숨김
@@ -125,7 +126,7 @@ fun StudyResultScreen(navController: NavController, viewModel: StudyResultViewMo
 
 
     if (uiState.isDialogShow){
-        ConfirmDialog("결과를 이미지로 저장하시겠습니까?",
+        ConfirmDialog("결과를 이미지로 저장할까요?",
             onDismiss = {viewModel.onDialogDismiss()},
             onConfirm = {
                 viewModel.saveBitmapToGallery(capture.invoke())

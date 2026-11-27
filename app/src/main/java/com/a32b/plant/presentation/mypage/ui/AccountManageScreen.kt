@@ -75,7 +75,7 @@ fun AccountManageScreen(
                     try {
                         context.startActivity(intent)
                     } catch (error: Exception) {
-                        context.showToast("계정 추가 설정을 열 수 없습니다.")
+                        context.showToast("계정 추가 설정을 열 수 없어요.")
                     }
                 }
 
@@ -83,7 +83,7 @@ fun AccountManageScreen(
                     coroutineScope.launch {
                         // Android 12+ 토스트는 두 줄까지만 보여 짧게 두 줄로 나눔. SM-N986N 글꼴 2.0에서 두 줄에 들어가는 것까지 확인 (#681)
                         context.showToast(
-                            "본인 확인을 위해\nGoogle 계정을 확인합니다.",
+                            "본인 확인을 위해\nGoogle 계정을 확인해요.",
                             Toast.LENGTH_LONG
                         )
                         val googleIdOption =
@@ -103,14 +103,14 @@ fun AccountManageScreen(
                             deleteViewModel.cancelLoading()
                         } catch (error: NoCredentialException) {
                             deleteViewModel.cancelLoading()
-                            context.showToast("기기에 등록된 Google 계정이 없습니다.")
+                            context.showToast("기기에 등록된 Google 계정이 없어요.")
                             deleteViewModel.openGoogleAccountSettings()
                         } catch (error: CancellationException) {
                             deleteViewModel.cancelLoading()
                             throw error
                         } catch (error: Exception) {
                             deleteViewModel.cancelLoading()
-                            context.showToast("구글 재인증에 실패했습니다. 다시 시도해주세요.")
+                            context.showToast("구글 재인증에 실패했어요. 다시 시도해주세요.")
                         }
                     }
                 }
@@ -137,7 +137,7 @@ fun AccountManageScreen(
                 }
             },
             // 2차 확인에서만 빨간 "탈퇴" 버튼으로 강조 (#647). 1차는 안내 문구("'예'를 눌러주세요")와 맞춰 일반 "예" 유지
-            confirmBtnText = if (isDeleteSecondConfirm) "탈퇴" else "예",
+            confirmBtnText = if (isDeleteSecondConfirm) "탈퇴" else stringResource(R.string.common_yes),
             isDestructive = isDeleteSecondConfirm
         )
     }

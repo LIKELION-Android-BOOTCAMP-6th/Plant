@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.dropUnlessStarted
@@ -112,7 +113,7 @@ fun StudyPlanDetailScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "화분 정보를 불러오지 못했습니다.",
+                        text = "화분 정보를 불러오지 못했어요.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSecondary
                     )
@@ -160,7 +161,7 @@ fun StudyPlanDetailScreen(
                         } }) {
                             if (isShareMode) {
                                 // 공유 모드면 확인 아이콘(누르면 선택한 기록으로 글쓰기 화면 이동), 아니면 공유 아이콘
-                                Icon(painterResource(id = R.drawable.ic_check), contentDescription = "확인", modifier = Modifier.size(19.dp), tint = MaterialTheme.colorScheme.onSurface)
+                                Icon(painterResource(id = R.drawable.ic_check), contentDescription = stringResource(R.string.common_confirm), modifier = Modifier.size(19.dp), tint = MaterialTheme.colorScheme.onSurface)
                             } else {
                                 Icon(painterResource(id = R.drawable.ic_share), contentDescription = "공유", modifier = Modifier.size(19.dp))
                             }
@@ -237,7 +238,7 @@ fun StudyPlanDetailScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "아직 학습 기록이 없습니다.",
+                                text = "아직 학습 기록이 없어요.",
                                 style = MaterialTheme.typography.titleMedium
                             )
                         }
@@ -283,7 +284,7 @@ fun StudyPlanDetailScreen(
                             onDismiss = { viewModel.dismissDeleteDialog() },
                             onConfirm = { viewModel.confirmDelete() },
                             isLoading = isWriting,
-                            confirmBtnText = "삭제",
+                            confirmBtnText = stringResource(R.string.common_delete),
                             isDestructive = true
                         )
                     }
@@ -365,7 +366,7 @@ fun StudyPlanDetailScreen(
                                                     containerColor = MaterialTheme.colorScheme.outline,
                                                 )
                                             ) {
-                                                Text("취소", style = MaterialTheme.typography.bodyMedium,
+                                                Text(stringResource(R.string.common_cancel), style = MaterialTheme.typography.bodyMedium,
                                                     color = MaterialTheme.colorScheme.onSecondary)
                                             }
                                             Spacer(modifier = Modifier.width(10.dp))
@@ -380,7 +381,7 @@ fun StudyPlanDetailScreen(
                                                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary
                                                 )
                                             ) {
-                                                Text("확인", style = MaterialTheme.typography.bodyMedium)
+                                                Text(stringResource(R.string.common_confirm), style = MaterialTheme.typography.bodyMedium)
                                             }
                                         }
                                     }
@@ -409,7 +410,7 @@ fun StudyPlanDetailScreen(
                                 }
                             },
                             isLoading = isWriting,
-                            confirmBtnText = "삭제",
+                            confirmBtnText = stringResource(R.string.common_delete),
                             isDestructive = true
                         )
                     }
@@ -418,7 +419,7 @@ fun StudyPlanDetailScreen(
                     if (isCompleteDialogShown) {
                         ConfirmDialog(
                             text = "학습 완료",
-                            semiText = "이 화분의 학습을 최종 완료 하시겠습니까?\n완료 후에는 '기른 나무'에서 확인 가능합니다.",
+                            semiText = "이 화분의 학습을 최종 완료할까요?\n완료 후에는 '기른 나무'에서 확인할 수 있어요.",
                             onDismiss = { viewModel.setCompleteDialogShown(false) },
                             onConfirm = {
                                 viewModel.completeStudyPlan { notice ->

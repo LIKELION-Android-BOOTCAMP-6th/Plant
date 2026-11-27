@@ -55,6 +55,6 @@ class FeedbackRepositoryImpl @Inject constructor(
 
     companion object {
         private val SUBMISSION_TIMEOUT = 10.seconds
-        private const val GENERIC_ERROR_MESSAGE = "제출 처리 중 오류가 발생했습니다."
+        private const val GENERIC_ERROR_MESSAGE = "제출 처리 중 오류가 발생했어요."
     }
 }

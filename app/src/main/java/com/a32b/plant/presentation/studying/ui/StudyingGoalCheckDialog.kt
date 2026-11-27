@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextDecoration
@@ -125,7 +126,7 @@ fun StudyingGoalCheckDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             DialogSmallButton(
-                                text = "취소",
+                                text = stringResource(R.string.common_cancel),
                                 containerColor = MaterialTheme.colorScheme.outline,
                                 onClick = onDismiss
                             )
@@ -139,7 +140,7 @@ fun StudyingGoalCheckDialog(
                     }
                     StudyingGoalCheckMode.CHECK -> {
                         DialogSmallButton(
-                            text = "닫기",
+                            text = stringResource(R.string.common_close),
                             containerColor = MaterialTheme.colorScheme.secondaryContainer,
                             onClick = onDismiss,
                             modifier = Modifier

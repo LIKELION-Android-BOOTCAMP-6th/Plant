@@ -43,7 +43,7 @@ fun DailyReportContent(report: DailyReport) {
             ReportCard(containerColor = containerColor) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("이 날짜에 시작한 기록", style = MaterialTheme.typography.titleMedium)
-                    Text("시각은 학습 화면을 열었을 때부터 저장때까지입니다", style = MaterialTheme.typography.labelMedium)
+                    Text("시각은 학습 화면을 열었을 때부터 저장때까지예요", style = MaterialTheme.typography.labelMedium)
                 }
                 report.records.forEachIndexed { index, record ->
                     if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outline)

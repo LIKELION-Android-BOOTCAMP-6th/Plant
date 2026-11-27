@@ -27,6 +27,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -35,6 +36,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.a32b.plant.R
 import com.a32b.plant.core.navigation.PlantAppNavigation
 import com.a32b.plant.core.navigation.isBottomTab
 import com.a32b.plant.core.navigation.Routes
@@ -201,15 +203,15 @@ class MainActivity : ComponentActivity() {
                     if (sessionExpiredReason != null) {
                         val (text, semiText) = when (sessionExpiredReason) {
                             SessionExpiredReason.DUPLICATE_LOGIN ->
-                                "다른 기기에서 로그인되었습니다." to "보안을 위해 자동 로그아웃 됩니다."
+                                "다른 기기에서 로그인되었어요." to "보안을 위해 자동 로그아웃돼요."
                             SessionExpiredReason.USER_NOT_FOUND ->
-                                "로그인한 유저의 정보를 찾을 수 없습니다." to "다시 로그인해 주세요."
+                                "로그인한 유저의 정보를 찾을 수 없어요." to "다시 로그인해 주세요."
                         }
                         ConfirmDialog(
                             text = text,
                             semiText = semiText,
                             isSingleBtn = true,
-                            confirmBtnText = "확인",
+                            confirmBtnText = stringResource(R.string.common_confirm),
                             onDismiss = {},
                             onConfirm = { sessionExpiredReasonOrdinal = null }
                         )

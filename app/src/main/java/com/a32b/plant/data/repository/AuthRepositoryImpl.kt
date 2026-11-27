@@ -13,7 +13,7 @@ import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private const val DELETE_ACCOUNT_RETRY_MESSAGE = "탈퇴 처리 중 문제가 발생했습니다. 다시 시도해주세요."
+private const val DELETE_ACCOUNT_RETRY_MESSAGE = "탈퇴 처리 중 문제가 발생했어요. 다시 시도해주세요."
 
 @Singleton
 class AuthRepositoryImpl @Inject constructor(
@@ -97,7 +97,7 @@ class AuthRepositoryImpl @Inject constructor(
         return when (firebaseEx?.errorCode) {
             "ERROR_USER_NOT_FOUND",
             "ERROR_WRONG_PASSWORD",
-            "ERROR_INVALID_CREDENTIAL" -> AppError.Auth("계정 정보가 올바르지 않습니다.")
+            "ERROR_INVALID_CREDENTIAL" -> AppError.Auth("계정 정보가 올바르지 않아요.")
             else -> when (e) {
                 is FirebaseNetworkException -> AppError.Network()
                 // datasource에서 auth.currentUser가 null일 때 던지는 예외.

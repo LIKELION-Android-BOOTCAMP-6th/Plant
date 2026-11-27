@@ -14,7 +14,7 @@ import java.io.OutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private const val SAVE_FAILED_MESSAGE = "이미지 저장에 실패했습니다."
+private const val SAVE_FAILED_MESSAGE = "이미지 저장에 실패했어요."
 
 @Singleton
 class GalleryRepositoryImpl @Inject constructor(

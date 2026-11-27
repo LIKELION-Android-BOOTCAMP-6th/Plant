@@ -50,7 +50,7 @@ class LevelUpPotUseCase @Inject constructor(
         val lackingItems = condition.requiredItems.filter { (type, count) -> user.item.countOf(type) < count }.keys
         if (lackingItems.isNotEmpty()) {
             return Result.Failure(
-                AppError.InsufficientItems("${lackingItems.joinToString { it.kor }}이(가) 부족합니다.")
+                AppError.InsufficientItems("${lackingItems.joinToString { it.kor }}이(가) 부족해요.")
             )
         }
 
@@ -65,8 +65,8 @@ class LevelUpPotUseCase @Inject constructor(
     companion object {
         private const val MINUTE_MS = 60 * 1000L
         private const val HOUR_MS = 60 * MINUTE_MS
-        const val POT_NOT_FOUND_MESSAGE = "존재하지 않거나 삭제된 화분입니다."
-        const val COMPLETED_POT_MESSAGE = "완료된 화분은 레벨업할 수 없습니다."
-        const val MAX_LEVEL_MESSAGE = "이미 최고 레벨입니다."
+        const val POT_NOT_FOUND_MESSAGE = "존재하지 않거나 삭제된 화분이에요."
+        const val COMPLETED_POT_MESSAGE = "완료된 화분은 레벨업할 수 없어요."
+        const val MAX_LEVEL_MESSAGE = "이미 최고 레벨이에요."
     }
 }
