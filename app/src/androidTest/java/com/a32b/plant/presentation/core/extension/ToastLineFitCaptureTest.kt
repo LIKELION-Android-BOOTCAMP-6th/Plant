@@ -32,10 +32,10 @@ class ToastLineFitCaptureTest {
     private val messages = listOf(
         // 대조군 (#531, 80029a18 이전 문구)
         "인터넷 연결이 원활하지 않아 출석 결과를 받지 못했어요. 출석판을 확인한 뒤 다시 시도해주세요.",
-        // StudyingRepositoryImpl — 기기 시계가 빨라 저장 거부
+        // StudyingRepositoryImpl — 사유를 찾지 못한 저장 거부 (UNRESOLVED_REJECTION_MESSAGE)
         "저장하지 못했어요. 기기 시간이 빠르면 잠시 후 다시 저장해 주세요.",
-        // LevelUpPotUseCase — 아이템 5종이 모두 부족할 때 (가장 긴 경우)
-        "정성, 햇빛, 물, 비료, 영양제이(가) 부족해요.",
+        // LevelUpPotUseCase — Lv.5에서 재료 5종이 모두 부족할 때 (가장 긴 경우, LevelUpCondition 순서)
+        "영양제, 비료, 물, 햇빛, 정성이(가) 부족해요.",
         // SignInScreen
         "기기에 등록된 Google 계정이 없어요. 설정에서 계정을 추가해주세요.",
         // StudyingRepositoryImpl — 로컬 백업 실패
