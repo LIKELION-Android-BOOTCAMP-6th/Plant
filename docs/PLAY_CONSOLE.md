@@ -14,8 +14,8 @@
 | SDK 추가·Firebase BoM 버전 변경 (광고 ID를 다시 수집하게 될 수 있음) | release 병합 매니페스트(`./gradlew :app:processReleaseMainManifest`, 결과 `app/build/intermediates/merged_manifest/release/processReleaseMainManifest/AndroidManifest.xml`)에 `AD_ID`·`ACCESS_ADSERVICES_*` 권한이 새로 생기지 않았는지, `AndroidManifest.xml`의 광고 ID 설정(#785)이 그대로인지 확인. 새 권한이 생기면 `tools:node="remove"`를 추가하고 4절 "광고 ID" 행 확인 |
 | Firebase BoM·Firebase SDK 버전 변경 | Firebase [Play 데이터 공개 안내](https://firebase.google.com/docs/android/play-data-disclosure)와 release 의존성을 다시 대조해 2절 "#781 확인 내용" 표 갱신 (예: `firebase-functions`가 끌어오는 `firebase-iid`가 빠지거나 바뀌면 처리방침 1절 사의 인스턴스 ID 토큰 문장 확인) |
 | 탈퇴 처리(`functions/accountDeletion.js`의 `deleteUserData`), 계정 삭제 안내 1절이 인용하는 탈퇴 경로 문구(`BottomBar.kt` "마이페이지", `MypageScreen.kt` "계정 관리", `AccountManageScreen.kt` 회원탈퇴·확인 창 문구·버튼, `DeleteAccountViewModel.kt` 완료 안내) | 계정 삭제 안내(`docs/legal/account-deletion.md`), 처리방침 3절, 이 문서 3절 |
-| `StudyingTimerService`의 서비스 유형·서브타입, 서비스 동작(`onStartCommand`, `START_NOT_STICKY`, 알림 갱신·주기 저장 간격) | `AndroidManifest.xml`, 이 문서 1절 |
-| 학습 타이머 서비스를 시작·중지하는 곳(`StudyingViewModel`의 `sendServiceIntent` 호출, `StudyingTimerServiceController.stop()` 호출, 알림을 눌렀을 때 여는 화면) | 이 문서 1절 실제 동작 표와 영어 설명 |
+| `StudyingTimerService`의 서비스 유형·서브타입, 서비스 동작(`onStartCommand`, `START_NOT_STICKY`, 알림 갱신·주기 저장 간격) | `AndroidManifest.xml`, 이 문서 1절 (1절 "녹화 기록"의 영상을 다시 찍을지 포함) |
+| 학습 타이머 서비스를 시작·중지하는 곳(`StudyingViewModel`의 `sendServiceIntent` 호출, `StudyingTimerServiceController.stop()` 호출, 알림을 눌렀을 때 여는 화면) | 이 문서 1절 실제 동작 표와 영어 설명, 1절 "녹화 기록"의 영상을 다시 찍을지 |
 
 ## 1. 포그라운드 서비스 권한
 
@@ -47,23 +47,23 @@
 
 Plant is a study app where users grow a virtual plant with the time they spend studying. The user starts a study session on the study screen: the stopwatch starts when the user finishes or closes the study-goal input dialog at the beginning of a session, or taps the resume button after pausing. Opening the end-session confirmation dialog pauses a running stopwatch, and closing that dialog without ending the session resumes it. While the stopwatch is running, the foreground service keeps counting the elapsed study time and shows it in an ongoing notification while the user switches to other apps (for example, to read study materials). It also periodically saves the elapsed time on the device. Tapping the notification opens the app (the study screen if it is still open). The service runs only while the user's stopwatch is running: it stops when the user pauses or ends the session, and the system does not restart it. A study session can last for hours, and the use is not media playback, location, phone calls, or network data transfer.
 
-- 확인 필요 (미확인): 콘솔에 넣기 전에 Android 공식 문서의 포그라운드 서비스 유형 목록을 읽고, 시간 제한이 있는 유형(예: shortService)이나 다른 유형이 맞지 않는 이유를 한 문장 덧붙일지 정한다
+- 시간 제한이 있는 유형(예: shortService)이나 다른 유형이 맞지 않는 이유를 한 문장 덧붙일지: 2026-11-27 제출 때 덧붙이지 않고 위 문단을 줄이거나 바꾸지 않고 그대로 넣음 (Android 공식 문서의 유형 목록과 대조하지는 않음). 거절되면 거절 사유를 보고 다시 정한다
 - 영상에서 "완료"·"학습하기" 버튼이 보이게 찍어, 위 설명의 "finishes the study-goal input dialog", "resume button"과 맞춰 볼 수 있게 한다
 
 ### 영상
 
 - 준비: Android 13 이상은 학습 화면에 처음 들어갈 때 알림 권한을 묻는다(`StudyingScreen`의 `POST_NOTIFICATIONS` 요청). 허용해야 알림이 보이므로, 녹화 전에 허용해 두거나 영상에서 허용하는 장면을 넣는다
 - 순서: 학습 화면에 들어가 목표 입력 창에서 "완료" → 타이머 시작 → 홈 버튼으로 앱 나가기 → 알림창에서 시간이 올라가는 것 보여 주기 → 알림 눌러 복귀 → "일시정지"를 누르면 알림이 사라지는 것 보여 주기 → "학습하기"로 다시 시작 → 종료. 녹화 중 최근 앱에서 Plant를 밀어서 닫지 않는다 (밀어서 닫은 뒤 알림을 누르면 학습 화면이 아니라 홈이 열림, 1절 실제 동작 표)
-- 링크: YouTube "일부 공개" 등 로그인 없이 볼 수 있는 링크 (미확인: 콘솔이 받는 링크 형식)
+- 링크: YouTube "일부 공개" 등 로그인 없이 볼 수 있는 링크 (2026-11-27 YouTube `watch?v=` 형식 주소로 콘솔에 저장됨. 심사에서 받아들여지는지는 심사 결과로 확인)
 - 녹화 빌드: release 빌드로 찍는다 (debug 빌드는 학습 화면에 "+1h [DEBUG]" 버튼이 보임). 영상은 앱 동작이 선언과 같은지 보여 주는 용도라, 타이머·알림 코드가 심사에 올릴 버전과 같으면 된다. 가장 확실한 건 올릴 AAB와 같은 커밋으로 만든 빌드
 
 #### 녹화 기록 (2026-11-27)
 
-- 빌드: develop `4f3d5f28`의 `assembleRelease` (업로드 키 서명, versionName 1.0.0). 이 커밋 이후 `StudyingTimerService`·`StudyingViewModel`이 바뀌면 다시 찍는다
+- 빌드: develop `4f3d5f28`의 `assembleRelease` (업로드 키 서명, versionName 1.0.0). 이 커밋 이후 영상에 나온 동작이나 화면 문구(아래 "장면 순서"의 버튼·창·알림, 서비스 시작·중지, 알림을 눌렀을 때 여는 화면, 서비스 유형 선언)가 바뀌면 다시 찍는다. 올릴 커밋과 비교할 때 주로 볼 경로: `git log --oneline 4f3d5f28..<올릴 커밋> -- app/src/main/java/com/a32b/plant/presentation/studying app/src/main/java/com/a32b/plant/presentation/home app/src/main/java/com/a32b/plant/presentation/MainActivity.kt app/src/main/java/com/a32b/plant/core/util/TimeFormatter.kt app/src/main/AndroidManifest.xml app/src/main/res/drawable/ic_notification.xml` (화면 문구가 다른 곳으로 옮겨질 수 있어, 결과가 비어도 문구는 장면 순서와 한 번 대조한다)
 - 기기: SM-N986N (Android 13), `adb shell screenrecord`로 녹화, 터치 표시(`show_touches`) 켬, 기기 홈 화면은 아이콘 없이 비움, 목표 입력 자판은 영어. 길이 약 66초, 1080x2316, 소리 없음
 - 장면 순서: 홈 "공부 시작" → 알림 권한 창 "허용" → 목표 입력("Mock interview practice") 후 "완료" → 타이머 진행 → 홈 버튼으로 앱 나가기 → 알림창에서 "Plant 학습 중" 알림의 시간 증가 → 알림 눌러 학습 화면 복귀 → "일시정지" → 알림창에 알림 없음 → "학습하기"로 재개 → "학습종료" → 확인 창 "종료" → 결과 화면
-- 녹화 중 확인한 것 (adb): 알림을 누른 뒤 앞 화면이 `MainActivity`, 일시정지 뒤 `dumpsys activity services`에 `StudyingTimerService` 없음, 재개 뒤 다시 있음
-- 제출 (2026-11-27): YouTube "일부 공개"로 업로드(세로 3분 이하라 쇼츠로 자동 분류됨, 콘솔에는 `watch?v=` 형식 주소로 입력), 로그아웃 상태 조회(oEmbed HTTP 200)로 로그인 없이 열리는 것 확인. Play Console 앱 콘텐츠 > 포그라운드 서비스 권한에서 "특수 용도 > 기타"를 고르고 위 영어 설명과 영상 링크를 넣어 저장함 (심사 결과는 앱을 검토에 보낸 뒤)
+- 녹화 중 확인한 것 (adb): 알림을 누른 뒤 앞 화면이 `MainActivity`(앱 매니페스트의 Activity가 `MainActivity` 하나뿐이라 홈이 열려도 같게 나옴. 학습 화면으로 돌아온 것은 영상 장면으로 확인), 일시정지 뒤 `dumpsys activity services`에 `StudyingTimerService` 없음, 재개 뒤 다시 있음
+- 제출 (2026-11-27): YouTube "일부 공개"로 업로드(세로 3분 이하라 쇼츠로 자동 분류됨, 콘솔에는 `watch?v=` 형식 주소로 입력), 로그인 없이 열리는 것 확인(로그아웃 상태 oEmbed 조회 HTTP 200, 시크릿 창 재생은 작성자 확인). Play Console 앱 콘텐츠 > 포그라운드 서비스 권한에서 "특수 용도 > 기타"를 고르고 위 영어 설명(줄이거나 바꾸지 않음, shortService 문장 없음)과 영상 링크를 넣어 저장함 (심사 결과는 앱을 검토에 보낸 뒤)
 
 ### 거절되면
 
