@@ -117,6 +117,6 @@ class StudyLogRepositoryImpl @Inject constructor(
     companion object {
         /** 기록 삭제 제한 시간 — 학습 기록 저장(StudyingRepositoryImpl.SAVE_TIMEOUT)과 같은 5초 */
         private val DELETE_TIMEOUT = 5.seconds
-        private const val DELETE_ERROR_MESSAGE = "학습 기록 삭제에 실패했습니다. 다시 시도해주세요."
+        private const val DELETE_ERROR_MESSAGE = "학습 기록 삭제에 실패했어요. 다시 시도해주세요."
     }
 }

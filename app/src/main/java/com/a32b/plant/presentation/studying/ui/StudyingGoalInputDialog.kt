@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -232,7 +233,7 @@ fun StudyingGoalInputDialog(
                             containerColor = MaterialTheme.colorScheme.error.copy(0.3f),
                             contentColor = MaterialTheme.colorScheme.onSurface
                         )
-                    ) { Text("삭제", style = MaterialTheme.typography.bodySmall) }
+                    ) { Text(stringResource(R.string.common_delete), style = MaterialTheme.typography.bodySmall) }
 
                     Button(
                         onClick = {if (isEditing) onConfirmEdit(localLogs[index]) else onConfirm(localLogs)},
@@ -254,7 +255,7 @@ fun StudyingGoalInputDialog(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
                             contentColor = MaterialTheme.colorScheme.onSurface
                         )
-                    ) { Text("닫기", style = MaterialTheme.typography.bodySmall) }
+                    ) { Text(stringResource(R.string.common_close), style = MaterialTheme.typography.bodySmall) }
                 }
             }
         }

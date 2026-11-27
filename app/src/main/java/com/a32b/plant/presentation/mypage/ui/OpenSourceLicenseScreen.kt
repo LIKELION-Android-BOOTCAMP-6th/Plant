@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import com.a32b.plant.R
 import com.a32b.plant.core.navigation.rememberPopBackStackSafely
@@ -60,7 +61,7 @@ fun OpenSourceLicenseScreen(navController: NavController) {
                     authorTextStyle = MaterialTheme.typography.bodySmall,
                     licensesTextStyle = MaterialTheme.typography.bodySmall
                 ),
-                licenseDialogConfirmText = "확인"
+                licenseDialogConfirmText = stringResource(R.string.common_confirm)
             )
         }
     }

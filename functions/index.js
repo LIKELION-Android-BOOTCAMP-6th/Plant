@@ -209,7 +209,7 @@ const BONUS_BOX_TOTAL_WEIGHT = BONUS_BOX_DROP_TABLE
 const BONUS_BOX_MAX_OPEN_COUNT = 100;
 // requestId는 문서 ID로 쓰므로 "/" 등을 막는다 (앱은 UUID를 보낸다)
 const BONUS_BOX_REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
-const BONUS_BOX_NOT_ENOUGH_MESSAGE = "보너스 박스의 개수가 부족합니다.";
+const BONUS_BOX_NOT_ENOUGH_MESSAGE = "보너스 박스의 개수가 부족해요.";
 
 /**
  * 확률 표에서 하나를 뽑는다.
@@ -262,7 +262,7 @@ async function openBonusBoxes(uid, count, requestId) {
       return {items: openingSnapshot.get("items") || []};
     }
     if (!userSnapshot.exists) {
-      throw new HttpsError("not-found", "사용자 정보를 찾을 수 없습니다.");
+      throw new HttpsError("not-found", "사용자 정보를 찾을 수 없어요.");
     }
 
     const box = userSnapshot.get("item.box");
@@ -292,12 +292,12 @@ exports.openBonusBoxes = onCall(async (request) => {
       count > BONUS_BOX_MAX_OPEN_COUNT) {
     throw new HttpsError(
         "invalid-argument",
-        `보너스 박스는 한 번에 1~${BONUS_BOX_MAX_OPEN_COUNT}개까지 열 수 있습니다.`,
+        `보너스 박스는 한 번에 1~${BONUS_BOX_MAX_OPEN_COUNT}개까지 열 수 있어요.`,
     );
   }
   if (typeof requestId !== "string" ||
       !BONUS_BOX_REQUEST_ID_PATTERN.test(requestId)) {
-    throw new HttpsError("invalid-argument", "잘못된 요청입니다.");
+    throw new HttpsError("invalid-argument", "잘못된 요청이에요.");
   }
 
   try {

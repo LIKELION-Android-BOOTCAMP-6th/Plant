@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">Plant</string>
+
+    <!-- 여러 화면에서 같이 쓰는 버튼 문구 (#646) -->
+    <string name="common_cancel">취소</string>
+    <string name="common_confirm">확인</string>
+    <string name="common_delete">삭제</string>
+    <string name="common_close">닫기</string>
+    <string name="common_save">저장</string>
+    <string name="common_retry">다시 시도</string>
+    <string name="common_yes">예</string>
 </resources>

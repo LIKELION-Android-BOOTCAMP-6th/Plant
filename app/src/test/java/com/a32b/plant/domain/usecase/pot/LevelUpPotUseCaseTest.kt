@@ -65,7 +65,7 @@ class LevelUpPotUseCaseTest {
 
         val result = useCase("pot-1")
 
-        assertEquals(Result.Failure(AppError.InsufficientItems("햇빛, 물이(가) 부족합니다.")), result)
+        assertEquals(Result.Failure(AppError.InsufficientItems("햇빛, 물이(가) 부족해요.")), result)
         assertTrue(pots.levelUps.isEmpty())
     }
 

@@ -129,7 +129,7 @@ class CommunityPostViewModel @Inject constructor(
             repository.getPostDetail(postId)
                 .onSuccess { post ->
                     if (post == null) {
-                        _eventChannel.send(CommunityPostEvent.ShowToast("삭제된 게시글입니다."))
+                        _eventChannel.send(CommunityPostEvent.ShowToast("삭제된 게시글이에요."))
                         _eventChannel.send(CommunityPostEvent.NavigateBack)
                         return@onSuccess
                     }
@@ -225,15 +225,15 @@ class CommunityPostViewModel @Inject constructor(
                             updatedAt = System.currentTimeMillis()
                         )
                     )
-                    // Pending이어도 상세 화면으로 이동한다 (#641). 화면에 남겨 두면 뒤로가기 시 "작성된 게시글은 저장되지 않습니다"
+                    // Pending이어도 상세 화면으로 이동한다 (#641). 화면에 남겨 두면 뒤로가기 시 "작성된 게시글은 저장되지 않아요"
                     // 다이얼로그가 뜨고, 이전 상세 화면은 수정 전 제목을 보여 줘 수정이 사라진 것처럼 보인다.
                     // 새로 여는 상세 화면은 기기에 반영된 수정 내용을 읽는다
-                    val message = if (saveResult == SaveResult.Saved) "수정되었습니다!" else CommunityConstants.WRITE_PENDING_MESSAGE
+                    val message = if (saveResult == SaveResult.Saved) "수정되었어요!" else CommunityConstants.WRITE_PENDING_MESSAGE
                     _eventChannel.send(CommunityPostEvent.ShowToast(message))
                     _eventChannel.send(CommunityPostEvent.NavigateToDetail(postId!!))
                 }.onFailure { e ->
                     Log.e("CommunityPostVM", "게시글 수정 실패: ${e.message}")
-                    _eventChannel.send(CommunityPostEvent.ShowToast("수정에 실패했습니다."))
+                    _eventChannel.send(CommunityPostEvent.ShowToast("수정에 실패했어요."))
                 }
             } else {
                 // 쿨다운은 글을 등록한 계정 기준이므로 요청 시점의 uid로 확인/기록
@@ -248,7 +248,7 @@ class CommunityPostViewModel @Inject constructor(
 
                 if (!postCooldownManager.canPost(uid)) {
                     val remaining = postCooldownManager.getRemainingSeconds(uid)
-                    sendToast("게시글 작성은 ${remaining}초 후에 가능합니다")
+                    sendToast("게시글 작성은 ${remaining}초 후에 가능해요")
                     _uiState.update { it.copy(isSubmitting = false) }
                     return@launch
                 }
@@ -268,12 +268,12 @@ class CommunityPostViewModel @Inject constructor(
                     postUpdateNotifier.notifyPostCreated(created.postId)
                     // Pending이어도 상세 화면으로 이동한다 (#641). 이 화면에 남으면 다시 눌렀을 때 새 문서 ID로 글이 하나 더 생긴다.
                     // 상세 화면은 기기에 반영된 새 글을 읽는다
-                    val message = if (created.saveResult == SaveResult.Saved) "성공적으로 등록되었습니다!" else CommunityConstants.WRITE_PENDING_MESSAGE
+                    val message = if (created.saveResult == SaveResult.Saved) "성공적으로 등록되었어요!" else CommunityConstants.WRITE_PENDING_MESSAGE
                     _eventChannel.send(CommunityPostEvent.ShowToast(message))
                     _eventChannel.send(CommunityPostEvent.NavigateToDetail(created.postId))
                 }.onFailure { e ->
                     Log.e("CommunityPostVM", "게시글 등록 실패: ${e.message}")
-                    _eventChannel.send(CommunityPostEvent.ShowToast("등록에 실패했습니다."))
+                    _eventChannel.send(CommunityPostEvent.ShowToast("등록에 실패했어요."))
                 }
             }
 

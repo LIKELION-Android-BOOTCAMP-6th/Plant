@@ -264,7 +264,7 @@ class UserRepositoryImpl @Inject constructor(
     }.fold(
         onSuccess = { Result.Success(Unit) },
         onFailure = { e ->
-            Result.Failure(handleLocalError(e, "다크모드 설정을 저장하지 못했습니다."))
+            Result.Failure(handleLocalError(e, "다크모드 설정을 저장하지 못했어요."))
         }
     )
 
@@ -302,9 +302,9 @@ class UserRepositoryImpl @Inject constructor(
             when (val decision = dto.toDomain()) {
                 is AttendanceDecision.Success -> Result.Success(decision)
                 AttendanceDecision.AlreadyChecked ->
-                    Result.Failure(AppError.Custom("이미 오늘 출석했습니다."))
+                    Result.Failure(AppError.Custom("이미 오늘 출석했어요."))
                 AttendanceDecision.MonthCompleted ->
-                    Result.Failure(AppError.Custom("이번 달 출석을 모두 완료했습니다."))
+                    Result.Failure(AppError.Custom("이번 달 출석을 모두 완료했어요."))
                 null -> {
                     Log.e("UserRepository", "출석 함수 응답을 해석할 수 없음: $dto")
                     Result.Failure(AppError.Server())
@@ -351,17 +351,17 @@ class UserRepositoryImpl @Inject constructor(
                 FirebaseFirestoreException.Code.UNAVAILABLE,
                 FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
 
-                else -> AppError.Custom("닉네임 설정에 실패했습니다.")
+                else -> AppError.Custom("닉네임 설정에 실패했어요.")
             }
 
             is FirebaseNetworkException -> AppError.Network()
-            else -> AppError.Custom("닉네임 설정에 실패했습니다.")
+            else -> AppError.Custom("닉네임 설정에 실패했어요.")
         }
     }
 
     private fun handleUpdateProfileError(e: Throwable): AppError {
         Log.e("UserRepository", "프로필 수정 실패: ${e.message}", e)
 
-        return if (isNetworkError(e)) AppError.Network() else AppError.Custom("프로필 저장에 실패했습니다. 잠시 후 다시 시도해주세요.")
+        return if (isNetworkError(e)) AppError.Network() else AppError.Custom("프로필 저장에 실패했어요. 잠시 후 다시 시도해주세요.")
     }
 }

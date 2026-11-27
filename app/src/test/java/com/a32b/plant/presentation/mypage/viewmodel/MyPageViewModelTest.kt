@@ -108,7 +108,7 @@ class MyPageViewModelTest {
             Dispatchers.setMain(dispatcher)
             val users = FakeUserRepository(
                 testUser(),
-                updateProfileResult = Result.Failure(AppError.Custom("프로필 저장에 실패했습니다. 잠시 후 다시 시도해주세요."))
+                updateProfileResult = Result.Failure(AppError.Custom("프로필 저장에 실패했어요. 잠시 후 다시 시도해주세요."))
             )
             val viewModel = createViewModel(users)
             val events = collectEvents(viewModel, dispatcher)
@@ -118,7 +118,7 @@ class MyPageViewModelTest {
 
             assertNull(viewModel.uiState.value.nicknameError)
             assertEquals(
-                listOf(MyPageEvent.ShowToast("프로필 저장에 실패했습니다. 잠시 후 다시 시도해주세요.", false)),
+                listOf(MyPageEvent.ShowToast("프로필 저장에 실패했어요. 잠시 후 다시 시도해주세요.", false)),
                 events
             )
             assertFalse(viewModel.uiState.value.isLoading)

@@ -104,7 +104,7 @@ class SignInViewModel @Inject constructor(
             // 다이얼로그를 새로 띄울 때마다 동의는 처음부터 받는다
             _uiState.update { it.copy(showNicknameDialog = true, agreedConsents = emptySet()) }
         } else {
-            sendToast("${nickname}님 환영합니다.")
+            sendToast("${nickname}님 환영해요.")
             viewModelScope.launch { _eventChannel.send(SignInEvent.NavigateToHome) }
         }
     }
@@ -126,7 +126,7 @@ class SignInViewModel @Inject constructor(
             setNicknameUseCase(loggedInUid, nickname, hasAgreedToRequiredTerms)
                 .onSuccess { savedNickname ->
                     _uiState.update { it.copy(showNicknameDialog = false, isNicknameLoading = false) }
-                    sendToast("${savedNickname}님 환영합니다.")
+                    sendToast("${savedNickname}님 환영해요.")
                     _eventChannel.send(SignInEvent.NavigateToHome)
                 }
                 .onFailure { error ->

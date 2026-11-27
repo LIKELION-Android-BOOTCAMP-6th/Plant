@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -68,7 +69,7 @@ fun StudyLogDetailDialog(
                     IconButton(onClick = ondismiss,
                         modifier = Modifier.size(24.dp)) {
                         Icon(painter = painterResource(R.drawable.ic_close),
-                            contentDescription = "닫기")
+                            contentDescription = stringResource(R.string.common_close))
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
@@ -110,7 +111,7 @@ fun StudyLogDetailDialog(
                         }
                     }
                 } else {
-                    Text(text = "기록된 상세 내용이 없습니다.", style = MaterialTheme.typography.bodyMedium)
+                    Text(text = "기록된 상세 내용이 없어요.", style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }

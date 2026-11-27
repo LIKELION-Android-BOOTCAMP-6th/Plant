@@ -84,7 +84,7 @@ class ImprovementSuggestionViewModelTest {
             assertTrue(requestStarted.isCompleted)
             assertEquals(
                 listOf(
-                    ImprovementSuggestionEvent.ShowToast("개선사항 제안이 접수되었습니다."),
+                    ImprovementSuggestionEvent.ShowToast("개선사항 제안이 접수되었어요."),
                     ImprovementSuggestionEvent.NavigateBack
                 ),
                 events
@@ -129,7 +129,7 @@ class ImprovementSuggestionViewModelTest {
             assertEquals(
                 listOf(
                     ImprovementSuggestionEvent.ShowToast(AppError.Permission().message),
-                    ImprovementSuggestionEvent.ShowToast("개선사항 제안이 접수되었습니다."),
+                    ImprovementSuggestionEvent.ShowToast("개선사항 제안이 접수되었어요."),
                     ImprovementSuggestionEvent.NavigateBack
                 ),
                 events

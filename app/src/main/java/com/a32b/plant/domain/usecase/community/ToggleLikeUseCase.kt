@@ -17,7 +17,7 @@ class ToggleLikeUseCase @Inject constructor(
         }
 
         // 본인 게시글은 좋아요할 수 없음
-        if (user.uid == authorId) return Result.Failure(AppError.Custom("본인 게시글은 좋아요할 수 없습니다."))
+        if (user.uid == authorId) return Result.Failure(AppError.Custom("본인 게시글은 좋아요할 수 없어요."))
 
         return repository.toggleLike(postId, user.uid, title)
     }

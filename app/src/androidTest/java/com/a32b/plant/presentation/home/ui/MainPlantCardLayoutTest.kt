@@ -109,7 +109,7 @@ class MainPlantCardLayoutTest {
     fun 큰_카드_화분없음_버튼은_바닥_로고는_영역_가운데() {
         setCard(hasNoPot = true, compact = false, cardHeight = LARGE_CARD_HEIGHT)
         assertButtonsAtBottom(compact = false)
-        assertImageCentered("로고 사진", "공부 화분이 없습니다", compact = false, upShiftRatio = LOGO_UP_SHIFT_RATIO)
+        assertImageCentered("로고 사진", "공부 화분이 없어요", compact = false, upShiftRatio = LOGO_UP_SHIFT_RATIO)
     }
 
     @Test
@@ -123,7 +123,7 @@ class MainPlantCardLayoutTest {
     fun 최소_높이_간격모드_화분없음_버튼이_잘리지_않음() {
         setCard(hasNoPot = true, compact = true, cardHeight = null)
         assertButtonsAtBottom(compact = true)
-        assertImageCentered("로고 사진", "공부 화분이 없습니다", compact = true, upShiftRatio = LOGO_UP_SHIFT_RATIO)
+        assertImageCentered("로고 사진", "공부 화분이 없어요", compact = true, upShiftRatio = LOGO_UP_SHIFT_RATIO)
     }
 
     private companion object {

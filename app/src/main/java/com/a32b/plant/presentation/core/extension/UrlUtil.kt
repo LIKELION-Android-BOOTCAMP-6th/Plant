@@ -13,7 +13,7 @@ fun Context.openUrl(url: String) {
     try {
         startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
     } catch (error: Exception) {
-        showToast("브라우저 앱을 찾을 수 없습니다.")
+        showToast("브라우저 앱을 찾을 수 없어요.")
     }
 }
 

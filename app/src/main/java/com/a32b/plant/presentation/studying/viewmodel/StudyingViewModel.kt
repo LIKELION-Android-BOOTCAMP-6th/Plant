@@ -158,7 +158,7 @@ class StudyingViewModel @Inject constructor(
             val backup = repository.readLocalSession().getOrNull()
             // 종료했지만 저장되지 않은 세션을 새 공부가 덮어쓰지 않도록, 시작하지 않고 홈 복구 창으로 보냄
             if (isUnsavedFinishedSession(backup)) {
-                sendToast("저장되지 않은 학습 기록이 있어 홈으로 이동합니다.")
+                sendToast("저장되지 않은 학습 기록이 있어 홈으로 이동해요.")
                 _eventChannel.send(StudyingEvent.NavigateToHome)
                 return@launch
             }
@@ -741,7 +741,7 @@ class StudyingViewModel @Inject constructor(
 
     private suspend fun clearLocalBackup(){
         repository.clearLocalSession()
-            .onFailure { sendToast("자동 저장된 학습 기록이 지워지지 않았습니다.") }
+            .onFailure { sendToast("자동 저장된 학습 기록이 지워지지 않았어요.") }
     }
 
     /**

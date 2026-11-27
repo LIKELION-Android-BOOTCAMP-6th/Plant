@@ -124,7 +124,7 @@ class CommunityActivityViewModel @Inject constructor(
             withContext(NonCancellable) { deleteActivitiesUseCase(toDelete) }
                 .onSuccess {
                     _uiState.update { it.copy(isDeleting = false, isSelectionMode = false, selectedIds = emptySet()) }
-                    sendToast("삭제되었습니다.")
+                    sendToast("삭제되었어요.")
                 }
                 .onFailure { e ->
                     _uiState.update { it.copy(isDeleting = false) }

@@ -63,7 +63,7 @@ fun ReportSummaryMetrics(
                 modifier = Modifier.weight(1f).fillMaxHeight()
             )
         }
-        Text("연속은 1분 이상 공부한 날만 집계됩니다", style = MaterialTheme.typography.labelMedium)
+        Text("연속은 1분 이상 공부한 날만 집계돼요", style = MaterialTheme.typography.labelMedium)
     }
 }
 

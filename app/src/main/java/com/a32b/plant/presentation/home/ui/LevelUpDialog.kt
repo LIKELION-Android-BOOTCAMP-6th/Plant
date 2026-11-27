@@ -23,10 +23,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.a32b.plant.R
 import com.a32b.plant.domain.type.ItemType
 import com.a32b.plant.presentation.core.extension.resId
 import com.a32b.plant.presentation.home.viewmodel.LevelUpDialogUiState
@@ -74,7 +76,7 @@ fun LevelUpDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isLoading) {
-                Text("취소", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondary)
+                Text(stringResource(R.string.common_cancel), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondary)
             }
         },
         shape = RoundedCornerShape(24.dp)

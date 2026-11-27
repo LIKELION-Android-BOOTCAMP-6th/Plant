@@ -56,6 +56,7 @@ import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.platform.LocalContext
@@ -369,8 +370,8 @@ fun HomeScreen(
 }
 
 private fun AttendanceReward.announceText(): String = when (this) {
-    is AttendanceReward.Coin -> "${amount}골드를 획득했습니다!"
-    is AttendanceReward.ItemReward -> "${type.kor} ${amount}개를 획득했습니다!"
+    is AttendanceReward.Coin -> "${amount}골드를 획득했어요!"
+    is AttendanceReward.ItemReward -> "${type.kor} ${amount}개를 획득했어요!"
 }
 
 // 아이템은 학습 결과 보상(StudyRewardSection)과 같은 ItemType.resId, 골드는 출석판과 같은 ic_coin
@@ -405,7 +406,7 @@ fun PotChangeDialog(
                     .heightIn(max = 300.dp)
             ) {
                 Text(
-                    text = "정원에 있는 다른 공부 화분으로\n변경할 수 있습니다.",
+                    text = "정원에 있는 다른 공부 화분으로\n변경할 수 있어요.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSecondary
                 )
@@ -419,7 +420,7 @@ fun PotChangeDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "생성된 다른 화분이 없습니다.",
+                            "생성된 다른 화분이 없어요.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.tertiary
                         )
@@ -493,7 +494,7 @@ fun PotChangeDialog(
                     contentColor = MaterialTheme.colorScheme.onSecondary
                 )
             ) {
-                Text("취소", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.common_cancel), style = MaterialTheme.typography.bodyMedium)
             }
         },
         shape = RoundedCornerShape(24.dp)
@@ -720,7 +721,7 @@ fun MainPlantCard(
                 Spacer(modifier = Modifier.height(6.dp.compactIf(compact)))
             }
             Text(
-                text = if(hasNoPot) "공부 화분이 없습니다" else displayPot.name.ifEmpty { "실험용" },
+                text = if(hasNoPot) "공부 화분이 없어요" else displayPot.name.ifEmpty { "실험용" },
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.tertiary
             )
@@ -1297,7 +1298,7 @@ fun BonusBoxResultDialog(
             },
             confirmButton = {
                 TextButton(onClick = onDismiss) {
-                    Text("확인", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.common_confirm), style = MaterialTheme.typography.labelLarge)
                 }
             },
             shape = RoundedCornerShape(24.dp)
@@ -1333,8 +1334,8 @@ private fun RecoveryDialog(
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
                     text = when (session.status) {
-                        StudyingSessionStatus.STUDYING -> "앱이 비정상 종료되어 저장되지 않은 학습 기록이 있습니다."
-                        StudyingSessionStatus.FINISHED -> "학습을 종료했지만 저장이 완료되지 않은 학습 기록이 있습니다."
+                        StudyingSessionStatus.STUDYING -> "앱이 비정상 종료되어 저장되지 않은 학습 기록이 있어요."
+                        StudyingSessionStatus.FINISHED -> "학습을 종료했지만 저장이 완료되지 않은 학습 기록이 있어요."
                     },
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -1380,14 +1381,14 @@ private fun RecoveryDialog(
                     onClick = onDiscard,
                     enabled = !isLoading
                 ) {
-                    Text("확인", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.common_confirm), style = MaterialTheme.typography.bodyMedium)
                 }
             } else {
                 Button(
                     onClick = onRecover,
                     enabled = !isLoading
                 ) {
-                    Text("저장", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.common_save), style = MaterialTheme.typography.bodyMedium)
                 }
             }
         },
@@ -1498,7 +1499,7 @@ fun BonusBoxOpenDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isOpening) {
-                Text("취소", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondary)
+                Text(stringResource(R.string.common_cancel), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondary)
             }
         },
         shape = RoundedCornerShape(24.dp)

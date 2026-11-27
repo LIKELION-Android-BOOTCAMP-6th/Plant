@@ -231,7 +231,7 @@ class StudyingRepositoryImpl @Inject constructor(
         onFailure = { e ->
             Log.e("studying", "학습 세션 로컬 저장", e)
             val error = when(e){
-                is IOException -> AppError.Custom("저장 공간이 부족하여 비정상 종료 시 데이터를 소실할 수 있습니다.")
+                is IOException -> AppError.Custom("저장 공간이 부족하여 비정상 종료 시 데이터를 소실할 수 있어요.")
                 else -> AppError.Local()
             }
             Result.Failure(error)
@@ -246,7 +246,7 @@ class StudyingRepositoryImpl @Inject constructor(
             Log.e("studying", "학습 시간 로컬 저장", e)
             // 실패 안내 문구는 전체 저장(saveLocalSession)과 같게 — 학습 화면이 같은 안내를 띄운다
             val error = when (e) {
-                is IOException -> AppError.Custom("저장 공간이 부족하여 비정상 종료 시 데이터를 소실할 수 있습니다.")
+                is IOException -> AppError.Custom("저장 공간이 부족하여 비정상 종료 시 데이터를 소실할 수 있어요.")
                 else -> AppError.Local()
             }
             Result.Failure(error)
@@ -332,6 +332,6 @@ class StudyingRepositoryImpl @Inject constructor(
 
         /** 사유를 찾지 못한 저장 거부 안내 — 백업은 남아 홈 복구 창에서 다시 저장할 수 있다 */
         private const val UNRESOLVED_REJECTION_MESSAGE =
-            "학습 기록을 저장하지 못했습니다. 기기 시간이 실제보다 빠르면 잠시 후 다시 저장해 주세요."
+            "저장하지 못했어요. 기기 시간이 빠르면 잠시 후 다시 저장해 주세요."
     }
 }

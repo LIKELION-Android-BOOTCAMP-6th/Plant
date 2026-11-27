@@ -92,7 +92,7 @@ class DeleteAccountViewModelTest {
 
             assertEquals(
                 listOf(
-                    DeleteAccountEvent.ShowToast("회원탈퇴가 완료되었습니다."),
+                    DeleteAccountEvent.ShowToast("회원탈퇴가 완료되었어요."),
                     DeleteAccountEvent.NavigateToSignIn
                 ),
                 events

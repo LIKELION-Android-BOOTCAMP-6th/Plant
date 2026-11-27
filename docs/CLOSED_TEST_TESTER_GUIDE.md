@@ -78,8 +78,8 @@ Plant는 공부한 시간만큼 나만의 화분이 자라는 학습 관리 앱�
 
 | 내용 | 상태 |
 |------|------|
-| 홈 위쪽 상점 아이콘(출석체크 아이콘 바로 왼쪽)을 누르면 "준비 중인 기능입니다"가 나와요 | 아직 없는 기능이에요 |
-| 마이페이지의 "사용 가이드"를 누르면 "준비 중입니다."가 나와요 | 아직 없는 기능이에요 |
+| 홈 위쪽 상점 아이콘(출석체크 아이콘 바로 왼쪽)을 누르면 "준비 중인 기능이에요"가 나와요 | 아직 없는 기능이에요 |
+| 마이페이지의 "사용 가이드"를 누르면 "준비 중이에요."가 나와요 | 아직 없는 기능이에요 |
 | 출석체크나 보너스 박스에서 골드를 받아도, 지금은 가진 골드를 볼 수 있는 화면이 없어요 | 아직 없는 기능이에요 |
 | 닉네임에 이모지가 섞여 있어도 저장되고, 이모지만 넣으면 이유와 맞지 않는 안내가 나와요. 닉네임에는 이모지를 넣지 말아 주세요 | 정식 출시 전에 고칠 예정이에요 |
 | `[작성 필요: 최종 점검(#642) 후 남은 문제]` | |
@@ -116,9 +116,9 @@ Play 스토어에서도 비공개 의견을 보낼 수 있어요. 테스트 버�
 ### 6. 꼭 알아 두실 것
 
 - **데이터 초기화**: 테스트 중에 문제를 고치기 위해 서버 데이터(학습 기록, 화분, 게시글, 아이템 등)를 초기화할 수 있어요. 초기화하기 전에 미리 알려 드릴게요. 초기화 안내를 받으면 공부 중인 기록은 끝내 주세요.
-  - 초기화된 뒤 인터넷에 연결된 상태로 앱을 쓰면 로그인 화면으로 돌아가요. "로그인한 유저의 정보를 찾을 수 없습니다." 창이 함께 뜰 때도 있어요. 초기화 안내를 받은 뒤라면 문제가 아니에요. 안내가 없었는데 이 창이 뜨면 제보해 주세요.
+  - 초기화된 뒤 인터넷에 연결된 상태로 앱을 쓰면 로그인 화면으로 돌아가요. "로그인한 유저의 정보를 찾을 수 없어요." 창이 함께 뜰 때도 있어요. 초기화 안내를 받은 뒤라면 문제가 아니에요. 안내가 없었는데 이 창이 뜨면 제보해 주세요.
   - 다시 Google 로그인하면 닉네임 설정부터 처음 가입하는 것처럼 시작해요.
-- **한 계정은 한 기기에서만**: 테스트는 한 계정으로 한 기기에서 해 주세요. 같은 계정을 두 기기에서 쓰면 한쪽이 로그아웃되고, "다른 기기에서 로그인되었습니다." 창이 뜰 수 있어요. 문제가 아니에요.
+- **한 계정은 한 기기에서만**: 테스트는 한 계정으로 한 기기에서 해 주세요. 같은 계정을 두 기기에서 쓰면 한쪽이 로그아웃되고, "다른 기기에서 로그인되었어요." 창이 뜰 수 있어요. 문제가 아니에요.
 - **공부를 마칠 때**: 앱에서 "학습종료"를 눌러 주세요. 학습 중에 최근 앱 목록에서 앱을 밀어서 닫아도 알림의 학습 시간이 계속 올라갈 수 있어요. 이때 알림을 누르면 학습 화면이 아니라 홈이 열리고, "이전 학습 기록 발견" 창이 뜰 수 있어요. 창의 학습 시간은 알림에 보이던 시간보다 조금 짧을 수 있어요. 창에 보이는 학습 시간을 확인하고, 창의 안내에 따라 처리해 주세요.
 - **업데이트**: 새 버전이 나오면 Play 스토어에서 업데이트해 주세요. 앱을 열 때 "새 버전으로 업데이트해 주세요" 창이 뜨면 "업데이트"를 눌러 주세요. 이 창이 뜬 경우에는 업데이트해야 앱을 쓸 수 있어요.
 - **결제 없음**: 앱 안에 결제 기능이 없어요. 테스트 중에 돈이 드는 일은 없어요.
@@ -190,7 +190,7 @@ Play 스토어에서도 비공개 의견을 보낼 수 있어요. 테스트 버�
 - [ ] 피드백 이메일 또는 URL 입력 (1부 5절과 같은 값)
 - [ ] 테스터 모집 인원: `[작성 필요]`명 (12명 조건이면 중도 이탈을 생각해 여유 있게)
 
-## 안내문에 쓴 앱 동작의 근거 (2026-11-26 develop `27e3a329` 기준)
+## 안내문에 쓴 앱 동작의 근거 (2026-11-26 develop `27e3a329` 기준, 인용한 화면 문구만 #646 해요체 통일 반영)
 
 | 안내문 내용 | 코드 위치 |
 |------------|----------|
@@ -204,19 +204,19 @@ Play 스토어에서도 비공개 의견을 보낼 수 있어요. 테스트 버�
 | 출석 하루 1번, 인터넷 필요, 달마다 새로 셈 | 서버 `functions/index.js` `checkAttendance`. 오프라인 안내 `HomeViewModel.kt` `ATTENDANCE_OFFLINE_MESSAGE`. 서버 `functions/calculations.js` `decideAttendance`가 한국 시간 날짜 키(`todayKey`)의 연·월이 지난 출석과 다르면 횟수를 0부터 셈 (안내문에는 시간대를 쓰지 않음) |
 | 보너스 박스 인터넷 필요 | 서버 함수 호출 `ItemRepositoryImpl.openBonusBoxes()`. 실패하면 `HomeViewModel.kt`가 오류 문구를 토스트로 표시 (오프라인 문구는 인용하지 않음) |
 | 박스에서 박스가 나오면 남은 수가 늘어남 | `functions/index.js` `BONUS_BOX_DROP_TABLE`에 `BOX` 항목, `functions/calculations.js` `computeBonusBoxDeltas`(연 개수만큼 빼고 나온 박스만큼 더함) |
-| 골드를 볼 화면 없음 | 골드를 주는 곳: 출석 7·14·21·28번째(지급 원본은 서버 `functions/index.js` `ATTENDANCE_REWARD_TABLE`, 앱의 `AttendanceRewardTable.kt`는 출석판 표시용 사본), 박스 `GOLD_300`·`GOLD_500`·`GOLD_1000`(`BONUS_BOX_DROP_TABLE`). 화면에 골드가 나오는 곳은 획득 안내(출석 "…골드를 획득했습니다!", 박스 결과 창 "300골드 x1 획득!" — 이름은 `ItemType.kor`)와 출석판 보상 표시뿐이고, `presentation`에서 `User.gold`를 읽는 곳은 없음 (2026-11-26 `presentation` 전체에서 `gold`·`coin`·"골드" 검색). 관련 이슈는 찾지 못해 안내문에 일정은 쓰지 않음 |
+| 골드를 볼 화면 없음 | 골드를 주는 곳: 출석 7·14·21·28번째(지급 원본은 서버 `functions/index.js` `ATTENDANCE_REWARD_TABLE`, 앱의 `AttendanceRewardTable.kt`는 출석판 표시용 사본), 박스 `GOLD_300`·`GOLD_500`·`GOLD_1000`(`BONUS_BOX_DROP_TABLE`). 화면에 골드가 나오는 곳은 획득 안내(출석 "…골드를 획득했어요!", 박스 결과 창 "300골드 x1 획득!" — 이름은 `ItemType.kor`)와 출석판 보상 표시뿐이고, `presentation`에서 `User.gold`를 읽는 곳은 없음 (2026-11-26 `presentation` 전체에서 `gold`·`coin`·"골드" 검색). 관련 이슈는 찾지 못해 안내문에 일정은 쓰지 않음 |
 | 홈 진입 때 출석 창 | `HomeViewModel.maybeShowAutomaticAttendanceDialog()` (오늘 출석 전, 복구 창 없음, 이 ViewModel에서 그날 처음일 때. 앱을 새로 열면 다시 뜰 수 있음) |
 | 화분 생성·공부 시작 버튼 | `HomeScreen.kt` "화분 생성"(화분 없을 때), "공부 시작". `NewBornTreeScreen.kt` "화분 이름", "완료" |
 | 학습 시작·종료 흐름 | 목표 창이 먼저 뜸(`StudyingUiState.isGoalInputDialogShown` 기본값 true), `StudyingGoalInputDialog.kt` 입력칸 placeholder "오늘의 학습 목표를 기록해보세요!"·버튼 "완료". 종료 `StudyingScreen.kt` "학습종료" → `StudyingGoalCheckDialog.kt` "종료" → `StudyingViewModel.onIsStudyFinishChange()` → `onFinishStudyingClick()`에서 저장 (별도 저장 버튼 없음). 타이머가 멈추면(일시정지 버튼, 종료 확인 창 열기 등 — `docs/PLAY_CONSOLE.md` 1절) `StudyingTimerService.pauseTimer()`가 `stopForeground(STOP_FOREGROUND_REMOVE)`로 알림을 지우고, 다시 시작하면 `startForeground`로 알림을 다시 띄움 |
 | 신고 취소 불가, 5명이면 숨김, 내 글에는 아이콘 없음 | 신고·차단은 글자 없는 아이콘(`CommunityDetailScreen.kt` `contentDescription` "신고"·"사용자 차단"). 내 게시글은 수정·삭제만(`author.id == uiState.currentUid` 분기), 내 댓글은 `!isOwner` 조건으로 신고·차단 아이콘 없음. 앱에 신고 취소 기능 없음(`CommunityReportRepository`에 `createReport`만 있음), 한 사람은 같은 대상에 한 번만 신고(`firestore.rules` `reports` 문서 ID = 신고자 uid + 대상 id), `Post.kt` `BLIND_REPORT_THRESHOLD = 5` (게시글·댓글 공통) |
-| 초기화 뒤 로그인 화면 | 경로가 여러 개라 안내문은 "창이 함께 뜰 때도 있어요"로만 씀. 프로세스가 살아 있으면 `UserRepositoryImpl.kt` 리스너 `USER_NOT_FOUND` → `MainActivity.kt` "로그인한 유저의 정보를 찾을 수 없습니다." / 새로 실행하면 `CheckAutoLoginUseCase.kt`(서버에서 문서 없음을 확인하면 로그아웃 후 로그인 화면) / 오프라인이면 캐시로 홈에 들어갔다가 연결 뒤 감지 / 다시 로그인: `ResolveUserSessionUseCase.kt`(문서 새로 만듦) → 닉네임 설정. 같은 창은 초기화가 아니어도 `USER_NOT_FOUND`로 뜰 수 있어 "안내가 없었는데 뜨면 제보"로 씀 |
-| 한 계정 한 기기 | 마지막으로 세션 토큰을 쓴 기기만 남음(로그인 `ResolveUserSessionUseCase`, 서버 응답을 받은 자동 로그인 `CheckAutoLoginUseCase`). 리스너가 도는 기기에서 `UserRepositoryImpl.kt` `DUPLICATE_LOGIN` → `MainActivity.kt` "다른 기기에서 로그인되었습니다." 어느 쪽이 남는지는 상황에 따라 달라 안내문은 "한쪽이"로만 씀 |
+| 초기화 뒤 로그인 화면 | 경로가 여러 개라 안내문은 "창이 함께 뜰 때도 있어요"로만 씀. 프로세스가 살아 있으면 `UserRepositoryImpl.kt` 리스너 `USER_NOT_FOUND` → `MainActivity.kt` "로그인한 유저의 정보를 찾을 수 없어요." / 새로 실행하면 `CheckAutoLoginUseCase.kt`(서버에서 문서 없음을 확인하면 로그아웃 후 로그인 화면) / 오프라인이면 캐시로 홈에 들어갔다가 연결 뒤 감지 / 다시 로그인: `ResolveUserSessionUseCase.kt`(문서 새로 만듦) → 닉네임 설정. 같은 창은 초기화가 아니어도 `USER_NOT_FOUND`로 뜰 수 있어 "안내가 없었는데 뜨면 제보"로 씀 |
+| 한 계정 한 기기 | 마지막으로 세션 토큰을 쓴 기기만 남음(로그인 `ResolveUserSessionUseCase`, 서버 응답을 받은 자동 로그인 `CheckAutoLoginUseCase`). 리스너가 도는 기기에서 `UserRepositoryImpl.kt` `DUPLICATE_LOGIN` → `MainActivity.kt` "다른 기기에서 로그인되었어요." 어느 쪽이 남는지는 상황에 따라 달라 안내문은 "한쪽이"로만 씀 |
 | 공부를 마칠 때·밀어서 닫았을 때 | 밀어서 닫아도 서비스가 남아 30초마다 백업(`StudyingTimerService.kt` `LOCAL_BACKUP_INTERVAL_MS`, `onTaskRemoved` 없음), 그래서 "알림의 시간이 계속 올라갈 수 있어요". 그 뒤 알림을 누르면 로그인 상태일 때 홈이 열리고 복구 창이 뜸, 복구 창 시간은 마지막 백업 값이라 알림 시간보다 짧을 수 있음 (`docs/PLAY_CONSOLE.md` 1절, SM-N986N 한 대의 실기기 기록 — 그래서 "~할 수 있어요"로 씀). `HomeScreen.kt` 복구 창 "이전 학습 기록 발견"(버튼은 보통 "저장"·"폐기", 7일이 지났거나 시작 시각이 없는 기록은 `StudyLog.isTooOldToSave`가 true라 "확인"만 — 그래서 안내문은 버튼 이름을 쓰지 않음) |
 | 강제 업데이트 창 | `splash/UpdateRequiredDialog.kt` "새 버전으로 업데이트해 주세요", "업데이트" (뒤로가기는 앱 종료). 서버 `config/app`의 최소 버전보다 낮을 때만 뜸(`CheckAppVersionUseCase`) |
 | 하단 탭 이름 | `BottomBar.kt` `BOTTOM_BAR_LABELS` ("홈", "내 화분", "커뮤니티", "리포트", "마이페이지") |
 | 신고·차단 | `CommunityDetailScreen.kt` "신고하기", 차단 확인 문구("마이페이지 > 차단 목록에서 해제할 수 있어요") |
 | 회원탈퇴 경로 | `MypageScreen.kt` "계정 관리" → `AccountManageScreen.kt` "회원탈퇴" → 확인 창 "예"·"탈퇴" → Google 계정 재선택. 지워지는 범위는 `docs/legal/account-deletion.md` 3절 (안내문에는 목록을 옮기지 않고 링크로 대신함) |
-| 상점·사용 가이드 준비 중 | 상점은 글자 없는 아이콘(`HomeScreen.kt` `contentDescription = "상점"`, 출석체크 아이콘 왼쪽), `HomeViewModel.onShopClick()` "준비 중인 기능입니다", `MypageScreen.kt` `onGuideClick` "준비 중입니다." |
+| 상점·사용 가이드 준비 중 | 상점은 글자 없는 아이콘(`HomeScreen.kt` `contentDescription = "상점"`, 출석체크 아이콘 왼쪽), `HomeViewModel.onShopClick()` "준비 중인 기능이에요", `MypageScreen.kt` `onGuideClick` "준비 중이에요." |
 | 닉네임 이모지 | #738 (열림): 섞이면 통과, 이모지·기호만이면 금칙어 문구로 거부 |
 | 약관·처리방침 주소, 문의처 | `core/util/LegalUrls.kt`, `docs/legal/privacy.md` 12절 |
 | 가입 전·앱 없이 계정 삭제 요청 | `docs/legal/privacy.md` 9절, `docs/legal/account-deletion.md` 2절 (주소 `hosting/build-legal.mjs` `PAGES`, 2026-11-26 요청해 HTTP 200 확인) |

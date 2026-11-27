@@ -34,7 +34,7 @@ class CommunityReportRepositoryImpl @Inject constructor(
     }.fold(
         onSuccess = { reported ->
             if (reported) Result.Success(Unit)
-            else Result.Failure(AppError.Custom("이미 신고한 콘텐츠입니다."))
+            else Result.Failure(AppError.Custom("이미 신고한 콘텐츠예요."))
         },
         onFailure = { e -> Result.Failure(handleError(e)) }
     )
@@ -46,8 +46,8 @@ class CommunityReportRepositoryImpl @Inject constructor(
             FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> AppError.Network()
             // 정상 사용 중에는 대상이 삭제됐거나 같은 신고가 동시에 제출된 경우에만 발생
             FirebaseFirestoreException.Code.PERMISSION_DENIED ->
-                AppError.Custom("삭제되었거나 신고할 수 없는 콘텐츠입니다.")
-            else -> AppError.Custom("신고 처리 중 오류가 발생했습니다.")
+                AppError.Custom("삭제되었거나 신고할 수 없는 콘텐츠예요.")
+            else -> AppError.Custom("신고 처리 중 오류가 발생했어요.")
         }
         else -> AppError.Unknown()
     }

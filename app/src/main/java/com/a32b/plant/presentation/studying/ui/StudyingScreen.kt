@@ -56,6 +56,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -206,7 +207,7 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
                             color = MaterialTheme.colorScheme.errorContainer
                         ) {
                             Text(
-                                text = "자동 저장에 실패했습니다. 앱 종료 시 학습 기록이 유실될 수 있습니다.",
+                                text = "자동 저장에 실패했어요. 앱 종료 시 학습 기록이 유실될 수 있어요.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
@@ -339,10 +340,10 @@ fun StudyingScreen(navController: NavController, viewModel: StudyingViewModel = 
     if (uiState.error != null)
         ConfirmDialog(
             text = "${uiState.error}",
-            semiText = "메인 화면으로 이동합니다.",
+            semiText = "메인 화면으로 이동해요.",
             isSingleBtn = true,
             isCancelable = false,
-            confirmBtnText = "확인",
+            confirmBtnText = stringResource(R.string.common_confirm),
             onDismiss = {},
             onConfirm = { viewModel.onErrorConfirmClicked() }
         )

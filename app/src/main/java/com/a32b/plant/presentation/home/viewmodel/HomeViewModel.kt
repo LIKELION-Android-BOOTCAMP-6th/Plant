@@ -129,8 +129,8 @@ internal const val ATTENDANCE_OFFLINE_MESSAGE = "인터넷에 연결되면 출�
 // Android 12부터 텍스트 토스트는 두 줄까지만 보이므로(Android 13 실기기에서 이전 문구는 "출석판을 확인..."에서 잘림) 짧게 유지한다
 internal const val ATTENDANCE_NETWORK_ERROR_MESSAGE = "출석 결과를 받지 못했어요. 출석판을 확인해주세요."
 
-// 보너스 박스가 없을 때 박스 칸을 누르면 보여주는 문구 (#678에서 화면에서 옮김, 문구는 그대로)
-internal const val NO_BONUS_BOX_MESSAGE = "보유한 보너스 박스가 없습니다."
+// 보너스 박스가 없을 때 박스 칸을 누르면 보여주는 문구 (#678에서 화면에서 옮김)
+internal const val NO_BONUS_BOX_MESSAGE = "보유한 보너스 박스가 없어요."
 
 /**
  * 홈 "오늘 학습 시간"의 0 표시 — 화분 있음(기록 0)·화분 없음·조회 실패를 같은 형식으로 맞춘다 (#584)
@@ -314,7 +314,7 @@ class HomeViewModel @Inject constructor(
 
     // 상점 화면 구현 전까지는 "준비 중" 토스트만 표시 (구현 후 네비게이션 이벤트로 교체)
     fun onShopClick() {
-        sendToast("준비 중인 기능입니다")
+        sendToast("준비 중인 기능이에요")
     }
 
     fun openAttendanceDialog() {
@@ -403,7 +403,7 @@ class HomeViewModel @Inject constructor(
                     maybeShowAutomaticAttendanceDialog()
                     sendToast(
                         when (result) {
-                            StudySaveResult.Saved, StudySaveResult.AlreadySaved -> "학습 기록이 저장되었습니다."
+                            StudySaveResult.Saved, StudySaveResult.AlreadySaved -> "학습 기록이 저장되었어요."
                             StudySaveResult.Pending -> "네트워크에 연결되면 학습 기록이 자동으로 저장돼요."
                             is StudySaveResult.Rejected -> result.reason.message
                         }

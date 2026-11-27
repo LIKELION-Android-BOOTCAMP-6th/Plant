@@ -100,6 +100,6 @@ class ImprovementSuggestionViewModel @Inject constructor(
     }
 
     companion object {
-        private const val SUCCESS_MESSAGE = "개선사항 제안이 접수되었습니다."
+        private const val SUCCESS_MESSAGE = "개선사항 제안이 접수되었어요."
     }
 }

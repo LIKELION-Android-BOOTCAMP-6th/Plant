@@ -192,7 +192,7 @@ class PotRepositoryImpl @Inject constructor(
             onSuccess = { Result.Success(it) },
             onFailure = { throwable ->
                 Log.e("PotRepository", "오늘 학습 로그 조회 실패: ${throwable.message}", throwable)
-                Result.Failure(handleError(throwable, "오늘 학습 시간 조회 중 오류가 발생했습니다."))
+                Result.Failure(handleError(throwable, "오늘 학습 시간 조회 중 오류가 발생했어요."))
             }
         )
     }
@@ -255,13 +255,13 @@ class PotRepositoryImpl @Inject constructor(
     companion object {
         /** 화분 생성·이름 변경·완료·삭제·레벨업 제한 시간 — 학습 기록 저장(StudyingRepositoryImpl.SAVE_TIMEOUT)과 같은 5초 */
         private val WRITE_TIMEOUT = 5.seconds
-        private const val ADD_POT_ERROR_MESSAGE = "화분 추가에 실패했습니다."
-        private const val RENAME_ERROR_MESSAGE = "화분 이름 변경에 실패했습니다."
-        private const val COMPLETE_ERROR_MESSAGE = "학습 완료에 실패했습니다. 다시 시도해주세요."
-        private const val DELETE_POT_ERROR_MESSAGE = "화분 삭제에 실패했습니다. 다시 시도해주세요."
-        private const val POT_NOT_FOUND_MESSAGE = "존재하지 않거나 삭제된 화분입니다."
-        private const val POT_LOAD_ERROR_MESSAGE = "화분 정보를 불러오지 못했습니다."
+        private const val ADD_POT_ERROR_MESSAGE = "화분 추가에 실패했어요."
+        private const val RENAME_ERROR_MESSAGE = "화분 이름 변경에 실패했어요."
+        private const val COMPLETE_ERROR_MESSAGE = "학습 완료에 실패했어요. 다시 시도해주세요."
+        private const val DELETE_POT_ERROR_MESSAGE = "화분 삭제에 실패했어요. 다시 시도해주세요."
+        private const val POT_NOT_FOUND_MESSAGE = "존재하지 않거나 삭제된 화분이에요."
+        private const val POT_LOAD_ERROR_MESSAGE = "화분 정보를 불러오지 못했어요."
         // 규칙은 거부 사유를 알려주지 않는다 — 예: 다른 기기에서 아이템을 먼저 써서 서버 기준으로 부족해진 경우
-        private const val LEVEL_UP_ERROR_MESSAGE = "레벨업에 실패했습니다. 아이템과 학습 시간을 확인해주세요."
+        private const val LEVEL_UP_ERROR_MESSAGE = "레벨업에 실패했어요. 아이템과 학습 시간을 확인해주세요."
     }
 }

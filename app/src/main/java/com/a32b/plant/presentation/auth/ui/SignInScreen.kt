@@ -259,7 +259,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
                 viewModel.cancelGoogleSignIn()
             } catch (e: NoCredentialException) {
                 viewModel.cancelGoogleSignIn()
-                context.showToast("기기에 등록된 Google 계정이 없습니다. 설정에서 계정을 추가해주세요.")
+                context.showToast("기기에 등록된 Google 계정이 없어요. 설정에서 계정을 추가해주세요.")
                 val intent = Intent(Settings.ACTION_ADD_ACCOUNT)
                 intent.putExtra("account_types", arrayOf("com.google"))
                 context.startActivity(intent)
@@ -270,7 +270,7 @@ fun SignInScreen(navController: NavController, viewModel: SignInViewModel = hilt
             } catch (e: Exception) {
                 viewModel.cancelGoogleSignIn()
                 Log.e("SignIn", "구글 로그인 에러: ${e.message}", e)
-                context.showToast("구글 로그인에 실패했습니다.\n다시 시도해주세요.")
+                context.showToast("구글 로그인에 실패했어요.\n다시 시도해주세요.")
             }
         }
     }

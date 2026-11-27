@@ -103,14 +103,14 @@ class SignInViewModelTest {
 
     @Test
     fun `other save failure shows short toast without input error`() = runSignInTest(
-        completeResult = Result.Failure(AppError.Custom("닉네임 설정에 실패했습니다."))
+        completeResult = Result.Failure(AppError.Custom("닉네임 설정에 실패했어요."))
     ) { _, viewModel, events ->
         viewModel.onNicknameChange("새싹")
         viewModel.confirmNickname()
         runCurrent()
 
         assertNull(viewModel.uiState.value.nicknameError)
-        assertEquals(listOf(SignInEvent.ShowToast("닉네임 설정에 실패했습니다.", isLong = false)), events)
+        assertEquals(listOf(SignInEvent.ShowToast("닉네임 설정에 실패했어요.", isLong = false)), events)
     }
 
     @Test
@@ -123,7 +123,7 @@ class SignInViewModelTest {
         assertEquals(listOf("새싹"), users.completedNicknames.map { it.second })
         // 토스트는 sendToast가 별도 코루틴으로 보내므로 홈 이동과의 순서는 보장되지 않는다 → 포함 여부만 확인
         assertEquals(
-            setOf(SignInEvent.ShowToast("새싹님 환영합니다.", isLong = false), SignInEvent.NavigateToHome),
+            setOf(SignInEvent.ShowToast("새싹님 환영해요.", isLong = false), SignInEvent.NavigateToHome),
             events.toSet()
         )
         assertEquals(2, events.size)
@@ -140,7 +140,7 @@ class SignInViewModelTest {
         runCurrent()
 
         assertEquals(
-            setOf(SignInEvent.ShowToast("이전닉님 환영합니다.", isLong = false), SignInEvent.NavigateToHome),
+            setOf(SignInEvent.ShowToast("이전닉님 환영해요.", isLong = false), SignInEvent.NavigateToHome),
             events.toSet()
         )
         assertEquals(2, events.size)

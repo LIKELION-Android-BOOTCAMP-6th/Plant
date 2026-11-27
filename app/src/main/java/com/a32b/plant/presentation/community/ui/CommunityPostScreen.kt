@@ -237,7 +237,7 @@ fun CommunityPostScreen(
                         PostInputField(
                             value = uiState.content,
                             onValueChange = { viewModel.onContentChange(it) },
-                            placeholder = "나누고 싶은 이야기를 적어주세요.\n\n※ 비방이나 욕설은 제재 대상이 될 수 있습니다.",
+                            placeholder = "나누고 싶은 이야기를 적어주세요.\n\n※ 비방이나 욕설은 제재 대상이 될 수 있어요.",
                             modifier = Modifier.heightIn(min = 400.dp),
                             maxLength = 1000
                         )
@@ -251,8 +251,8 @@ fun CommunityPostScreen(
 
     if (uiState.isDismissDialogShow)
         ConfirmDialog(
-            "게시글 작성을 종료하시겠습니까?",
-            semiText = "작성된 게시글은 저장되지 않습니다.",
+            "게시글 작성을 종료할까요?",
+            semiText = "작성된 게시글은 저장되지 않아요.",
             onDismiss = { viewModel.onIsDismissDialogShowChange() },
             onConfirm = {
                 // NavigateBack 이벤트와 겹쳐도 한 번만 닫히도록 동일하게 CommunityPost를 대상으로 pop

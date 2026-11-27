@@ -35,7 +35,7 @@ class UpdateProfileUseCase @Inject constructor(
         val isNicknameChanged = normalizedNickname != NicknameRule.normalize(currentUser.nickname)
 
         if (!isNicknameChanged && newImageLevel == currentUser.profileImg) {
-            return Result.Failure(AppError.Custom("변경사항이 없습니다."))
+            return Result.Failure(AppError.Custom("변경사항이 없어요."))
         }
 
         if (isNicknameChanged) {

@@ -67,7 +67,7 @@ class ReportRepositoryImpl @Inject constructor(
                     else -> AppError.Server()
                 }
             }
-            else -> AppError.Custom("리포트를 불러오지 못했습니다.")
+            else -> AppError.Custom("리포트를 불러오지 못했어요.")
         }
     }
 

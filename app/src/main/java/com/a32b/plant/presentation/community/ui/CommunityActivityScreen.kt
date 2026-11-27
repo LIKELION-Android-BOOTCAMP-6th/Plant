@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -36,6 +37,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
+import com.a32b.plant.R
 import com.a32b.plant.core.navigation.Routes
 import com.a32b.plant.core.navigation.rememberPopBackStackSafely
 import com.a32b.plant.core.util.TimeFormatter
@@ -84,8 +86,8 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
 
     if (uiState.isDeleteDialogShown) {
         val (text, semiText) = when (uiState.selected) {
-            ActivityType.LIKE -> "선택한 좋아요를 취소하시겠습니까?" to null
-            ActivityType.BOOKMARK -> "선택한 북마크를 취소하시겠습니까?" to null
+            ActivityType.LIKE -> "선택한 좋아요를 취소할까요?" to null
+            ActivityType.BOOKMARK -> "선택한 북마크를 취소할까요?" to null
             else -> "선택한 항목을 삭제하시겠습니까?" to "삭제된 데이터는 복구할 수 없습니다."
         }
         // 게시글·댓글 삭제만 되돌릴 수 없는 동작으로 강조 (#647). 좋아요·북마크 취소는 다시 누르면 되돌릴 수 있어 일반 "예" 유지
@@ -100,7 +102,7 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
             },
             textStyle = MaterialTheme.typography.titleMedium,
             buttonTextStyle = MaterialTheme.typography.labelLarge,
-            confirmBtnText = if (isDestructive) "삭제" else "예",
+            confirmBtnText = if (isDestructive) stringResource(R.string.common_delete) else stringResource(R.string.common_yes),
             isDestructive = isDestructive
         )
     }
@@ -133,7 +135,7 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                                         when (uiState.selected) {
                                             ActivityType.LIKE -> "좋아요 취소"
                                             ActivityType.BOOKMARK -> "북마크 취소"
-                                            else -> "삭제"
+                                            else -> stringResource(R.string.common_delete)
                                         },
                                         modifier = Modifier.weight(1f, fill = false),
                                         color = MaterialTheme.colorScheme.error,
@@ -153,7 +155,7 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                                 onClick = { viewModel.exitSelectionMode() }
                             ) {
                                 Text(
-                                    "취소",
+                                    stringResource(R.string.common_cancel),
                                     style = MaterialTheme.typography.bodyMedium,
                                     maxLines = 1
                                 )
@@ -186,7 +188,7 @@ fun CommunityActivityScreen(navController: NavController, viewModel: CommunityAc
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "커뮤니티 활동 내역이 없습니다.",
+                                    text = "커뮤니티 활동 내역이 없어요.",
                                     style = MaterialTheme.typography.bodyMedium,
                                 )
                             }

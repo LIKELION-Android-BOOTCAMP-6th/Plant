@@ -60,7 +60,7 @@ class NewBornTreeViewModel @Inject constructor(private val potRepository: PotRep
         // 저장 중 연타 무시 (#672). 화면 버튼의 enabled는 화면이 다시 그려져야 반영되므로 ViewModel에서도 막는다
         if (_isUploading.value) return
         if(currentUid.isEmpty()){
-            _errorMessage.value = "사용자 정보가 없습니다. 다시 로그인해주세요."
+            _errorMessage.value = "사용자 정보가 없어요. 다시 로그인해주세요."
             return
         }
         _isUploading.value = true
@@ -73,7 +73,7 @@ class NewBornTreeViewModel @Inject constructor(private val potRepository: PotRep
                 onCreated(if (saveResult == SaveResult.Pending) NETWORK_SLOW_MESSAGE else null)
             }
                 .onFailure { exception ->
-                    val msg = exception.message ?: "화분 생성에 실패했습니다. 다시 시도해주세요"
+                    val msg = exception.message ?: "화분 생성에 실패했어요. 다시 시도해주세요"
                     _errorMessage.emit(msg)
                 }
         }
