@@ -242,14 +242,6 @@ private fun AttendanceBoard(
                 }
             }
         }
-
-        Text(
-            text = "다음 출석 보상: ${rewards.getOrNull(checkedCount)?.label?.ifBlank { "기본 보상" } ?: "기본 보상"}",
-            modifier = Modifier.fillMaxWidth(),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSecondary,
-            textAlign = TextAlign.Center
-        )
     }
 }
 
@@ -404,7 +396,8 @@ private fun TextMeasurer.fitsOneLine(text: String, style: TextStyle, maxWidth: I
     ).hasVisualOverflow
 
 /**
- * label   보상 이름. "다음 출석 보상" 안내 문구에 쓰이므로 아이콘이 있어도 비우지 않는다.
+ * label   보상 이름. 아이콘의 contentDescription(TalkBack이 읽는 이름)으로 쓰이므로 아이콘이 있어도 비우지 않는다.
+ *         [showLabelBelow]가 true면 원 아래 글씨로도 보인다.
  * iconRes 원 안에 표시할 아이콘.
  * showLabelBelow 원 아래에도 글씨를 보일지. 금액 구분이 필요한 골드만 true.
  */
