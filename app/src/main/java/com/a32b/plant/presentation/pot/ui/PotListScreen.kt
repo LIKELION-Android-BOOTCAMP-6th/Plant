@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -202,13 +203,17 @@ fun PotSortDropdown(
         modifier = Modifier.wrapContentSize(Alignment.TopEnd)
     ) {
         // 버튼 형태의 드롭다운 앵커
+        // 위 "공부 중 | 기른 화분" 탭(titleSmall)에 맞춰 글자·높이를 줄임 (#800)
+        // 버튼 기본 최소 높이(40dp)를 32dp로 낮춤. 높이를 고정하지 않고 최소값만 둬서 글자가 더 커지면 버튼도 늘어남
+        // 터치 영역은 버튼 안 Surface의 minimumInteractiveComponentSize()가 48dp로 유지
         OutlinedButton(
             onClick = { expanded = true },
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+            modifier = Modifier.heightIn(min = 32.dp),
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
         ) {
             Text(
                 text = currentSort.displayName,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.width(4.dp))
@@ -216,9 +221,14 @@ fun PotSortDropdown(
                 painter = painterResource(R.drawable.ic_arrow_drop_down),
                 contentDescription = "정렬 기준 변경",
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(16.dp)
             )
         }
+
+        // 메뉴 항목 기본 최소 높이(48dp)를 bodySmall 줄 높이(lineHeight) + 16dp로 낮춤 (#800)
+        // 최대 높이를 sp 기준 줄 높이로 잡아 큰 글꼴에서는 함께 늘어남
+        val menuTextStyle = MaterialTheme.typography.bodySmall
+        val menuItemMaxHeight = with(LocalDensity.current) { menuTextStyle.lineHeight.toDp() } + 16.dp
 
         // 드롭다운 메뉴 리스트
         DropdownMenu(
@@ -228,10 +238,12 @@ fun PotSortDropdown(
             PotSortType.entries.forEach { sortType ->
                 val isSelected = sortType == currentSort
                 DropdownMenuItem(
+                    modifier = Modifier.heightIn(max = menuItemMaxHeight),
                     text = {
                         Text(
                             text = sortType.displayName,
-                            style = MaterialTheme.typography.bodyMedium,
+                            // 칩 글자(titleSmall 12sp)와 같은 크기로 줄임 (#800)
+                            style = menuTextStyle,
                             // 다크 메뉴 배경(surfaceContainer 414141) 위 primary(627347)는 대비 약 1.97:1이라 진한 초록(tertiary) (#643)
                             color = if (isSelected) MaterialTheme.colorScheme.tertiary else Color.Unspecified
                         )
@@ -242,7 +254,7 @@ fun PotSortDropdown(
                             Icon(
                                 painter = painterResource(R.drawable.ic_check),
                                 contentDescription = "선택됨",
-                                modifier = Modifier.size(18.dp),
+                                modifier = Modifier.size(16.dp),
                                 tint = MaterialTheme.colorScheme.tertiary
                             )
                         }
