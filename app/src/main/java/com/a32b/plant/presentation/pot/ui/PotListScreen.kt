@@ -235,7 +235,8 @@ fun PotSortDropdown(
                     text = {
                         Text(
                             text = sortType.displayName,
-                            style = MaterialTheme.typography.bodyMedium,
+                            // 칩 글자(titleSmall 12sp)와 같은 크기로 줄임 (#800)
+                            style = MaterialTheme.typography.bodySmall,
                             // 다크 메뉴 배경(surfaceContainer 414141) 위 primary(627347)는 대비 약 1.97:1이라 진한 초록(tertiary) (#643)
                             color = if (isSelected) MaterialTheme.colorScheme.tertiary else Color.Unspecified
                         )
@@ -246,7 +247,7 @@ fun PotSortDropdown(
                             Icon(
                                 painter = painterResource(R.drawable.ic_check),
                                 contentDescription = "선택됨",
-                                modifier = Modifier.size(18.dp),
+                                modifier = Modifier.size(16.dp),
                                 tint = MaterialTheme.colorScheme.tertiary
                             )
                         }
