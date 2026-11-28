@@ -205,7 +205,7 @@ fun PotSortDropdown(
         // 버튼 형태의 드롭다운 앵커
         // 위 "공부 중 | 기른 화분" 탭(titleSmall)에 맞춰 글자·높이를 줄임 (#800)
         // 버튼 기본 최소 높이(40dp)를 32dp로 낮춤. 높이를 고정하지 않고 최소값만 둬서 글자가 더 커지면 버튼도 늘어남
-        // 터치 영역은 버튼 안 Surface의 minimumInteractiveComponentSize()가 48dp로 유지
+        // 보이는 크기만 줄이고 터치 영역은 48dp 유지
         OutlinedButton(
             onClick = { expanded = true },
             modifier = Modifier.heightIn(min = 32.dp),
