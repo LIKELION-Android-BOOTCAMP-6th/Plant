@@ -202,13 +202,17 @@ fun PotSortDropdown(
         modifier = Modifier.wrapContentSize(Alignment.TopEnd)
     ) {
         // 버튼 형태의 드롭다운 앵커
+        // 위 "공부 중 | 기른 화분" 탭(titleSmall)에 맞춰 글자·높이를 줄임 (#800)
+        // 버튼 기본 최소 높이(40dp)를 32dp로 낮춤. 높이를 고정하지 않고 최소값만 둬서 글자가 더 커지면 버튼도 늘어남
+        // 터치 영역은 버튼 안 Surface의 minimumInteractiveComponentSize()가 48dp로 유지
         OutlinedButton(
             onClick = { expanded = true },
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+            modifier = Modifier.heightIn(min = 32.dp),
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
         ) {
             Text(
                 text = currentSort.displayName,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.width(4.dp))
@@ -216,7 +220,7 @@ fun PotSortDropdown(
                 painter = painterResource(R.drawable.ic_arrow_drop_down),
                 contentDescription = "정렬 기준 변경",
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(16.dp)
             )
         }
 
