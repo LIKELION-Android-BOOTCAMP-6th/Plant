@@ -4,6 +4,8 @@ import androidx.lifecycle.viewModelScope
 import com.a32b.plant.core.base.BaseViewModel
 import com.a32b.plant.core.util.safeRunCatching
 import com.a32b.plant.domain.model.Pot
+import com.a32b.plant.domain.repository.PotRepository
+import com.a32b.plant.domain.result.onSuccess
 import com.a32b.plant.domain.type.PotSortType
 import com.a32b.plant.domain.usecase.pot.GetPotListUseCase
 import com.a32b.plant.domain.usecase.session.EnsureCurrentUserUseCase
@@ -21,6 +23,7 @@ import javax.inject.Inject
 @HiltViewModel
 class PotListViewModel @Inject constructor(
     private val getPotListUseCase: GetPotListUseCase,
+    private val potRepository: PotRepository,
     private val ensureCurrentUserUseCase: EnsureCurrentUserUseCase
 ) : BaseViewModel() {
 
@@ -29,12 +32,16 @@ class PotListViewModel @Inject constructor(
     private val _pots = MutableStateFlow<List<Pot>>(emptyList())
     val pots = _pots.asStateFlow()
 
-    // 정렬
-    private val _sortType = MutableStateFlow(PotSortType.CREATED_DATE)
+    // 정렬 — 기기에 저장된 값을 loadData()에서 읽어 덮어쓴다 (#803)
+    private val _sortType = MutableStateFlow(PotSortType.DEFAULT)
     val sortType: StateFlow<PotSortType> = _sortType.asStateFlow()
 
     fun setSortType(sortType: PotSortType) {
+        if (_sortType.value == sortType) return
         _sortType.value = sortType
+        // 저장에 실패해도 이 화면에 있는 동안은 고른 정렬을 그대로 보여 준다
+        // (다른 탭에 갔다 오면 마지막으로 저장된 값, 없거나 읽지 못하면 "생성일"로 돌아감. 토스트 없음, 로그는 Repository에서)
+        viewModelScope.launch { potRepository.saveSortType(sortType) }
     }
 
     // 공부 중인 화분 리스트
@@ -62,6 +69,10 @@ class PotListViewModel @Inject constructor(
 
     private fun loadData() {
         viewModelScope.launch {
+            // 저장된 정렬을 목록보다 먼저 읽는다 — 로딩(LoadableScreen)이 풀릴 때 "생성일" 순서가 잠깐 보이지 않게 (#803)
+            // 읽기에 실패하면 기본값("생성일") 그대로
+            potRepository.readSortType().onSuccess { _sortType.value = it }
+
             safeRunCatching {
                 ensureCurrentUserUseCase { user ->
                     val uid = user.uid

@@ -7,6 +7,7 @@ import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.PotRepository
 import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.type.ItemType
+import com.a32b.plant.domain.type.PotSortType
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import java.util.Date
@@ -77,4 +78,26 @@ class FakePotRepository(
     override suspend fun completeStudyPlan(uid: String, potId: String): Result<SaveResult> = error("Unused")
     override suspend fun getTodayStudyLogs(uid: String, potId: String, startOfToday: Date): Result<List<StudyLog>> =
         todayStudyLogsResult ?: error("Unused")
+
+    /** readSortType 결과 — 넣지 않으면 호출 시 실패 */
+    var readSortTypeResult: Result<PotSortType>? = null
+
+    /** 넣으면 readSortType이 게이트가 완료될 때까지 끝나지 않는다 (저장된 정렬 읽기 전 상태 확인용) */
+    var readSortTypeGate: CompletableDeferred<Unit>? = null
+
+    var saveSortTypeResult: Result<Unit> = Result.Success(Unit)
+
+    /** saveSortType 호출 기록 */
+    val savedSortTypes = mutableListOf<PotSortType>()
+
+    override suspend fun readSortType(): Result<PotSortType> {
+        val result = readSortTypeResult ?: error("Unused")
+        readSortTypeGate?.await()
+        return result
+    }
+
+    override suspend fun saveSortType(sortType: PotSortType): Result<Unit> {
+        savedSortTypes += sortType
+        return saveSortTypeResult
+    }
 }

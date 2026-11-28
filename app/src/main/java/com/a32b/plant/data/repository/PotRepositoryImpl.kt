@@ -8,6 +8,8 @@ import com.a32b.plant.data.firestore.isRuleRejection
 import com.a32b.plant.data.source.remote.pot.PotRemoteDataSource
 import com.a32b.plant.data.mapper.toDomain
 import com.a32b.plant.data.source.remote.pot.PotNotFoundException
+import com.a32b.plant.data.source.local.SettingsLocalDataSource
+import com.a32b.plant.di.qualifier.ApplicationScope
 import com.a32b.plant.domain.error.AppError
 import com.a32b.plant.domain.model.Pot
 import com.a32b.plant.domain.model.SaveResult
@@ -16,9 +18,15 @@ import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.repository.PotRepository
 import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.type.ItemType
+import com.a32b.plant.domain.type.PotSortType
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
@@ -32,8 +40,13 @@ import kotlin.time.Duration.Companion.seconds
 @Singleton
 class PotRepositoryImpl @Inject constructor(
     private val potRemoteDataSource: PotRemoteDataSource,
-    private val db: FirebaseFirestore
+    private val db: FirebaseFirestore,
+    private val settingsLocalDataSource: SettingsLocalDataSource,
+    @param:ApplicationScope private val scope: CoroutineScope
 ) : PotRepository {
+
+    /** 정렬 기준 읽기·저장을 부른 순서대로 처리한다 — 연달아 고르면 마지막 값이 남고, 저장 중에 읽으면 저장 뒤 값을 읽는다 (#803) */
+    private val sortTypeMutex = Mutex()
 
     override fun getPots(uid: String): Flow<List<Pot>> =
         potRemoteDataSource.getPots(uid)
@@ -251,6 +264,32 @@ class PotRepositoryImpl @Inject constructor(
             }
         )
     }
+
+    override suspend fun readSortType(): Result<PotSortType> = safeRunCatching {
+        sortTypeMutex.withLock { settingsLocalDataSource.readPotSortType() }
+    }.fold(
+        onSuccess = { name -> Result.Success(PotSortType.fromName(name)) },
+        onFailure = { e ->
+            Log.e("PotRepository", "정렬 기준 읽기 실패", e)
+            Result.Failure(AppError.Local("불러오기 실패"))
+        }
+    )
+
+    // 고르자마자 다른 탭으로 가면 ViewModel 스코프가 취소되므로, 앱 스코프에서 써서 저장이 끊기지 않게 한다.
+    // 실패 로그도 앱 스코프 안에서 남긴다 — 호출한 쪽이 먼저 취소되면 결과를 받을 곳이 없다.
+    // UNDISPATCHED: 호출한 순서대로 잠금 대기열에 들어가게 (IO 스레드로 넘어가며 순서가 뒤바뀌지 않게)
+    override suspend fun saveSortType(sortType: PotSortType): Result<Unit> =
+        scope.async(start = CoroutineStart.UNDISPATCHED) {
+            safeRunCatching {
+                sortTypeMutex.withLock { settingsLocalDataSource.savePotSortType(sortType.name) }
+            }.fold(
+                onSuccess = { Result.Success(Unit) },
+                onFailure = { e ->
+                    Log.e("PotRepository", "정렬 기준 저장 실패", e)
+                    Result.Failure(AppError.Local())
+                }
+            )
+        }.await()
 
     companion object {
         /** 화분 생성·이름 변경·완료·삭제·레벨업 제한 시간 — 학습 기록 저장(StudyingRepositoryImpl.SAVE_TIMEOUT)과 같은 5초 */
