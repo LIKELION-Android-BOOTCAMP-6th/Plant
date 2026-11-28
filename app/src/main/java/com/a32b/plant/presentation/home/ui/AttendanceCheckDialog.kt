@@ -284,7 +284,9 @@ private fun AttendanceRewardItem(
                 .aspectRatio(1f)
                 .clip(CircleShape)
                 .background(backgroundColor)
-                .border(if (isNext) 2.dp else 1.dp, borderColor, CircleShape),
+                .border(if (isNext) 2.dp else 1.dp, borderColor, CircleShape)
+                // 다음 출석 칸은 화면에서만 구분되므로 TalkBack에 상태를 따로 알림 (원 아래 골드 글씨와는 합치지 않음)
+                .semantics(mergeDescendants = true) { if (isNext) stateDescription = NEXT_STATE_DESCRIPTION },
             contentAlignment = Alignment.Center
         ) {
             when {
@@ -396,7 +398,7 @@ private fun TextMeasurer.fitsOneLine(text: String, style: TextStyle, maxWidth: I
     ).hasVisualOverflow
 
 /**
- * label   보상 이름. 아이콘의 contentDescription(TalkBack이 읽는 이름)으로 쓰이므로 아이콘이 있어도 비우지 않는다.
+ * label   보상 이름. 출석 전 칸 아이콘의 contentDescription(TalkBack이 읽는 이름)으로 쓰이므로 아이콘이 있어도 비우지 않는다.
  *         [showLabelBelow]가 true면 원 아래 글씨로도 보인다.
  * iconRes 원 안에 표시할 아이콘.
  * showLabelBelow 원 아래에도 글씨를 보일지. 금액 구분이 필요한 골드만 true.
@@ -412,6 +414,7 @@ private data class AttendanceRewardUi(
 // 홈 레벨업 버튼의 비활성처럼 보이기(alpha 0.38f)와 같은 값
 private const val OFFLINE_BUTTON_ALPHA = 0.38f
 private const val OFFLINE_STATE_DESCRIPTION = "오프라인"
+private const val NEXT_STATE_DESCRIPTION = "다음 출석"
 
 // 골드 글자를 줄일 수 있는 최소 크기. 최대 크기는 labelSmall(11sp)
 // 320dp·글꼴 2.0 칸(SM-N986N에서 86px)에 "100G"가 한 줄로 들어가는 크기가 6sp~7sp 사이라 6sp로 둠
