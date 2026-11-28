@@ -11,4 +11,9 @@ interface SettingsLocalDataSource {
     suspend fun readNotificationGuideShownEpochDay(): Long?
 
     suspend fun saveNotificationGuideShownEpochDay(epochDay: Long)
+
+    /** 내 화분 정렬 기준 (PotSortType.name) — 한 번도 안 골랐으면 null (#803) */
+    suspend fun readPotSortType(): String?
+
+    suspend fun savePotSortType(sortTypeName: String)
 }

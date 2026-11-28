@@ -6,6 +6,7 @@ import com.a32b.plant.domain.model.Tag
 import com.a32b.plant.domain.model.StudyLog
 import com.a32b.plant.domain.result.Result
 import com.a32b.plant.domain.type.ItemType
+import com.a32b.plant.domain.type.PotSortType
 import kotlinx.coroutines.flow.Flow
 import java.util.Date
 
@@ -39,5 +40,14 @@ interface PotRepository {
      * 거부됐지만 서버 레벨이 이미 목표 레벨이면(연타·재전송) 성공
      */
     suspend fun levelUpPot(uid: String, potId: String, currentLevel: Int, items: Map<ItemType, Int>): Result<SaveResult>
+
+    /**
+     * 내 화분 정렬 기준 읽기 (#803). 다크모드처럼 기기 설정 저장소에만 둔다 (서버로 보내지 않음, 계정 구분 없음).
+     * 저장된 값이 없거나 지금 [PotSortType]에 없는 이름이면 [PotSortType.DEFAULT]
+     */
+    suspend fun readSortType(): Result<PotSortType>
+
+    /** 내 화분 정렬 기준 저장 (#803). 호출한 화면이 바로 닫혀도 쓰기는 끝까지 진행한다 */
+    suspend fun saveSortType(sortType: PotSortType): Result<Unit>
 
 }
