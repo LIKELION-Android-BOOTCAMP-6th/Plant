@@ -127,3 +127,8 @@ fun plantTypography(colorScheme: ColorScheme): Typography{
 //labelSmall(11sp)보다 1sp 작게: 글꼴 2배에서 11sp는 "영양제"가 좁은 칸에 다 들어가지 않고 "영양…"으로 잘렸다
 val Typography.homeItemLabel: TextStyle
     get() = labelSmall.copy(fontSize = 10.sp)
+
+//마이페이지 메뉴 글자 (#801) - 다크모드 줄과 메뉴 버튼(ButtonTemplate: 사용 가이드~로그아웃, 계정 관리의 회원탈퇴)이 함께 씀
+//titleMedium(Medium 15sp)에서 크기만 1sp 줄임. 줄 높이 23sp는 그대로라 글꼴 1.0에서 버튼 높이(최소 50dp)가 바뀌지 않음
+val Typography.mypageMenuLabel: TextStyle
+    get() = titleMedium.copy(fontSize = 14.sp)

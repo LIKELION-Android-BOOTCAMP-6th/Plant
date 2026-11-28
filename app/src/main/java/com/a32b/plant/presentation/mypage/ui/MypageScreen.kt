@@ -74,6 +74,7 @@ import com.a32b.plant.presentation.mypage.viewmodel.MyPageUiState
 import com.a32b.plant.presentation.mypage.viewmodel.MyPageViewModel
 import com.a32b.plant.presentation.theme.LocalIsDarkTheme
 import com.a32b.plant.presentation.theme.PlantTheme
+import com.a32b.plant.presentation.theme.mypageMenuLabel
 
 @Composable
 fun MyPageScreen(navController: NavController, viewModel: MyPageViewModel = hiltViewModel()) {
@@ -283,8 +284,8 @@ fun DarkModeToggleButton(
             // 좌측
             Text(
                 text = "다크모드",
-                // 아래 메뉴 버튼(ButtonTemplate)과 같은 글자 스타일
-                style = MaterialTheme.typography.bodyMedium,
+                // 아래 메뉴 버튼(ButtonTemplate)과 같은 글자 스타일 (#801)
+                style = MaterialTheme.typography.mypageMenuLabel,
                 modifier = Modifier.padding(start = 8.dp),
             )
             // 우측
@@ -331,7 +332,8 @@ fun ButtonTemplate(
         ) {
             Text(
                 text = text,
-                style = MaterialTheme.typography.bodyMedium,
+                // 위 다크모드 줄과 같은 글자 스타일 (#801)
+                style = MaterialTheme.typography.mypageMenuLabel,
                 color = textColor
             )
         }
