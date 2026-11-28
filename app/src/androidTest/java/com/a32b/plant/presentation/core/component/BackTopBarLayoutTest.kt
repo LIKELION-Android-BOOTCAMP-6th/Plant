@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.a32b.plant.R
 import com.a32b.plant.presentation.community.ui.PostTopBar
+import com.a32b.plant.presentation.studyPlanDetail.ui.StudyPlanDetailMoreMenu
 import com.a32b.plant.presentation.theme.PlantTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -56,7 +57,8 @@ import org.junit.runner.RunWith
  * BackTopBar를 쓰는 화면 9곳의 상단바가 좁은 화면·큰 글꼴에서도 겹치지 않고, TabTopBar와 같은 높이인지 확인 (#645)
  *
  * - 화면 폭은 requiredWidth로, 글꼴 배율은 LocalDensity의 fontScale로 바꾼다 (BottomBarLargeFontTest와 같은 방식)
- * - 글쓰기는 실제 PostTopBar를 그린다. 내 활동·공부 기록 상세의 actions는 ViewModel이 필요한 화면 안에 있어서
+ * - 글쓰기는 실제 PostTopBar를, 공부 기록 상세의 더보기 메뉴는 실제 StudyPlanDetailMoreMenu를 그린다.
+ *   내 활동·공부 기록 상세의 나머지 actions는 ViewModel이 필요한 화면 안에 있어서
  *   같은 구성(버튼 종류·글자 스타일·아이콘 크기)을 여기서 다시 만든다. 화면 코드를 바꾸면 이 구성도 같이 바꿔야 한다
  */
 @RunWith(AndroidJUnit4::class)
@@ -73,6 +75,9 @@ class BackTopBarLayoutTest {
         val actionFinders: List<Finder> = emptyList(),
         // 글꼴 1.0(모든 폭)에서 제목이 말줄임 없이 다 보여야 하는지 (긴 화분 이름은 말줄임이 정상)
         val fitsAtDefault: Boolean = true,
+        // 제목이 TabTopBar(displayLarge)보다 작은 글자인지 (화분 상세 titleMedium, #808).
+        // 작은 제목은 큰 글꼴에서 앱바를 덜 늘려서, TabTopBar와 높이가 같지 않고 같거나 낮다
+        val smallerTitle: Boolean = false,
         // 어떤 폭·글꼴에서도 말줄임 없이 다 보여야 하는 글자 (예: 선택 개수)
         val alwaysVisibleTexts: List<String> = emptyList(),
         // 글꼴 1.0에서는 말줄임 없이 다 보여야 하는 글자 (큰 글꼴에서는 말줄임 허용)
@@ -186,13 +191,20 @@ class BackTopBarLayoutTest {
         forEachCombo(darkTheme = true) { s, w, f -> assertNoOverlap(s, w, f) }
     }
 
-    /** 높이는 같은 제목의 TabTopBar와 같다 (기본 64dp, 큰 글꼴로 제목이 더 크면 제목 높이) */
+    /**
+     * 높이는 같은 제목의 TabTopBar와 같다 (기본 64dp, 큰 글꼴로 제목이 더 크면 제목 높이).
+     * 제목 글자가 더 작은 화면(smallerTitle)은 TabTopBar보다 높지 않은지만 본다
+     */
     @Test
     fun heightSameAsTabTopBar() {
         forEachCombo { s, w, f ->
             val back = composeRule.onNodeWithTag(BACK_BAR).fetchSemanticsNode().size.height
             val tab = composeRule.onNodeWithTag(TAB_BAR).fetchSemanticsNode().size.height
-            assertEquals("${s.name}, 폭 $w, 글꼴 $f: 높이(px)", tab, back)
+            if (s.smallerTitle) {
+                assertTrue("${s.name}, 폭 $w, 글꼴 $f: 높이(px) $back > TabTopBar $tab", back <= tab)
+            } else {
+                assertEquals("${s.name}, 폭 $w, 글꼴 $f: 높이(px)", tab, back)
+            }
             if (f == 1.0f) {
                 val px64 = with(composeRule.density) { 64.dp.roundToPx() }
                 assertEquals("${s.name}, 폭 $w: 글꼴 1.0 높이 64dp", px64, back)
@@ -285,21 +297,14 @@ class BackTopBarLayoutTest {
         const val LONG_POT_TITLE = "[자격증] 정보처리기사실기대비하는새화분"
 
         @Composable
-        private fun RowScope.StudyDetailActions(isShareMode: Boolean) {
-            // StudyPlanDetailScreen의 actions와 같은 구성: 수정·공유·삭제, 공유 모드는 ✓만
-            if (!isShareMode) {
+        private fun StudyDetailActions(isShareMode: Boolean) {
+            // StudyPlanDetailScreen의 actions와 같은 구성: 더보기 메뉴(실제 컴포넌트), 공유 모드는 ✓만 (#808)
+            if (isShareMode) {
                 IconButton(onClick = {}) {
-                    Icon(painterResource(R.drawable.ic_edit), "수정하기", modifier = Modifier.size(19.dp))
+                    Icon(painterResource(R.drawable.ic_check), "확인", modifier = Modifier.size(19.dp))
                 }
-            }
-            IconButton(onClick = {}) {
-                if (isShareMode) Icon(painterResource(R.drawable.ic_check), "확인", modifier = Modifier.size(19.dp))
-                else Icon(painterResource(R.drawable.ic_share), "공유", modifier = Modifier.size(19.dp))
-            }
-            if (!isShareMode) {
-                IconButton(onClick = {}) {
-                    Icon(painterResource(R.drawable.ic_trash), "화분 전체 삭제하기", modifier = Modifier.size(24.dp))
-                }
+            } else {
+                StudyPlanDetailMoreMenu(onEdit = {}, onShare = {}, onDelete = {})
             }
         }
 
@@ -361,18 +366,24 @@ class BackTopBarLayoutTest {
             },
             Scenario(
                 "공부 기록 상세", LONG_POT_TITLE,
-                actionFinders = listOf(Finder.Description("수정하기"), Finder.Description("공유"), Finder.Description("화분 전체 삭제하기")),
-                fitsAtDefault = false
+                actionFinders = listOf(Finder.Description("더보기")),
+                fitsAtDefault = false,
+                smallerTitle = true
             ) { m ->
-                BackTopBar(title = LONG_POT_TITLE, onBack = {}, modifier = m) { StudyDetailActions(isShareMode = false) }
+                BackTopBar(
+                    title = LONG_POT_TITLE, onBack = {}, modifier = m,
+                    titleStyle = MaterialTheme.typography.titleMedium
+                ) { StudyDetailActions(isShareMode = false) }
             },
             Scenario(
                 "공부 기록 상세 공유 모드", LONG_POT_TITLE, backDescription = "공유 취소",
                 actionFinders = listOf(Finder.Description("확인")),
-                fitsAtDefault = false
+                fitsAtDefault = false,
+                smallerTitle = true
             ) { m ->
                 BackTopBar(
                     title = LONG_POT_TITLE, onBack = {}, modifier = m,
+                    titleStyle = MaterialTheme.typography.titleMedium,
                     backIcon = painterResource(R.drawable.ic_study_result_close),
                     backContentDescription = "공유 취소"
                 ) { StudyDetailActions(isShareMode = true) }

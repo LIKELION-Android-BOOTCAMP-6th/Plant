@@ -107,6 +107,29 @@ class MaterialIconDrawableTest {
         close()
     }
 
+    // 화분 상세 상단바 더보기 메뉴 아이콘 (#808, 라이브러리를 뺀 뒤 새로 옮김)
+    @Test
+    fun `ic_more_vert는 Filled MoreVert와 같다`() = assertSameAsMaterialIcon("ic_more_vert") {
+        moveTo(12.0f, 8.0f)
+        curveToRelative(1.1f, 0.0f, 2.0f, -0.9f, 2.0f, -2.0f)
+        reflectiveCurveToRelative(-0.9f, -2.0f, -2.0f, -2.0f)
+        reflectiveCurveToRelative(-2.0f, 0.9f, -2.0f, 2.0f)
+        reflectiveCurveToRelative(0.9f, 2.0f, 2.0f, 2.0f)
+        close()
+        moveTo(12.0f, 10.0f)
+        curveToRelative(-1.1f, 0.0f, -2.0f, 0.9f, -2.0f, 2.0f)
+        reflectiveCurveToRelative(0.9f, 2.0f, 2.0f, 2.0f)
+        reflectiveCurveToRelative(2.0f, -0.9f, 2.0f, -2.0f)
+        reflectiveCurveToRelative(-0.9f, -2.0f, -2.0f, -2.0f)
+        close()
+        moveTo(12.0f, 16.0f)
+        curveToRelative(-1.1f, 0.0f, -2.0f, 0.9f, -2.0f, 2.0f)
+        reflectiveCurveToRelative(0.9f, 2.0f, 2.0f, 2.0f)
+        reflectiveCurveToRelative(2.0f, -0.9f, 2.0f, -2.0f)
+        reflectiveCurveToRelative(-0.9f, -2.0f, -2.0f, -2.0f)
+        close()
+    }
+
     @Test
     fun `ic_radio_button_unchecked는 Outlined RadioButtonUnchecked와 같다`() =
         assertSameAsMaterialIcon("ic_radio_button_unchecked") {

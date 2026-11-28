@@ -25,6 +25,8 @@ import com.a32b.plant.core.navigation.rememberPopBackStackSafely
 import com.a32b.plant.domain.model.StudyLog
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import com.a32b.plant.presentation.core.component.BackTopBar
@@ -130,6 +132,8 @@ fun StudyPlanDetailScreen(
             topBar = {
                 BackTopBar(
                     title = "[${pot.tagName}] ${pot.name}",
+                    // 화분 이름이 덜 잘리도록 이 화면만 기본(displayLarge 22sp)보다 작은 글자 (#808)
+                    titleStyle = MaterialTheme.typography.titleMedium,
                     // 공유 모드에서는 뒤로가기 자리가 X(공유 취소)로 바뀐다
                     onBack = {
                         if(isShareMode) viewModel.setShareMode(false)
@@ -141,41 +145,19 @@ fun StudyPlanDetailScreen(
                     ),
                     backContentDescription = if (isShareMode) "공유 취소" else "뒤로가기",
                     actions = {
-                        // 순서: 수정·공유·삭제 — 수정과 삭제를 떨어뜨려 잘못 누르기를 줄인다 (#645)
-                        // 수정
-                        if(!isShareMode) {
-                            IconButton(onClick = { viewModel.setEditDialogShown(true) }) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_edit),
-                                    "수정하기",
-                                    modifier = Modifier.size(19.dp)
-                                )
-                            }
-                        }
-                        // 글쓰기 화면으로 이동해 이 화면이 나가는 중에 누른 공유·확인 클릭은 무시한다 (#672)
-                        IconButton(onClick = dropUnlessStarted { if (!isShareMode) {
-                            viewModel.setShareMode(true)
-                        } else {
-                            // 2. 이미 공유 모드라면 데이터 전송(화면 이동) 수행
-                            viewModel.navigateToCommunityShare(navController)
-                        } }) {
-                            if (isShareMode) {
-                                // 공유 모드면 확인 아이콘(누르면 선택한 기록으로 글쓰기 화면 이동), 아니면 공유 아이콘
+                        if (isShareMode) {
+                            // 공유 모드: 확인(✓)만. 누르면 선택한 기록으로 글쓰기 화면 이동
+                            // 글쓰기 화면으로 이동해 이 화면이 나가는 중에 누른 확인 클릭은 무시한다 (#672)
+                            IconButton(onClick = dropUnlessStarted { viewModel.navigateToCommunityShare(navController) }) {
                                 Icon(painterResource(id = R.drawable.ic_check), contentDescription = stringResource(R.string.common_confirm), modifier = Modifier.size(19.dp), tint = MaterialTheme.colorScheme.onSurface)
-                            } else {
-                                Icon(painterResource(id = R.drawable.ic_share), contentDescription = "공유", modifier = Modifier.size(19.dp))
                             }
-                        }
-                        // 화분 전체 삭제
-                        if(!isShareMode) {
-                            IconButton(onClick = { viewModel.setPotDeleteDialogShown(true) }) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_trash),
-                                    "화분 전체 삭제하기",
-                                    // 다른 아이콘(19dp)과 눈으로 보이는 크기를 맞춘 의도된 크기 (#645)
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
+                        } else {
+                            // 수정·공유·삭제 아이콘 3개를 더보기 메뉴 하나로 합쳐 제목 칸을 넓힌다 (#808)
+                            StudyPlanDetailMoreMenu(
+                                onEdit = { viewModel.setEditDialogShown(true) },
+                                onShare = { viewModel.setShareMode(true) },
+                                onDelete = { viewModel.setPotDeleteDialogShown(true) }
+                            )
                         }
                     }
                 )
@@ -437,6 +419,75 @@ fun StudyPlanDetailScreen(
     }
 }
 
+/**
+ * 화분 상세 상단바의 더보기(세로 점 3개) 버튼과 메뉴 (#808)
+ *
+ * - 항목 순서: 수정·공유·삭제 — 수정과 삭제를 떨어뜨려 잘못 누르기를 줄인다 (#645)
+ * - 항목을 누르면 메뉴를 먼저 닫고 동작을 부른다. 메뉴가 닫히는 중에 한 번 더 눌려도
+ *   세 동작 모두 다이얼로그·공유 모드를 켜기만 해서 다이얼로그가 두 개 뜨지 않는다
+ * - 열림 상태는 remember: 화면이 세로 고정이라 회전으로 다시 만들어지지 않고,
+ *   다른 이유로 Activity가 다시 만들어지면 메뉴는 닫힌 채로 돌아온다
+ */
+@Composable
+fun StudyPlanDetailMoreMenu(
+    onEdit: () -> Unit,
+    onShare: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_more_vert),
+                contentDescription = "더보기"
+            )
+        }
+
+        // 정렬 메뉴(PotSortDropdown, #800)와 같은 글자·항목 높이:
+        // 메뉴 항목 기본 최소 높이(48dp)를 bodySmall 줄 높이(lineHeight) + 16dp로 낮추고,
+        // 최대 높이를 sp 기준 줄 높이로 잡아 큰 글꼴에서는 함께 늘어남
+        val menuTextStyle = MaterialTheme.typography.bodySmall
+        val density = LocalDensity.current
+        val menuItemMaxHeight = with(density) { menuTextStyle.lineHeight.toDp() } + 16.dp
+
+        val items = listOf(
+            "수정" to onEdit,
+            "공유" to onShare,
+            "삭제" to onDelete
+        )
+        // 항목이 두 글자뿐이라 기본 최소 폭(112dp, material3 1.4.0 Menu.kt)이면 메뉴가 너무 넓다 (#808).
+        // 가장 긴 항목 글자 폭 + 왼쪽 기본 안쪽 여백(12dp) + 오른쪽 여백(MenuItemEndSpace)으로 폭을 정한다.
+        // 글자는 정렬 메뉴처럼 왼쪽 12dp에 붙고, 남는 공간은 오른쪽에 둔다.
+        // 글자 폭을 직접 재므로 큰 글꼴에서는 메뉴도 함께 넓어진다
+        val textMeasurer = rememberTextMeasurer()
+        val menuItemWidth = remember(menuTextStyle, density) {
+            with(density) {
+                items.maxOf { (label, _) -> textMeasurer.measure(label, menuTextStyle).size.width }.toDp()
+            } + MenuItemStartPadding + MenuItemEndSpace
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            items.forEach { (label, action) ->
+                DropdownMenuItem(
+                    modifier = Modifier
+                        .width(menuItemWidth)
+                        .heightIn(max = menuItemMaxHeight),
+                    // 왼쪽은 정렬 메뉴와 같은 12dp, 오른쪽 안쪽 여백은 0 (오른쪽 공간은 폭에 이미 들어 있음)
+                    contentPadding = PaddingValues(start = MenuItemStartPadding, end = 0.dp),
+                    text = { Text(text = label, style = menuTextStyle) },
+                    onClick = {
+                        expanded = false
+                        action()
+                    }
+                )
+            }
+        }
+    }
+}
 
 @Composable
 fun StudyRecordCard(
@@ -547,3 +598,9 @@ fun StudyRecordCard(
 
 // 카드에 미리 보여줄 학습 내용 개수
 private const val MAX_PREVIEW_CONTENTS = 2
+
+// 더보기 메뉴 항목 여백 (#808). 메뉴 폭 = 가장 긴 글자 폭 + 왼쪽 + 오른쪽
+// 왼쪽: material3 1.4.0 기본 안쪽 여백(DropdownMenuItemHorizontalPadding)과 같은 12dp라 정렬 메뉴와 글자 시작 위치가 같다
+private val MenuItemStartPadding = 12.dp
+// 오른쪽: 글자 뒤에 남기는 여백
+private val MenuItemEndSpace = 36.dp

@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -26,12 +27,14 @@ import com.a32b.plant.presentation.theme.PlantTheme
 // 뒤로가기가 있는 하위 화면 공통 앱바. 하단바 탭 화면은 TabTopBar, 홈은 HomeTopBar를 사용한다.
 // 높이·좌우 여백은 TabTopBar와 같은 CenterAlignedTopAppBar 기본값을 따르고, 제목은 가운데 정렬한다.
 // 공부 기록 상세의 공유 모드처럼 뒤로가기 자리에 다른 아이콘이 필요하면 backIcon·backContentDescription을 바꾼다.
+// 제목 글자는 기본 displayLarge(앱바 타이틀용)이고, 화분 상세처럼 긴 제목을 더 보여야 하는 화면만 titleStyle로 바꾼다 (#808).
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BackTopBar(
     title: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    titleStyle: TextStyle = MaterialTheme.typography.displayLarge,
     backEnabled: Boolean = true,
     backIcon: Painter = painterResource(R.drawable.ic_backbtn),
     backContentDescription: String = "뒤로가기",
@@ -41,7 +44,7 @@ fun BackTopBar(
         title = {
             Text(
                 text = title,
-                style = MaterialTheme.typography.displayLarge,
+                style = titleStyle,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
