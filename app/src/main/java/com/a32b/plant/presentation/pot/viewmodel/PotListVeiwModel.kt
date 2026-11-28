@@ -39,7 +39,8 @@ class PotListViewModel @Inject constructor(
     fun setSortType(sortType: PotSortType) {
         if (_sortType.value == sortType) return
         _sortType.value = sortType
-        // 저장에 실패해도 이번 실행 중에는 고른 정렬을 그대로 보여 준다 (토스트 없음, 로그는 Repository에서)
+        // 저장에 실패해도 이 화면에 있는 동안은 고른 정렬을 그대로 보여 준다
+        // (다른 탭에 갔다 오면 마지막으로 저장된 값, 없거나 읽지 못하면 "생성일"로 돌아감. 토스트 없음, 로그는 Repository에서)
         viewModelScope.launch { potRepository.saveSortType(sortType) }
     }
 

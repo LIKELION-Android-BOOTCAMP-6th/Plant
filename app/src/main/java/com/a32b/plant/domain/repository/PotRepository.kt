@@ -47,7 +47,7 @@ interface PotRepository {
      */
     suspend fun readSortType(): Result<PotSortType>
 
-    /** 내 화분 정렬 기준 저장 (#803). 호출한 화면이 바로 닫혀도 쓰기는 끝까지 진행한다 */
+    /** 내 화분 정렬 기준 저장 (#803). 호출한 화면(ViewModel)이 정리돼도, 앱 프로세스가 살아 있으면 쓰기는 끝까지 진행한다 */
     suspend fun saveSortType(sortType: PotSortType): Result<Unit>
 
 }
