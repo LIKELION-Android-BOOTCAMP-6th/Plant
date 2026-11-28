@@ -225,7 +225,7 @@ fun PotSortDropdown(
             )
         }
 
-        // 메뉴 항목 기본 최소 높이(48dp)를 글자 한 줄 + 위아래 8dp로 낮춤 (#800)
+        // 메뉴 항목 기본 최소 높이(48dp)를 bodySmall 줄 높이(lineHeight) + 16dp로 낮춤 (#800)
         // 최대 높이를 sp 기준 줄 높이로 잡아 큰 글꼴에서는 함께 늘어남
         val menuTextStyle = MaterialTheme.typography.bodySmall
         val menuItemMaxHeight = with(LocalDensity.current) { menuTextStyle.lineHeight.toDp() } + 16.dp
