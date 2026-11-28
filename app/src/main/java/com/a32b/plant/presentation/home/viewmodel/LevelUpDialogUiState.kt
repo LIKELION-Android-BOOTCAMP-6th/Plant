@@ -69,7 +69,7 @@ internal fun buildLevelUpDialogUiState(pot: Pot, item: Item): LevelUpDialogUiSta
             .sortedBy { it.type.ordinal },
         currentStudyTimeText = TimeFormatter.formatToHoursMinutes(pot.potTotalStudyingTime),
         requiredStudyTimeText = TimeFormatter.formatToHoursMinutes(requiredMs),
-        // 남은 시간은 분 단위로 올림 — 30초 남았을 때 "1분 미만 남았어요"가 아니라 "1분 남았어요"로 안내한다
+        // 남은 시간은 분 단위로 올림 — 30초 남았을 때 토스트를 "1분 미만 더 필요해요"가 아니라 "1분 더 필요해요"로 안내한다
         remainingStudyTimeText = if (remainingMs > 0) {
             TimeFormatter.formatToHoursMinutes((remainingMs + MINUTE_MS - 1) / MINUTE_MS * MINUTE_MS)
         } else {

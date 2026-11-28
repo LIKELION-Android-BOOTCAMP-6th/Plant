@@ -39,6 +39,7 @@ import org.junit.runner.RunWith
 /**
  * 레벨업 확인 다이얼로그 (#678)
  * - 버튼: 조건 부족이어도 눌리고(비활성 버튼 + Toast 패턴) TalkBack 상태를 알림, 처리 중에는 버튼·취소를 막음
+ * - 부족 안내: "n개 부족"·"… 남았어요" 줄 없이 "보유 / 필요개"·"현재 / 필요"만 보임 (#805)
  * - 큰 글꼴: 본문(LevelUpDialogContent)의 글자가 한 줄을 넘지 않고 이름과 개수가 겹치지 않음
  *   Dialog 안에는 LocalDensity 덮어쓰기가 닿지 않아 본문만 직접 그린다
  *   폭 232dp: M3 AlertDialog 최소 폭 280dp(material3 1.4.0 AlertDialog.kt DialogMinWidth) - 좌우 여백 24dp씩
@@ -93,7 +94,25 @@ class LevelUpDialogTest {
         assertEquals(LEVEL_UP_NOT_READY_STATE_DESCRIPTION, button.stateDescription())
         button.assertIsEnabled().performClick()
         assertEquals(1, confirms)
-        composeRule.onNodeWithText("2개 부족", useUnmergedTree = true).assertExists()
+    }
+
+    // 부족한 양은 "보유 / 필요개"·"현재 / 필요"로만 보여주고 아래 안내 줄은 두지 않는다 (#805)
+    @Test
+    fun lackingGuideLinesAreNotShown() {
+        composeRule.setContent {
+            PlantTheme(darkTheme = false) {
+                LevelUpDialog(state = longState, isLoading = false, onConfirm = {}, onDismiss = {})
+            }
+        }
+
+        for (item in longState.items.filter { !it.isEnough }) {
+            composeRule.onNodeWithText("${item.owned} / ${item.required}개", useUnmergedTree = true).assertExists()
+            composeRule.onNodeWithText("${item.lackingCount}개 부족", useUnmergedTree = true).assertDoesNotExist()
+            // TalkBack은 묶인 줄을 "이름, 보유 / 필요개"로 읽는다
+            assertEquals("${item.type.kor}, ${item.owned} / ${item.required}개", composeRule.onNodeWithText(item.type.kor).text())
+        }
+        composeRule.onNodeWithText("149시간 59분 / 150시간", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("남았어요", substring = true, useUnmergedTree = true).assertDoesNotExist()
     }
 
     @Test
@@ -151,11 +170,6 @@ class LevelUpDialogTest {
                 listOf(name, count).forEach { node ->
                     val lines = node.textLayout().lineCount
                     if (lines != 1) failures += "$where: '${node.text()}' ${lines}줄"
-                }
-                if (!item.isEnough) {
-                    val lacking = composeRule.onNodeWithText("${item.lackingCount}개 부족", useUnmergedTree = true)
-                    val lines = lacking.textLayout().lineCount
-                    if (lines != 1) failures += "$where: '${lacking.text()}' ${lines}줄"
                 }
                 val nameRight = name.fetchSemanticsNode().boundsInRoot.right
                 val countLeft = count.fetchSemanticsNode().boundsInRoot.left
