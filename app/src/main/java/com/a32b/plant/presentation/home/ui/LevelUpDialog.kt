@@ -117,19 +117,12 @@ internal fun LevelUpDialogContent(state: LevelUpDialogUiState) {
             style = MaterialTheme.typography.bodyMedium,
             color = if (state.isStudyTimeEnough) MaterialTheme.colorScheme.onSurface else dialogErrorTextColor()
         )
-        state.remainingStudyTimeText?.let { remaining ->
-            Text(
-                text = "$remaining 남았어요",
-                style = MaterialTheme.typography.bodySmall,
-                color = dialogErrorTextColor()
-            )
-        }
     }
 }
 
 /**
- * 재료 한 줄: 아이콘 + 이름 + "보유 / 필요개" — 부족하면 개수를 강조하고, 이름 아래에 "n개 부족"을 글자로도 적는다
- * (색만으로 부족을 알리지 않기 위함. 개수 옆에 붙이면 큰 글꼴에서 개수 글자가 길어져 이름 칸이 밀려나므로 아래 줄에 둔다)
+ * 재료 한 줄: 아이콘 + 이름 + "보유 / 필요개" — 부족하면 개수를 붉은색으로 강조한다
+ * 얼마나 부족한지는 "보유 / 필요개" 숫자로 알 수 있어 따로 적지 않는다 (#805). 숫자가 글자로 남아 있어 색만으로 알리는 것은 아니다
  */
 @Composable
 private fun LevelUpItemRow(requirement: LevelUpItemRequirement) {
@@ -147,20 +140,12 @@ private fun LevelUpItemRow(requirement: LevelUpItemRequirement) {
             modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = requirement.type.kor,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            if (!requirement.isEnough) {
-                Text(
-                    text = "${requirement.lackingCount}개 부족",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = dialogErrorTextColor()
-                )
-            }
-        }
+        Text(
+            text = requirement.type.kor,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = "${requirement.owned} / ${requirement.required}개",
