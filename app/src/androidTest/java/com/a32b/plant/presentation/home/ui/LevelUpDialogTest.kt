@@ -108,7 +108,7 @@ class LevelUpDialogTest {
         for (item in longState.items.filter { !it.isEnough }) {
             composeRule.onNodeWithText("${item.owned} / ${item.required}개", useUnmergedTree = true).assertExists()
             composeRule.onNodeWithText("${item.lackingCount}개 부족", useUnmergedTree = true).assertDoesNotExist()
-            // TalkBack은 묶인 줄을 "이름, 보유 / 필요개"로 읽는다
+            // 묶인 줄(mergeDescendants)의 글자가 이름·"보유 / 필요개" 두 개뿐 (", "는 text()의 구분자, 실제 TalkBack 음성은 미확인)
             assertEquals("${item.type.kor}, ${item.owned} / ${item.required}개", composeRule.onNodeWithText(item.type.kor).text())
         }
         composeRule.onNodeWithText("149시간 59분 / 150시간", useUnmergedTree = true).assertExists()
